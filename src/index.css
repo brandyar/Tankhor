@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Vazirmatn", system-ui, -apple-system, sans-serif;
+  --font-mono: "Vazirmatn", system-ui, -apple-system, sans-serif;
+  --color-ink: #171717;
+  --color-canvas-soft: #fafafa;
+  --color-canvas: #ffffff;
+  --color-hairline: #ebebeb;
+  --color-hairline-strong: #a1a1a1;
+}
+
+*, ::before, ::after, :root, html, body, button, input, select, textarea, code, pre, .font-mono, .caption-mono {
+  font-family: 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Caption helper using Vazirmatn */
+.caption-mono {
+  font-family: 'Vazirmatn', sans-serif !important;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888888;
+}
+
+/* Mesh gradient backdrop for Vercel-style ambient hero cards */
+.bg-mesh-gradient {
+  background: radial-gradient(at 0% 0%, rgba(0, 124, 240, 0.08) 0px, transparent 50%),
+              radial-gradient(at 50% 0%, rgba(121, 40, 202, 0.08) 0px, transparent 50%),
+              radial-gradient(at 100% 0%, rgba(255, 0, 128, 0.06) 0px, transparent 50%),
+              radial-gradient(at 100% 100%, rgba(249, 203, 40, 0.05) 0px, transparent 50%);
+}
+
+.bg-mesh-gradient-dark {
+  background: linear-gradient(135deg, #0f0f0f 0%, #171717 100%);
+}
+
+.text-mesh-gradient {
+  background: linear-gradient(90deg, #007cf0 0%, #00dfd8 33%, #7928ca 66%, #ff0080 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Stacked shadow utilities from DESIGN.md */
+.shadow-vercel-sm {
+  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.04), 0px 0px 0px 1px rgba(0, 0, 0, 0.06);
+}
+
+.shadow-vercel-md {
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.04), 0px 8px 16px -4px rgba(0, 0, 0, 0.06), 0px 0px 0px 1px rgba(0, 0, 0, 0.06);
+}
+
+.shadow-vercel-lg {
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.06), 0px 16px 32px -8px rgba(0, 0, 0, 0.08), 0px 0px 0px 1px rgba(0, 0, 0, 0.08);
+}
+
+/* Caption Mono helper */
+.caption-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #888888;
+}
+
+/* Custom smooth dark scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(161, 161, 161, 0.25);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(161, 161, 161, 0.45);
+}
+
