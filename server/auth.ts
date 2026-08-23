@@ -223,16 +223,30 @@ authRouter.post('/login', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'نام کاربری (ایمیل) یا کلمه عبور نادرست است.' });
     }
 
-    // 2. Fetch full user info using Admin Client or user access_token
+    // 2. Fetch full user info using access_token or Admin Client
     let userRecord: any;
-    try {
-      const users = await DirectusAdminClient.getItems('directus_users', {
-        filter: { email: { _eq: cleanEmail } },
-        limit: 1,
-      });
-      userRecord = users[0];
-    } catch {
-      // Fallback
+    if (directusAuthRes?.access_token) {
+      try {
+        userRecord = await DirectusAdminClient.request('/users/me', {
+          headers: {
+            Authorization: `Bearer ${directusAuthRes.access_token}`,
+          },
+        });
+      } catch {
+        // Fallback to query
+      }
+    }
+
+    if (!userRecord) {
+      try {
+        const users = await DirectusAdminClient.getItems('directus_users', {
+          filter: { email: { _eq: cleanEmail } },
+          limit: 1,
+        });
+        userRecord = users?.[0];
+      } catch (err: any) {
+        console.warn('[Auth Login] User lookup error:', err.message);
+      }
     }
 
     if (!userRecord) {

@@ -62,6 +62,29 @@ export class DirectusAdminClient {
     }
   }
 
+  public static getCollectionEndpoint(collection: string, suffix = ''): string {
+    const s = suffix ? (suffix.startsWith('/') ? suffix : `/${suffix}`) : '';
+    switch (collection) {
+      case 'directus_users':
+      case 'users':
+        return `/users${s}`;
+      case 'directus_roles':
+      case 'roles':
+        return `/roles${s}`;
+      case 'directus_files':
+      case 'files':
+        return `/files${s}`;
+      case 'directus_activity':
+      case 'activity':
+        return `/activity${s}`;
+      case 'directus_settings':
+      case 'settings':
+        return `/settings${s}`;
+      default:
+        return `/items/${collection}${s}`;
+    }
+  }
+
   // Raw Directus Items CRUD using Admin Token
   public static async getItems<T = any>(collection: string, query?: Record<string, any>): Promise<T[]> {
     let queryString = '';
@@ -74,13 +97,15 @@ export class DirectusAdminClient {
       if (query.fields) params.append('fields', Array.isArray(query.fields) ? query.fields.join(',') : query.fields);
       queryString = `?${params.toString()}`;
     }
-    return this.request<T[]>(`/items/${collection}${queryString}`);
+    const endpoint = `${this.getCollectionEndpoint(collection)}${queryString}`;
+    return this.request<T[]>(endpoint);
   }
 
   public static async getItemById<T = any>(collection: string, id: string | number, fields?: string): Promise<T | null> {
     try {
       const queryString = fields ? `?fields=${fields}` : '';
-      return await this.request<T>(`/items/${collection}/${id}${queryString}`);
+      const endpoint = `${this.getCollectionEndpoint(collection, String(id))}${queryString}`;
+      return await this.request<T>(endpoint);
     } catch (err: any) {
       if (err.message?.includes('404') || err.message?.toLowerCase().includes('not found')) {
         return null;
@@ -90,21 +115,21 @@ export class DirectusAdminClient {
   }
 
   public static async createItem<T = any>(collection: string, item: any): Promise<T> {
-    return this.request<T>(`/items/${collection}`, {
+    return this.request<T>(this.getCollectionEndpoint(collection), {
       method: 'POST',
       body: JSON.stringify(item),
     });
   }
 
   public static async updateItem<T = any>(collection: string, id: string | number, item: any): Promise<T> {
-    return this.request<T>(`/items/${collection}/${id}`, {
+    return this.request<T>(this.getCollectionEndpoint(collection, String(id)), {
       method: 'PATCH',
       body: JSON.stringify(item),
     });
   }
 
   public static async deleteItem(collection: string, id: string | number): Promise<boolean> {
-    await this.request(`/items/${collection}/${id}`, {
+    await this.request(this.getCollectionEndpoint(collection, String(id)), {
       method: 'DELETE',
     });
     return true;
