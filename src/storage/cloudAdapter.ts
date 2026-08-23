@@ -36,7 +36,13 @@ export class CloudDirectusAdapter implements IStorageProvider {
       if (org.id) {
         return await directusClient.updateItem<Organization>('organizations', org.id, org);
       }
-      return await directusClient.createItem<Organization>('organizations', org);
+      return await directusClient.createOrganization({
+        name: org.name || 'سازمان جدید',
+        slug: org.slug,
+        currency: org.currency,
+        timezone: org.timezone,
+        plan: org.plan,
+      });
     } catch (err: any) {
       console.warn('[CloudDirectusAdapter] Cloud saveOrganization failed, falling back to local adapter:', err?.message || err);
       const saved = await this.localAdapter.saveOrganization(org);

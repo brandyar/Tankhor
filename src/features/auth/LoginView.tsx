@@ -21,6 +21,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [orgName, setOrgName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,26 +32,38 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     e.preventDefault();
     setFormValidationError(null);
 
+    const cleanEmail = email.trim();
+    const cleanPass = password;
+    const cleanFirst = firstName.trim();
+    const cleanLast = lastName.trim();
+    const cleanOrg = orgName.trim() || `فروشگاه ${cleanFirst} ${cleanLast}`.trim() || 'فروشگاه من';
+
     if (activeTab === 'login') {
-      if (!email || !password) return;
-      const ok = await login(email, password);
+      if (!cleanEmail || !cleanPass) return;
+      const ok = await login(cleanEmail, cleanPass);
       if (ok && onSuccess) {
         onSuccess();
       }
     } else {
-      if (!firstName || !lastName || !email || !password) {
+      if (!cleanFirst || !cleanLast || !cleanEmail || !cleanPass) {
         setFormValidationError('لطفاً تمامی فیلدهای الزامی را تکمیل کنید.');
         return;
       }
-      if (password.length < 6) {
+      if (cleanPass.length < 6) {
         setFormValidationError('رمز عبور باید حداقل ۶ کاراکتر باشد.');
         return;
       }
-      if (password !== confirmPassword) {
+      if (cleanPass !== confirmPassword) {
         setFormValidationError('کلمه عبور و تکرار آن یکسان نیستند.');
         return;
       }
-      const ok = await register(firstName, lastName, email, password);
+      const ok = await register({
+        firstName: cleanFirst,
+        lastName: cleanLast,
+        email: cleanEmail,
+        pass: cleanPass,
+        orgName: cleanOrg,
+      });
       if (ok && onSuccess) {
         onSuccess();
       }
@@ -150,40 +163,55 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
               <form onSubmit={handleSubmit} className="space-y-4 text-start">
                 {/* Extra Fields for Registration */}
                 {activeTab === 'register' && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-neutral-700 mb-1">
-                        نام <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-neutral-400">
-                          <UserIcon className="w-4 h-4" />
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-neutral-700 mb-1">
+                          نام <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-neutral-400">
+                            <UserIcon className="w-4 h-4" />
+                          </div>
+                          <input
+                            type="text"
+                            required
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            placeholder="نام..."
+                            className="w-full ps-9 pe-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                          />
                         </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-neutral-700 mb-1">
+                          نام خانوادگی <span className="text-red-500">*</span>
+                        </label>
                         <input
                           type="text"
                           required
-                          value={firstName}
-                          onChange={(e) => setFirstName(e.target.value)}
-                          placeholder="نام..."
-                          className="w-full ps-9 pe-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          placeholder="نام خانوادگی..."
+                          className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
                         />
                       </div>
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-neutral-700 mb-1">
-                        نام خانوادگی <span className="text-red-500">*</span>
+                        نام فروشگاه یا برند (سازمان)
                       </label>
                       <input
                         type="text"
-                        required
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        placeholder="نام خانوادگی..."
+                        value={orgName}
+                        onChange={(e) => setOrgName(e.target.value)}
+                        placeholder="مثال: بوتیک شیک‌پوشان (اختیاری)"
                         className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
                       />
                     </div>
-                  </div>
+                  </>
                 )}
 
                 {/* Email Field */}

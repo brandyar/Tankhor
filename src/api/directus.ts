@@ -163,6 +163,26 @@ class DirectusClient {
     return res;
   }
 
+  public async createOrganization(data: {
+    name: string;
+    slug?: string;
+    currency?: string;
+    timezone?: string;
+    plan?: string;
+  }): Promise<any> {
+    const res = await this.request('/auth/create-org', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    if (res.token) {
+      this.setToken(res.token);
+    }
+    if (res.organization?.id && typeof window !== 'undefined') {
+      localStorage.setItem('tankhor_active_org_id', String(res.organization.id));
+    }
+    return res.organization;
+  }
+
   // Generic collection helpers
   public async getItems<T>(collection: string, query?: Record<string, any>): Promise<T[]> {
     let queryString = '';

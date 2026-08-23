@@ -21,17 +21,23 @@ export interface User {
   status?: string;
 }
 
-interface RegisterParams {
-  firstName: string;
-  lastName: string;
+export interface RegisterParams {
+  firstName?: string;
+  lastName?: string;
   email: string;
-  pass: string;
-  orgName: string;
+  pass?: string;
+  password?: string;
+  orgName?: string;
   orgSlug?: string;
   currency?: string;
   initialCategoryName?: string;
   initialWarehouseName?: string;
 }
+
+export type RegisterFunction = {
+  (params: RegisterParams): Promise<boolean>;
+  (firstName: string, lastName: string, email: string, password: string, orgName?: string): Promise<boolean>;
+};
 
 interface AuthContextType {
   user: User | null;
@@ -43,7 +49,7 @@ interface AuthContextType {
   openLoginModal: () => void;
   closeLoginModal: () => void;
   login: (email: string, pass: string) => Promise<boolean>;
-  register: (params: RegisterParams) => Promise<boolean>;
+  register: RegisterFunction;
   logout: () => Promise<void>;
 }
 
@@ -132,21 +138,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (params: RegisterParams): Promise<boolean> => {
+  const register: RegisterFunction = (async (
+    paramOrFirst: RegisterParams | string,
+    lastNameArg?: string,
+    emailArg?: string,
+    passArg?: string,
+    orgNameArg?: string
+  ): Promise<boolean> => {
     setLoginError(null);
     setIsLoading(true);
     try {
+      let finalParams: RegisterParams;
+      if (typeof paramOrFirst === 'object' && paramOrFirst !== null) {
+        finalParams = paramOrFirst;
+      } else {
+        const firstStr = typeof paramOrFirst === 'string' ? paramOrFirst : '';
+        finalParams = {
+          firstName: firstStr,
+          lastName: lastNameArg || '',
+          email: emailArg || '',
+          pass: passArg || '',
+          orgName: orgNameArg || (firstStr ? `فروشگاه ${firstStr} ${lastNameArg || ''}`.trim() : 'فروشگاه من'),
+        };
+      }
+
+      const email = (finalParams.email || '').trim();
+      const password = (finalParams.pass || finalParams.password || '').trim();
+      const firstName = (finalParams.firstName || '').trim();
+      const lastName = (finalParams.lastName || '').trim();
+      const orgName = (finalParams.orgName || '').trim() || (firstName ? `فروشگاه ${firstName} ${lastName}`.trim() : 'فروشگاه من');
+
+      if (!email || !password) {
+        setLoginError('وارد کردن آدرس ایمیل و کلمه عبور الزامی است.');
+        return false;
+      }
+
       // 1. Send registration request with user & custom organization data
       await directusClient.register({
-        first_name: params.firstName,
-        last_name: params.lastName,
-        email: params.email,
-        password: params.pass,
-        org_name: params.orgName,
-        org_slug: params.orgSlug,
-        currency: params.currency || 'TOMAN',
-        initial_category_name: params.initialCategoryName,
-        initial_warehouse_name: params.initialWarehouseName,
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        password: password,
+        org_name: orgName,
+        org_slug: finalParams.orgSlug,
+        currency: finalParams.currency || 'TOMAN',
+        initial_category_name: finalParams.initialCategoryName,
+        initial_warehouse_name: finalParams.initialWarehouseName,
       });
 
       // 2. Fetch authenticated profile & organization
@@ -178,7 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+  }) as RegisterFunction;
 
   const logout = async (): Promise<void> => {
     setIsLoading(true);

@@ -8,11 +8,13 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck } from 'lucide-react';
+import { EditOrganizationModal } from '../organizations/EditOrganizationModal';
+import { CreateOrganizationModal } from '../organizations/CreateOrganizationModal';
+import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck, Building2, Edit3, Plus, ShieldAlert, Globe, Clock, CheckCircle2 } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
   const { t } = useTranslation();
-  const { activeOrganization } = useOrganization();
+  const { activeOrganization, isOwner, userRole, refreshOrganizations } = useOrganization();
   const {
     user,
     isCloudAuthenticated,
@@ -23,6 +25,8 @@ export const SettingsView: React.FC = () => {
   const [mode, setMode] = useState(storageManager.getMode());
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
+  const [isEditOrgOpen, setIsEditOrgOpen] = useState(false);
+  const [isCreateOrgOpen, setIsCreateOrgOpen] = useState(false);
 
   const handleModeChange = (newMode: 'local_offline' | 'cloud_synced') => {
     if (newMode === 'cloud_synced' && !isCloudAuthenticated) {
@@ -39,6 +43,7 @@ export const SettingsView: React.FC = () => {
     try {
       const res = await StorageSyncManager.syncLocalToCloud(storageManager.getCloudAdapter());
       setSyncStatusMsg(`همگام‌سازی انجام شد: ${res.success} موفق، ${res.failed} ناموفق.`);
+      await refreshOrganizations();
     } catch (err: any) {
       setSyncStatusMsg(`خطا در همگام‌سازی: ${err.message}`);
     } finally {
@@ -54,14 +59,14 @@ export const SettingsView: React.FC = () => {
     if (typeof user.role === 'string') {
       return user.role;
     }
-    return isCloudAuthenticated ? 'کاربر سرور ابری' : 'کاربر آفلاین محلی';
+    return isCloudAuthenticated ? 'کاربر سرور ابری' : 'مدیر کل (آفلاین)';
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={t('navigation.storageSyncSettings')}
-        subtitle="پیکربندی حالت ذخیره‌سازی، وضعیت همگام‌سازی ابری و مدیریت حساب کاربری"
+        subtitle="پیکربندی حالت ذخیره‌سازی، وضعیت همگام‌سازی ابری و مدیریت اطلاعات سازمان"
       />
 
       {/* Cloud Account Status Banner */}
@@ -106,6 +111,99 @@ export const SettingsView: React.FC = () => {
               >
                 خروج از حساب کاربری
               </Button>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* Active Org Profile & Owner Edit Section */}
+      <Card
+        title="اطلاعات سازمان فعال"
+        subtitle="مشخصات، واحد پول، منطقه زمانی و مدیریت تنظیمات کسب‌وکار"
+        action={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCreateOrgOpen(true)}
+              icon={<Plus className="w-3.5 h-3.5" />}
+              className="text-xs font-medium"
+            >
+              سازمان جدید
+            </Button>
+            {isOwner ? (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsEditOrgOpen(true)}
+                icon={<Edit3 className="w-3.5 h-3.5" />}
+                className="text-xs font-bold bg-blue-600 hover:bg-blue-700"
+              >
+                ویرایش اطلاعات سازمان
+              </Button>
+            ) : (
+              <Badge variant="neutral">نقش: {userRole} (فقط مشاهده)</Badge>
+            )}
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {!isOwner && (
+            <div className="flex items-center gap-2.5 p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl">
+              <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600" />
+              <span>
+                شما به عنوان <strong>{userRole}</strong> در این سازمان عضو هستید. ویرایش اطلاعات سازمان فقط برای <strong>مالک (Owner)</strong> مجاز است.
+              </span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-neutral-50/70 border border-neutral-200/80">
+            <div className="space-y-1">
+              <span className="text-[11px] text-neutral-500 font-medium">نام سازمان / برند</span>
+              <p className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-neutral-500 shrink-0" />
+                <span>{activeOrganization?.name || 'سازمان اصلی'}</span>
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[11px] text-neutral-500 font-medium">شناسه یکتا (Slug)</span>
+              <p className="text-xs font-mono font-bold text-neutral-700 dir-ltr text-start">
+                {activeOrganization?.slug || '-'}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[11px] text-neutral-500 font-medium">واحد پول پیش‌فرض</span>
+              <p className="text-xs font-bold text-neutral-800">
+                {activeOrganization?.currency === 'TOMAN' ? 'تومان (TOMAN)' : (activeOrganization?.currency || 'TOMAN')}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[11px] text-neutral-500 font-medium">منطقه زمانی</span>
+              <p className="text-xs font-mono text-neutral-700 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-neutral-400" />
+                <span>{activeOrganization?.timezone || 'Asia/Tehran'}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-500 pt-2 border-t border-neutral-100">
+            <div className="flex items-center gap-2">
+              <span>وضعیت سازمان:</span>
+              <Badge variant={activeOrganization?.status === 'active' ? 'success' : 'neutral'}>
+                {activeOrganization?.status === 'active' ? 'فعال' : (activeOrganization?.status || 'نامشخص')}
+              </Badge>
+              <span className="ms-2">پلن:</span>
+              <Badge variant={activeOrganization?.plan === 'pro' ? 'info' : 'neutral'}>
+                {activeOrganization?.plan === 'pro' ? 'حرفه‌ای (Pro)' : 'رایگان (Free)'}
+              </Badge>
+            </div>
+            {activeOrganization?.date_created && (
+              <span className="font-mono text-[11px]">
+                تاریخ ایجاد: {new Date(activeOrganization.date_created).toLocaleDateString('fa-IR')}
+              </span>
             )}
           </div>
         </div>
@@ -180,15 +278,21 @@ export const SettingsView: React.FC = () => {
         </div>
       </Card>
 
-      {/* Active Org Profile */}
-      <Card title="اطلاعات سازمان فعال" subtitle="شناسه و واحد پول حساب کاربر">
-        <div className="space-y-2 text-xs text-neutral-700 font-mono">
-          <p><span className="font-bold font-sans">نام سازمان:</span> {activeOrganization?.name}</p>
-          <p><span className="font-bold font-sans">شناسه (Slug):</span> {activeOrganization?.slug}</p>
-          <p><span className="font-bold font-sans">واحد پول اصلی:</span> {activeOrganization?.currency}</p>
-          <p><span className="font-bold font-sans">منطقه زمانی:</span> {activeOrganization?.timezone}</p>
-        </div>
-      </Card>
+      {/* Edit Organization Modal */}
+      <EditOrganizationModal
+        isOpen={isEditOrgOpen}
+        onClose={() => setIsEditOrgOpen(false)}
+        organization={activeOrganization}
+        onSuccess={() => refreshOrganizations()}
+      />
+
+      {/* Create Organization Modal */}
+      <CreateOrganizationModal
+        isOpen={isCreateOrgOpen}
+        onClose={() => setIsCreateOrgOpen(false)}
+        onSuccess={() => refreshOrganizations()}
+      />
     </div>
   );
 };
+

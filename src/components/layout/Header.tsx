@@ -5,7 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { storageManager } from '../../storage';
 import { StorageSyncManager } from '../../storage/syncManager';
 import { LoginModal } from '../../features/auth/LoginModal';
-import { Building2, Globe, Database, RefreshCw, User as UserIcon, CheckCircle2, Menu, PanelLeft, LogIn, LogOut, ShieldCheck, Cloud, Settings, ChevronDown } from 'lucide-react';
+import { CreateOrganizationModal } from '../../features/organizations/CreateOrganizationModal';
+import { Building2, Globe, Database, RefreshCw, User as UserIcon, CheckCircle2, Menu, PanelLeft, LogIn, LogOut, ShieldCheck, Cloud, Settings, ChevronDown, Plus, Store } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 
 interface HeaderProps {
@@ -15,20 +16,26 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
   const { t, locale, setLocale } = useTranslation();
-  const { organizations, activeOrganization, selectOrganization } = useOrganization();
+  const { organizations, activeOrganization, selectOrganization, refreshOrganizations, isOwner } = useOrganization();
   const { user, isCloudAuthenticated, openLoginModal, logout } = useAuth();
 
   const [mode, setModeState] = useState(storageManager.getMode());
   const [syncing, setSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(StorageSyncManager.getQueue().length);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isOrgMenuOpen, setIsOrgMenuOpen] = useState(false);
+  const [isCreateOrgOpen, setIsCreateOrgOpen] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
+  const orgMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
+      }
+      if (orgMenuRef.current && !orgMenuRef.current.contains(event.target as Node)) {
+        setIsOrgMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -54,6 +61,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
     try {
       await StorageSyncManager.syncLocalToCloud(storageManager.getCloudAdapter());
       setPendingCount(StorageSyncManager.getQueue().length);
+      await refreshOrganizations();
     } finally {
       setSyncing(false);
     }
@@ -73,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
   return (
     <>
       <header className="h-16 bg-white/90 backdrop-blur-md border-b border-neutral-200/80 px-4 sm:px-6 flex items-center justify-between gap-4 sticky top-0 z-30 shadow-vercel-sm">
-        {/* Left / Start: Sidebar Toggle & Organization Switcher */}
+        {/* Left / Start: Sidebar Toggle & Organization Switcher Dropdown */}
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={onToggleSidebar}
@@ -82,19 +90,89 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
           >
             <PanelLeft className="w-5 h-5 shrink-0" />
           </button>
-          <div className="flex items-center gap-2 bg-neutral-100/80 hover:bg-neutral-100 rounded-md px-3 py-1.5 border border-neutral-200/80 transition-colors">
-            <Building2 className="w-3.5 h-3.5 text-neutral-700 shrink-0" />
-            <select
-              value={activeOrganization?.id || ''}
-              onChange={(e) => selectOrganization(Number(e.target.value))}
-              className="bg-transparent text-xs font-bold text-neutral-900 focus:outline-none cursor-pointer pe-1"
+
+          {/* Interactive Organization Dropdown */}
+          <div className="relative" ref={orgMenuRef}>
+            <button
+              onClick={() => setIsOrgMenuOpen(!isOrgMenuOpen)}
+              className="flex items-center gap-2 bg-neutral-100/90 hover:bg-neutral-200/70 rounded-xl px-3 py-1.5 border border-neutral-200/90 transition-all cursor-pointer focus:outline-none shadow-2xs"
             >
-              {organizations.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </select>
+              <div className="w-5 h-5 rounded-lg bg-neutral-900 text-white flex items-center justify-center shrink-0">
+                <Building2 className="w-3 h-3" />
+              </div>
+              <div className="text-start pe-1">
+                <span className="text-xs font-bold text-neutral-900 block truncate max-w-[140px] sm:max-w-[180px]">
+                  {activeOrganization?.name || 'انتخاب سازمان'}
+                </span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-neutral-500 transition-transform ${isOrgMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Organization Switcher Dropdown Menu */}
+            {isOrgMenuOpen && (
+              <div className="absolute start-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-neutral-200/90 py-2 z-50 animate-fade-in text-neutral-800">
+                <div className="px-4 py-2.5 border-b border-neutral-100 flex items-center justify-between">
+                  <span className="text-xs font-bold text-neutral-700">سازمان‌ها و فروشگاه‌ها</span>
+                  <span className="text-[11px] font-mono font-semibold bg-neutral-100 px-2 py-0.5 rounded-full text-neutral-600">
+                    {organizations.length} سازمان
+                  </span>
+                </div>
+
+                {/* Organization List */}
+                <div className="max-h-56 overflow-y-auto p-1 space-y-1">
+                  {organizations.map((org) => {
+                    const isSelected = activeOrganization?.id === org.id;
+                    return (
+                      <button
+                        key={org.id}
+                        onClick={() => {
+                          selectOrganization(org.id);
+                          setIsOrgMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer text-start ${
+                          isSelected
+                            ? 'bg-neutral-900 text-white font-bold'
+                            : 'hover:bg-neutral-100 text-neutral-800'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-[11px] font-bold ${
+                              isSelected ? 'bg-white/20 text-white' : 'bg-neutral-200 text-neutral-700'
+                            }`}
+                          >
+                            {org.name ? org.name[0] : 'O'}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-xs">{org.name}</p>
+                            {org.slug && (
+                              <p className={`text-[10px] font-mono truncate ${isSelected ? 'text-neutral-300' : 'text-neutral-400'}`}>
+                                {org.slug}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {isSelected && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Add New Organization Action */}
+                <div className="p-1 pt-1.5 border-t border-neutral-100 mt-1">
+                  <button
+                    onClick={() => {
+                      setIsOrgMenuOpen(false);
+                      setIsCreateOrgOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded-xl transition-colors text-start cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4 shrink-0 text-blue-600" />
+                    <span>ایجاد سازمان / فروشگاه جدید</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -232,7 +310,15 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
 
       {/* Global Login Modal */}
       <LoginModal />
+
+      {/* Header Organization Creation Modal */}
+      <CreateOrganizationModal
+        isOpen={isCreateOrgOpen}
+        onClose={() => setIsCreateOrgOpen(false)}
+        onSuccess={() => refreshOrganizations()}
+      />
     </>
   );
 };
+
 

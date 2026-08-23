@@ -193,9 +193,32 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
 // Update Item with tenant boundary validation
 proxyRouter.patch('/items/:collection/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const { collection, id } = req.params;
-  const { organizationId } = req.user!;
+  const { userId, organizationId } = req.user!;
 
   try {
+    // Special handling for organizations collection
+    if (collection === 'organizations') {
+      const orgId = Number(id);
+      const memberships = await DirectusAdminClient.getItems('organization_users', {
+        filter: {
+          _and: [
+            { user_id: { _eq: userId } },
+            { organization_id: { _eq: orgId } },
+          ],
+        },
+        limit: 1,
+      });
+
+      if (memberships.length === 0 || memberships[0].role !== 'owner') {
+        return res.status(403).json({ error: 'فقط مالک سازمان (Owner) مجاز به ویرایش مشخصات سازمان است.' });
+      }
+
+      const payload = { ...req.body };
+      delete payload.id;
+      const updated = await DirectusAdminClient.updateItem('organizations', orgId, payload);
+      return res.json({ data: updated });
+    }
+
     // 1. Verify existence and tenant ownership
     if (TENANT_SCOPED_COLLECTIONS.has(collection)) {
       const existing = await DirectusAdminClient.getItemById(collection, id);

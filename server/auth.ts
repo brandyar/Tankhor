@@ -414,3 +414,72 @@ authRouter.post('/switch-org', requireAuth, async (req: AuthenticatedRequest, re
     return res.status(500).json({ error: error.message || 'خطا در تغییر سازمان' });
   }
 });
+
+// Create new organization and assign current user as owner
+authRouter.post('/create-org', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { name, slug, currency, timezone, plan } = req.body;
+    const { userId, email } = req.user!;
+
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: 'وارد کردن نام سازمان الزامی است.' });
+    }
+
+    const orgName = String(name).trim();
+    const orgSlug = slug && String(slug).trim()
+      ? String(slug).trim().toLowerCase().replace(/\s+/g, '-')
+      : `org-${Date.now().toString(36)}`;
+    const orgCurrency = currency || 'TOMAN';
+    const orgTimezone = timezone || 'Asia/Tehran';
+    const orgPlan = plan || 'free';
+
+    // 1. Create Organization in Directus
+    const newOrg = await DirectusAdminClient.createItem('organizations', {
+      name: orgName,
+      slug: orgSlug,
+      currency: orgCurrency,
+      timezone: orgTimezone,
+      plan: orgPlan,
+      status: 'active',
+    });
+
+    // 2. Create organization_users membership as owner
+    await DirectusAdminClient.createItem('organization_users', {
+      organization_id: newOrg.id,
+      user_id: userId,
+      role: 'owner',
+      status: 'active',
+    });
+
+    // 3. Create default warehouse for this organization
+    try {
+      await DirectusAdminClient.createItem('warehouses', {
+        organization_id: newOrg.id,
+        name: 'انبار مرکزی',
+        code: 'WH-CENTRAL',
+        status: 'active',
+        is_default: true,
+      });
+    } catch (e: any) {
+      console.warn('[Create Org] Default warehouse auto-creation skipped:', e.message);
+    }
+
+    // 4. Generate new JWT token scoped to this new organization with owner role
+    const newToken = generateToken({
+      userId,
+      email,
+      organizationId: newOrg.id,
+      role: 'owner',
+    });
+
+    return res.status(201).json({
+      success: true,
+      token: newToken,
+      organization: newOrg,
+      role: 'owner',
+    });
+  } catch (error: any) {
+    console.error('[Auth /create-org Error]:', error);
+    return res.status(500).json({ error: error.message || 'خطا در ایجاد سازمان جدید' });
+  }
+});
