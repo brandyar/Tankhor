@@ -35,11 +35,27 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       setIsLoading(true);
       const adapter = storageManager.getAdapter();
-      const list = await adapter.getOrganizations();
+      let list = await adapter.getOrganizations();
+
+      // Filter out placeholder dummy "سازمان اصلی" if real organizations exist
+      if (list.length > 1) {
+        const nonPlaceholder = list.filter((o) => o.slug !== 'main-org' && o.name !== 'سازمان اصلی');
+        if (nonPlaceholder.length > 0) {
+          list = nonPlaceholder;
+        }
+      }
+
       setOrganizations(list);
 
       const savedOrgId = localStorage.getItem('tankhor_active_org_id');
-      const found = list.find((o) => String(o.id) === savedOrgId) || list[0] || null;
+      let found: Organization | null = null;
+      if (savedOrgId) {
+        found = list.find((o) => String(o.id) === String(savedOrgId)) || null;
+      }
+      if (!found && list.length > 0) {
+        found = list[0];
+      }
+
       setActiveOrganization(found);
       if (found && (!savedOrgId || savedOrgId !== String(found.id))) {
         localStorage.setItem('tankhor_active_org_id', String(found.id));
@@ -53,7 +69,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   useEffect(() => {
     refreshOrganizations();
-  }, [refreshOrganizations, isCloudAuthenticated]);
+  }, [refreshOrganizations, isCloudAuthenticated, user?.id]);
 
   const selectOrganization = async (id: number) => {
     const found = organizations.find((o) => o.id === id);

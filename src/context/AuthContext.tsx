@@ -77,11 +77,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (token) {
       setIsLoading(true);
       directusClient.getMe()
-        .then((userData) => {
+        .then(async (userData) => {
           if (userData && userData.id) {
             setUser(userData);
             setIsCloudAuthenticated(true);
+            storageManager.setMode('cloud_synced');
             localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
+
+            const activeOrg = userData.active_organization || userData.activeOrganization;
+            if (activeOrg && activeOrg.id) {
+              localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+              await storageManager.getLocalAdapter().saveOrganization(activeOrg);
+            }
+            if (Array.isArray(userData.organizations)) {
+              for (const org of userData.organizations) {
+                if (org && org.id && org.name) {
+                  await storageManager.getLocalAdapter().saveOrganization(org);
+                }
+              }
+            }
           } else {
             handleOfflineFallback(cachedUserRaw);
           }
@@ -118,13 +132,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoginError(null);
     setIsLoading(true);
     try {
-      await directusClient.login(email, pass);
+      const loginRes = await directusClient.login(email, pass);
       const userData = await directusClient.getMe();
 
       if (userData && userData.id) {
         setUser(userData);
         setIsCloudAuthenticated(true);
+        storageManager.setMode('cloud_synced');
         localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
+
+        const activeOrg = userData.active_organization || userData.activeOrganization || loginRes.activeOrganization;
+        if (activeOrg && activeOrg.id) {
+          localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+          await storageManager.getLocalAdapter().saveOrganization(activeOrg);
+        }
+        if (Array.isArray(userData.organizations)) {
+          for (const org of userData.organizations) {
+            if (org && org.id && org.name) {
+              await storageManager.getLocalAdapter().saveOrganization(org);
+            }
+          }
+        }
+
         setIsLoginModalOpen(false);
         return true;
       }
@@ -174,7 +203,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // 1. Send registration request with user & custom organization data
-      await directusClient.register({
+      const regRes = await directusClient.register({
         first_name: firstName,
         last_name: lastName,
         email: email,
@@ -191,7 +220,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userData && userData.id) {
         setUser(userData);
         setIsCloudAuthenticated(true);
+        storageManager.setMode('cloud_synced');
         localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
+
+        const activeOrg = userData.active_organization || userData.activeOrganization || regRes.organization || regRes.activeOrganization;
+        if (activeOrg && activeOrg.id) {
+          localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+          await storageManager.getLocalAdapter().saveOrganization(activeOrg);
+        }
+        if (Array.isArray(userData.organizations)) {
+          for (const org of userData.organizations) {
+            if (org && org.id && org.name) {
+              await storageManager.getLocalAdapter().saveOrganization(org);
+            }
+          }
+        }
+
         setIsLoginModalOpen(false);
         return true;
       }
@@ -224,6 +268,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // Ignore network errors
     } finally {
+      storageManager.setMode('local_offline');
       localStorage.removeItem(CACHED_USER_KEY);
       localStorage.removeItem('tankhor_directus_token');
       localStorage.removeItem('tankhor_directus_refresh_token');

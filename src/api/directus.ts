@@ -143,8 +143,9 @@ class DirectusClient {
     if (res.token) {
       this.setToken(res.token);
     }
-    if (res.organization?.id && typeof window !== 'undefined') {
-      localStorage.setItem('tankhor_active_org_id', String(res.organization.id));
+    const orgId = res.activeOrganization?.id || res.organization?.id;
+    if (orgId && typeof window !== 'undefined') {
+      localStorage.setItem('tankhor_active_org_id', String(orgId));
     }
     return res;
   }
@@ -157,8 +158,9 @@ class DirectusClient {
     if (res.token) {
       this.setToken(res.token);
     }
-    if (res.activeOrganization?.id && typeof window !== 'undefined') {
-      localStorage.setItem('tankhor_active_org_id', String(res.activeOrganization.id));
+    const orgId = res.activeOrganization?.id || targetOrganizationId;
+    if (orgId && typeof window !== 'undefined') {
+      localStorage.setItem('tankhor_active_org_id', String(orgId));
     }
     return res;
   }
@@ -177,10 +179,23 @@ class DirectusClient {
     if (res.token) {
       this.setToken(res.token);
     }
-    if (res.organization?.id && typeof window !== 'undefined') {
-      localStorage.setItem('tankhor_active_org_id', String(res.organization.id));
+    const orgId = res.activeOrganization?.id || res.organization?.id;
+    if (orgId && typeof window !== 'undefined') {
+      localStorage.setItem('tankhor_active_org_id', String(orgId));
     }
-    return res.organization;
+    return res.organization || res.activeOrganization;
+  }
+
+  public async getOrganizations(): Promise<any[]> {
+    try {
+      const res = await this.request('/organizations');
+      if (Array.isArray(res)) return res;
+      if (res && Array.isArray(res.data)) return res.data;
+      if (res && Array.isArray(res.organizations)) return res.organizations;
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   // Generic collection helpers

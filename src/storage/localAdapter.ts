@@ -73,17 +73,23 @@ export class LocalOfflineAdapter implements IStorageProvider {
   }
 
   async saveOrganization(org: Partial<Organization>): Promise<Organization> {
-    const list = await this.getOrganizations();
+    let list = await this.getOrganizations();
     if (org.id) {
-      const idx = list.findIndex((o) => o.id === org.id);
+      const idx = list.findIndex((o) => Number(o.id) === Number(org.id));
       if (idx !== -1) {
         list[idx] = { ...list[idx], ...org, date_updated: new Date().toISOString() };
         this.setItem('organizations', list);
         return list[idx];
       }
     }
+
+    // If saving a real organization and only default placeholder exists, purge placeholder
+    if (org.name && org.name !== 'سازمان اصلی' && list.length === 1 && list[0].slug === 'main-org') {
+      list = [];
+    }
+
     const newOrg: Organization = {
-      id: this.generateUniqueId(list),
+      id: org.id || this.generateUniqueId(list),
       name: org.name || 'سازمان جدید',
       slug: org.slug || 'new-org',
       currency: org.currency || 'TOMAN',

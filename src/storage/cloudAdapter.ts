@@ -17,17 +17,38 @@ export class CloudDirectusAdapter implements IStorageProvider {
   // Organizations
   async getOrganizations(): Promise<Organization[]> {
     try {
-      return await directusClient.getItems<Organization>('organizations');
-    } catch {
-      return this.localAdapter.getOrganizations();
+      let orgs = await directusClient.getOrganizations();
+      if (!Array.isArray(orgs) || orgs.length === 0) {
+        orgs = await directusClient.getItems<Organization>('organizations');
+      }
+
+      const validOrgs: Organization[] = (Array.isArray(orgs) ? orgs : [])
+        .filter((o: any) => o && typeof o === 'object' && o.id && o.name);
+
+      if (validOrgs.length > 0) {
+        // Cache to local adapter for offline resilience
+        for (const org of validOrgs) {
+          await this.localAdapter.saveOrganization(org);
+        }
+        return validOrgs;
+      }
+      return await this.localAdapter.getOrganizations();
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] getOrganizations fallback:', err?.message || err);
+      return await this.localAdapter.getOrganizations();
     }
   }
 
   async getOrganizationById(id: number): Promise<Organization | null> {
     try {
-      return await directusClient.getItemById<Organization>('organizations', id);
+      const org = await directusClient.getItemById<Organization>('organizations', id);
+      if (org && org.id && org.name) {
+        await this.localAdapter.saveOrganization(org);
+        return org;
+      }
+      return await this.localAdapter.getOrganizationById(id);
     } catch {
-      return this.localAdapter.getOrganizationById(id);
+      return await this.localAdapter.getOrganizationById(id);
     }
   }
 

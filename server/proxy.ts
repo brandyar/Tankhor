@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
 import { DirectusAdminClient } from './directusAdmin';
-import { requireAuth, AuthenticatedRequest } from './auth';
+import { requireAuth, AuthenticatedRequest, getUserOrganizations } from './auth';
 
 const upload = multer({ limits: { fileSize: 15 * 1024 * 1024 } }); // 15MB
 
@@ -22,13 +22,8 @@ proxyRouter.get('/health', (req, res) => {
 proxyRouter.get('/organizations', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { userId, organizationId } = req.user!;
-    const memberships = await DirectusAdminClient.getItems('organization_users', {
-      filter: { user_id: { _eq: userId } },
-      fields: ['id', 'role', 'status', 'organization_id.*'],
-    }).catch(() => []);
-
-    const orgs = memberships.map((m: any) => m.organization_id).filter(Boolean);
-    return res.json(orgs);
+    const { organizations } = await getUserOrganizations(userId, organizationId);
+    return res.json(organizations);
   } catch (error: any) {
     return res.status(500).json({ error: error.message || 'Failed to fetch organizations' });
   }
@@ -96,12 +91,8 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
 
   try {
     if (collection === 'organizations') {
-      const memberships = await DirectusAdminClient.getItems('organization_users', {
-        filter: { user_id: { _eq: userId } },
-        fields: ['id', 'role', 'status', 'organization_id.*'],
-      }).catch(() => []);
-      const orgs = memberships.map((m: any) => m.organization_id).filter(Boolean);
-      return res.json({ data: orgs });
+      const { organizations } = await getUserOrganizations(userId, organizationId);
+      return res.json({ data: organizations });
     }
 
     let clientFilter: any = {};

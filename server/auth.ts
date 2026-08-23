@@ -43,6 +43,92 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
   next();
 }
 
+/**
+ * Robustly resolve all full Organization objects that a user belongs to.
+ * Handles both populated Directus relationships and raw organization_id foreign key integers.
+ */
+export async function getUserOrganizations(userId: string, targetActiveOrgId?: number): Promise<{ activeOrganization: any; organizations: any[] }> {
+  try {
+    // 1. Fetch memberships from organization_users
+    const memberships = await DirectusAdminClient.getItems('organization_users', {
+      filter: { user_id: { _eq: userId } },
+      fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id'],
+    }).catch(() => []);
+
+    const orgList: any[] = [];
+    const orgIdsToFetch = new Set<number>();
+
+    for (const m of memberships) {
+      if (typeof m.organization_id === 'object' && m.organization_id && m.organization_id.id && m.organization_id.name) {
+        orgList.push({
+          ...m.organization_id,
+          user_role: m.role || 'owner',
+        });
+      } else if (m.organization_id) {
+        const idNum = Number(typeof m.organization_id === 'object' ? m.organization_id.id : m.organization_id);
+        if (idNum && !isNaN(idNum)) {
+          orgIdsToFetch.add(idNum);
+        }
+      }
+    }
+
+    if (targetActiveOrgId && !orgList.some((o) => Number(o.id) === Number(targetActiveOrgId))) {
+      orgIdsToFetch.add(Number(targetActiveOrgId));
+    }
+
+    // 2. Fetch full organization objects for all collected IDs
+    for (const orgId of Array.from(orgIdsToFetch)) {
+      if (!orgList.some((o) => Number(o.id) === Number(orgId))) {
+        try {
+          const org = await DirectusAdminClient.getItemById('organizations', orgId);
+          if (org && org.id && org.name) {
+            const matchingMembership = memberships.find(
+              (m: any) => Number(typeof m.organization_id === 'object' ? m.organization_id?.id : m.organization_id) === Number(orgId)
+            );
+            orgList.push({
+              ...org,
+              user_role: matchingMembership?.role || 'owner',
+            });
+          }
+        } catch (fetchErr: any) {
+          console.warn(`[getUserOrganizations] Could not load organization #${orgId}:`, fetchErr.message);
+        }
+      }
+    }
+
+    // 3. Deduplicate organizations by ID
+    const uniqueOrgs: any[] = [];
+    const seenIds = new Set<number>();
+    for (const org of orgList) {
+      const idNum = Number(org.id);
+      if (idNum && !seenIds.has(idNum)) {
+        seenIds.add(idNum);
+        uniqueOrgs.push(org);
+      }
+    }
+
+    // 4. Resolve active organization
+    let activeOrg = (targetActiveOrgId && uniqueOrgs.find((o) => Number(o.id) === Number(targetActiveOrgId))) || uniqueOrgs[0] || null;
+
+    if (!activeOrg && targetActiveOrgId) {
+      try {
+        activeOrg = await DirectusAdminClient.getItemById('organizations', targetActiveOrgId);
+        if (activeOrg && activeOrg.id && !seenIds.has(Number(activeOrg.id))) {
+          uniqueOrgs.push(activeOrg);
+        }
+      } catch {}
+    }
+
+    return {
+      activeOrganization: activeOrg,
+      organizations: uniqueOrgs,
+    };
+  } catch (error: any) {
+    console.error('[getUserOrganizations Error]:', error);
+    return { activeOrganization: null, organizations: [] };
+  }
+}
+
 export const authRouter = Router();
 
 // Register new user + provision custom Organization + initial warehouse/category
@@ -255,16 +341,12 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 
     const userId = userRecord.id;
 
-    // 3. Fetch user's organizations from organization_users
-    let orgMemberships = await DirectusAdminClient.getItems('organization_users', {
-      filter: { user_id: { _eq: userId } },
-      fields: ['id', 'role', 'status', 'organization_id.*'],
-    }).catch(() => []);
+    // 3. Fetch user's organizations and active org
+    const orgsData = await getUserOrganizations(userId);
+    let activeOrg = orgsData.activeOrganization;
+    let userRole = activeOrg?.user_role || 'owner';
 
-    let activeOrg: any = null;
-    let userRole = 'owner';
-
-    if (orgMemberships.length === 0) {
+    if (!activeOrg || orgsData.organizations.length === 0) {
       // Auto-create a default organization if none exists
       const orgName = userRecord.first_name ? `فروشگاه ${userRecord.first_name}` : 'فروشگاه من';
       const createdOrg = await DirectusAdminClient.createItem('organizations', {
@@ -285,13 +367,7 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 
       activeOrg = createdOrg;
       userRole = 'owner';
-    } else {
-      // Extract populated organization
-      const firstMembership = orgMemberships[0];
-      userRole = firstMembership.role || 'owner';
-      activeOrg = typeof firstMembership.organization_id === 'object'
-        ? firstMembership.organization_id
-        : await DirectusAdminClient.getItemById('organizations', firstMembership.organization_id);
+      orgsData.organizations = [createdOrg];
     }
 
     // 4. Generate user JWT
@@ -318,7 +394,7 @@ authRouter.post('/login', async (req: Request, res: Response) => {
       token,
       user: userProfile,
       activeOrganization: activeOrg,
-      organizations: orgMemberships.map((m: any) => m.organization_id).filter(Boolean),
+      organizations: orgsData.organizations,
     });
   } catch (error: any) {
     console.error('[Auth Login Error]:', error);
@@ -337,16 +413,8 @@ authRouter.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Respon
       return res.status(404).json({ error: 'کاربر یافت نشد.' });
     }
 
-    // Fetch organization details
-    const activeOrg = await DirectusAdminClient.getItemById('organizations', organizationId).catch(() => null);
-
-    // Fetch all user organizations
-    const memberships = await DirectusAdminClient.getItems('organization_users', {
-      filter: { user_id: { _eq: userId } },
-      fields: ['id', 'role', 'status', 'organization_id.*'],
-    }).catch(() => []);
-
-    const organizations = memberships.map((m: any) => m.organization_id).filter(Boolean);
+    // Fetch full organization details and all memberships
+    const { activeOrganization, organizations } = await getUserOrganizations(userId, organizationId);
 
     return res.json({
       id: user.id,
@@ -356,9 +424,10 @@ authRouter.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Respon
       avatar: user.avatar,
       title: user.title,
       status: user.status,
-      role: req.user!.role,
-      active_organization_id: organizationId,
-      active_organization: activeOrg,
+      role: req.user!.role || activeOrganization?.user_role || 'owner',
+      active_organization_id: activeOrganization?.id || organizationId,
+      active_organization: activeOrganization,
+      activeOrganization: activeOrganization,
       organizations: organizations,
     });
   } catch (error: any) {
@@ -377,23 +446,13 @@ authRouter.post('/switch-org', requireAuth, async (req: AuthenticatedRequest, re
       return res.status(400).json({ error: 'targetOrganizationId is required' });
     }
 
-    // Verify user belongs to targetOrganizationId
-    const memberships = await DirectusAdminClient.getItems('organization_users', {
-      filter: {
-        _and: [
-          { user_id: { _eq: userId } },
-          { organization_id: { _eq: targetOrganizationId } },
-        ],
-      },
-      limit: 1,
-    });
+    const { activeOrganization, organizations } = await getUserOrganizations(userId, Number(targetOrganizationId));
 
-    if (memberships.length === 0) {
+    if (!activeOrganization) {
       return res.status(403).json({ error: 'شما به این سازمان دسترسی ندارید.' });
     }
 
-    const membership = memberships[0];
-    const role = membership.role || 'viewer';
+    const role = activeOrganization.user_role || 'viewer';
 
     const newToken = generateToken({
       userId,
@@ -402,12 +461,11 @@ authRouter.post('/switch-org', requireAuth, async (req: AuthenticatedRequest, re
       role,
     });
 
-    const activeOrg = await DirectusAdminClient.getItemById('organizations', targetOrganizationId);
-
     return res.json({
       success: true,
       token: newToken,
-      activeOrganization: activeOrg,
+      activeOrganization,
+      organizations,
       role,
     });
   } catch (error: any) {
@@ -472,10 +530,14 @@ authRouter.post('/create-org', requireAuth, async (req: AuthenticatedRequest, re
       role: 'owner',
     });
 
+    const { organizations } = await getUserOrganizations(userId, newOrg.id);
+
     return res.status(201).json({
       success: true,
       token: newToken,
       organization: newOrg,
+      activeOrganization: newOrg,
+      organizations: organizations.length > 0 ? organizations : [newOrg],
       role: 'owner',
     });
   } catch (error: any) {
