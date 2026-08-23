@@ -10,6 +10,22 @@ import {
   SizeGuideMeasurement, SizeGuideValue
 } from '../types';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function cleanUuid(val: any): string | null {
+  if (typeof val === 'string' && UUID_REGEX.test(val.trim())) {
+    return val.trim();
+  }
+  return null;
+}
+
+function cleanInt(val: any): number | null {
+  if (val === undefined || val === null || val === '') return null;
+  const num = Number(val);
+  if (isNaN(num) || num <= 0) return null;
+  return Math.floor(num);
+}
+
 export class CloudDirectusAdapter implements IStorageProvider {
   public mode: StorageMode = 'cloud_synced';
   private localAdapter = new LocalOfflineAdapter();
@@ -81,8 +97,12 @@ export class CloudDirectusAdapter implements IStorageProvider {
     try {
       const products = await directusClient.getItems<Product>('products', query);
       const [variants, inventoryItems] = await Promise.all([
-        directusClient.getItems<ProductVariant>('product_variants', {}).catch(() => []),
-        directusClient.getItems<InventoryItem>('inventory_items', {}).catch(() => []),
+        directusClient.getItems<ProductVariant>('product_variants', {
+          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+        }).catch(() => []),
+        directusClient.getItems<InventoryItem>('inventory_items', {
+          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+        }).catch(() => []),
       ]);
 
       return products.map((p) => {
@@ -120,16 +140,33 @@ export class CloudDirectusAdapter implements IStorageProvider {
     const payload: any = { ...product };
     delete payload.variants_count;
     delete payload.total_stock;
+    delete payload.brand;
+    delete payload.category;
+    delete payload.collection;
+    delete payload.season;
+    delete payload.size_guide_template;
+    delete payload.variants;
+
+    payload.main_image = cleanUuid(payload.main_image);
+    payload.brand_id = cleanInt(payload.brand_id);
+    payload.category_id = cleanInt(payload.category_id);
+    payload.collection_id = cleanInt(payload.collection_id);
+    payload.season_id = cleanInt(payload.season_id);
+    payload.size_guide_template_id = cleanInt(payload.size_guide_template_id);
+    payload.sort = Number(payload.sort) || 0;
+    if (!payload.status) payload.status = 'published';
+
+    const id = payload.id ? Number(payload.id) : undefined;
+    delete payload.id;
+
     try {
-      if (payload.id) {
-        return await directusClient.updateItem<Product>('products', payload.id, payload);
+      if (id) {
+        return await directusClient.updateItem<Product>('products', id, payload);
       }
       return await directusClient.createItem<Product>('products', payload);
     } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] Cloud saveProduct failed, falling back to local adapter:', err?.message || err);
-      const saved = await this.localAdapter.saveProduct(product);
-      StorageSyncManager.enqueue({ action: product.id ? 'UPDATE' : 'CREATE', collection: 'products', payload: saved });
-      return saved;
+      console.error('[CloudDirectusAdapter] Cloud saveProduct failed:', err?.message || err);
+      throw err;
     }
   }
 
@@ -137,10 +174,8 @@ export class CloudDirectusAdapter implements IStorageProvider {
     try {
       return await directusClient.deleteItem('products', id);
     } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] Cloud deleteProduct failed, falling back to local adapter:', err?.message || err);
-      const res = await this.localAdapter.deleteProduct(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'products', payload: { id } });
-      return res;
+      console.error('[CloudDirectusAdapter] Cloud deleteProduct failed:', err?.message || err);
+      throw err;
     }
   }
 
@@ -195,17 +230,33 @@ export class CloudDirectusAdapter implements IStorageProvider {
     delete payload.color_name;
     delete payload.size_name;
     delete payload.product_title;
+    delete payload.color;
+    delete payload.size;
+    delete payload.product;
+    delete payload._tempId;
+
+    payload.image = cleanUuid(payload.image);
+    payload.color_id = cleanInt(payload.color_id);
+    payload.size_id = cleanInt(payload.size_id);
+    payload.product_id = Number(payload.product_id);
+    payload.price = payload.price !== undefined && payload.price !== '' ? Number(payload.price) : 0;
+    payload.cost = payload.cost !== undefined && payload.cost !== '' ? Number(payload.cost) : 0;
+    payload.sort = Number(payload.sort) || 0;
+    if (!payload.status) payload.status = 'published';
+
+    const id = payload.id ? Number(payload.id) : undefined;
+    delete payload.id;
 
     try {
       let saved: ProductVariant;
-      if (payload.id) {
-        saved = await directusClient.updateItem<ProductVariant>('product_variants', payload.id, payload);
+      if (id) {
+        saved = await directusClient.updateItem<ProductVariant>('product_variants', id, payload);
       } else {
         saved = await directusClient.createItem<ProductVariant>('product_variants', payload);
       }
 
       if (stockQty !== undefined && stockQty !== null) {
-        const qtyNum = Number(stockQty) || 0;
+        const qtyNum = Math.max(0, Number(stockQty) || 0);
         const existingInventory = await directusClient.getItems<InventoryItem>('inventory_items', {
           filter: { variant_id: { _eq: saved.id } },
         }).catch(() => []);
@@ -214,28 +265,49 @@ export class CloudDirectusAdapter implements IStorageProvider {
           await directusClient.updateItem<InventoryItem>('inventory_items', existingInventory[0].id, {
             quantity: qtyNum,
             available_quantity: qtyNum,
-            updated_at: new Date().toISOString(),
-          }).catch(() => null);
+          }).catch((err) => {
+            console.warn('[CloudDirectusAdapter] Update inventory failed:', err?.message || err);
+          });
         } else {
+          // Resolve effective warehouse for this organization
+          let targetWarehouseId = warehouseId;
+          const warehouses = await directusClient.getItems<Warehouse>('warehouses', {}).catch(() => []);
+          const orgWh = warehouses.find(w => Number(w.organization_id) === Number(saved.organization_id)) || warehouses[0];
+          if (orgWh && orgWh.id) {
+            targetWarehouseId = orgWh.id;
+          } else {
+            try {
+              const newWh = await directusClient.createItem<Warehouse>('warehouses', {
+                organization_id: saved.organization_id,
+                name: 'انبار اصلی',
+                code: 'MAIN',
+                type: 'warehouse',
+                status: 'active',
+              });
+              targetWarehouseId = newWh.id;
+            } catch (whErr) {
+              console.warn('[CloudDirectusAdapter] Auto-create warehouse failed:', whErr);
+            }
+          }
+
           await directusClient.createItem<InventoryItem>('inventory_items', {
-            organization_id: saved.organization_id || 1,
+            organization_id: saved.organization_id,
             variant_id: saved.id,
-            warehouse_id: warehouseId,
+            warehouse_id: targetWarehouseId,
             quantity: qtyNum,
             reserved_quantity: 0,
             available_quantity: qtyNum,
             damaged_quantity: 0,
-            updated_at: new Date().toISOString(),
-          }).catch(() => null);
+          }).catch((err) => {
+            console.warn('[CloudDirectusAdapter] Create inventory failed:', err?.message || err);
+          });
         }
       }
 
       return { ...saved, stock_quantity: stockQty !== undefined ? Number(stockQty) : 0 };
     } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] Cloud saveVariant failed, falling back to local adapter:', err?.message || err);
-      const savedLocal = await this.localAdapter.saveVariant(variant, warehouseId);
-      StorageSyncManager.enqueue({ action: variant.id ? 'UPDATE' : 'CREATE', collection: 'product_variants', payload: savedLocal });
-      return savedLocal;
+      console.error('[CloudDirectusAdapter] Cloud saveVariant failed:', err?.message || err);
+      throw err;
     }
   }
 
@@ -250,10 +322,8 @@ export class CloudDirectusAdapter implements IStorageProvider {
       }
       return await directusClient.deleteItem('product_variants', id);
     } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] Cloud deleteVariant failed, falling back to local adapter:', err?.message || err);
-      const res = await this.localAdapter.deleteVariant(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'product_variants', payload: { id } });
-      return res;
+      console.error('[CloudDirectusAdapter] Cloud deleteVariant failed:', err?.message || err);
+      throw err;
     }
   }
 

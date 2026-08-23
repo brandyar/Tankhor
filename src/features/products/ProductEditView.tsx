@@ -433,7 +433,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
   const handleSaveProductAndVariants = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!title.trim()) {
-      alert('لطفاً عنوان محصول را وارد کنید.');
+      alert(isPersian ? 'لطفاً عنوان محصول را وارد کنید.' : 'Please enter a product title.');
       return;
     }
 
@@ -445,51 +445,56 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
 
       // 1. Save main Product record to Directus / Storage
       const savedProduct = await adapter.saveProduct({
-        id: productId || undefined,
+        id: productId ? Number(productId) : undefined,
         organization_id: orgId,
         title: title.trim(),
         slug: generatedSlug,
-        brand_id: brandId ? Number(brandId) : undefined,
-        category_id: categoryId ? Number(categoryId) : undefined,
-        collection_id: collectionId ? Number(collectionId) : undefined,
-        season_id: seasonId ? Number(seasonId) : undefined,
-        size_guide_template_id: sizeGuideTemplateId ? Number(sizeGuideTemplateId) : undefined,
-        main_image: mainImage,
-        tags,
+        brand_id: brandId && !isNaN(Number(brandId)) && Number(brandId) > 0 ? Number(brandId) : undefined,
+        category_id: categoryId && !isNaN(Number(categoryId)) && Number(categoryId) > 0 ? Number(categoryId) : undefined,
+        collection_id: collectionId && !isNaN(Number(collectionId)) && Number(collectionId) > 0 ? Number(collectionId) : undefined,
+        season_id: seasonId && !isNaN(Number(seasonId)) && Number(seasonId) > 0 ? Number(seasonId) : undefined,
+        size_guide_template_id: sizeGuideTemplateId && !isNaN(Number(sizeGuideTemplateId)) && Number(sizeGuideTemplateId) > 0 ? Number(sizeGuideTemplateId) : undefined,
+        main_image: mainImage && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(mainImage.trim()) ? mainImage.trim() : undefined,
+        tags: tags ? tags.trim() : undefined,
         sort: sort !== '' ? Number(sort) : 0,
-        description,
+        description: description ? description.trim() : undefined,
         status,
       });
 
       // 2. Process deletions first
       for (const dId of deletedVariantIds) {
-        await adapter.deleteVariant(dId);
+        if (dId && !isNaN(Number(dId))) {
+          await adapter.deleteVariant(Number(dId)).catch((delErr) => {
+            console.warn('[ProductEditView] Delete variant warning:', delErr);
+          });
+        }
       }
 
       // 3. Save / Update all variant rows in table
       for (const v of variants) {
         await adapter.saveVariant({
-          id: v.id,
+          id: v.id ? Number(v.id) : undefined,
           organization_id: orgId,
           product_id: savedProduct.id,
-          color_id: v.color_id ? Number(v.color_id) : undefined,
-          size_id: v.size_id ? Number(v.size_id) : undefined,
-          sku: v.sku || `SKU-${Date.now().toString().slice(-6)}`,
-          barcode: v.barcode || '',
-          price: v.price !== undefined ? Number(v.price) : 0,
-          cost: v.cost !== undefined ? Number(v.cost) : 0,
-          stock_quantity: v.stock_quantity !== undefined ? Number(v.stock_quantity) : 0,
-          image: v.image || '',
+          color_id: v.color_id && !isNaN(Number(v.color_id)) && Number(v.color_id) > 0 ? Number(v.color_id) : undefined,
+          size_id: v.size_id && !isNaN(Number(v.size_id)) && Number(v.size_id) > 0 ? Number(v.size_id) : undefined,
+          sku: v.sku ? v.sku.trim() : `SKU-${Date.now().toString().slice(-6)}`,
+          barcode: v.barcode ? v.barcode.trim() : undefined,
+          price: v.price !== undefined && v.price !== '' ? Number(v.price) : 0,
+          cost: v.cost !== undefined && v.cost !== '' ? Number(v.cost) : 0,
+          stock_quantity: v.stock_quantity !== undefined && v.stock_quantity !== '' ? Number(v.stock_quantity) : 0,
+          image: v.image && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.image.trim()) ? v.image.trim() : undefined,
           status: v.status || 'published',
-          sort: v.sort || 0,
+          sort: v.sort !== undefined ? Number(v.sort) : 0,
         });
       }
 
       onSaved();
       onBack();
-    } catch (err) {
+    } catch (err: any) {
       console.error('[ProductEditView] Error saving product & variants:', err);
-      alert('خطا در ذخیره‌سازی محصول و واریانت‌ها');
+      const errMsg = err?.message || (isPersian ? 'خطای ناشناخته در ذخیره‌سازی' : 'Unknown error');
+      alert(`${isPersian ? 'خطا در ذخیره‌سازی محصول و واریانت‌ها' : 'Error saving product and variants'}: ${errMsg}`);
     } finally {
       setIsSaving(false);
     }

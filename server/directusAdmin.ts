@@ -52,6 +52,7 @@ export class DirectusAdminClient {
 
       if (!response.ok) {
         const errorMsg = data.errors?.[0]?.message || data.message || `Directus request failed with status ${response.status}`;
+        console.error(`[DirectusAdminClient] Directus error on ${endpoint} (${response.status}):`, JSON.stringify(data));
         throw new Error(errorMsg);
       }
 
