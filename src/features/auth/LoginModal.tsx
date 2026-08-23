@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
@@ -13,7 +13,6 @@ import {
   Building2,
   Boxes,
   Warehouse,
-  ChevronRight,
   ChevronLeft,
   Coins,
   Sparkles,
@@ -41,6 +40,12 @@ export const LoginModal: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  // Refs for fail-safe DOM reading
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const firstNameRef = useRef<HTMLInputElement>(null);
+  const lastNameRef = useRef<HTMLInputElement>(null);
+
   // Step 2: Organization & Initial Tenant Seed
   const [orgName, setOrgName] = useState('');
   const [orgSlug, setOrgSlug] = useState('');
@@ -50,54 +55,94 @@ export const LoginModal: React.FC = () => {
 
   const [formValidationError, setFormValidationError] = useState<string | null>(null);
 
-  const handleNextStep = (e: React.FormEvent) => {
-    e.preventDefault();
+  const getEffectiveEmail = (): string => {
+    return (email || emailRef.current?.value || '').trim();
+  };
+
+  const getEffectivePassword = (): string => {
+    return password || passwordRef.current?.value || '';
+  };
+
+  const getEffectiveFirstName = (): string => {
+    return (firstName || firstNameRef.current?.value || '').trim();
+  };
+
+  const getEffectiveLastName = (): string => {
+    return (lastName || lastNameRef.current?.value || '').trim();
+  };
+
+  const handleNextStep = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setFormValidationError(null);
 
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
+    const effEmail = getEffectiveEmail();
+    const effPass = getEffectivePassword();
+    const effFirst = getEffectiveFirstName();
+    const effLast = getEffectiveLastName();
+
+    if (!effFirst || !effLast || !effEmail || !effPass) {
       setFormValidationError('لطفاً تمامی فیلدهای الزامی مشخصات فردی را تکمیل کنید.');
       return;
     }
-    if (password.length < 6) {
+    if (effPass.length < 6) {
       setFormValidationError('رمز عبور باید حداقل ۶ کاراکتر باشد.');
       return;
     }
-    if (password !== confirmPassword) {
+    if (confirmPassword && effPass !== confirmPassword) {
       setFormValidationError('کلمه عبور و تکرار آن یکسان نیستند.');
       return;
     }
 
     // Auto-generate suggested organization name if not set
     if (!orgName) {
-      setOrgName(`فروشگاه ${firstName.trim()} ${lastName.trim()}`);
+      setOrgName(`فروشگاه ${effFirst} ${effLast}`.trim());
     }
     setRegisterStep(2);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormValidationError(null);
+    const effEmail = getEffectiveEmail();
+    const effPass = getEffectivePassword();
+    if (!effEmail || !effPass) {
+      setFormValidationError('لطفاً ایمیل و رمز عبور را وارد کنید.');
+      return;
+    }
+    await login(effEmail, effPass);
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormValidationError(null);
 
-    if (activeTab === 'login') {
-      if (!email || !password) return;
-      await login(email, password);
-    } else {
-      if (!orgName.trim()) {
-        setFormValidationError('لطفاً نام سازمان / فروشگاه خود را وارد کنید.');
-        return;
-      }
-      await register({
-        firstName,
-        lastName,
-        email,
-        pass: password,
-        orgName: orgName.trim(),
-        orgSlug: orgSlug.trim() || undefined,
-        currency,
-        initialCategoryName: initialCategoryName.trim(),
-        initialWarehouseName: initialWarehouseName.trim(),
-      });
+    const effEmail = getEffectiveEmail();
+    const effPass = getEffectivePassword();
+    const effFirst = getEffectiveFirstName();
+    const effLast = getEffectiveLastName();
+
+    if (!effEmail || !effPass) {
+      setFormValidationError('ایمیل یا رمز عبور نامعتبر است. لطفاً به مرحله اول برگردید.');
+      setRegisterStep(1);
+      return;
     }
+
+    if (!orgName.trim()) {
+      setFormValidationError('لطفاً نام سازمان / فروشگاه خود را وارد کنید.');
+      return;
+    }
+
+    await register({
+      firstName: effFirst,
+      lastName: effLast,
+      email: effEmail,
+      pass: effPass,
+      orgName: orgName.trim(),
+      orgSlug: orgSlug.trim() || undefined,
+      currency,
+      initialCategoryName: initialCategoryName.trim(),
+      initialWarehouseName: initialWarehouseName.trim(),
+    });
   };
 
   if (!isLoginModalOpen) return null;
@@ -216,7 +261,7 @@ export const LoginModal: React.FC = () => {
 
         {/* LOGIN FORM */}
         {activeTab === 'login' && (
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={handleLoginSubmit} className="space-y-3">
             <div>
               <label className="block text-xs font-bold text-neutral-700 mb-1">
                 پست الکترونیک (ایمیل) <span className="text-red-500">*</span>
@@ -228,6 +273,7 @@ export const LoginModal: React.FC = () => {
                 <input
                   type="email"
                   required
+                  ref={emailRef}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="آدرس ایمیل..."
@@ -247,6 +293,7 @@ export const LoginModal: React.FC = () => {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
+                  ref={passwordRef}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="کلمه عبور..."
@@ -275,246 +322,247 @@ export const LoginModal: React.FC = () => {
           </form>
         )}
 
-        {/* REGISTER FORM - STEP 1 (Credentials) */}
-        {activeTab === 'register' && registerStep === 1 && (
-          <form onSubmit={handleNextStep} className="space-y-3">
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">
-                  نام <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
-                    <UserIcon className="w-3.5 h-3.5" />
+        {/* REGISTER MULTI-STEP FORM (Keep inputs mounted to prevent password manager unmount wipes) */}
+        {activeTab === 'register' && (
+          <div className="space-y-3">
+            {/* STEP 1: Personal credentials */}
+            <div className={registerStep === 1 ? 'space-y-3' : 'hidden'}>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">
+                    نام <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
+                      <UserIcon className="w-3.5 h-3.5" />
+                    </div>
+                    <input
+                      type="text"
+                      ref={firstNameRef}
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="نام..."
+                      className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                    />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">
+                    نام خانوادگی <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
-                    required
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="نام..."
-                    className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                    ref={lastNameRef}
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="نام خانوادگی..."
+                    className="w-full px-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-neutral-700 mb-1">
-                  نام خانوادگی <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="نام خانوادگی..."
-                  className="w-full px-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-1">
-                پست الکترونیک (ایمیل) <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
-                  <Mail className="w-3.5 h-3.5" />
-                </div>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="آدرس ایمیل..."
-                  className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">
-                  رمز عبور <span className="text-red-500">*</span>
+                  پست الکترونیک (ایمیل) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
-                    <Lock className="w-3.5 h-3.5" />
+                    <Mail className="w-3.5 h-3.5" />
                   </div>
                   <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="حداقل ۶ کاراکتر"
+                    type="email"
+                    ref={emailRef}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="آدرس ایمیل..."
                     className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">
-                  تکرار رمز عبور <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
-                    <Lock className="w-3.5 h-3.5" />
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">
+                    رمز عبور <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
+                      <Lock className="w-3.5 h-3.5" />
+                    </div>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      ref={passwordRef}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="حداقل ۶ کاراکتر"
+                      className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                    />
                   </div>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="تکرار رمز عبور"
-                    className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                  />
                 </div>
-              </div>
-            </div>
 
-            <div className="pt-2">
-              <Button
-                type="submit"
-                variant="primary"
-                className="w-full justify-center py-2 text-xs font-bold flex items-center gap-2"
-              >
-                <span>مرحله بعد: تنظیم مشخصات سازمان</span>
-                <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
-              </Button>
-            </div>
-          </form>
-        )}
-
-        {/* REGISTER FORM - STEP 2 (Organization & Starter Items) */}
-        {activeTab === 'register' && registerStep === 2 && (
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-blue-900 text-xs">
-              <div className="flex items-center gap-1.5 font-bold mb-1">
-                <Sparkles className="w-4 h-4 text-blue-600" />
-                <span>تنظیمات اولیه مستأجر (Organization Setup)</span>
-              </div>
-              <p className="text-[11px] text-blue-700 leading-relaxed">
-                با ثبت این اطلاعات، سازمان اختصاصی شما همراه با اولین دسته‌بندی و انبار مرکزی برای آغاز به کار ساخته خواهد شد.
-              </p>
-            </div>
-
-            {/* Organization Name */}
-            <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-1">
-                نام برند / سازمان / فروشگاه <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
-                  <Building2 className="w-3.5 h-3.5" />
-                </div>
-                <input
-                  type="text"
-                  required
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                  placeholder="مثال: بوتیک تن‌پوش شیراز"
-                  className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                />
-              </div>
-            </div>
-
-            {/* Slug & Currency */}
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">
-                  شناسه انگلیسی (Slug)
-                </label>
-                <input
-                  type="text"
-                  value={orgSlug}
-                  onChange={(e) => setOrgSlug(e.target.value)}
-                  placeholder="مثال: tanpoosh-boutique"
-                  className="w-full px-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">
-                  واحد پولی پیش‌فرض
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
-                    <Coins className="w-3.5 h-3.5" />
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">
+                    تکرار رمز عبور <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
+                      <Lock className="w-3.5 h-3.5" />
+                    </div>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="تکرار رمز عبور"
+                      className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                    />
                   </div>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900 cursor-pointer"
-                  >
-                    <option value="TOMAN">تومان (TOMAN)</option>
-                    <option value="IRR">ریال (IRR)</option>
-                    <option value="USD">دلار (USD)</option>
-                  </select>
                 </div>
+              </div>
+
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={handleNextStep}
+                  className="w-full justify-center py-2 text-xs font-bold flex items-center gap-2"
+                >
+                  <span>مرحله بعد: تنظیم مشخصات سازمان</span>
+                  <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
+                </Button>
               </div>
             </div>
 
-            {/* Starter Items */}
-            <div className="border-t border-neutral-200/80 pt-2.5 space-y-2.5">
-              <p className="text-[11px] font-bold text-neutral-600">اقلام اولیه برای شروع سریع:</p>
-              
+            {/* STEP 2: Organization & Starter Items */}
+            <div className={registerStep === 2 ? 'space-y-3' : 'hidden'}>
+              <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-blue-900 text-xs">
+                <div className="flex items-center gap-1.5 font-bold mb-1">
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <span>تنظیمات اولیه مستأجر (Organization Setup)</span>
+                </div>
+                <p className="text-[11px] text-blue-700 leading-relaxed">
+                  با ثبت این اطلاعات، سازمان اختصاصی شما همراه با اولین دسته‌بندی و انبار مرکزی برای آغاز به کار ساخته خواهد شد.
+                </p>
+              </div>
+
+              {/* Organization Name */}
               <div>
-                <label className="block text-[11px] font-medium text-neutral-700 mb-1">
-                  عنوان دسته‌بندی اولیه محصولات:
+                <label className="block text-xs font-bold text-neutral-700 mb-1">
+                  نام برند / سازمان / فروشگاه <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
-                    <Boxes className="w-3.5 h-3.5" />
+                    <Building2 className="w-3.5 h-3.5" />
                   </div>
                   <input
                     type="text"
-                    value={initialCategoryName}
-                    onChange={(e) => setInitialCategoryName(e.target.value)}
-                    placeholder="نام دسته‌بندی اولیه..."
-                    className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    placeholder="مثال: بوتیک تن‌پوش شیراز"
+                    className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-medium text-neutral-700 mb-1">
-                  عنوان انبار پیش‌فرض:
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
-                    <Warehouse className="w-3.5 h-3.5" />
-                  </div>
+              {/* Slug & Currency */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">
+                    شناسه انگلیسی (Slug)
+                  </label>
                   <input
                     type="text"
-                    value={initialWarehouseName}
-                    onChange={(e) => setInitialWarehouseName(e.target.value)}
-                    placeholder="نام انبار..."
-                    className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                    value={orgSlug}
+                    onChange={(e) => setOrgSlug(e.target.value)}
+                    placeholder="مثال: tanpoosh-boutique"
+                    className="w-full px-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">
+                    واحد پولی پیش‌فرض
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
+                      <Coins className="w-3.5 h-3.5" />
+                    </div>
+                    <select
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900 cursor-pointer"
+                    >
+                      <option value="TOMAN">تومان (TOMAN)</option>
+                      <option value="IRR">ریال (IRR)</option>
+                      <option value="USD">دلار (USD)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Starter Items */}
+              <div className="border-t border-neutral-200/80 pt-2.5 space-y-2.5">
+                <p className="text-[11px] font-bold text-neutral-600">اقلام اولیه برای شروع سریع:</p>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-neutral-700 mb-1">
+                    عنوان دسته‌بندی اولیه محصولات:
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
+                      <Boxes className="w-3.5 h-3.5" />
+                    </div>
+                    <input
+                      type="text"
+                      value={initialCategoryName}
+                      onChange={(e) => setInitialCategoryName(e.target.value)}
+                      placeholder="نام دسته‌بندی اولیه..."
+                      className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-neutral-700 mb-1">
+                    عنوان انبار پیش‌فرض:
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
+                      <Warehouse className="w-3.5 h-3.5" />
+                    </div>
+                    <input
+                      type="text"
+                      value={initialWarehouseName}
+                      onChange={(e) => setInitialWarehouseName(e.target.value)}
+                      placeholder="نام انبار..."
+                      className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2 Form Buttons */}
+              <div className="pt-2 flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRegisterStep(1)}
+                  className="py-2 text-xs"
+                >
+                  بازگشت
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={handleRegisterSubmit}
+                  className="flex-1 justify-center py-2 text-xs font-bold"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'در حال ساخت سازمان و آماده‌سازی پنل...' : 'تکمیل ثبت‌نام و ورود به پنل'}
+                </Button>
               </div>
             </div>
-
-            {/* Step 2 Form Buttons */}
-            <div className="pt-2 flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setRegisterStep(1)}
-                className="py-2 text-xs"
-              >
-                بازگشت
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                className="flex-1 justify-center py-2 text-xs font-bold"
-                disabled={isLoading}
-              >
-                {isLoading ? 'در حال ساخت سازمان و آماده‌سازی پنل...' : 'تکمیل ثبت‌نام و ورود به پنل'}
-              </Button>
-            </div>
-          </form>
+          </div>
         )}
 
         {/* Footer info */}

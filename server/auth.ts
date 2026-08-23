@@ -48,20 +48,29 @@ export const authRouter = Router();
 // Register new user + provision custom Organization + initial warehouse/category
 authRouter.post('/register', async (req: Request, res: Response) => {
   try {
-    const {
-      email,
-      password,
-      first_name,
-      last_name,
-      org_name,
-      org_slug,
-      currency = 'TOMAN',
-      initial_category_name,
-      initial_warehouse_name,
-    } = req.body;
+    let body: any = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        body = {};
+      }
+    }
+    body = body || {};
+
+    const email = (body.email || body.username || body.userEmail || body.Email || '').toString().trim();
+    const password = (body.password || body.pass || body.Password || '').toString();
+    const first_name = (body.first_name || body.firstName || '').toString().trim();
+    const last_name = (body.last_name || body.lastName || '').toString().trim();
+    const org_name = (body.org_name || body.orgName || '').toString().trim();
+    const org_slug = (body.org_slug || body.orgSlug || '').toString().trim();
+    const currency = (body.currency || 'TOMAN').toString().trim();
+    const initial_category_name = (body.initial_category_name || body.initialCategoryName || '').toString().trim();
+    const initial_warehouse_name = (body.initial_warehouse_name || body.initialWarehouseName || '').toString().trim();
 
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
+      console.warn('[Auth Register Warning] Missing email or password:', { hasEmail: !!email, hasPassword: !!password, bodyKeys: Object.keys(body) });
+      return res.status(400).json({ error: 'وارد کردن آدرس ایمیل و کلمه عبور الزامی است.' });
     }
 
     // 1. Check if user already exists in Directus
@@ -180,9 +189,21 @@ authRouter.post('/register', async (req: Request, res: Response) => {
 // Login with email & password
 authRouter.post('/login', async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    let body: any = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        body = {};
+      }
+    }
+    body = body || {};
+
+    const email = (body.email || body.username || body.userEmail || '').toString().trim();
+    const password = (body.password || body.pass || '').toString();
+
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
+      return res.status(400).json({ error: 'وارد کردن ایمیل و رمز عبور الزامی است.' });
     }
 
     const cleanEmail = email.toLowerCase().trim();
