@@ -1,5 +1,6 @@
 /**
- * Directus REST API Client
+ * Tankhor Backend API Gateway Client (BFF Proxy)
+ * Connects securely to the Node.js API Gateway which handles Directus Admin and Tenant Isolation.
  */
 
 export interface DirectusConfig {
@@ -11,182 +12,155 @@ class DirectusClient {
   private baseUrl: string;
   private token: string | null = null;
 
-  private refreshTokenValue: string | null = null;
-  private isRefreshing = false;
-
   constructor(baseUrl?: string) {
-    const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
-    const envUrl = metaEnv?.VITE_DIRECTUS_URL;
-    this.baseUrl = baseUrl || envUrl || 'https://api.tankhor.com';
-    this.token = localStorage.getItem('tankhor_directus_token');
-    this.refreshTokenValue = localStorage.getItem('tankhor_directus_refresh_token');
+    this.baseUrl = baseUrl || '/api';
+    this.token = typeof window !== 'undefined' ? localStorage.getItem('tankhor_directus_token') : null;
   }
 
-  public setToken(token: string | null, refreshToken?: string | null) {
+  public setToken(token: string | null) {
     this.token = token;
-    if (token) {
-      localStorage.setItem('tankhor_directus_token', token);
-    } else {
-      localStorage.removeItem('tankhor_directus_token');
-    }
-
-    if (refreshToken !== undefined) {
-      this.refreshTokenValue = refreshToken;
-      if (refreshToken) {
-        localStorage.setItem('tankhor_directus_refresh_token', refreshToken);
+    if (typeof window !== 'undefined') {
+      if (token) {
+        localStorage.setItem('tankhor_directus_token', token);
       } else {
-        localStorage.removeItem('tankhor_directus_refresh_token');
+        localStorage.removeItem('tankhor_directus_token');
       }
     }
   }
 
-  public getRefreshToken(): string | null {
-    return this.refreshTokenValue || localStorage.getItem('tankhor_directus_refresh_token');
+  public getToken(): string | null {
+    if (this.token) return this.token;
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('tankhor_directus_token');
+    }
+    return null;
   }
 
   public getBaseUrl(): string {
-    const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
-    const envUrl = metaEnv?.VITE_DIRECTUS_URL;
-    return envUrl || this.baseUrl || 'https://api.tankhor.com';
-  }
-
-  public getEffectiveToken(): string | null {
-    if (this.token) return this.token;
-    const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
-    const envAdminToken = metaEnv?.VITE_DIRECTUS_ADMIN_TOKEN || metaEnv?.VITE_DIRECTUS_STATIC_TOKEN;
-    return envAdminToken || null;
+    return this.baseUrl || '/api';
   }
 
   private getHeaders(): HeadersInit {
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    const effectiveToken = this.getEffectiveToken();
-    if (effectiveToken) {
-      headers['Authorization'] = `Bearer ${effectiveToken}`;
+    const token = this.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
     return headers;
   }
 
-  public async request<T = any>(endpoint: string, options: RequestInit = {}, retryCount = 0): Promise<T> {
-    const url = `${this.getBaseUrl()}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-    
+  public async request<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${this.getBaseUrl()}${cleanEndpoint}`;
+
     try {
       const response = await fetch(url, {
         ...options,
         headers: {
           ...this.getHeaders(),
-          ...options.headers,
+          ...(options.headers || {}),
         },
       });
-
-      if (response.status === 401 && retryCount === 0 && !endpoint.includes('/auth/')) {
-        const refreshed = await this.refreshTokens();
-        if (refreshed) {
-          return this.request<T>(endpoint, options, 1);
-        }
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.errors?.[0]?.message || errorData.message || 'Directus request failed');
-      }
 
       if (response.status === 204) {
         return {} as T;
       }
 
       const text = await response.text();
-      if (!text || !text.trim()) {
-        return {} as T;
+      let data: any = {};
+      if (text && text.trim()) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { message: text };
+        }
       }
 
-      try {
-        const json = JSON.parse(text);
-        return json.data !== undefined ? json.data : (json as T);
-      } catch {
-        return {} as T;
+      if (!response.ok) {
+        const errorMsg = data.error || data.message || `Request failed with status ${response.status}`;
+        throw new Error(errorMsg);
       }
+
+      return data.data !== undefined ? data.data : (data as T);
     } catch (err: any) {
-      console.warn(`[Directus Client] Request failed for ${endpoint}:`, err.message);
+      console.warn(`[API Client] Request failed for ${endpoint}:`, err.message);
       throw err;
     }
   }
 
   // Auth methods
-  public async login(email: string, password: string): Promise<{ access_token: string; refresh_token: string }> {
+  public async login(email: string, password: string): Promise<{ access_token: string; user: any; activeOrganization: any; organizations: any[] }> {
     const data = await this.request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password, mode: 'json' }),
+      body: JSON.stringify({ email, password }),
     });
-    if (data.access_token) {
-      this.setToken(data.access_token, data.refresh_token || null);
+
+    if (data.token) {
+      this.setToken(data.token);
     }
-    return data;
-  }
-
-  public async refreshTokens(): Promise<boolean> {
-    const rf = this.getRefreshToken();
-    if (!rf || this.isRefreshing) return false;
-
-    try {
-      this.isRefreshing = true;
-      const res = await fetch(`${this.getBaseUrl()}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: rf, mode: 'json' }),
-      });
-
-      if (!res.ok) {
-        this.setToken(null, null);
-        return false;
-      }
-
-      const text = await res.text();
-      if (!text || !text.trim()) {
-        this.setToken(null, null);
-        return false;
-      }
-      const json = JSON.parse(text);
-      const data = json.data || json;
-      if (data.access_token) {
-        this.setToken(data.access_token, data.refresh_token || rf);
-        return true;
-      }
-      return false;
-    } catch {
-      this.setToken(null, null);
-      return false;
-    } finally {
-      this.isRefreshing = false;
+    if (data.activeOrganization?.id && typeof window !== 'undefined') {
+      localStorage.setItem('tankhor_active_org_id', String(data.activeOrganization.id));
     }
+
+    return {
+      access_token: data.token,
+      user: data.user,
+      activeOrganization: data.activeOrganization,
+      organizations: data.organizations || [],
+    };
   }
 
   public async logout(): Promise<void> {
-    const rf = this.getRefreshToken();
-    if (rf) {
-      try {
-        await fetch(`${this.getBaseUrl()}/auth/logout`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: rf }),
-        }).catch(() => {});
-      } catch {
-        // ignore logout network errors
-      }
+    this.setToken(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('tankhor_cached_user_profile');
+      localStorage.removeItem('tankhor_active_org_id');
     }
-    this.setToken(null, null);
   }
 
   public async getMe(): Promise<any> {
-    return this.request('/users/me?fields=*,role.id,role.name,role.description,role.admin_access');
+    return this.request('/auth/me');
   }
 
-  public async register(data: { email: string; password: string; first_name?: string; last_name?: string }): Promise<any> {
-    return await this.request('/users/register', {
+  public async register(data: {
+    email: string;
+    password: string;
+    first_name?: string;
+    last_name?: string;
+    org_name?: string;
+    org_slug?: string;
+    currency?: string;
+    initial_category_name?: string;
+    initial_warehouse_name?: string;
+  }): Promise<any> {
+    const res = await this.request('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+
+    if (res.token) {
+      this.setToken(res.token);
+    }
+    if (res.organization?.id && typeof window !== 'undefined') {
+      localStorage.setItem('tankhor_active_org_id', String(res.organization.id));
+    }
+    return res;
+  }
+
+  public async switchOrganization(targetOrganizationId: number): Promise<any> {
+    const res = await this.request('/auth/switch-org', {
+      method: 'POST',
+      body: JSON.stringify({ targetOrganizationId }),
+    });
+    if (res.token) {
+      this.setToken(res.token);
+    }
+    if (res.activeOrganization?.id && typeof window !== 'undefined') {
+      localStorage.setItem('tankhor_active_org_id', String(res.activeOrganization.id));
+    }
+    return res;
   }
 
   // Generic collection helpers
@@ -194,14 +168,15 @@ class DirectusClient {
     let queryString = '';
     if (query) {
       const params = new URLSearchParams();
-      if (query.filter) params.append('filter', JSON.stringify(query.filter));
+      if (query.filter) params.append('filter', typeof query.filter === 'string' ? query.filter : JSON.stringify(query.filter));
       if (query.sort) params.append('sort', query.sort);
       if (query.limit) params.append('limit', String(query.limit));
       if (query.page) params.append('page', String(query.page));
       if (query.fields) params.append('fields', Array.isArray(query.fields) ? query.fields.join(',') : query.fields);
       queryString = `?${params.toString()}`;
     }
-    return this.request<T[]>(`/items/${collection}${queryString}`);
+    const result = await this.request<T[]>(`/items/${collection}${queryString}`);
+    return Array.isArray(result) ? result : [];
   }
 
   public async getItemById<T>(collection: string, id: number | string): Promise<T> {
@@ -234,9 +209,10 @@ class DirectusClient {
     formData.append('file', file);
 
     const url = `${this.getBaseUrl()}/files`;
-    const headers: HeadersInit = {};
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+    const headers: Record<string, string> = {};
+    const token = this.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     const response = await fetch(url, {
@@ -247,11 +223,11 @@ class DirectusClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(errorData.errors?.[0]?.message || errorData.message || 'File upload failed');
+      throw new Error(errorData.error || errorData.message || 'File upload failed');
     }
 
     const json = await response.json();
-    return json.data;
+    return json.data || json;
   }
 
   public getAssetUrl(fileId: string): string {
@@ -259,7 +235,9 @@ class DirectusClient {
     if (fileId.startsWith('data:') || fileId.startsWith('http://') || fileId.startsWith('https://')) {
       return fileId;
     }
-    return `${this.getBaseUrl()}/assets/${fileId}`;
+    const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
+    const directusUrl = metaEnv?.VITE_DIRECTUS_URL || 'https://api.tankhor.com';
+    return `${directusUrl.replace(/\/+$/, '')}/assets/${fileId}`;
   }
 }
 

@@ -21,6 +21,18 @@ export interface User {
   status?: string;
 }
 
+interface RegisterParams {
+  firstName: string;
+  lastName: string;
+  email: string;
+  pass: string;
+  orgName: string;
+  orgSlug?: string;
+  currency?: string;
+  initialCategoryName?: string;
+  initialWarehouseName?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -31,7 +43,7 @@ interface AuthContextType {
   openLoginModal: () => void;
   closeLoginModal: () => void;
   login: (email: string, pass: string) => Promise<boolean>;
-  register: (firstName: string, lastName: string, email: string, pass: string) => Promise<boolean>;
+  register: (params: RegisterParams) => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
@@ -120,26 +132,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (firstName: string, lastName: string, email: string, pass: string): Promise<boolean> => {
+  const register = async (params: RegisterParams): Promise<boolean> => {
     setLoginError(null);
     setIsLoading(true);
     try {
-      // 1. Send registration request directly to Directus API
+      // 1. Send registration request with user & custom organization data
       await directusClient.register({
-        first_name: firstName,
-        last_name: lastName,
-        email: email,
-        password: pass,
+        first_name: params.firstName,
+        last_name: params.lastName,
+        email: params.email,
+        password: params.pass,
+        org_name: params.orgName,
+        org_slug: params.orgSlug,
+        currency: params.currency || 'TOMAN',
+        initial_category_name: params.initialCategoryName,
+        initial_warehouse_name: params.initialWarehouseName,
       });
 
-      // 2. Log in automatically with the newly created account
-      const loggedIn = await login(email, pass);
-      if (loggedIn) {
+      // 2. Fetch authenticated profile & organization
+      const userData = await directusClient.getMe();
+      if (userData && userData.id) {
+        setUser(userData);
+        setIsCloudAuthenticated(true);
+        localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
         setIsLoginModalOpen(false);
         return true;
       }
 
-      setLoginError('حساب کاربری در سرور ابری ایجاد شد اما ورود خودکار انجام نشد. لطفاً وارد شوید.');
+      setLoginError('حساب و سازمان ایجاد شدند، لطفاً وارد شوید.');
       return false;
     } catch (err: any) {
       console.error('[AuthContext] Cloud Registration Failed:', err);
@@ -151,12 +171,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         errMsg.toLowerCase().includes('already exists')
       ) {
         setLoginError('این آدرس ایمیل قبلاً در سرور ابری ثبت شده است. لطفاً وارد شوید.');
-      } else if (
-        errMsg.toLowerCase().includes('forbidden') ||
-        errMsg.toLowerCase().includes('permission') ||
-        errMsg.includes('FORBIDDEN')
-      ) {
-        setLoginError('ثبت‌نام مستقیم کاربران در سرور ابری غیرفعال است.');
       } else {
         setLoginError(`خطا در ثبت‌نام: ${errMsg}`);
       }
