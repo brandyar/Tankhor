@@ -13,6 +13,7 @@ export const navigationEn = {
   sizeGuides: 'Size Guide Templates',
   inventoryGroup: 'Inventory & Warehouses',
   inventoryOverview: 'Stock Balances',
+  barcodePrint: 'Barcode Generator & Print',
   warehouses: 'Warehouses & Stores',
   warehouseLocations: 'Warehouse Locations',
   stockMovements: 'Stock Movement Logs',

@@ -139,10 +139,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       }
 
-      setLoginError('حساب کاربر در دایرکتوس ایجاد شد اما ورود خودکار انجام نشد. لطفاً وارد شوید.');
+      setLoginError('حساب کاربری در سرور ابری ایجاد شد اما ورود خودکار انجام نشد. لطفاً وارد شوید.');
       return false;
     } catch (err: any) {
-      console.error('[AuthContext] Directus Registration Failed:', err);
+      console.error('[AuthContext] Cloud Registration Failed:', err);
       const errMsg = err?.message || err?.toString() || '';
 
       if (
@@ -150,15 +150,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         errMsg.includes('RECORD_NOT_UNIQUE') ||
         errMsg.toLowerCase().includes('already exists')
       ) {
-        setLoginError('این آدرس ایمیل قبلاً در پایگاه داده دایرکتوس ثبت شده است.');
+        setLoginError('این آدرس ایمیل قبلاً در سرور ابری ثبت شده است. لطفاً وارد شوید.');
       } else if (
         errMsg.toLowerCase().includes('forbidden') ||
         errMsg.toLowerCase().includes('permission') ||
         errMsg.includes('FORBIDDEN')
       ) {
-        setLoginError('ثبت‌نام مستقیم کاربران در سرور دایرکتوس مجاز نیست (دسترسی عمومی ثبت‌نام در دایرکتوس غیرفعال است).');
+        setLoginError('ثبت‌نام مستقیم کاربران در سرور ابری غیرفعال است.');
       } else {
-        setLoginError(`خطا در ثبت‌نام دایرکتوس: ${errMsg}`);
+        setLoginError(`خطا در ثبت‌نام: ${errMsg}`);
       }
       return false;
     } finally {

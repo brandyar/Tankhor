@@ -8,7 +8,7 @@ interface ModalProps {
   title: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -35,18 +35,27 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null;
 
-  const maxWidthClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    '2xl': 'max-w-2xl',
+  const getMaxWidthClass = (size?: string) => {
+    if (!size) return 'max-w-md';
+    if (size.startsWith('max-w-')) return size;
+    const map: Record<string, string> = {
+      sm: 'max-w-sm',
+      md: 'max-w-md',
+      lg: 'max-w-lg',
+      xl: 'max-w-xl',
+      '2xl': 'max-w-2xl',
+      '3xl': 'max-w-3xl',
+      '4xl': 'max-w-4xl',
+      '5xl': 'max-w-5xl',
+      full: 'max-w-full',
+    };
+    return map[size] || 'max-w-md';
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
       <div
-        className={`w-full bg-white rounded-xl border border-neutral-200/80 shadow-vercel-lg overflow-hidden flex flex-col max-h-[90vh] ${maxWidthClasses[maxWidth]}`}
+        className={`w-full bg-white rounded-xl border border-neutral-200/80 shadow-vercel-lg overflow-hidden flex flex-col max-h-[90vh] ${getMaxWidthClass(maxWidth)}`}
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">

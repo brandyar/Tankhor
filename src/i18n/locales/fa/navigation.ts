@@ -13,6 +13,7 @@ export const navigationFa = {
   sizeGuides: 'قالب‌های راهنمای سایز',
   inventoryGroup: 'انبار و موجودی',
   inventoryOverview: 'موجودی انبارها',
+  barcodePrint: 'تولید و چاپ بارکد',
   warehouses: 'انبارها و فروشگاه‌ها',
   warehouseLocations: 'قفسه‌بندی و جایگاه‌ها',
   stockMovements: 'سوابق گردش کالا',

@@ -171,6 +171,27 @@ export class LocalOfflineAdapter implements IStorageProvider {
     let list = this.getItem<Product>('products', []);
     list = list.filter((p) => p.id !== id);
     this.setItem('products', list);
+
+    // Clean up associated variants & inventory
+    const variants = this.getItem<ProductVariant>('product_variants', []);
+    const removedVariantIds: number[] = [];
+    const remainingVariants = variants.filter((v) => {
+      const pId = typeof v.product_id === 'number' ? v.product_id : (v.product_id as any)?.id;
+      if (pId === id) {
+        removedVariantIds.push(v.id);
+        return false;
+      }
+      return true;
+    });
+    this.setItem('product_variants', remainingVariants);
+
+    let inventoryList = this.getItem<InventoryItem>('inventory_items', []);
+    inventoryList = inventoryList.filter((i) => {
+      const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
+      return !removedVariantIds.includes(vId);
+    });
+    this.setItem('inventory_items', inventoryList);
+
     return true;
   }
 

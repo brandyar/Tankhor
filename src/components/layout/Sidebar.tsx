@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingBag, Layers, Tag, Bookmark, Sun,
   Palette, Ruler, Warehouse as WarehouseIcon, MapPin, ArrowLeftRight,
   ClipboardList, ShoppingCart, Truck, Users, Settings, Shirt, Award,
-  X, ChevronRight, ChevronLeft, PanelLeftClose, PanelLeft
+  X, ChevronRight, ChevronLeft, PanelLeftClose, PanelLeft, Barcode, Printer
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -53,6 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       title: t('navigation.inventoryGroup'),
       items: [
         { route: 'inventory/overview', label: t('navigation.inventoryOverview'), icon: ClipboardList },
+        { route: 'inventory/barcodes', label: t('navigation.barcodePrint'), icon: Barcode },
         { route: 'inventory/warehouses', label: t('navigation.warehouses'), icon: WarehouseIcon },
         { route: 'inventory/locations', label: t('navigation.warehouseLocations'), icon: MapPin },
         { route: 'inventory/movements', label: t('navigation.stockMovements'), icon: ClipboardList },

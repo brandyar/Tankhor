@@ -16,6 +16,7 @@ import { SizeGroupsView } from './features/products/SizeGroupsView';
 import { SizesView } from './features/products/SizesView';
 import { SizeGuidesView } from './features/products/SizeGuidesView';
 import { InventoryView } from './features/inventory/InventoryView';
+import { BarcodePrintView } from './features/inventory/BarcodePrintView';
 import { WarehousesView } from './features/inventory/WarehousesView';
 import { LocationsView } from './features/inventory/LocationsView';
 import { MovementsView } from './features/inventory/MovementsView';
@@ -77,6 +78,9 @@ const MainAppContent: React.FC = () => {
         return <SizeGuidesView />;
       case 'inventory/overview':
         return <InventoryView />;
+      case 'inventory/barcodes':
+      case 'products/barcodes':
+        return <BarcodePrintView />;
       case 'inventory/warehouses':
         return <WarehousesView />;
       case 'inventory/locations':

@@ -14,8 +14,10 @@ class DirectusClient {
   private refreshTokenValue: string | null = null;
   private isRefreshing = false;
 
-  constructor(baseUrl: string = 'https://api.tankhor.com') {
-    this.baseUrl = 'https://api.tankhor.com';
+  constructor(baseUrl?: string) {
+    const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
+    const envUrl = metaEnv?.VITE_DIRECTUS_URL;
+    this.baseUrl = baseUrl || envUrl || 'https://api.tankhor.com';
     this.token = localStorage.getItem('tankhor_directus_token');
     this.refreshTokenValue = localStorage.getItem('tankhor_directus_refresh_token');
   }
@@ -43,15 +45,25 @@ class DirectusClient {
   }
 
   public getBaseUrl(): string {
-    return 'https://api.tankhor.com';
+    const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
+    const envUrl = metaEnv?.VITE_DIRECTUS_URL;
+    return envUrl || this.baseUrl || 'https://api.tankhor.com';
+  }
+
+  public getEffectiveToken(): string | null {
+    if (this.token) return this.token;
+    const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
+    const envAdminToken = metaEnv?.VITE_DIRECTUS_ADMIN_TOKEN || metaEnv?.VITE_DIRECTUS_STATIC_TOKEN;
+    return envAdminToken || null;
   }
 
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+    const effectiveToken = this.getEffectiveToken();
+    if (effectiveToken) {
+      headers['Authorization'] = `Bearer ${effectiveToken}`;
     }
     return headers;
   }
@@ -80,8 +92,21 @@ class DirectusClient {
         throw new Error(errorData.errors?.[0]?.message || errorData.message || 'Directus request failed');
       }
 
-      const json = await response.json();
-      return json.data !== undefined ? json.data : json;
+      if (response.status === 204) {
+        return {} as T;
+      }
+
+      const text = await response.text();
+      if (!text || !text.trim()) {
+        return {} as T;
+      }
+
+      try {
+        const json = JSON.parse(text);
+        return json.data !== undefined ? json.data : (json as T);
+      } catch {
+        return {} as T;
+      }
     } catch (err: any) {
       console.warn(`[Directus Client] Request failed for ${endpoint}:`, err.message);
       throw err;
@@ -117,7 +142,12 @@ class DirectusClient {
         return false;
       }
 
-      const json = await res.json();
+      const text = await res.text();
+      if (!text || !text.trim()) {
+        this.setToken(null, null);
+        return false;
+      }
+      const json = JSON.parse(text);
       const data = json.data || json;
       if (data.access_token) {
         this.setToken(data.access_token, data.refresh_token || rf);
@@ -153,18 +183,10 @@ class DirectusClient {
   }
 
   public async register(data: { email: string; password: string; first_name?: string; last_name?: string }): Promise<any> {
-    try {
-      return await this.request('/users/register', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-    } catch (err: any) {
-      // Fallback to standard POST /users if /users/register is not configured
-      return await this.request('/users', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-    }
+    return await this.request('/users/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   // Generic collection helpers
