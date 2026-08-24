@@ -6,7 +6,7 @@ import { Product, ProductVariant, Color, Size, InventoryItem } from '../../types
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { formatCurrency, toPersianDigits } from '../../utils/formatters';
+import { formatCurrency, toPersianDigits, normalizeId } from '../../utils/formatters';
 import { directusClient } from '../../api/directus';
 import { Shirt, Layers, Edit, CheckCircle, AlertCircle, Barcode, Tag } from 'lucide-react';
 
@@ -66,10 +66,11 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
   if (!product) return null;
 
   const totalStockSum = variants.reduce((acc, v) => {
+    const vNormId = normalizeId(v.id);
     const vStock = inventoryItems
       .filter((i) => {
-        const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-        return vId === v.id;
+        const vId = normalizeId(i.variant_id);
+        return vId === vNormId;
       })
       .reduce((s, curr) => s + (Number(curr.quantity) || 0), 0);
     return acc + vStock;
@@ -176,13 +177,14 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {variants.map((v, index) => {
-                  const colorObj = colors.find((c) => c.id === (typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id));
-                  const sizeObj = sizes.find((s) => s.id === (typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id));
+                  const vNormId = normalizeId(v.id);
+                  const colorObj = colors.find((c) => c.id === normalizeId(v.color_id));
+                  const sizeObj = sizes.find((s) => s.id === normalizeId(v.size_id));
 
                   const stockQty = inventoryItems
                     .filter((i) => {
-                      const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-                      return vId === v.id;
+                      const vId = normalizeId(i.variant_id);
+                      return vId === vNormId;
                     })
                     .reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
 

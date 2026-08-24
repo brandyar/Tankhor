@@ -63,3 +63,20 @@ export function formatDate(isoString?: string | null, isPersian: boolean = true)
     return isoString;
   }
 }
+
+/**
+ * Safely extracts numeric ID from number, string, or object like { id: number }
+ */
+export function normalizeId(val: any): number | undefined {
+  if (typeof val === 'number' && !isNaN(val)) return val;
+  if (val && typeof val === 'object' && val !== null && 'id' in val) {
+    const parsed = Number(val.id);
+    return !isNaN(parsed) ? parsed : undefined;
+  }
+  if (typeof val === 'string' && val.trim() !== '') {
+    const parsed = Number(val);
+    return !isNaN(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+

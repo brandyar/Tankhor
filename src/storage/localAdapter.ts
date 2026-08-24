@@ -1,4 +1,5 @@
 import { IStorageProvider, QueryParams, StorageMode } from './types';
+import { normalizeId } from '../utils/formatters';
 import {
   Organization, OrganizationUser, Category, Collection, Season, Color, SizeGroup, Size, Brand,
   Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
@@ -211,13 +212,13 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
     return items.map((p) => {
       const pVariants = variants.filter((v) => {
-        const pId = typeof v.product_id === 'number' ? v.product_id : (v.product_id as any)?.id;
+        const pId = normalizeId(v.product_id);
         return pId === p.id;
       });
-      const pVariantIds = new Set(pVariants.map((v) => v.id));
+      const pVariantIds = new Set(pVariants.map((v) => normalizeId(v.id)).filter(Boolean));
       const pInventory = inventoryItems.filter((i) => {
-        const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-        return pVariantIds.has(vId);
+        const vId = normalizeId(i.variant_id);
+        return vId !== undefined && pVariantIds.has(vId);
       });
       const totalStock = pInventory.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
 
@@ -305,22 +306,27 @@ export class LocalOfflineAdapter implements IStorageProvider {
     const inventoryItems = this.getItem<InventoryItem>('inventory_items', []);
 
     return items.map((v) => {
-      const prodId = typeof v.product_id === 'number' ? v.product_id : (v.product_id as any)?.id;
-      const colorId = typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id;
-      const sizeId = typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id;
+      const vNormalizedId = normalizeId(v.id);
+      const prodId = normalizeId(v.product_id);
+      const colorId = normalizeId(v.color_id);
+      const sizeId = normalizeId(v.size_id);
 
       const prod = products.find((p) => p.id === prodId);
       const color = colors.find((c) => c.id === colorId);
       const size = sizes.find((s) => s.id === sizeId);
 
       const vInv = inventoryItems.filter((i) => {
-        const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-        return vId === v.id;
+        const vId = normalizeId(i.variant_id);
+        return vId === vNormalizedId;
       });
       const totalStock = vInv.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
 
       return {
         ...v,
+        id: vNormalizedId || v.id,
+        product_id: prodId || v.product_id,
+        color_id: colorId,
+        size_id: sizeId,
         product_title: prod?.title || v.product_title || 'محصول',
         color_name: color?.name || v.color_name || '-',
         size_name: size?.name || v.size_name || '-',
@@ -331,7 +337,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   async getVariantsByProductId(productId: number): Promise<ProductVariant[]> {
     const variants = this.getItem<ProductVariant>('product_variants', []).filter((v) => {
-      const pId = typeof v.product_id === 'number' ? v.product_id : (v.product_id as any)?.id;
+      const pId = normalizeId(v.product_id);
       return pId === productId;
     });
     const inventoryItems = this.getItem<InventoryItem>('inventory_items', []);
@@ -341,20 +347,25 @@ export class LocalOfflineAdapter implements IStorageProvider {
     const prod = products.find((p) => p.id === productId);
 
     return variants.map((v) => {
+      const vNormalizedId = normalizeId(v.id);
       const vInv = inventoryItems.filter((i) => {
-        const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-        return vId === v.id;
+        const vId = normalizeId(i.variant_id);
+        return vId === vNormalizedId;
       });
       const totalStock = vInv.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
 
-      const cId = typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id;
-      const sId = typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id;
+      const cId = normalizeId(v.color_id);
+      const sId = normalizeId(v.size_id);
 
       const matchedColor = colors.find((c) => c.id === cId);
       const matchedSize = sizes.find((s) => s.id === sId);
 
       return {
         ...v,
+        id: vNormalizedId || v.id,
+        product_id: productId,
+        color_id: cId,
+        size_id: sId,
         product_title: prod?.title || 'محصول',
         color_name: matchedColor?.name || v.color_name || '-',
         size_name: matchedSize?.name || v.size_name || '-',
@@ -366,17 +377,31 @@ export class LocalOfflineAdapter implements IStorageProvider {
   async saveVariant(variant: Partial<ProductVariant>, warehouseId?: number, locationId?: number): Promise<ProductVariant> {
     const list = this.getItem<ProductVariant>('product_variants', []);
     let saved: ProductVariant;
+    const vId = normalizeId(variant.id);
+    const colorId = normalizeId(variant.color_id);
+    const sizeId = normalizeId(variant.size_id);
+    const productId = normalizeId(variant.product_id);
 
-    if (variant.id) {
-      const idx = list.findIndex((v) => v.id === variant.id);
+    if (vId) {
+      const idx = list.findIndex((v) => normalizeId(v.id) === vId);
       if (idx !== -1) {
-        list[idx] = { ...list[idx], ...variant, date_updated: new Date().toISOString() };
+        list[idx] = {
+          ...list[idx],
+          ...variant,
+          id: vId,
+          product_id: productId || list[idx].product_id,
+          color_id: colorId,
+          size_id: sizeId,
+          date_updated: new Date().toISOString(),
+        };
         saved = list[idx];
       } else {
         saved = {
-          id: variant.id,
+          id: vId,
           organization_id: variant.organization_id || 1,
-          product_id: variant.product_id || 0,
+          product_id: productId || 0,
+          color_id: colorId,
+          size_id: sizeId,
           sku: variant.sku || `SKU-${Date.now().toString().slice(-6)}`,
           status: 'published',
           ...variant,
@@ -387,7 +412,9 @@ export class LocalOfflineAdapter implements IStorageProvider {
       saved = {
         id: this.generateUniqueId(list),
         organization_id: variant.organization_id || 1,
-        product_id: variant.product_id || 0,
+        product_id: productId || 0,
+        color_id: colorId,
+        size_id: sizeId,
         sku: variant.sku || `SKU-${Date.now().toString().slice(-6)}`,
         status: 'published',
         date_created: new Date().toISOString(),
@@ -423,8 +450,8 @@ export class LocalOfflineAdapter implements IStorageProvider {
       }
 
       const invIdx = inventoryList.findIndex((i) => {
-        const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-        return vId === saved.id;
+        const itemVId = normalizeId(i.variant_id);
+        return itemVId === saved.id;
       });
 
       if (invIdx !== -1) {

@@ -2,6 +2,7 @@ import { IStorageProvider, QueryParams, StorageMode } from './types';
 import { directusClient } from '../api/directus';
 import { LocalOfflineAdapter } from './localAdapter';
 import { StorageSyncManager } from './syncManager';
+import { normalizeId } from '../utils/formatters';
 import {
   Organization, OrganizationUser, Category, Collection, Season, Color, SizeGroup, Size, Brand,
   Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
@@ -334,13 +335,13 @@ export class CloudDirectusAdapter implements IStorageProvider {
     payload.image = cleanUuid(payload.image);
     payload.color_id = cleanInt(payload.color_id);
     payload.size_id = cleanInt(payload.size_id);
-    payload.product_id = Number(payload.product_id);
+    payload.product_id = normalizeId(payload.product_id) || Number(payload.product_id);
     payload.price = payload.price !== undefined && payload.price !== '' ? Number(payload.price) : 0;
     payload.cost = payload.cost !== undefined && payload.cost !== '' ? Number(payload.cost) : 0;
     payload.sort = Number(payload.sort) || 0;
     if (!payload.status) payload.status = 'published';
 
-    const id = payload.id ? Number(payload.id) : undefined;
+    const id = normalizeId(payload.id);
     delete payload.id;
 
     try {

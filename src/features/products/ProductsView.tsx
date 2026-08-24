@@ -9,7 +9,7 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Product, Category, Collection, Season, SizeGuideTemplate, Color, Size, Brand, ProductVariant } from '../../types';
-import { toPersianDigits, formatDate } from '../../utils/formatters';
+import { toPersianDigits, formatDate, normalizeId } from '../../utils/formatters';
 import { ProductEditView } from './ProductEditView';
 import { ProductVariantsModal } from './ProductVariantsModal';
 import { directusClient } from '../../api/directus';
@@ -108,9 +108,9 @@ export const ProductsView: React.FC = () => {
       if (selectedColorFilter) {
         const matchingProductIds = new Set<number>();
         vList.forEach((v) => {
-          const cId = typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id;
+          const cId = normalizeId(v.color_id);
           if (cId === Number(selectedColorFilter)) {
-            const pId = typeof v.product_id === 'number' ? v.product_id : (v.product_id as any)?.id;
+            const pId = normalizeId(v.product_id);
             if (pId) matchingProductIds.add(pId);
           }
         });

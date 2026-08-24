@@ -10,7 +10,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { ImageUpload } from '../../components/ui/ImageUpload';
-import { formatCurrency, toPersianDigits } from '../../utils/formatters';
+import { formatCurrency, toPersianDigits, normalizeId } from '../../utils/formatters';
 import {
   ArrowRight, Save, Plus, Trash2, Grid, Tag, Shirt, Package, Layers,
   CheckCircle2, Sliders, RefreshCw, Sparkles, DollarSign, Archive,
@@ -138,24 +138,31 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
           setStatus(prod.status || 'published');
 
           const vList = await adapter.getVariantsByProductId(productId);
-          setVariants(vList);
+          const normalizedVList = vList.map((v) => ({
+            ...v,
+            id: normalizeId(v.id),
+            product_id: normalizeId(v.product_id),
+            color_id: normalizeId(v.color_id),
+            size_id: normalizeId(v.size_id),
+          }));
+          setVariants(normalizedVList);
 
           // Extract colors and sizes present in loaded variants
           const existingColorIds = Array.from(
             new Set(
-              vList
-                .map((v) => (typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id))
-                .filter(Boolean)
+              normalizedVList
+                .map((v) => v.color_id)
+                .filter((id): id is number => id !== undefined)
             )
-          ) as number[];
+          );
 
           const existingSizeIds = Array.from(
             new Set(
-              vList
-                .map((v) => (typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id))
-                .filter(Boolean)
+              normalizedVList
+                .map((v) => v.size_id)
+                .filter((id): id is number => id !== undefined)
             )
-          ) as number[];
+          );
 
           setSelectedColorIds(existingColorIds);
           setSelectedSizeIds(existingSizeIds);
@@ -237,8 +244,8 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
 
     const existingMap = new Map<string, Partial<ProductVariant> & { _tempId?: string }>();
     currentVariants.forEach((v) => {
-      const cVal = v.color_id ? Number(v.color_id) : 'none';
-      const sVal = v.size_id ? Number(v.size_id) : 'none';
+      const cVal = normalizeId(v.color_id) ?? 'none';
+      const sVal = normalizeId(v.size_id) ?? 'none';
       existingMap.set(`${cVal}_${sVal}`, v);
     });
 
@@ -289,12 +296,13 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
 
     // Track unselected variant IDs for database deletion
     currentVariants.forEach((v) => {
-      const cVal = v.color_id ? Number(v.color_id) : 'none';
-      const sVal = v.size_id ? Number(v.size_id) : 'none';
+      const cVal = normalizeId(v.color_id) ?? 'none';
+      const sVal = normalizeId(v.size_id) ?? 'none';
       const key = `${cVal}_${sVal}`;
       if (!activeKeys.has(key) && (v.color_id || v.size_id)) {
-        if (v.id) {
-          setDeletedVariantIds((prev) => [...prev, v.id!]);
+        const vId = normalizeId(v.id);
+        if (vId) {
+          setDeletedVariantIds((prev) => [...prev, vId]);
         }
       }
     });
@@ -489,8 +497,9 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
 
       // 2. Process deletions first
       for (const dId of deletedVariantIds) {
-        if (dId && !isNaN(Number(dId))) {
-          await adapter.deleteVariant(Number(dId)).catch((delErr) => {
+        const normDId = normalizeId(dId);
+        if (normDId) {
+          await adapter.deleteVariant(normDId).catch((delErr) => {
             console.warn('[ProductEditView] Delete variant warning:', delErr);
           });
         }
@@ -498,13 +507,17 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
 
       // 3. Save / Update all variant rows in table
       for (const v of variants) {
+        const vId = normalizeId(v.id);
+        const colorId = normalizeId(v.color_id);
+        const sizeId = normalizeId(v.size_id);
+
         await adapter.saveVariant(
           {
-            id: v.id ? Number(v.id) : undefined,
+            id: vId,
             organization_id: orgId,
             product_id: savedProduct.id,
-            color_id: v.color_id && !isNaN(Number(v.color_id)) && Number(v.color_id) > 0 ? Number(v.color_id) : undefined,
-            size_id: v.size_id && !isNaN(Number(v.size_id)) && Number(v.size_id) > 0 ? Number(v.size_id) : undefined,
+            color_id: colorId,
+            size_id: sizeId,
             sku: v.sku ? v.sku.trim() : `SKU-${Date.now().toString().slice(-6)}`,
             barcode: v.barcode ? v.barcode.trim() : undefined,
             price: v.price !== undefined && v.price !== '' ? Number(v.price) : 0,
