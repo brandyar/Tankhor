@@ -45,9 +45,11 @@ export class StorageSyncManager {
           else if (item.collection === 'categories') await cloudAdapter.saveCategory(item.payload);
           else if (item.collection === 'inventory_movements') await cloudAdapter.recordMovement(item.payload);
           else if (item.collection === 'orders') await cloudAdapter.saveOrder(item.payload);
+          else if (item.collection === 'organization_users') await cloudAdapter.saveOrganizationUser(item.payload);
         } else if (item.action === 'DELETE') {
           if (item.collection === 'products') await cloudAdapter.deleteProduct(item.payload.id);
           else if (item.collection === 'product_variants') await cloudAdapter.deleteVariant(item.payload.id);
+          else if (item.collection === 'organization_users') await cloudAdapter.deleteOrganizationUser(item.payload.id);
         }
         success++;
       } catch (err) {

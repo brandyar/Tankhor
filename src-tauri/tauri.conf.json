@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Tankhor",
+  "version": "1.0.0",
+  "identifier": "com.tankhor.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "vite build",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "TANKHOR (تن‌خور) - مدیریت پوشاک و انبارداری",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Business",
+    "shortDescription": "پلتفرم مدیریت پوشاک و انبارداری تن‌خور",
+    "longDescription": "تن‌خور یک سیستم جامع مدیریت پوشاک، راهنمای سایز اختصاصی و انبارداری با قابلیت کارکرد آفلاین محلی و همگام‌سازی ابری است."
+  }
+}

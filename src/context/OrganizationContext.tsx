@@ -1,17 +1,23 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Organization } from '../types';
+import { Organization, OrganizationUser, UserRole } from '../types';
 import { storageManager } from '../storage';
 import { useAuth } from './AuthContext';
 import { directusClient } from '../api/directus';
+import { getRolePermissions, RolePermissions } from '../utils/permissions';
 
 interface OrganizationContextType {
   organizations: Organization[];
   activeOrganization: Organization | null;
+  organizationUsers: OrganizationUser[];
+  userRole: UserRole | string;
   isOwner: boolean;
-  userRole: string;
+  permissions: RolePermissions;
   selectOrganization: (id: number) => Promise<void>;
   createOrganization: (orgData: Partial<Organization>) => Promise<Organization>;
   updateActiveOrganization: (orgData: Partial<Organization>) => Promise<Organization>;
+  saveOrganizationUser: (ou: Partial<OrganizationUser>) => Promise<OrganizationUser>;
+  deleteOrganizationUser: (id: number) => Promise<boolean>;
+  refreshMembers: () => Promise<void>;
   isLoading: boolean;
   refreshOrganizations: () => Promise<void>;
 }
@@ -22,14 +28,43 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const { user, isCloudAuthenticated } = useAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [activeOrganization, setActiveOrganization] = useState<Organization | null>(null);
+  const [organizationUsers, setOrganizationUsers] = useState<OrganizationUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Compute owner role: in offline mode or when user has owner role in cloud
-  const userRole = isCloudAuthenticated
-    ? (typeof user?.role === 'object' ? (user.role as any)?.name || 'viewer' : (user?.role || 'owner'))
-    : 'owner';
+  // Load organization users for active organization
+  const refreshMembers = useCallback(async () => {
+    if (!activeOrganization) {
+      setOrganizationUsers([]);
+      return;
+    }
+    try {
+      const adapter = storageManager.getAdapter();
+      const users = await adapter.getOrganizationUsers({ organization_id: activeOrganization.id });
+      setOrganizationUsers(users);
+    } catch (err) {
+      console.error('[OrganizationContext] Failed to load organization members:', err);
+    }
+  }, [activeOrganization]);
 
-  const isOwner = !isCloudAuthenticated || userRole === 'owner' || userRole === 'Administrator' || userRole === 'Admin';
+  useEffect(() => {
+    refreshMembers();
+  }, [refreshMembers]);
+
+  // Compute active user role in current organization
+  const currentUserRecord = organizationUsers.find((ou) => {
+    if (user?.id && ou.user_id === user.id) return true;
+    if (user?.email && ou.email?.toLowerCase() === user.email.toLowerCase()) return true;
+    return false;
+  });
+
+  const rawRole = currentUserRecord?.role || (typeof user?.role === 'object' ? (user.role as any)?.name : user?.role);
+  
+  const userRole: UserRole | string = !isCloudAuthenticated
+    ? 'owner'
+    : (rawRole ? String(rawRole).toLowerCase() : 'owner');
+
+  const permissions: RolePermissions = getRolePermissions(userRole);
+  const isOwner = permissions.canManageOrgSettings;
 
   const refreshOrganizations = useCallback(async () => {
     try {
@@ -95,7 +130,19 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const adapter = storageManager.getAdapter();
       const created = await adapter.saveOrganization(orgData);
 
-      // Update state and select the newly created organization
+      // Create owner record for current user in organization_users
+      if (activeOrganization) {
+        await adapter.saveOrganizationUser({
+          organization_id: created.id,
+          user_id: user?.id || 'owner_user',
+          first_name: user?.first_name || 'مدیر',
+          last_name: user?.last_name || 'سازمان',
+          email: user?.email || 'owner@tankhor.com',
+          role: 'owner',
+          status: 'active',
+        });
+      }
+
       setOrganizations((prev) => {
         const filtered = prev.filter((o) => o.id !== created.id);
         return [...filtered, created];
@@ -134,16 +181,39 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+  const saveOrganizationUser = async (ouData: Partial<OrganizationUser>): Promise<OrganizationUser> => {
+    if (!activeOrganization) throw new Error('سازمان فعالی انتخاب نشده است.');
+    const adapter = storageManager.getAdapter();
+    const saved = await adapter.saveOrganizationUser({
+      ...ouData,
+      organization_id: activeOrganization.id,
+    });
+    await refreshMembers();
+    return saved;
+  };
+
+  const deleteOrganizationUser = async (id: number): Promise<boolean> => {
+    const adapter = storageManager.getAdapter();
+    const res = await adapter.deleteOrganizationUser(id);
+    await refreshMembers();
+    return res;
+  };
+
   return (
     <OrganizationContext.Provider
       value={{
         organizations,
         activeOrganization,
+        organizationUsers,
         isOwner,
         userRole,
+        permissions,
         selectOrganization,
         createOrganization,
         updateActiveOrganization,
+        saveOrganizationUser,
+        deleteOrganizationUser,
+        refreshMembers,
         isLoading,
         refreshOrganizations,
       }}

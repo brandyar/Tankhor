@@ -1,6 +1,6 @@
 import { IStorageProvider, QueryParams, StorageMode } from './types';
 import {
-  Organization, Category, Collection, Season, Color, SizeGroup, Size, Brand,
+  Organization, OrganizationUser, Category, Collection, Season, Color, SizeGroup, Size, Brand,
   Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
   InventoryMovement, Customer, Order, OrderItem, Supplier, PurchaseOrder,
   PurchaseOrderItem, StockTransfer, StockTransferItem, SizeGuideTemplate,
@@ -102,6 +102,92 @@ export class LocalOfflineAdapter implements IStorageProvider {
     list.push(newOrg);
     this.setItem('organizations', list);
     return newOrg;
+  }
+
+  // Organization Users & Roles
+  async getOrganizationUsers(params?: QueryParams): Promise<OrganizationUser[]> {
+    let list = this.getItem<OrganizationUser>('organization_users', []);
+    const orgId = params?.organization_id;
+    if (orgId) {
+      list = list.filter((ou) => {
+        const oId = typeof ou.organization_id === 'number' ? ou.organization_id : (ou.organization_id as any)?.id;
+        return oId === orgId;
+      });
+    }
+
+    // Default owner user if array is empty
+    if (list.length === 0 && orgId) {
+      const defaultOwner: OrganizationUser = {
+        id: 1,
+        organization_id: orgId,
+        user_id: 'local_owner_admin',
+        role: 'owner',
+        status: 'active',
+        date_joined: new Date().toISOString(),
+        first_name: 'مدیر',
+        last_name: 'اصلی',
+        email: 'owner@tankhor.com',
+      };
+      this.setItem('organization_users', [defaultOwner]);
+      return [defaultOwner];
+    }
+    return list;
+  }
+
+  async saveOrganizationUser(ouData: Partial<OrganizationUser>): Promise<OrganizationUser> {
+    const list = this.getItem<OrganizationUser>('organization_users', []);
+    let saved: OrganizationUser;
+
+    if (ouData.id) {
+      const idx = list.findIndex((ou) => ou.id === ouData.id);
+      if (idx !== -1) {
+        saved = {
+          ...list[idx],
+          ...ouData,
+        };
+        list[idx] = saved;
+      } else {
+        saved = {
+          id: ouData.id,
+          organization_id: ouData.organization_id || 1,
+          user_id: ouData.user_id || `user_${Date.now()}`,
+          role: ouData.role || 'viewer',
+          status: ouData.status || 'active',
+          date_joined: ouData.date_joined || new Date().toISOString(),
+          first_name: ouData.first_name || '',
+          last_name: ouData.last_name || '',
+          email: ouData.email || '',
+        };
+        list.push(saved);
+      }
+    } else {
+      const nextId = list.reduce((max, ou) => Math.max(max, ou.id || 0), 0) + 1;
+      saved = {
+        id: nextId,
+        organization_id: ouData.organization_id || 1,
+        user_id: ouData.user_id || `user_${Date.now()}`,
+        role: ouData.role || 'viewer',
+        status: ouData.status || 'active',
+        date_joined: new Date().toISOString(),
+        first_name: ouData.first_name || '',
+        last_name: ouData.last_name || '',
+        email: ouData.email || '',
+      };
+      list.push(saved);
+    }
+
+    this.setItem('organization_users', list);
+    return saved;
+  }
+
+  async deleteOrganizationUser(id: number): Promise<boolean> {
+    const list = this.getItem<OrganizationUser>('organization_users', []);
+    const filtered = list.filter((ou) => ou.id !== id);
+    if (filtered.length !== list.length) {
+      this.setItem('organization_users', filtered);
+      return true;
+    }
+    return false;
   }
 
   // Products & Variants

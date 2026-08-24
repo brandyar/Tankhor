@@ -36,6 +36,11 @@ export interface IStorageProvider {
   getOrganizationById(id: number): Promise<Organization | null>;
   saveOrganization(org: Partial<Organization>): Promise<Organization>;
 
+  // Organization Users & Roles
+  getOrganizationUsers(params?: QueryParams): Promise<OrganizationUser[]>;
+  saveOrganizationUser(user: Partial<OrganizationUser>): Promise<OrganizationUser>;
+  deleteOrganizationUser(id: number): Promise<boolean>;
+
   // Products & Variants
   getProducts(params?: QueryParams): Promise<Product[]>;
   getProductById(id: number): Promise<Product | null>;

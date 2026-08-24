@@ -1,5 +1,5 @@
 export const dashboardFa = {
-  welcomeMessage: 'به سامانه مدیریت پوشاک و انبارداری تن‌خور خوش آمدید',
+  welcomeMessage: 'به سامانه مدیریت پوشاک تن‌خور خوش آمدید',
   overviewSubtitle: 'خلاصه وضعیت موجودی، فروش و گردش کالای سازمان فعال شما',
   totalProducts: 'تعداد کل محصولات',
   totalVariants: 'تنوع‌های فعلی (SKU)',

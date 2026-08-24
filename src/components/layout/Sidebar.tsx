@@ -1,10 +1,11 @@
 import React from 'react';
 import { useTranslation } from '../../i18n';
+import { useOrganization } from '../../context/OrganizationContext';
 import {
   LayoutDashboard, ShoppingBag, Layers, Tag, Bookmark, Sun,
   Palette, Ruler, Warehouse as WarehouseIcon, MapPin, ArrowLeftRight,
   ClipboardList, ShoppingCart, Truck, Users, Settings, Shirt, Award,
-  X, ChevronRight, ChevronLeft, PanelLeftClose, PanelLeft, Barcode, Printer
+  X, ChevronRight, ChevronLeft, PanelLeftClose, PanelLeft, Barcode, Printer, UserCheck
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -25,6 +26,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse,
 }) => {
   const { t, locale } = useTranslation();
+  const { permissions } = useOrganization();
   const isRtl = locale === 'fa';
 
   const navGroups = [
@@ -37,48 +39,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       title: t('navigation.productsGroup'),
       items: [
-        { route: 'products/all', label: t('navigation.allProducts'), icon: ShoppingBag },
-        { route: 'products/variants', label: t('navigation.variants'), icon: Shirt },
-        { route: 'products/categories', label: t('navigation.categories'), icon: Layers },
-        { route: 'products/collections', label: t('navigation.collections'), icon: Bookmark },
-        { route: 'products/brands', label: t('navigation.brands'), icon: Award },
-        { route: 'products/seasons', label: t('navigation.seasons'), icon: Sun },
-        { route: 'products/colors', label: t('navigation.colors'), icon: Palette },
-        { route: 'products/size-groups', label: t('navigation.sizeGroups'), icon: Layers },
-        { route: 'products/sizes', label: t('navigation.sizes'), icon: Tag },
-        { route: 'products/size-guides', label: t('navigation.sizeGuides'), icon: Ruler },
-      ],
+        { route: 'products/all', label: t('navigation.allProducts'), icon: ShoppingBag, visible: permissions.canViewProducts },
+        { route: 'products/variants', label: t('navigation.variants'), icon: Shirt, visible: permissions.canViewProducts },
+        { route: 'products/categories', label: t('navigation.categories'), icon: Layers, visible: permissions.canViewProducts },
+        { route: 'products/collections', label: t('navigation.collections'), icon: Bookmark, visible: permissions.canViewProducts },
+        { route: 'products/brands', label: t('navigation.brands'), icon: Award, visible: permissions.canViewProducts },
+        { route: 'products/seasons', label: t('navigation.seasons'), icon: Sun, visible: permissions.canViewProducts },
+        { route: 'products/colors', label: t('navigation.colors'), icon: Palette, visible: permissions.canViewProducts },
+        { route: 'products/size-groups', label: t('navigation.sizeGroups'), icon: Layers, visible: permissions.canViewProducts },
+        { route: 'products/sizes', label: t('navigation.sizes'), icon: Tag, visible: permissions.canViewProducts },
+        { route: 'products/size-guides', label: t('navigation.sizeGuides'), icon: Ruler, visible: permissions.canViewProducts },
+      ].filter((i) => i.visible !== false),
     },
     {
       title: t('navigation.inventoryGroup'),
       items: [
-        { route: 'inventory/overview', label: t('navigation.inventoryOverview'), icon: ClipboardList },
-        { route: 'inventory/barcodes', label: t('navigation.barcodePrint'), icon: Barcode },
-        { route: 'inventory/warehouses', label: t('navigation.warehouses'), icon: WarehouseIcon },
-        { route: 'inventory/locations', label: t('navigation.warehouseLocations'), icon: MapPin },
-        { route: 'inventory/movements', label: t('navigation.stockMovements'), icon: ClipboardList },
-        { route: 'inventory/transfers', label: t('navigation.stockTransfers'), icon: ArrowLeftRight },
-      ],
+        { route: 'inventory/overview', label: t('navigation.inventoryOverview'), icon: ClipboardList, visible: permissions.canViewInventory },
+        { route: 'inventory/barcodes', label: t('navigation.barcodePrint'), icon: Barcode, visible: permissions.canViewInventory },
+        { route: 'inventory/warehouses', label: t('navigation.warehouses'), icon: WarehouseIcon, visible: permissions.canManageInventory },
+        { route: 'inventory/locations', label: t('navigation.warehouseLocations'), icon: MapPin, visible: permissions.canManageInventory },
+        { route: 'inventory/movements', label: t('navigation.stockMovements'), icon: ClipboardList, visible: permissions.canViewInventory },
+        { route: 'inventory/transfers', label: t('navigation.stockTransfers'), icon: ArrowLeftRight, visible: permissions.canManageInventory },
+      ].filter((i) => i.visible !== false),
     },
     {
       title: t('navigation.ordersGroup'),
       items: [
-        { route: 'orders/all', label: t('navigation.allOrders'), icon: ShoppingCart },
-        { route: 'orders/create', label: t('navigation.createOrder'), icon: ShoppingCart },
-      ],
+        { route: 'orders/all', label: t('navigation.allOrders'), icon: ShoppingCart, visible: permissions.canViewOrders },
+        { route: 'orders/create', label: t('navigation.createOrder'), icon: ShoppingCart, visible: permissions.canCreateOrders },
+      ].filter((i) => i.visible !== false),
     },
     {
       title: t('navigation.purchasingGroup'),
       items: [
-        { route: 'purchasing/suppliers', label: t('navigation.suppliers'), icon: Truck },
-        { route: 'purchasing/orders', label: t('navigation.purchaseOrders'), icon: Truck },
-      ],
+        { route: 'purchasing/suppliers', label: t('navigation.suppliers'), icon: Truck, visible: permissions.canViewPurchasing },
+        { route: 'purchasing/orders', label: t('navigation.purchaseOrders'), icon: Truck, visible: permissions.canViewPurchasing },
+      ].filter((i) => i.visible !== false),
     },
     {
       title: t('navigation.customersGroup'),
       items: [
-        { route: 'customers/all', label: t('navigation.allCustomers'), icon: Users },
-      ],
+        { route: 'customers/all', label: t('navigation.allCustomers'), icon: Users, visible: permissions.canViewCustomers },
+      ].filter((i) => i.visible !== false),
     },
     {
       title: t('navigation.settingsGroup'),
@@ -87,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { route: 'settings/sync', label: t('navigation.storageSyncSettings'), icon: Settings },
       ],
     },
-  ];
+  ].filter((group) => group.items.length > 0);
 
   const handleNavClick = (route: string) => {
     onNavigate(route);

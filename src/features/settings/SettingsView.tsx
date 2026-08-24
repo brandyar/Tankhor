@@ -10,7 +10,8 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { EditOrganizationModal } from '../organizations/EditOrganizationModal';
 import { CreateOrganizationModal } from '../organizations/CreateOrganizationModal';
-import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck, Building2, Edit3, Plus, ShieldAlert, Globe, Clock, CheckCircle2 } from 'lucide-react';
+import { OrganizationMembersSection } from '../organizations/OrganizationMembersSection';
+import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck, Building2, Edit3, Plus, ShieldAlert, Globe, Clock, CheckCircle2, Users } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
   const { t } = useTranslation();
@@ -208,6 +209,9 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
       </Card>
+
+      {/* Organization Members & Roles Section */}
+      <OrganizationMembersSection />
 
       {/* Storage Mode Selector */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

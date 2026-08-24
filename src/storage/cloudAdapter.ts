@@ -3,7 +3,7 @@ import { directusClient } from '../api/directus';
 import { LocalOfflineAdapter } from './localAdapter';
 import { StorageSyncManager } from './syncManager';
 import {
-  Organization, Category, Collection, Season, Color, SizeGroup, Size, Brand,
+  Organization, OrganizationUser, Category, Collection, Season, Color, SizeGroup, Size, Brand,
   Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
   InventoryMovement, Customer, Order, OrderItem, Supplier, PurchaseOrder,
   PurchaseOrderItem, StockTransfer, StockTransferItem, SizeGuideTemplate,
@@ -85,6 +85,49 @@ export class CloudDirectusAdapter implements IStorageProvider {
       const saved = await this.localAdapter.saveOrganization(org);
       StorageSyncManager.enqueue({ action: org.id ? 'UPDATE' : 'CREATE', collection: 'organizations', payload: saved });
       return saved;
+    }
+  }
+
+  // Organization Users & Roles
+  async getOrganizationUsers(params?: QueryParams): Promise<OrganizationUser[]> {
+    const orgId = params?.organization_id;
+    const query: any = { sort: '-id' };
+    if (orgId) {
+      query.filter = { organization_id: { _eq: orgId } };
+    }
+    try {
+      return await directusClient.getItems<OrganizationUser>('organization_users', query);
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] getOrganizationUsers failed, using local adapter:', err?.message || err);
+      return this.localAdapter.getOrganizationUsers(params);
+    }
+  }
+
+  async saveOrganizationUser(user: Partial<OrganizationUser>): Promise<OrganizationUser> {
+    try {
+      if (user.id) {
+        return await directusClient.updateItem<OrganizationUser>('organization_users', user.id, user);
+      } else {
+        return await directusClient.createItem<OrganizationUser>('organization_users', user);
+      }
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] saveOrganizationUser failed, falling back to local:', err?.message || err);
+      const saved = await this.localAdapter.saveOrganizationUser(user);
+      StorageSyncManager.enqueue({ action: user.id ? 'UPDATE' : 'CREATE', collection: 'organization_users', payload: saved });
+      return saved;
+    }
+  }
+
+  async deleteOrganizationUser(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('organization_users', id);
+      await this.localAdapter.deleteOrganizationUser(id);
+      return true;
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] deleteOrganizationUser failed, using local:', err?.message || err);
+      const res = await this.localAdapter.deleteOrganizationUser(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'organization_users', payload: { id } });
+      return res;
     }
   }
 

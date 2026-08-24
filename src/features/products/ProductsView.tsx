@@ -17,7 +17,7 @@ import { Plus, Search, Trash2, Edit, Layers, Filter, X, RefreshCw } from 'lucide
 
 export const ProductsView: React.FC = () => {
   const { t, locale } = useTranslation();
-  const { activeOrganization } = useOrganization();
+  const { activeOrganization, permissions } = useOrganization();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -308,9 +308,11 @@ export const ProductsView: React.FC = () => {
         title={t('navigation.allProducts')}
         subtitle="مدیریت کاتالوگ کامل پوشاک، تنوع‌ها، برندها، مجموعه‌ها و فیلترهای پیشرفته"
         action={
-          <Button onClick={handleOpenNewProduct} icon={<Plus className="w-4 h-4" />}>
-            {t('common.create')}
-          </Button>
+          permissions.canEditProducts ? (
+            <Button onClick={handleOpenNewProduct} icon={<Plus className="w-4 h-4" />}>
+              {t('common.create')}
+            </Button>
+          ) : undefined
         }
       />
 
