@@ -68,7 +68,6 @@ const TENANT_SCOPED_COLLECTIONS = new Set([
   'size_groups',
   'sizes',
   'warehouses',
-  'warehouse_locations',
   'inventory_items',
   'inventory_movements',
   'orders',
@@ -80,8 +79,6 @@ const TENANT_SCOPED_COLLECTIONS = new Set([
   'stock_transfers',
   'stock_transfer_items',
   'size_guide_templates',
-  'size_guide_measurements',
-  'size_guide_values',
 ]);
 
 // Generic List items with injected Tenant Scope

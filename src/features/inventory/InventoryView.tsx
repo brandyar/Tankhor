@@ -42,10 +42,15 @@ export const InventoryView: React.FC = () => {
         adapter.getInventoryItems({
           organization_id: orgId,
           warehouse_id: selectedWarehouseFilter ? Number(selectedWarehouseFilter) : undefined,
+        }).catch((err) => {
+          console.warn('[InventoryView] Failed to fetch inventory items:', err);
+          return [];
         }),
-        adapter.getVariants({ organization_id: orgId }),
-        adapter.getWarehouses({ organization_id: orgId }),
-        adapter.getWarehouseLocations({ organization_id: orgId }),
+        adapter.getVariants({ organization_id: orgId }).catch(() => []),
+        adapter.getWarehouses({ organization_id: orgId }).catch(() => []),
+        adapter.getWarehouseLocations(
+          selectedWarehouseFilter ? { warehouse_id: Number(selectedWarehouseFilter) } : undefined
+        ).catch(() => []),
       ]);
 
       let filtered = items;
@@ -60,7 +65,7 @@ export const InventoryView: React.FC = () => {
         const term = search.toLowerCase();
         filtered = filtered.filter((i) => {
           const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-          const v = variants.find((varObj) => varObj.id === vId);
+          const v = vList.find((varObj) => varObj.id === vId);
           return (
             (v && v.sku && v.sku.toLowerCase().includes(term)) ||
             (v && v.product_title && v.product_title.toLowerCase().includes(term)) ||

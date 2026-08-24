@@ -704,11 +704,12 @@ export class CloudDirectusAdapter implements IStorageProvider {
     if (params?.variant_id) filter.variant_id = { _eq: params.variant_id };
 
     try {
-      const [items, variants, products, colors, sizes, warehouses, locations] = await Promise.all([
-        directusClient.getItems<InventoryItem>('inventory_items', {
-          filter: Object.keys(filter).length > 0 ? filter : undefined,
-          sort: '-id',
-        }),
+      const items = await directusClient.getItems<InventoryItem>('inventory_items', {
+        filter: Object.keys(filter).length > 0 ? filter : undefined,
+        sort: '-id',
+      });
+
+      const [variants, products, colors, sizes, warehouses, locations] = await Promise.all([
         directusClient.getItems<ProductVariant>('product_variants', {
           filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
         }).catch(() => []),
@@ -728,29 +729,34 @@ export class CloudDirectusAdapter implements IStorageProvider {
         const wId = typeof item.warehouse_id === 'number' ? item.warehouse_id : (item.warehouse_id as any)?.id;
         const locId = typeof item.location_id === 'number' ? item.location_id : (item.location_id as any)?.id;
 
-        const variant = variants.find((v) => v.id === vId);
+        const vObj = typeof item.variant_id === 'object' && item.variant_id !== null ? (item.variant_id as any) : null;
+        const wObj = typeof item.warehouse_id === 'object' && item.warehouse_id !== null ? (item.warehouse_id as any) : null;
+        const lObj = typeof item.location_id === 'object' && item.location_id !== null ? (item.location_id as any) : null;
+
+        const variant = variants.find((v) => v.id === vId) || vObj;
         const prodId = variant ? (typeof variant.product_id === 'number' ? variant.product_id : (variant.product_id as any)?.id) : null;
-        const product = prodId ? products.find((p) => p.id === prodId) : null;
+        const product = prodId ? products.find((p) => p.id === prodId) : (typeof variant?.product_id === 'object' ? variant.product_id : null);
 
         const colorId = variant ? (typeof variant.color_id === 'number' ? variant.color_id : (variant.color_id as any)?.id) : null;
         const sizeId = variant ? (typeof variant.size_id === 'number' ? variant.size_id : (variant.size_id as any)?.id) : null;
 
-        const color = colorId ? colors.find((c) => c.id === colorId) : null;
-        const size = sizeId ? sizes.find((s) => s.id === sizeId) : null;
-        const warehouse = warehouses.find((w) => w.id === wId);
-        const location = locations.find((l) => l.id === locId);
+        const color = colorId ? colors.find((c) => c.id === colorId) : (typeof variant?.color_id === 'object' ? variant.color_id : null);
+        const size = sizeId ? sizes.find((s) => s.id === sizeId) : (typeof variant?.size_id === 'object' ? variant.size_id : null);
+        const warehouse = warehouses.find((w) => w.id === wId) || wObj;
+        const location = locations.find((l) => l.id === locId) || lObj;
 
         return {
           ...item,
           sku: variant?.sku || (vId ? `SKU-${vId}` : '-'),
-          product_title: product?.title || 'محصول',
-          color_name: color?.name || '-',
-          size_name: size?.name || '-',
+          product_title: product?.title || variant?.product_title || 'محصول',
+          color_name: color?.name || variant?.color_name || '-',
+          size_name: size?.name || variant?.size_name || '-',
           warehouse_name: warehouse?.name || 'انبار مرکزی',
           location_name: location?.name || '-',
         };
       });
-    } catch {
+    } catch (err) {
+      console.warn('[CloudDirectusAdapter] Error fetching inventory items from cloud:', err);
       return this.localAdapter.getInventoryItems(params);
     }
   }
