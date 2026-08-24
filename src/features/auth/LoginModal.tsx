@@ -166,16 +166,16 @@ export const LoginModal: React.FC = () => {
         {/* Top Feature Banner */}
         <div className="p-3 bg-neutral-900 text-white rounded-xl flex items-center justify-between gap-3 shadow-sm">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-white shrink-0 border border-neutral-700/80">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <div className="w-9 h-9 rounded-lg bg-white/10 p-1 flex items-center justify-center shrink-0 border border-white/20">
+              <img src="/favicon.png" alt="لوگوی تن‌خور" className="w-full h-full object-contain" />
             </div>
             <div>
-              <p className="font-bold text-xs">سامانه امنیتی و چندمستأجری تن‌خور</p>
-              <p className="text-[10px] text-neutral-400 font-mono">Multi-Tenant Cloud Gateway</p>
+              <p className="font-bold text-xs">پلتفرم مدیریت پوشاک و انبارداری تن‌خور</p>
+              <p className="text-[10px] text-neutral-400 font-mono">TANKHOR Platform</p>
             </div>
           </div>
           <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-            {isCloudAuthenticated ? 'متصل' : 'آماده فعال‌سازی'}
+            {isCloudAuthenticated ? 'متصل به سرور' : 'ورود / ثبت‌نام آنلاین'}
           </span>
         </div>
 

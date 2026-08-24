@@ -78,13 +78,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       directusClient.getMe()
         .then(async (userData) => {
-          if (userData && userData.id) {
+          if (userData && (userData.id || userData.email)) {
             setUser(userData);
             setIsCloudAuthenticated(true);
-            storageManager.setMode('cloud_synced');
-            localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
 
             const activeOrg = userData.active_organization || userData.activeOrganization;
+            const plan = activeOrg?.plan || userData.plan || 'free';
+            if (plan === 'free') {
+              storageManager.setMode('local_offline');
+            } else {
+              storageManager.setMode('cloud_synced');
+            }
+
+            localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
+
             if (activeOrg && activeOrg.id) {
               localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
               await storageManager.getLocalAdapter().saveOrganization(activeOrg);
@@ -101,7 +108,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         })
         .catch(() => {
-          // Server offline or token expired -> use cached user session for offline work
           handleOfflineFallback(cachedUserRaw);
         })
         .finally(() => setIsLoading(false));
@@ -115,9 +121,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (cachedUserRaw) {
       try {
         const parsed = JSON.parse(cachedUserRaw);
-        if (parsed && parsed.id) {
+        if (parsed && (parsed.id || parsed.email)) {
           setUser(parsed);
           setIsCloudAuthenticated(false);
+          storageManager.setMode('local_offline');
           return;
         }
       } catch {
@@ -126,6 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setUser(null);
     setIsCloudAuthenticated(false);
+    storageManager.setMode('local_offline');
   };
 
   const login = async (email: string, pass: string): Promise<boolean> => {
@@ -133,15 +141,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const loginRes = await directusClient.login(email, pass);
-      const userData = await directusClient.getMe();
+      let userData = await directusClient.getMe().catch(() => loginRes.user);
+      if (!userData) userData = loginRes.user;
 
-      if (userData && userData.id) {
+      if (userData && (userData.id || userData.email)) {
         setUser(userData);
         setIsCloudAuthenticated(true);
-        storageManager.setMode('cloud_synced');
-        localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
 
         const activeOrg = userData.active_organization || userData.activeOrganization || loginRes.activeOrganization;
+        const plan = activeOrg?.plan || userData.plan || 'free';
+        if (plan === 'free') {
+          storageManager.setMode('local_offline');
+        } else {
+          storageManager.setMode('cloud_synced');
+        }
+
+        localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
+
         if (activeOrg && activeOrg.id) {
           localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
           await storageManager.getLocalAdapter().saveOrganization(activeOrg);
@@ -216,14 +232,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       // 2. Fetch authenticated profile & organization
-      const userData = await directusClient.getMe();
-      if (userData && userData.id) {
+      let userData = await directusClient.getMe().catch(() => null);
+      if (!userData && regRes.user) {
+        userData = regRes.user;
+      }
+
+      if (userData && (userData.id || userData.email)) {
         setUser(userData);
         setIsCloudAuthenticated(true);
-        storageManager.setMode('cloud_synced');
-        localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
 
         const activeOrg = userData.active_organization || userData.activeOrganization || regRes.organization || regRes.activeOrganization;
+        const plan = activeOrg?.plan || userData.plan || 'free';
+        if (plan === 'free') {
+          storageManager.setMode('local_offline');
+        } else {
+          storageManager.setMode('cloud_synced');
+        }
+
+        localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
+
         if (activeOrg && activeOrg.id) {
           localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
           await storageManager.getLocalAdapter().saveOrganization(activeOrg);
@@ -251,7 +278,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         errMsg.includes('RECORD_NOT_UNIQUE') ||
         errMsg.toLowerCase().includes('already exists')
       ) {
-        setLoginError('این آدرس ایمیل قبلاً در سرور ابری ثبت شده است. لطفاً وارد شوید.');
+        setLoginError('این آدرس ایمیل قبلاً در سرور آنلاین ثبت شده است. لطفاً وارد شوید.');
       } else {
         setLoginError(`خطا در ثبت‌نام: ${errMsg}`);
       }

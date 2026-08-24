@@ -13,7 +13,24 @@ class DirectusClient {
   private token: string | null = null;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || '/api';
+    const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
+    const remoteUrl = (metaEnv?.VITE_DIRECTUS_URL || 'https://api.tankhor.com').replace(/\/+$/, '');
+
+    if (baseUrl) {
+      this.baseUrl = baseUrl.replace(/\/+$/, '');
+    } else if (typeof window !== 'undefined') {
+      const isTauri = window.location.protocol.includes('tauri') || Boolean((window as any).__TAURI__) || window.location.hostname === 'tauri.localhost';
+      const isLocalServer = window.location.port === '3000' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+      if (isTauri || !isLocalServer) {
+        this.baseUrl = remoteUrl;
+      } else {
+        this.baseUrl = '/api';
+      }
+    } else {
+      this.baseUrl = remoteUrl;
+    }
+
     this.token = typeof window !== 'undefined' ? localStorage.getItem('tankhor_directus_token') : null;
   }
 
@@ -37,7 +54,7 @@ class DirectusClient {
   }
 
   public getBaseUrl(): string {
-    return this.baseUrl || '/api';
+    return this.baseUrl || 'https://api.tankhor.com';
   }
 
   private getHeaders(): HeadersInit {
@@ -79,7 +96,7 @@ class DirectusClient {
       }
 
       if (!response.ok) {
-        const errorMsg = data.error || data.message || `Request failed with status ${response.status}`;
+        const errorMsg = data.errors?.[0]?.message || data.error || data.message || `Request failed with status ${response.status}`;
         throw new Error(errorMsg);
       }
 
@@ -92,23 +109,47 @@ class DirectusClient {
 
   // Auth methods
   public async login(email: string, password: string): Promise<{ access_token: string; user: any; activeOrganization: any; organizations: any[] }> {
-    const data = await this.request('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
+    const cleanEmail = email.toLowerCase().trim();
+    let res: any;
 
-    if (data.token) {
-      this.setToken(data.token);
+    try {
+      res = await this.request('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: cleanEmail, password }),
+      });
+    } catch (err: any) {
+      try {
+        res = await this.request('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email: cleanEmail, password, mode: 'json' }),
+        });
+      } catch (directusErr: any) {
+        throw new Error(directusErr.message || err.message || 'نام کاربری (ایمیل) یا کلمه عبور نادرست است.');
+      }
     }
-    if (data.activeOrganization?.id && typeof window !== 'undefined') {
-      localStorage.setItem('tankhor_active_org_id', String(data.activeOrganization.id));
+
+    const token = res.token || res.access_token;
+    if (token) {
+      this.setToken(token);
+    }
+
+    let user = res.user;
+    if (!user) {
+      user = await this.getMe().catch(() => null);
+    }
+
+    const activeOrg = res.activeOrganization || res.active_organization || { id: 1, name: 'فروشگاه من', plan: 'free' };
+    const orgs = res.organizations || [activeOrg];
+
+    if (activeOrg?.id && typeof window !== 'undefined') {
+      localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
     }
 
     return {
-      access_token: data.token,
-      user: data.user,
-      activeOrganization: data.activeOrganization,
-      organizations: data.organizations || [],
+      access_token: token,
+      user: user || { email: cleanEmail, role: 'owner', plan: 'free' },
+      activeOrganization: activeOrg,
+      organizations: orgs,
     };
   }
 
@@ -121,7 +162,11 @@ class DirectusClient {
   }
 
   public async getMe(): Promise<any> {
-    return this.request('/auth/me');
+    try {
+      return await this.request('/auth/me');
+    } catch {
+      return await this.request('/users/me');
+    }
   }
 
   public async register(data: {
@@ -135,13 +180,43 @@ class DirectusClient {
     initial_category_name?: string;
     initial_warehouse_name?: string;
   }): Promise<any> {
-    const res = await this.request('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const cleanEmail = data.email.toLowerCase().trim();
+    let res: any;
 
-    if (res.token) {
-      this.setToken(res.token);
+    try {
+      res = await this.request('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ ...data, email: cleanEmail }),
+      });
+    } catch (err: any) {
+      try {
+        const newUser = await this.request('/users', {
+          method: 'POST',
+          body: JSON.stringify({
+            email: cleanEmail,
+            password: data.password,
+            first_name: data.first_name || '',
+            last_name: data.last_name || '',
+            status: 'active',
+          }),
+        });
+
+        const loginRes = await this.login(cleanEmail, data.password);
+        return {
+          success: true,
+          user: newUser || loginRes.user,
+          token: loginRes.access_token,
+          activeOrganization: loginRes.activeOrganization,
+          organization: loginRes.activeOrganization,
+        };
+      } catch (directusErr: any) {
+        throw new Error(directusErr.message || err.message || 'خطا در ثبت نام در سرور آنلاین');
+      }
+    }
+
+    const token = res.token || res.access_token;
+    if (token) {
+      this.setToken(token);
     }
     const orgId = res.activeOrganization?.id || res.organization?.id;
     if (orgId && typeof window !== 'undefined') {
