@@ -1,0 +1,13 @@
+* text=auto
+
+# Ensure binary files are never modified by line ending normalization
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.svg binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
