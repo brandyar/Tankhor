@@ -336,9 +336,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               </p>
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                {variants.map((v) => (
+                {variants.map((v, vIdx) => (
                   <div
-                    key={v.id}
+                    key={`pdm_var_${v.id || 'temp'}_${vIdx}`}
                     className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs"
                   >
                     <div>

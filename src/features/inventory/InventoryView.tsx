@@ -285,8 +285,8 @@ export const InventoryView: React.FC = () => {
               className="bg-white border border-slate-300 rounded-xl text-slate-800 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
               <option value="">همه انبارها</option>
-              {warehouses.map((w) => (
-                <option key={w.id} value={w.id}>
+              {warehouses.map((w, wIdx) => (
+                <option key={`inv_wh_${w.id}_${wIdx}`} value={w.id}>
                   {w.name}
                 </option>
               ))}

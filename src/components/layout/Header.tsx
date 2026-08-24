@@ -120,11 +120,11 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
 
                 {/* Organization List */}
                 <div className="max-h-56 overflow-y-auto p-1 space-y-1">
-                  {organizations.map((org) => {
+                  {organizations.map((org, orgIdx) => {
                     const isSelected = activeOrganization?.id === org.id;
                     return (
                       <button
-                        key={org.id}
+                        key={`hdr_org_${org.id}_${orgIdx}`}
                         onClick={() => {
                           selectOrganization(org.id);
                           setIsOrgMenuOpen(false);

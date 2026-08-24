@@ -486,8 +486,8 @@ export const TransfersView: React.FC = () => {
                   className="w-full p-2 text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
                 >
                   <option value={0}>-- انتخاب کالا --</option>
-                  {variants.map((v) => (
-                    <option key={v.id} value={v.id}>
+                  {variants.map((v, vIdx) => (
+                    <option key={`trf_var_opt_${v.id}_${vIdx}`} value={v.id}>
                       {getVariantLabel(v)}
                     </option>
                   ))}

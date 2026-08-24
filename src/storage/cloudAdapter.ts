@@ -276,7 +276,7 @@ export class CloudDirectusAdapter implements IStorageProvider {
     }
   }
 
-  async saveVariant(variant: Partial<ProductVariant>, warehouseId?: number): Promise<ProductVariant> {
+  async saveVariant(variant: Partial<ProductVariant>, warehouseId?: number, locationId?: number): Promise<ProductVariant> {
     const payload: any = { ...variant };
     const stockQty = payload.stock_quantity;
     delete payload.stock_quantity;
@@ -328,11 +328,16 @@ export class CloudDirectusAdapter implements IStorageProvider {
           const damaged = Number(itemToUpdate.damaged_quantity) || 0;
           const available = Math.max(0, qtyNum - reserved - damaged);
 
-          await directusClient.updateItem<InventoryItem>('inventory_items', itemToUpdate.id, {
+          const invUpdatePayload: any = {
             quantity: qtyNum,
             available_quantity: available,
             updated_at: new Date().toISOString(),
-          }).catch((err) => {
+          };
+          if (locationId) {
+            invUpdatePayload.location_id = locationId;
+          }
+
+          await directusClient.updateItem<InventoryItem>('inventory_items', itemToUpdate.id, invUpdatePayload).catch((err) => {
             console.warn('[CloudDirectusAdapter] Update inventory failed:', err?.message || err);
           });
         } else {
@@ -371,6 +376,7 @@ export class CloudDirectusAdapter implements IStorageProvider {
             organization_id: orgId,
             variant_id: saved.id,
             warehouse_id: targetWarehouseId || 1,
+            location_id: locationId || undefined,
             quantity: qtyNum,
             reserved_quantity: 0,
             available_quantity: qtyNum,
@@ -387,6 +393,7 @@ export class CloudDirectusAdapter implements IStorageProvider {
             organization_id: orgId,
             variant_id: saved.id,
             warehouse_id: targetWarehouseId || 1,
+            location_id: locationId || undefined,
             type: 'adjustment',
             quantity: qtyNum,
             reference_type: 'manual',

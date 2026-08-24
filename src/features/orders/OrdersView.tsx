@@ -537,7 +537,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {selectedOrderItems.map((item, idx) => (
-                        <tr key={item.id || idx} className="hover:bg-slate-50 transition-colors">
+                        <tr key={`ord_item_${item.id || 'temp'}_${idx}`} className="hover:bg-slate-50 transition-colors">
                           <td className="p-2 text-center text-slate-400 font-mono text-[11px]">{idx + 1}</td>
                           <td className="p-2">
                             <span className="font-bold text-slate-900 block leading-tight">{item.productTitle}</span>

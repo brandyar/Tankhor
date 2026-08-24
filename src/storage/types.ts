@@ -44,7 +44,7 @@ export interface IStorageProvider {
 
   getVariants(params?: QueryParams): Promise<ProductVariant[]>;
   getVariantsByProductId(productId: number): Promise<ProductVariant[]>;
-  saveVariant(variant: Partial<ProductVariant>, warehouseId?: number): Promise<ProductVariant>;
+  saveVariant(variant: Partial<ProductVariant>, warehouseId?: number, locationId?: number): Promise<ProductVariant>;
   deleteVariant(id: number): Promise<boolean>;
 
   // Catalog Attributes

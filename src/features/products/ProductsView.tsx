@@ -352,8 +352,8 @@ export const ProductsView: React.FC = () => {
                 className="w-full bg-white border border-slate-300 rounded-xl text-slate-800 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
                 <option value="">همه برندها</option>
-                {brands.map((b) => (
-                  <option key={b.id} value={b.name}>
+                {brands.map((b, bIdx) => (
+                  <option key={`prod_brand_${b.id || b.name}_${bIdx}`} value={b.name}>
                     {b.name}
                   </option>
                 ))}
@@ -368,8 +368,8 @@ export const ProductsView: React.FC = () => {
                 className="w-full bg-white border border-slate-300 rounded-xl text-slate-800 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
                 <option value="">همه کالکشن‌ها</option>
-                {collections.map((col) => (
-                  <option key={col.id} value={col.id}>
+                {collections.map((col, colIdx) => (
+                  <option key={`prod_col_${col.id}_${colIdx}`} value={col.id}>
                     {col.name}
                   </option>
                 ))}
@@ -384,8 +384,8 @@ export const ProductsView: React.FC = () => {
                 className="w-full bg-white border border-slate-300 rounded-xl text-slate-800 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
                 <option value="">همه فصل‌ها</option>
-                {seasons.map((s) => (
-                  <option key={s.id} value={s.id}>
+                {seasons.map((s, sIdx) => (
+                  <option key={`prod_season_${s.id}_${sIdx}`} value={s.id}>
                     {s.name}
                   </option>
                 ))}
@@ -406,8 +406,8 @@ export const ProductsView: React.FC = () => {
                 className="bg-white border border-slate-300 rounded-lg text-slate-800 text-xs px-3 py-1.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
                 <option value="">همه رنگ‌ها</option>
-                {colors.map((c) => (
-                  <option key={c.id} value={c.id}>
+                {colors.map((c, cIdx) => (
+                  <option key={`prod_color_${c.id}_${cIdx}`} value={c.id}>
                     {c.name}
                   </option>
                 ))}

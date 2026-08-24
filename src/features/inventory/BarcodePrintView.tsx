@@ -409,7 +409,7 @@ export const BarcodePrintView: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    filteredVariants.map((v) => {
+                    filteredVariants.map((v, vIdx) => {
                       const isSelected = !!selectedItems[v.id];
                       const copies = selectedItems[v.id] || 0;
                       const color = colors.find((c) => c.id === (typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id));
@@ -417,7 +417,7 @@ export const BarcodePrintView: React.FC = () => {
 
                       return (
                         <tr
-                          key={v.id}
+                          key={`bar_var_${v.id}_${vIdx}`}
                           className={`hover:bg-neutral-50 transition-colors ${isSelected ? 'bg-emerald-50/40' : ''}`}
                         >
                           <td className="px-3 py-2.5 text-center">

@@ -298,8 +298,8 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
                     </td>
                   </tr>
                 ) : (
-                  categoryTreeData.map(({ item, level, parentName }) => (
-                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  categoryTreeData.map(({ item, level, parentName }, catIdx) => (
+                    <tr key={`attr_cat_${item.id}_${catIdx}`} className="hover:bg-slate-50 transition-colors">
                       <td className="p-3">
                         <div
                           className="flex items-center gap-2"

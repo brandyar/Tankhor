@@ -19,7 +19,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
-import { formatDate, formatCurrency } from '../../utils/formatters';
+import { formatDate, formatCurrency, toPersianDigits } from '../../utils/formatters';
 import {
   Truck,
   Plus,
@@ -30,6 +30,7 @@ import {
   Building2,
   Package,
   AlertCircle,
+  Trash2,
 } from 'lucide-react';
 
 export const PurchaseOrdersView: React.FC = () => {
@@ -100,16 +101,38 @@ export const PurchaseOrdersView: React.FC = () => {
     loadData();
   }, [activeOrganization]);
 
+  const getVariantLabel = (v: ProductVariant) => {
+    const prod = products.find((p) => p.id === (typeof v.product_id === 'object' ? (v.product_id as any).id : v.product_id));
+    const colorName = (v as any).color_name || (typeof v.color_id === 'object' ? (v.color_id as any).name : undefined);
+    const sizeName = (v as any).size_name || (typeof v.size_id === 'object' ? (v.size_id as any).name : undefined);
+    const title = prod?.title || (v as any).product_title || `کالا #${v.id}`;
+    const details = [colorName, sizeName].filter(Boolean).join(' / ');
+    const skuText = v.sku ? ` (${v.sku})` : '';
+    return `${title}${details ? ` - ${details}` : ''}${skuText}`;
+  };
+
   const handleAddItem = () => {
-    if (!selectedVariantId || itemQty <= 0) return;
-    const existing = items.findIndex((i) => i.variant_id === selectedVariantId);
-    if (existing !== -1) {
+    if (!selectedVariantId || selectedVariantId <= 0) {
+      alert(isPersian ? 'لطفاً یک کالا را انتخاب کنید.' : 'Please select a variant.');
+      return;
+    }
+    const qty = Math.max(1, Number(itemQty) || 1);
+    const cost = Math.max(0, Number(itemCost) || 0);
+
+    const existingIndex = items.findIndex((i) => i.variant_id === selectedVariantId);
+    if (existingIndex !== -1) {
       const updated = [...items];
-      updated[existing].quantity += itemQty;
+      updated[existingIndex].quantity += qty;
+      updated[existingIndex].unit_cost = cost;
       setItems(updated);
     } else {
-      setItems([...items, { variant_id: selectedVariantId, quantity: itemQty, unit_cost: itemCost }]);
+      setItems([...items, { variant_id: selectedVariantId, quantity: qty, unit_cost: cost }]);
     }
+
+    // Reset fields for next item
+    setSelectedVariantId(0);
+    setItemQty(10);
+    setItemCost(0);
   };
 
   const handleCreatePO = async (status: PurchaseOrderStatus = 'draft') => {
@@ -332,49 +355,79 @@ export const PurchaseOrdersView: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         title="ایجاد سفارش خرید جدید از تامین‌کننده"
+        maxWidth="2xl"
+        footer={
+          <div className="flex flex-wrap items-center justify-end gap-2 w-full">
+            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+              انصراف
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => handleCreatePO('ordered')}
+              isLoading={isSaving}
+              disabled={items.length === 0}
+            >
+              ثبت سفارش (ارسال به تامین‌کننده)
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => handleCreatePO('received')}
+              isLoading={isSaving}
+              disabled={items.length === 0}
+            >
+              تحویل فوری و رسید انبار
+            </Button>
+          </div>
+        }
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="تامین‌کننده"
+              label="تامین‌کننده *"
               value={supplierId}
               onChange={(e) => setSupplierId(Number(e.target.value))}
               options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
             />
 
             <Select
-              label="انبار تحویل گیرنده"
+              label="انبار تحویل گیرنده *"
               value={warehouseId}
               onChange={(e) => setWarehouseId(Number(e.target.value))}
               options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
             />
           </div>
 
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-            <h4 className="text-xs font-bold text-slate-800">اقلام سفارشی خرید</h4>
+          <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
+            <h4 className="text-xs font-bold text-slate-800">انتخاب کالا و اضافه کردن به فاکتور خرید</h4>
+            
             <div className="flex flex-col sm:flex-row items-end gap-2">
               <div className="flex-1 w-full">
-                <label className="block text-[11px] text-slate-500 mb-1">کالا (SKU)</label>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">انتخاب کالا / تنوع (SKU) *</label>
                 <select
                   value={selectedVariantId}
                   onChange={(e) => {
                     const id = Number(e.target.value);
                     setSelectedVariantId(id);
                     const v = variants.find((varObj) => varObj.id === id);
-                    if (v) setItemCost(v.cost_price || 0);
+                    if (v) {
+                      const costVal = v.cost !== undefined && v.cost !== null ? Number(v.cost) : ((v as any).cost_price !== undefined ? Number((v as any).cost_price) : 0);
+                      setItemCost(costVal);
+                    } else {
+                      setItemCost(0);
+                    }
                   }}
-                  className="w-full p-2 text-xs border border-slate-200 rounded-lg bg-white outline-none"
+                  className="w-full p-2.5 text-xs border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                 >
                   <option value={0}>-- انتخاب کالا --</option>
                   {variants.map((v, vIdx) => (
-                    <option key={`po_var_${v.id}_${vIdx}`} value={v.id}>
-                      {v.sku} - {v.price} تومان
+                    <option key={`po_var_opt_${v.id}_${vIdx}`} value={v.id}>
+                      {getVariantLabel(v)}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="w-24">
+              <div className="w-28 sm:w-24">
                 <Input
                   label="تعداد"
                   type="number"
@@ -384,44 +437,82 @@ export const PurchaseOrdersView: React.FC = () => {
                 />
               </div>
 
-              <div className="w-32">
+              <div className="w-36 sm:w-32">
                 <Input
-                  label="قیمت خرید"
+                  label="قیمت خرید واحد"
                   type="number"
                   value={itemCost}
                   onChange={(e) => setItemCost(Number(e.target.value))}
                 />
               </div>
 
-              <Button variant="secondary" onClick={handleAddItem} icon={<Plus className="w-4 h-4" />}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleAddItem}
+                icon={<Plus className="w-4 h-4" />}
+                className="whitespace-nowrap"
+              >
                 افزودن
               </Button>
             </div>
 
-            {items.length > 0 && (
-              <div className="divide-y divide-slate-200 bg-white border border-slate-200 rounded-lg">
-                {items.map((i, idx) => (
-                  <div key={idx} className="p-2 flex items-center justify-between text-xs font-mono">
-                    <span>کالا #{i.variant_id} - تعداد: {i.quantity}</span>
-                    <span className="font-bold text-slate-900">
-                      {formatCurrency(i.quantity * i.unit_cost, 'TOMAN', isPersian)}
-                    </span>
-                  </div>
-                ))}
+            {/* List of Added Order Items */}
+            {items.length === 0 ? (
+              <div className="text-center py-6 border border-dashed border-slate-200 rounded-lg bg-white text-slate-400 text-xs">
+                هیچ کالایی به سفارش خرید اضافه نشده است. کالا و تعداد را از کادر بالا انتخاب کنید.
+              </div>
+            ) : (
+              <div className="space-y-2 pt-1">
+                <div className="divide-y divide-slate-100 bg-white border border-slate-200 rounded-lg overflow-hidden">
+                  {items.map((item, idx) => {
+                    const v = variants.find((varObj) => varObj.id === item.variant_id);
+                    const label = v ? getVariantLabel(v) : `کالا #${item.variant_id}`;
+                    return (
+                      <div key={`po_item_row_${item.variant_id}_${idx}`} className="p-2.5 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors">
+                        <div className="flex-1 min-w-0 pr-2">
+                          <span className="font-bold text-slate-800 block truncate">{label}</span>
+                          <span className="text-slate-500 text-[11px] font-mono">
+                            {toPersianDigits(item.quantity)} عدد × {formatCurrency(item.unit_cost, 'TOMAN', isPersian)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-slate-900 font-mono">
+                            {formatCurrency(item.quantity * item.unit_cost, 'TOMAN', isPersian)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setItems(items.filter((_, itemIdx) => itemIdx !== idx))}
+                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                            title="حذف آیتم"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex justify-between items-center p-3 bg-indigo-50/80 rounded-xl border border-indigo-100 text-xs font-bold text-indigo-950">
+                  <span>جمع کل فاکتور سفارش خرید:</span>
+                  <span className="font-mono text-sm text-indigo-700">
+                    {formatCurrency(items.reduce((sum, i) => sum + i.quantity * i.unit_cost, 0), 'TOMAN', isPersian)}
+                  </span>
+                </div>
               </div>
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
-              انصراف
-            </Button>
-            <Button variant="secondary" onClick={() => handleCreatePO('ordered')} isLoading={isSaving}>
-              ثبت سفارش (ارسال به تامین‌کننده)
-            </Button>
-            <Button variant="primary" onClick={() => handleCreatePO('received')} isLoading={isSaving}>
-              تحویل فوری و رسید انبار
-            </Button>
+          <div className="space-y-1">
+            <label className="block text-xs font-semibold text-slate-700">یادداشت‌ها و توضیحات سفارش (اختیاری)</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              placeholder="توضیحات نحوه تسویه، زمان تحویل یا شرایط حمل..."
+              className="w-full bg-white border border-slate-300 rounded-xl text-slate-900 text-xs p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
           </div>
         </div>
       </Modal>

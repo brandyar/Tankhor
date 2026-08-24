@@ -351,9 +351,9 @@ export const CustomersView: React.FC = () => {
               }
               return (
                 <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
-                  {stats.orders.map((ord) => (
+                  {stats.orders.map((ord, ordIdx) => (
                     <div
-                      key={ord.id}
+                      key={`cust_ord_${ord.id || 'temp'}_${ordIdx}`}
                       className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs"
                     >
                       <div>

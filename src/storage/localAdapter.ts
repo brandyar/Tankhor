@@ -277,7 +277,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     });
   }
 
-  async saveVariant(variant: Partial<ProductVariant>, warehouseId?: number): Promise<ProductVariant> {
+  async saveVariant(variant: Partial<ProductVariant>, warehouseId?: number, locationId?: number): Promise<ProductVariant> {
     const list = this.getItem<ProductVariant>('product_variants', []);
     let saved: ProductVariant;
 
@@ -347,6 +347,9 @@ export class LocalOfflineAdapter implements IStorageProvider {
         const damaged = Number(item.damaged_quantity) || 0;
         inventoryList[invIdx].quantity = qtyNum;
         inventoryList[invIdx].available_quantity = Math.max(0, qtyNum - reserved - damaged);
+        if (locationId) {
+          inventoryList[invIdx].location_id = locationId;
+        }
         inventoryList[invIdx].updated_at = new Date().toISOString();
       } else {
         inventoryList.push({
@@ -354,6 +357,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
           organization_id: saved.organization_id || 1,
           variant_id: saved.id,
           warehouse_id: targetWarehouseId || 1,
+          location_id: locationId || undefined,
           quantity: qtyNum,
           reserved_quantity: 0,
           available_quantity: qtyNum,
@@ -370,6 +374,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
           organization_id: saved.organization_id || 1,
           variant_id: saved.id,
           warehouse_id: targetWarehouseId || 1,
+          location_id: locationId || undefined,
           type: 'adjustment',
           quantity: qtyNum,
           reference_type: 'manual',

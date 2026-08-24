@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
 import { storageManager } from '../../storage';
-import { Product, ProductVariant, Category, Collection, Season, SizeGuideTemplate, Brand, Color, Size, Warehouse } from '../../types';
+import { Product, ProductVariant, Category, Collection, Season, SizeGuideTemplate, Brand, Color, Size, Warehouse, WarehouseLocation } from '../../types';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -56,6 +56,8 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
   const [sizes, setSizes] = useState<Size[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<number>(1);
+  const [locations, setLocations] = useState<WarehouseLocation[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<number | ''>('');
 
   // Selected Colors & Sizes for real-time variant generation
   const [selectedColorIds, setSelectedColorIds] = useState<number[]>([]);
@@ -187,6 +189,23 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
   useEffect(() => {
     loadData();
   }, [productId, activeOrganization]);
+
+  // Load warehouse locations when selected warehouse changes
+  useEffect(() => {
+    if (!selectedWarehouseId) {
+      setLocations([]);
+      return;
+    }
+    const adapter = storageManager.getAdapter();
+    adapter.getWarehouseLocations({ warehouse_id: Number(selectedWarehouseId) })
+      .then((locList) => {
+        setLocations(locList);
+      })
+      .catch((err) => {
+        console.warn('[ProductEditView] Error loading locations:', err);
+        setLocations([]);
+      });
+  }, [selectedWarehouseId]);
 
   // Real-time synchronization of variant matrix from color and size selection
   const syncVariantsFromSelection = (
@@ -495,7 +514,8 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
             status: v.status || 'published',
             sort: v.sort !== undefined ? Number(v.sort) : 0,
           },
-          selectedWarehouseId
+          selectedWarehouseId,
+          selectedLocationId ? Number(selectedLocationId) : undefined
         );
       }
 
@@ -958,6 +978,32 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Warehouse & Shelf Location Selector for Initial Stock */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-5">
+            <Select
+              label="انبار ثبت موجودی اولیه *"
+              value={selectedWarehouseId}
+              onChange={(e) => {
+                const whId = Number(e.target.value);
+                setSelectedWarehouseId(whId);
+                setSelectedLocationId('');
+              }}
+              options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+            />
+            <Select
+              label="قفسه / جایگاه دقیق در انبار (وابسته به انبار انتخابی)"
+              value={selectedLocationId}
+              onChange={(e) => setSelectedLocationId(e.target.value ? Number(e.target.value) : '')}
+              options={[
+                { value: '', label: locations.length === 0 ? 'بدون جایگاه تعریف‌شده (موجودی عمومی انبار)' : 'انتخاب قفسه یا جایگاه انبار...' },
+                ...locations.map((loc) => ({
+                  value: loc.id,
+                  label: `${loc.name}${loc.code ? ` (${loc.code})` : ''}`,
+                })),
+              ]}
+            />
           </div>
 
           {/* Table Header: تیتر جدول تنوع‌ها، قیمت‌ها و موجودی انبار */}

@@ -165,13 +165,13 @@ export const CategoriesView: React.FC = () => {
     return options;
   };
 
-  const renderTreeNode = (node: Category, depth: number = 0) => {
+  const renderTreeNode = (node: Category, depth: number = 0, nodeIndex: number = 0) => {
     const children = buildTree(node.id);
     const hasChildren = children.length > 0;
     const isExpanded = !!expandedNodes[node.id];
 
     return (
-      <div key={node.id ? `cat_node_${node.id}` : `cat_node_depth_${depth}`} className="space-y-1">
+      <div key={`cat_node_${node.id || 'idx'}_${depth}_${nodeIndex}`} className="space-y-1">
         <div
           className={`group flex items-center justify-between p-3 rounded-2xl border transition-all duration-150 ${
             depth === 0
@@ -255,7 +255,7 @@ export const CategoriesView: React.FC = () => {
 
         {hasChildren && isExpanded && (
           <div className="space-y-1 relative pr-3 border-r-2 border-indigo-100 mr-4">
-            {children.map((child) => renderTreeNode(child, depth + 1))}
+            {children.map((child, cIdx) => renderTreeNode(child, depth + 1, cIdx))}
           </div>
         )}
       </div>
@@ -306,7 +306,7 @@ export const CategoriesView: React.FC = () => {
             {filteredCategories.length === 0 ? (
               <p className="py-8 text-center text-slate-400 text-sm">هیچ دسته‌بندی با این مشخصات یافت نشد.</p>
             ) : (
-              filteredCategories.map((c) => renderTreeNode(c, 0))
+              filteredCategories.map((c, cIdx) => renderTreeNode(c, 0, cIdx))
             )}
           </div>
         ) : rootNodes.length === 0 ? (
@@ -315,7 +315,7 @@ export const CategoriesView: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {rootNodes.map((rootNode) => renderTreeNode(rootNode, 0))}
+            {rootNodes.map((rootNode, rIdx) => renderTreeNode(rootNode, 0, rIdx))}
           </div>
         )}
       </Card>
