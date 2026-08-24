@@ -50,6 +50,7 @@ interface AuthContextType {
   closeLoginModal: () => void;
   login: (email: string, pass: string) => Promise<boolean>;
   register: RegisterFunction;
+  loginOfflineGuest: () => void;
   logout: () => Promise<void>;
 }
 
@@ -104,15 +105,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
             }
           } else {
+            // Token was invalid or unauthenticated
+            directusClient.setToken(null);
+            localStorage.removeItem(CACHED_USER_KEY);
+            setUser(null);
+            setIsCloudAuthenticated(false);
+            storageManager.setMode('local_offline');
+          }
+        })
+        .catch((err) => {
+          const errMsg = err?.message || '';
+          const isAuthError =
+            errMsg.toLowerCase().includes('token expired') ||
+            errMsg.toLowerCase().includes('unauthorized') ||
+            errMsg.toLowerCase().includes('invalid token') ||
+            errMsg.includes('TOKEN_EXPIRED') ||
+            errMsg.includes('INVALID_TOKEN') ||
+            !directusClient.getToken();
+
+          if (isAuthError) {
+            // Expired/Invalid token! Wipe tokens and profile so user lands on Login screen
+            directusClient.setToken(null);
+            localStorage.removeItem(CACHED_USER_KEY);
+            setUser(null);
+            setIsCloudAuthenticated(false);
+            storageManager.setMode('local_offline');
+          } else {
             handleOfflineFallback(cachedUserRaw);
           }
         })
-        .catch(() => {
-          handleOfflineFallback(cachedUserRaw);
-        })
         .finally(() => setIsLoading(false));
     } else {
-      handleOfflineFallback(cachedUserRaw);
+      // No token present -> User must see LoginView
+      setUser(null);
+      setIsCloudAuthenticated(false);
+      storageManager.setMode('local_offline');
       setIsLoading(false);
     }
   }, []);
@@ -136,9 +163,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     storageManager.setMode('local_offline');
   };
 
+  const loginOfflineGuest = () => {
+    const offlineUser: User = {
+      id: 'local_guest',
+      first_name: 'کاربر',
+      last_name: 'آفلاین',
+      email: 'guest@tankhor.local',
+      role: 'مدیر سیستم (آفلاین)',
+    };
+    setUser(offlineUser);
+    setIsCloudAuthenticated(false);
+    storageManager.setMode('local_offline');
+    localStorage.setItem(CACHED_USER_KEY, JSON.stringify(offlineUser));
+  };
+
   const login = async (email: string, pass: string): Promise<boolean> => {
     setLoginError(null);
     setIsLoading(true);
+    // Always clear old tokens before attempting login
+    directusClient.setToken(null);
     try {
       const loginRes = await directusClient.login(email, pass);
       let userData = await directusClient.getMe().catch(() => loginRes.user);
@@ -192,6 +235,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ): Promise<boolean> => {
     setLoginError(null);
     setIsLoading(true);
+    // Always clear old tokens before attempting registration
+    directusClient.setToken(null);
     try {
       let finalParams: RegisterParams;
       if (typeof paramOrFirst === 'object' && paramOrFirst !== null) {
@@ -319,6 +364,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         closeLoginModal,
         login,
         register,
+        loginOfflineGuest,
         logout,
       }}
     >

@@ -57,18 +57,32 @@ class DirectusClient {
     return this.baseUrl || 'https://api.tankhor.com';
   }
 
-  private getHeaders(): HeadersInit {
+  private isAuthPublicEndpoint(endpoint: string): boolean {
+    const clean = endpoint.toLowerCase().trim();
+    return (
+      clean.startsWith('/auth/login') ||
+      clean.startsWith('/auth/register') ||
+      clean.startsWith('/auth/refresh') ||
+      clean === '/users' ||
+      clean === '/users/'
+    );
+  }
+
+  private getHeaders(options?: RequestInit & { skipAuth?: boolean }, endpoint?: string): HeadersInit {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    const token = this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    const skip = options?.skipAuth || (endpoint && this.isAuthPublicEndpoint(endpoint));
+    if (!skip) {
+      const token = this.getToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
     return headers;
   }
 
-  public async request<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  public async request<T = any>(endpoint: string, options: RequestInit & { skipAuth?: boolean } = {}): Promise<T> {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${this.getBaseUrl()}${cleanEndpoint}`;
 
@@ -76,7 +90,7 @@ class DirectusClient {
       const response = await fetch(url, {
         ...options,
         headers: {
-          ...this.getHeaders(),
+          ...this.getHeaders(options, cleanEndpoint),
           ...(options.headers || {}),
         },
       });
@@ -97,6 +111,21 @@ class DirectusClient {
 
       if (!response.ok) {
         const errorMsg = data.errors?.[0]?.message || data.error || data.message || `Request failed with status ${response.status}`;
+        
+        const isExpiredOrUnauthorized =
+          response.status === 401 ||
+          errorMsg.toLowerCase().includes('token expired') ||
+          errorMsg.toLowerCase().includes('invalid token') ||
+          errorMsg.includes('TOKEN_EXPIRED') ||
+          errorMsg.includes('INVALID_TOKEN');
+
+        if (isExpiredOrUnauthorized) {
+          this.setToken(null);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('tankhor_cached_user_profile');
+          }
+        }
+
         throw new Error(errorMsg);
       }
 
