@@ -205,6 +205,12 @@ export interface InventoryItem {
   reorder_point?: number;
   safety_stock?: number;
   updated_at?: string;
+  sku?: string;
+  product_title?: string;
+  color_name?: string;
+  size_name?: string;
+  warehouse_name?: string;
+  location_name?: string;
 }
 
 export type MovementType = 'purchase' | 'sale' | 'return' | 'adjustment' | 'transfer_in' | 'transfer_out' | 'damage';

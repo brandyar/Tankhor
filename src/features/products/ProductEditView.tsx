@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
 import { storageManager } from '../../storage';
-import { Product, ProductVariant, Category, Collection, Season, SizeGuideTemplate, Brand, Color, Size } from '../../types';
+import { Product, ProductVariant, Category, Collection, Season, SizeGuideTemplate, Brand, Color, Size, Warehouse } from '../../types';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -54,6 +54,8 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
   const [sizeGuides, setSizeGuides] = useState<SizeGuideTemplate[]>([]);
   const [colors, setColors] = useState<Color[]>([]);
   const [sizes, setSizes] = useState<Size[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<number>(1);
 
   // Selected Colors & Sizes for real-time variant generation
   const [selectedColorIds, setSelectedColorIds] = useState<number[]>([]);
@@ -93,7 +95,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
 
-      const [bList, cList, colList, seaList, sgList, colorList, sizeList] = await Promise.all([
+      const [bList, cList, colList, seaList, sgList, colorList, sizeList, whList] = await Promise.all([
         adapter.getBrands({ organization_id: orgId }),
         adapter.getCategories({ organization_id: orgId }),
         adapter.getCollections({ organization_id: orgId }),
@@ -101,6 +103,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
         adapter.getSizeGuideTemplates({ organization_id: orgId }),
         adapter.getColors({ organization_id: orgId }),
         adapter.getSizes({ organization_id: orgId }),
+        adapter.getWarehouses({ organization_id: orgId }),
       ]);
 
       setBrands(bList);
@@ -110,6 +113,10 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
       setSizeGuides(sgList);
       setColors(colorList);
       setSizes(sizeList);
+      setWarehouses(whList);
+      if (whList.length > 0) {
+        setSelectedWarehouseId(whList[0].id);
+      }
 
       if (productId) {
         const prod = await adapter.getProductById(productId);
@@ -472,21 +479,24 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
 
       // 3. Save / Update all variant rows in table
       for (const v of variants) {
-        await adapter.saveVariant({
-          id: v.id ? Number(v.id) : undefined,
-          organization_id: orgId,
-          product_id: savedProduct.id,
-          color_id: v.color_id && !isNaN(Number(v.color_id)) && Number(v.color_id) > 0 ? Number(v.color_id) : undefined,
-          size_id: v.size_id && !isNaN(Number(v.size_id)) && Number(v.size_id) > 0 ? Number(v.size_id) : undefined,
-          sku: v.sku ? v.sku.trim() : `SKU-${Date.now().toString().slice(-6)}`,
-          barcode: v.barcode ? v.barcode.trim() : undefined,
-          price: v.price !== undefined && v.price !== '' ? Number(v.price) : 0,
-          cost: v.cost !== undefined && v.cost !== '' ? Number(v.cost) : 0,
-          stock_quantity: v.stock_quantity !== undefined && v.stock_quantity !== '' ? Number(v.stock_quantity) : 0,
-          image: v.image && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.image.trim()) ? v.image.trim() : undefined,
-          status: v.status || 'published',
-          sort: v.sort !== undefined ? Number(v.sort) : 0,
-        });
+        await adapter.saveVariant(
+          {
+            id: v.id ? Number(v.id) : undefined,
+            organization_id: orgId,
+            product_id: savedProduct.id,
+            color_id: v.color_id && !isNaN(Number(v.color_id)) && Number(v.color_id) > 0 ? Number(v.color_id) : undefined,
+            size_id: v.size_id && !isNaN(Number(v.size_id)) && Number(v.size_id) > 0 ? Number(v.size_id) : undefined,
+            sku: v.sku ? v.sku.trim() : `SKU-${Date.now().toString().slice(-6)}`,
+            barcode: v.barcode ? v.barcode.trim() : undefined,
+            price: v.price !== undefined && v.price !== '' ? Number(v.price) : 0,
+            cost: v.cost !== undefined && v.cost !== '' ? Number(v.cost) : 0,
+            stock_quantity: v.stock_quantity !== undefined && v.stock_quantity !== '' ? Number(v.stock_quantity) : 0,
+            image: v.image && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.image.trim()) ? v.image.trim() : undefined,
+            status: v.status || 'published',
+            sort: v.sort !== undefined ? Number(v.sort) : 0,
+          },
+          selectedWarehouseId
+        );
       }
 
       onSaved();
@@ -1009,7 +1019,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
                   {variants.map((v, index) => (
-                    <tr key={v.id ? `variant_${v.id}_${index}` : (v._tempId ? `temp_${v._tempId}_${index}` : `row_${index}`)} className="hover:bg-slate-50 transition-colors">
+                    <tr key={`pe_vrow_${v.id || v._tempId || 'idx'}_${index}`} className="hover:bg-slate-50 transition-colors">
                       <td className="py-2.5 px-3 font-bold text-slate-400">
                         {toPersianDigits(index + 1)}
                       </td>
@@ -1022,8 +1032,8 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                           className="bg-white border border-slate-300 rounded-lg text-slate-800 text-xs px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                         >
                           <option value="">بدون رنگ</option>
-                          {colors.map((c) => (
-                            <option key={c.id} value={c.id}>
+                          {colors.map((c, cIdx) => (
+                            <option key={`pe_c_opt_${c.id}_${cIdx}`} value={c.id}>
                               {c.name}
                             </option>
                           ))}
@@ -1038,8 +1048,8 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                           className="bg-white border border-slate-300 rounded-lg text-slate-800 text-xs px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                         >
                           <option value="">بدون سایز</option>
-                          {sizes.map((s) => (
-                            <option key={s.id} value={s.id}>
+                          {sizes.map((s, sIdx) => (
+                            <option key={`pe_s_opt_${s.id}_${sIdx}`} value={s.id}>
                               {s.name}
                             </option>
                           ))}

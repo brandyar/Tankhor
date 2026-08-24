@@ -59,11 +59,14 @@ export const InventoryView: React.FC = () => {
       if (search.trim()) {
         const term = search.toLowerCase();
         filtered = filtered.filter((i) => {
-          const v = vList.find((varObj) => varObj.id === i.variant_id);
+          const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
+          const v = variants.find((varObj) => varObj.id === vId);
           return (
-            (v && v.sku.toLowerCase().includes(term)) ||
+            (v && v.sku && v.sku.toLowerCase().includes(term)) ||
             (v && v.product_title && v.product_title.toLowerCase().includes(term)) ||
-            (v && v.barcode && v.barcode.includes(term))
+            (v && v.barcode && v.barcode.includes(term)) ||
+            (i.sku && i.sku.toLowerCase().includes(term)) ||
+            (i.product_title && i.product_title.toLowerCase().includes(term))
           );
         });
       }
@@ -84,12 +87,12 @@ export const InventoryView: React.FC = () => {
   }, [activeOrganization, selectedWarehouseFilter, lowStockOnly, search]);
 
   // Calculations for KPI Cards
-  const totalQuantity = inventoryItems.reduce((acc, curr) => acc + (curr.quantity || 0), 0);
-  const totalAvailable = inventoryItems.reduce((acc, curr) => acc + (curr.available_quantity || curr.quantity || 0), 0);
-  const totalReserved = inventoryItems.reduce((acc, curr) => acc + (curr.reserved_quantity || 0), 0);
-  const totalDamaged = inventoryItems.reduce((acc, curr) => acc + (curr.damaged_quantity || 0), 0);
+  const totalQuantity = inventoryItems.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
+  const totalAvailable = inventoryItems.reduce((acc, curr) => acc + (Number(curr.available_quantity) || Number(curr.quantity) || 0), 0);
+  const totalReserved = inventoryItems.reduce((acc, curr) => acc + (Number(curr.reserved_quantity) || 0), 0);
+  const totalDamaged = inventoryItems.reduce((acc, curr) => acc + (Number(curr.damaged_quantity) || 0), 0);
   const lowStockCount = inventoryItems.filter(
-    (i) => i.quantity <= (i.reorder_point || 5) || i.quantity <= (i.safety_stock || 2)
+    (i) => (Number(i.quantity) || 0) <= (i.reorder_point || 5) || (Number(i.quantity) || 0) <= (i.safety_stock || 2)
   ).length;
 
   const columns: Column<InventoryItem>[] = [
@@ -97,12 +100,18 @@ export const InventoryView: React.FC = () => {
       key: 'variant_id',
       header: 'شناسه و عنوان کالا (SKU)',
       render: (item) => {
-        const v = variants.find((varObj) => varObj.id === item.variant_id);
+        const vId = typeof item.variant_id === 'number' ? item.variant_id : (item.variant_id as any)?.id;
+        const v = variants.find((varObj) => varObj.id === vId);
+        const sku = item.sku || v?.sku || (vId ? `VAR-#${vId}` : '-');
+        const prodTitle = item.product_title || v?.product_title || 'محصول';
+        const colorName = item.color_name || v?.color_name || '-';
+        const sizeName = item.size_name || v?.size_name || '-';
+
         return (
           <div>
-            <p className="font-extrabold text-slate-900 font-mono text-xs">{v?.sku || `VAR-#${item.variant_id}`}</p>
+            <p className="font-extrabold text-slate-900 font-mono text-xs">{sku}</p>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              {v?.product_title || 'محصول'} ({v?.color_name || '-'} / {v?.size_name || '-'})
+              {prodTitle} ({colorName} / {sizeName})
             </p>
           </div>
         );
@@ -112,14 +121,19 @@ export const InventoryView: React.FC = () => {
       key: 'warehouse_id',
       header: 'انبار و جایگاه',
       render: (item) => {
-        const wh = warehouses.find((w) => w.id === item.warehouse_id);
-        const loc = locations.find((l) => l.id === item.location_id);
+        const wId = typeof item.warehouse_id === 'number' ? item.warehouse_id : (item.warehouse_id as any)?.id;
+        const locId = typeof item.location_id === 'number' ? item.location_id : (item.location_id as any)?.id;
+        const wh = warehouses.find((w) => w.id === wId);
+        const loc = locations.find((l) => l.id === locId);
+        const whName = item.warehouse_name || wh?.name || 'انبار مرکزی';
+        const locName = item.location_name || loc?.name;
+
         return (
           <div>
-            <p className="font-bold text-slate-800 text-xs">{wh?.name || 'انبار مرکزی'}</p>
-            {loc && (
+            <p className="font-bold text-slate-800 text-xs">{whName}</p>
+            {locName && locName !== '-' && (
               <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-                قفسه: {loc.name} ({loc.code || loc.type})
+                قفسه: {locName}
               </p>
             )}
           </div>

@@ -516,10 +516,10 @@ export const TransfersView: React.FC = () => {
             {/* Selected Items List */}
             {selectedItems.length > 0 && (
               <div className="divide-y divide-slate-200 bg-white border border-slate-200 rounded-lg overflow-hidden">
-                {selectedItems.map((item) => {
+                {selectedItems.map((item, index) => {
                   const v = variants.find((varObj) => varObj.id === item.variant_id);
                   return (
-                    <div key={item.variant_id} className="p-2.5 flex items-center justify-between text-xs">
+                    <div key={`trf_sel_${item.variant_id}_${index}`} className="p-2.5 flex items-center justify-between text-xs">
                       <div>
                         <span className="font-bold text-slate-900">{v ? getVariantLabel(v) : `تنوع #${item.variant_id}`}</span>
                         <span className="mr-3 text-indigo-600 font-mono font-bold">تعداد: {item.quantity} عدد</span>

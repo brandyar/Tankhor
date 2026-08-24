@@ -69,7 +69,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
       const locationIdNum = selectedLocationId ? Number(selectedLocationId) : undefined;
       const qtyNum = Number(quantity);
 
-      // 1. Record Inventory Movement audit log
+      // 1. Record Inventory Movement audit log (this also auto-adjusts inventory_items in both cloud & local adapters)
       const variantObj = variants.find((v) => v.id === variantIdNum);
       const warehouseObj = warehouses.find((w) => w.id === warehouseIdNum);
 
@@ -87,78 +87,24 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
         warehouse_name: warehouseObj?.name,
       });
 
-      // 2. Update Inventory Items stock balances
-      const currentItems = await adapter.getInventoryItems({ organization_id: orgId });
-      let existingItem = currentItems.find(
-        (i) => i.variant_id === variantIdNum && i.warehouse_id === warehouseIdNum
-      );
-
-      let currentQty = existingItem ? existingItem.quantity : 0;
-      let currentDamaged = existingItem ? existingItem.damaged_quantity : 0;
-      let currentReserved = existingItem ? existingItem.reserved_quantity : 0;
-
-      // Adjust balances based on movement type
-      if (movementType === 'purchase' || movementType === 'transfer_in' || movementType === 'return') {
-        currentQty += qtyNum;
-      } else if (movementType === 'sale' || movementType === 'transfer_out') {
-        currentQty = Math.max(0, currentQty - qtyNum);
-      } else if (movementType === 'damage') {
-        currentDamaged += qtyNum;
-        currentQty = Math.max(0, currentQty - qtyNum);
-      } else if (movementType === 'adjustment') {
-        currentQty = qtyNum; // Direct replacement
-      }
-
-      const availableQty = Math.max(0, currentQty - currentReserved);
-
-      // Save or update inventory balance record
-      const itemsList = localStorage.getItem('tankhor_db_inventory_items');
-      let parsed: any[] = itemsList ? JSON.parse(itemsList) : [];
-
-      if (existingItem) {
-        parsed = parsed.map((item) =>
-          item.id === existingItem.id
-            ? {
-                ...item,
-                quantity: currentQty,
-                available_quantity: availableQty,
-                damaged_quantity: currentDamaged,
-                location_id: locationIdNum || item.location_id,
-                reorder_point: reorderPoint ? Number(reorderPoint) : item.reorder_point,
-                safety_stock: safetyStock ? Number(safetyStock) : item.safety_stock,
-                updated_at: new Date().toISOString(),
-              }
-            : item
+      // 2. If reorder point or safety stock was customized, ensure it's saved on the inventory item
+      if (reorderPoint || safetyStock) {
+        const currentItems = await adapter.getInventoryItems({ organization_id: orgId });
+        const existingItem = currentItems.find(
+          (i) => {
+            const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
+            const wId = typeof i.warehouse_id === 'number' ? i.warehouse_id : (i.warehouse_id as any)?.id;
+            return vId === variantIdNum && wId === warehouseIdNum;
+          }
         );
-      } else {
-        const maxExistingId = parsed.reduce((max, i) => (typeof i.id === 'number' && i.id > max ? i.id : max), 0);
-        const newInventoryId = Math.max(maxExistingId + 1, Date.now());
-        parsed.unshift({
-          id: newInventoryId,
-          organization_id: orgId,
-          variant_id: variantIdNum,
-          warehouse_id: warehouseIdNum,
-          location_id: locationIdNum,
-          quantity: currentQty,
-          reserved_quantity: 0,
-          available_quantity: availableQty,
-          damaged_quantity: currentDamaged,
-          reorder_point: reorderPoint ? Number(reorderPoint) : 5,
-          safety_stock: safetyStock ? Number(safetyStock) : 2,
-          updated_at: new Date().toISOString(),
-        });
+        if (existingItem) {
+          await adapter.saveInventoryItem({
+            id: existingItem.id,
+            reorder_point: reorderPoint ? Number(reorderPoint) : existingItem.reorder_point,
+            safety_stock: safetyStock ? Number(safetyStock) : existingItem.safety_stock,
+          });
+        }
       }
-
-      localStorage.setItem('tankhor_db_inventory_items', JSON.stringify(parsed));
-
-      // 3. Update variant total stock quantity cache
-      const allVariantItems = parsed.filter((i) => i.variant_id === variantIdNum);
-      const totalVariantStock = allVariantItems.reduce((acc, curr) => acc + curr.quantity, 0);
-
-      await adapter.saveVariant({
-        id: variantIdNum,
-        stock_quantity: totalVariantStock,
-      });
 
       onAdjustmentComplete();
       onClose();

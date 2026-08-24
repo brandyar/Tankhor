@@ -14,6 +14,7 @@ export interface QueryParams {
   status?: string;
   category_id?: number;
   warehouse_id?: number;
+  variant_id?: number;
   type?: string;
   page?: number;
   limit?: number;
@@ -43,7 +44,7 @@ export interface IStorageProvider {
 
   getVariants(params?: QueryParams): Promise<ProductVariant[]>;
   getVariantsByProductId(productId: number): Promise<ProductVariant[]>;
-  saveVariant(variant: Partial<ProductVariant>): Promise<ProductVariant>;
+  saveVariant(variant: Partial<ProductVariant>, warehouseId?: number): Promise<ProductVariant>;
   deleteVariant(id: number): Promise<boolean>;
 
   // Catalog Attributes

@@ -172,6 +172,17 @@ export class CloudDirectusAdapter implements IStorageProvider {
 
   async deleteProduct(id: number): Promise<boolean> {
     try {
+      // Find all variants for this product and delete their inventory & movements first
+      const variants = await directusClient.getItems<ProductVariant>('product_variants', {
+        filter: { product_id: { _eq: id } },
+      }).catch(() => []);
+
+      for (const v of variants) {
+        await this.deleteVariant(v.id).catch((err) => {
+          console.warn(`[CloudDirectusAdapter] Delete variant ${v.id} warning:`, err?.message || err);
+        });
+      }
+
       return await directusClient.deleteItem('products', id);
     } catch (err: any) {
       console.error('[CloudDirectusAdapter] Cloud deleteProduct failed:', err?.message || err);
@@ -184,7 +195,45 @@ export class CloudDirectusAdapter implements IStorageProvider {
     if (params?.organization_id) {
       query.filter = { organization_id: { _eq: params.organization_id } };
     }
-    return directusClient.getItems<ProductVariant>('product_variants', query);
+    try {
+      const [variants, products, colors, sizes, inventoryItems] = await Promise.all([
+        directusClient.getItems<ProductVariant>('product_variants', query),
+        directusClient.getItems<Product>('products', {
+          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+        }).catch(() => []),
+        directusClient.getItems<Color>('colors', {}).catch(() => []),
+        directusClient.getItems<Size>('sizes', {}).catch(() => []),
+        directusClient.getItems<InventoryItem>('inventory_items', {
+          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+        }).catch(() => []),
+      ]);
+
+      return variants.map((v) => {
+        const prodId = typeof v.product_id === 'number' ? v.product_id : (v.product_id as any)?.id;
+        const colorId = typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id;
+        const sizeId = typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id;
+
+        const prod = products.find((p) => p.id === prodId);
+        const color = colors.find((c) => c.id === colorId);
+        const size = sizes.find((s) => s.id === sizeId);
+
+        const vInv = inventoryItems.filter((i) => {
+          const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
+          return vId === v.id;
+        });
+        const totalStock = vInv.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
+
+        return {
+          ...v,
+          product_title: prod?.title || v.product_title || 'محصول',
+          color_name: color?.name || v.color_name || '-',
+          size_name: size?.name || v.size_name || '-',
+          stock_quantity: totalStock,
+        };
+      });
+    } catch {
+      return this.localAdapter.getVariants(params);
+    }
   }
 
   async getVariantsByProductId(productId: number): Promise<ProductVariant[]> {
@@ -192,11 +241,14 @@ export class CloudDirectusAdapter implements IStorageProvider {
       const variants = await directusClient.getItems<ProductVariant>('product_variants', {
         filter: { product_id: { _eq: productId } },
       });
-      const [inventoryItems, colors, sizes] = await Promise.all([
+      const [inventoryItems, colors, sizes, products] = await Promise.all([
         directusClient.getItems<InventoryItem>('inventory_items', {}).catch(() => []),
         directusClient.getItems<Color>('colors', {}).catch(() => []),
         directusClient.getItems<Size>('sizes', {}).catch(() => []),
+        directusClient.getItems<Product>('products', { filter: { id: { _eq: productId } } }).catch(() => []),
       ]);
+
+      const productTitle = products[0]?.title || 'محصول';
 
       return variants.map((v) => {
         const vInv = inventoryItems.filter((i) => {
@@ -213,8 +265,9 @@ export class CloudDirectusAdapter implements IStorageProvider {
 
         return {
           ...v,
-          color_name: matchedColor?.name || v.color_name,
-          size_name: matchedSize?.name || v.size_name,
+          product_title: productTitle,
+          color_name: matchedColor?.name || v.color_name || '-',
+          size_name: matchedSize?.name || v.size_name || '-',
           stock_quantity: totalStock,
         };
       });
@@ -223,7 +276,7 @@ export class CloudDirectusAdapter implements IStorageProvider {
     }
   }
 
-  async saveVariant(variant: Partial<ProductVariant>, warehouseId: number = 1): Promise<ProductVariant> {
+  async saveVariant(variant: Partial<ProductVariant>, warehouseId?: number): Promise<ProductVariant> {
     const payload: any = { ...variant };
     const stockQty = payload.stock_quantity;
     delete payload.stock_quantity;
@@ -255,52 +308,91 @@ export class CloudDirectusAdapter implements IStorageProvider {
         saved = await directusClient.createItem<ProductVariant>('product_variants', payload);
       }
 
+      // Robust inventory synchronization
       if (stockQty !== undefined && stockQty !== null) {
         const qtyNum = Math.max(0, Number(stockQty) || 0);
+        const orgId = saved.organization_id || 1;
+
+        // Query existing inventory items for this variant
         const existingInventory = await directusClient.getItems<InventoryItem>('inventory_items', {
           filter: { variant_id: { _eq: saved.id } },
         }).catch(() => []);
 
         if (existingInventory.length > 0) {
-          await directusClient.updateItem<InventoryItem>('inventory_items', existingInventory[0].id, {
+          const itemToUpdate = (warehouseId && existingInventory.find((i) => {
+            const whId = typeof i.warehouse_id === 'number' ? i.warehouse_id : (i.warehouse_id as any)?.id;
+            return whId === warehouseId;
+          })) || existingInventory[0];
+
+          const reserved = Number(itemToUpdate.reserved_quantity) || 0;
+          const damaged = Number(itemToUpdate.damaged_quantity) || 0;
+          const available = Math.max(0, qtyNum - reserved - damaged);
+
+          await directusClient.updateItem<InventoryItem>('inventory_items', itemToUpdate.id, {
             quantity: qtyNum,
-            available_quantity: qtyNum,
+            available_quantity: available,
+            updated_at: new Date().toISOString(),
           }).catch((err) => {
             console.warn('[CloudDirectusAdapter] Update inventory failed:', err?.message || err);
           });
         } else {
-          // Resolve effective warehouse for this organization
+          // Resolve or auto-create warehouse
           let targetWarehouseId = warehouseId;
-          const warehouses = await directusClient.getItems<Warehouse>('warehouses', {}).catch(() => []);
-          const orgWh = warehouses.find(w => Number(w.organization_id) === Number(saved.organization_id)) || warehouses[0];
-          if (orgWh && orgWh.id) {
-            targetWarehouseId = orgWh.id;
+          const warehouses = await directusClient.getItems<Warehouse>('warehouses', {
+            filter: { organization_id: { _eq: orgId } },
+          }).catch(() => []);
+
+          if (targetWarehouseId && warehouses.some((w) => w.id === targetWarehouseId)) {
+            // Valid warehouse selected
+          } else if (warehouses.length > 0) {
+            targetWarehouseId = warehouses[0].id;
           } else {
-            try {
-              const newWh = await directusClient.createItem<Warehouse>('warehouses', {
-                organization_id: saved.organization_id,
-                name: 'انبار اصلی',
-                code: 'MAIN',
-                type: 'warehouse',
-                status: 'active',
-              });
-              targetWarehouseId = newWh.id;
-            } catch (whErr) {
-              console.warn('[CloudDirectusAdapter] Auto-create warehouse failed:', whErr);
+            const allWarehouses = await directusClient.getItems<Warehouse>('warehouses', {}).catch(() => []);
+            if (allWarehouses.length > 0) {
+              targetWarehouseId = allWarehouses[0].id;
+            } else {
+              try {
+                const newWh = await directusClient.createItem<Warehouse>('warehouses', {
+                  organization_id: orgId,
+                  name: 'انبار مرکزی',
+                  code: 'MAIN',
+                  type: 'warehouse',
+                  status: 'active',
+                });
+                targetWarehouseId = newWh.id;
+              } catch (whErr) {
+                console.warn('[CloudDirectusAdapter] Auto-create warehouse failed:', whErr);
+                targetWarehouseId = 1;
+              }
             }
           }
 
           await directusClient.createItem<InventoryItem>('inventory_items', {
-            organization_id: saved.organization_id,
+            organization_id: orgId,
             variant_id: saved.id,
-            warehouse_id: targetWarehouseId,
+            warehouse_id: targetWarehouseId || 1,
             quantity: qtyNum,
             reserved_quantity: 0,
             available_quantity: qtyNum,
             damaged_quantity: 0,
+            reorder_point: 5,
+            safety_stock: 2,
+            updated_at: new Date().toISOString(),
           }).catch((err) => {
             console.warn('[CloudDirectusAdapter] Create inventory failed:', err?.message || err);
           });
+
+          // Record initial movement log
+          await directusClient.createItem<InventoryMovement>('inventory_movements', {
+            organization_id: orgId,
+            variant_id: saved.id,
+            warehouse_id: targetWarehouseId || 1,
+            type: 'adjustment',
+            quantity: qtyNum,
+            reference_type: 'manual',
+            reference_id: `INIT-${saved.id}`,
+            note: 'موجودی اولیه هنگام ایجاد متغیر کالا',
+          }).catch((movErr) => console.warn('[CloudDirectusAdapter] Movement log error:', movErr));
         }
       }
 
@@ -313,13 +405,25 @@ export class CloudDirectusAdapter implements IStorageProvider {
 
   async deleteVariant(id: number): Promise<boolean> {
     try {
-      // Delete associated inventory items first if any
+      // 1. Delete associated inventory items first
       const inventoryItems = await directusClient.getItems<InventoryItem>('inventory_items', {
         filter: { variant_id: { _eq: id } },
       }).catch(() => []);
       for (const inv of inventoryItems) {
-        await directusClient.deleteItem('inventory_items', inv.id).catch(() => null);
+        await directusClient.deleteItem('inventory_items', inv.id).catch((err) => {
+          console.warn(`[CloudDirectusAdapter] Delete inventory item ${inv.id} warning:`, err?.message || err);
+        });
       }
+
+      // 2. Delete associated inventory movements
+      const movements = await directusClient.getItems<InventoryMovement>('inventory_movements', {
+        filter: { variant_id: { _eq: id } },
+      }).catch(() => []);
+      for (const mov of movements) {
+        await directusClient.deleteItem('inventory_movements', mov.id).catch(() => null);
+      }
+
+      // 3. Delete from product_variants
       return await directusClient.deleteItem('product_variants', id);
     } catch (err: any) {
       console.error('[CloudDirectusAdapter] Cloud deleteVariant failed:', err?.message || err);
@@ -594,16 +698,91 @@ export class CloudDirectusAdapter implements IStorageProvider {
 
   // Inventory
   async getInventoryItems(params?: QueryParams): Promise<InventoryItem[]> {
-    return directusClient.getItems<InventoryItem>('inventory_items', {
-      filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-    });
+    const filter: any = {};
+    if (params?.organization_id) filter.organization_id = { _eq: params.organization_id };
+    if (params?.warehouse_id) filter.warehouse_id = { _eq: params.warehouse_id };
+    if (params?.variant_id) filter.variant_id = { _eq: params.variant_id };
+
+    try {
+      const [items, variants, products, colors, sizes, warehouses, locations] = await Promise.all([
+        directusClient.getItems<InventoryItem>('inventory_items', {
+          filter: Object.keys(filter).length > 0 ? filter : undefined,
+          sort: '-id',
+        }),
+        directusClient.getItems<ProductVariant>('product_variants', {
+          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+        }).catch(() => []),
+        directusClient.getItems<Product>('products', {
+          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+        }).catch(() => []),
+        directusClient.getItems<Color>('colors', {}).catch(() => []),
+        directusClient.getItems<Size>('sizes', {}).catch(() => []),
+        directusClient.getItems<Warehouse>('warehouses', {
+          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+        }).catch(() => []),
+        directusClient.getItems<WarehouseLocation>('warehouse_locations', {}).catch(() => []),
+      ]);
+
+      return items.map((item) => {
+        const vId = typeof item.variant_id === 'number' ? item.variant_id : (item.variant_id as any)?.id;
+        const wId = typeof item.warehouse_id === 'number' ? item.warehouse_id : (item.warehouse_id as any)?.id;
+        const locId = typeof item.location_id === 'number' ? item.location_id : (item.location_id as any)?.id;
+
+        const variant = variants.find((v) => v.id === vId);
+        const prodId = variant ? (typeof variant.product_id === 'number' ? variant.product_id : (variant.product_id as any)?.id) : null;
+        const product = prodId ? products.find((p) => p.id === prodId) : null;
+
+        const colorId = variant ? (typeof variant.color_id === 'number' ? variant.color_id : (variant.color_id as any)?.id) : null;
+        const sizeId = variant ? (typeof variant.size_id === 'number' ? variant.size_id : (variant.size_id as any)?.id) : null;
+
+        const color = colorId ? colors.find((c) => c.id === colorId) : null;
+        const size = sizeId ? sizes.find((s) => s.id === sizeId) : null;
+        const warehouse = warehouses.find((w) => w.id === wId);
+        const location = locations.find((l) => l.id === locId);
+
+        return {
+          ...item,
+          sku: variant?.sku || (vId ? `SKU-${vId}` : '-'),
+          product_title: product?.title || 'محصول',
+          color_name: color?.name || '-',
+          size_name: size?.name || '-',
+          warehouse_name: warehouse?.name || 'انبار مرکزی',
+          location_name: location?.name || '-',
+        };
+      });
+    } catch {
+      return this.localAdapter.getInventoryItems(params);
+    }
   }
 
   async saveInventoryItem(item: Partial<InventoryItem>): Promise<InventoryItem> {
-    if (item.id) {
-      return directusClient.updateItem<InventoryItem>('inventory_items', item.id, item);
+    const payload: any = { ...item };
+    delete payload.sku;
+    delete payload.product_title;
+    delete payload.color_name;
+    delete payload.size_name;
+    delete payload.warehouse_name;
+    delete payload.location_name;
+
+    payload.organization_id = cleanInt(payload.organization_id) || 1;
+    payload.variant_id = cleanInt(payload.variant_id);
+    payload.warehouse_id = cleanInt(payload.warehouse_id) || 1;
+    payload.location_id = cleanInt(payload.location_id);
+    payload.quantity = Math.max(0, Number(payload.quantity) || 0);
+    payload.reserved_quantity = Math.max(0, Number(payload.reserved_quantity) || 0);
+    payload.damaged_quantity = Math.max(0, Number(payload.damaged_quantity) || 0);
+    payload.available_quantity = Math.max(0, payload.quantity - payload.reserved_quantity - payload.damaged_quantity);
+    if (payload.reorder_point !== undefined) payload.reorder_point = Math.max(0, Number(payload.reorder_point) || 0);
+    if (payload.safety_stock !== undefined) payload.safety_stock = Math.max(0, Number(payload.safety_stock) || 0);
+    payload.updated_at = new Date().toISOString();
+
+    const id = payload.id ? Number(payload.id) : undefined;
+    delete payload.id;
+
+    if (id) {
+      return directusClient.updateItem<InventoryItem>('inventory_items', id, payload);
     }
-    return directusClient.createItem<InventoryItem>('inventory_items', item);
+    return directusClient.createItem<InventoryItem>('inventory_items', payload);
   }
 
   async deleteInventoryItem(id: number): Promise<boolean> {
@@ -611,14 +790,126 @@ export class CloudDirectusAdapter implements IStorageProvider {
   }
 
   async getInventoryMovements(params?: QueryParams): Promise<InventoryMovement[]> {
-    return directusClient.getItems<InventoryMovement>('inventory_movements', {
-      filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-      sort: '-created_at',
-    });
+    const filter: any = {};
+    if (params?.organization_id) filter.organization_id = { _eq: params.organization_id };
+    if (params?.warehouse_id) filter.warehouse_id = { _eq: params.warehouse_id };
+    if (params?.variant_id) filter.variant_id = { _eq: params.variant_id };
+    if (params?.type) filter.type = { _eq: params.type };
+
+    try {
+      const [movements, variants, warehouses] = await Promise.all([
+        directusClient.getItems<InventoryMovement>('inventory_movements', {
+          filter: Object.keys(filter).length > 0 ? filter : undefined,
+          sort: '-created_at',
+        }),
+        directusClient.getItems<ProductVariant>('product_variants', {
+          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+        }).catch(() => []),
+        directusClient.getItems<Warehouse>('warehouses', {
+          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+        }).catch(() => []),
+      ]);
+
+      return movements.map((m) => {
+        const vId = typeof m.variant_id === 'number' ? m.variant_id : (m.variant_id as any)?.id;
+        const wId = typeof m.warehouse_id === 'number' ? m.warehouse_id : (m.warehouse_id as any)?.id;
+        const variant = variants.find((v) => v.id === vId);
+        const warehouse = warehouses.find((w) => w.id === wId);
+
+        return {
+          ...m,
+          sku: variant?.sku || m.sku || (vId ? `VAR-#${vId}` : '-'),
+          warehouse_name: warehouse?.name || m.warehouse_name || 'انبار مرکزی',
+        };
+      });
+    } catch {
+      return this.localAdapter.getInventoryMovements(params);
+    }
   }
 
   async recordMovement(movement: Partial<InventoryMovement>): Promise<InventoryMovement> {
-    return directusClient.createItem<InventoryMovement>('inventory_movements', movement);
+    const payload: any = { ...movement };
+    delete payload.sku;
+    delete payload.warehouse_name;
+
+    payload.organization_id = cleanInt(payload.organization_id) || 1;
+    payload.variant_id = cleanInt(payload.variant_id);
+    payload.warehouse_id = cleanInt(payload.warehouse_id) || 1;
+    payload.location_id = cleanInt(payload.location_id);
+    payload.quantity = Math.max(0, Number(payload.quantity) || 1);
+    if (!payload.type) payload.type = 'adjustment';
+    if (!payload.reference_type) payload.reference_type = 'manual';
+
+    const savedMovement = await directusClient.createItem<InventoryMovement>('inventory_movements', payload);
+
+    // Automatically update inventory_items balance
+    try {
+      const vId = payload.variant_id;
+      const wId = payload.warehouse_id;
+      const moveQty = payload.quantity;
+      const moveType = payload.type;
+
+      const existingItems = await directusClient.getItems<InventoryItem>('inventory_items', {
+        filter: {
+          _and: [
+            { variant_id: { _eq: vId } },
+            { warehouse_id: { _eq: wId } },
+          ],
+        },
+      }).catch(() => []);
+
+      if (existingItems.length > 0) {
+        const item = existingItems[0];
+        let currentQty = Number(item.quantity) || 0;
+        let currentDamaged = Number(item.damaged_quantity) || 0;
+        let currentReserved = Number(item.reserved_quantity) || 0;
+
+        if (moveType === 'purchase' || moveType === 'transfer_in' || moveType === 'return') {
+          currentQty += moveQty;
+        } else if (moveType === 'sale' || moveType === 'transfer_out') {
+          currentQty = Math.max(0, currentQty - moveQty);
+        } else if (moveType === 'damage') {
+          currentDamaged += moveQty;
+          currentQty = Math.max(0, currentQty - moveQty);
+        } else if (moveType === 'adjustment') {
+          currentQty = moveQty;
+        }
+
+        const availableQty = Math.max(0, currentQty - currentReserved - currentDamaged);
+
+        await directusClient.updateItem<InventoryItem>('inventory_items', item.id, {
+          quantity: currentQty,
+          available_quantity: availableQty,
+          damaged_quantity: currentDamaged,
+          location_id: payload.location_id || item.location_id,
+          updated_at: new Date().toISOString(),
+        });
+      } else {
+        let initialQty = moveQty;
+        let initialDamaged = 0;
+        if (moveType === 'damage') {
+          initialDamaged = moveQty;
+          initialQty = 0;
+        }
+        await directusClient.createItem<InventoryItem>('inventory_items', {
+          organization_id: payload.organization_id,
+          variant_id: vId,
+          warehouse_id: wId,
+          location_id: payload.location_id,
+          quantity: initialQty,
+          reserved_quantity: 0,
+          available_quantity: initialQty,
+          damaged_quantity: initialDamaged,
+          reorder_point: 5,
+          safety_stock: 2,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch (invErr) {
+      console.warn('[CloudDirectusAdapter] Auto-adjust inventory item warning:', invErr);
+    }
+
+    return savedMovement;
   }
 
   // Orders

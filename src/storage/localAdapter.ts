@@ -178,7 +178,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     list = list.filter((p) => p.id !== id);
     this.setItem('products', list);
 
-    // Clean up associated variants & inventory
+    // Clean up associated variants, inventory & movements
     const variants = this.getItem<ProductVariant>('product_variants', []);
     const removedVariantIds: number[] = [];
     const remainingVariants = variants.filter((v) => {
@@ -198,6 +198,13 @@ export class LocalOfflineAdapter implements IStorageProvider {
     });
     this.setItem('inventory_items', inventoryList);
 
+    let movementsList = this.getItem<InventoryMovement>('inventory_movements', []);
+    movementsList = movementsList.filter((m) => {
+      const vId = typeof m.variant_id === 'number' ? m.variant_id : (m.variant_id as any)?.id;
+      return !removedVariantIds.includes(vId);
+    });
+    this.setItem('inventory_movements', movementsList);
+
     return true;
   }
 
@@ -206,7 +213,34 @@ export class LocalOfflineAdapter implements IStorageProvider {
     if (params?.organization_id) {
       items = items.filter((v) => v.organization_id === params.organization_id);
     }
-    return items;
+    const products = this.getItem<Product>('products', []);
+    const colors = this.getItem<Color>('colors', []);
+    const sizes = this.getItem<Size>('sizes', []);
+    const inventoryItems = this.getItem<InventoryItem>('inventory_items', []);
+
+    return items.map((v) => {
+      const prodId = typeof v.product_id === 'number' ? v.product_id : (v.product_id as any)?.id;
+      const colorId = typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id;
+      const sizeId = typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id;
+
+      const prod = products.find((p) => p.id === prodId);
+      const color = colors.find((c) => c.id === colorId);
+      const size = sizes.find((s) => s.id === sizeId);
+
+      const vInv = inventoryItems.filter((i) => {
+        const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
+        return vId === v.id;
+      });
+      const totalStock = vInv.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
+
+      return {
+        ...v,
+        product_title: prod?.title || v.product_title || 'محصول',
+        color_name: color?.name || v.color_name || '-',
+        size_name: size?.name || v.size_name || '-',
+        stock_quantity: totalStock,
+      };
+    });
   }
 
   async getVariantsByProductId(productId: number): Promise<ProductVariant[]> {
@@ -217,6 +251,8 @@ export class LocalOfflineAdapter implements IStorageProvider {
     const inventoryItems = this.getItem<InventoryItem>('inventory_items', []);
     const colors = this.getItem<Color>('colors', []);
     const sizes = this.getItem<Size>('sizes', []);
+    const products = this.getItem<Product>('products', []);
+    const prod = products.find((p) => p.id === productId);
 
     return variants.map((v) => {
       const vInv = inventoryItems.filter((i) => {
@@ -233,14 +269,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
       return {
         ...v,
-        color_name: matchedColor?.name || v.color_name,
-        size_name: matchedSize?.name || v.size_name,
+        product_title: prod?.title || 'محصول',
+        color_name: matchedColor?.name || v.color_name || '-',
+        size_name: matchedSize?.name || v.size_name || '-',
         stock_quantity: totalStock,
       };
     });
   }
 
-  async saveVariant(variant: Partial<ProductVariant>, warehouseId: number = 1): Promise<ProductVariant> {
+  async saveVariant(variant: Partial<ProductVariant>, warehouseId?: number): Promise<ProductVariant> {
     const list = this.getItem<ProductVariant>('product_variants', []);
     let saved: ProductVariant;
 
@@ -276,28 +313,71 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
     if (variant.stock_quantity !== undefined && variant.stock_quantity !== null) {
       const inventoryList = this.getItem<InventoryItem>('inventory_items', []);
+      const qtyNum = Math.max(0, Number(variant.stock_quantity) || 0);
+
+      // Resolve warehouse
+      const warehouses = this.getItem<Warehouse>('warehouses', []);
+      let targetWarehouseId = warehouseId;
+      if (!targetWarehouseId || !warehouses.some((w) => w.id === targetWarehouseId)) {
+        if (warehouses.length > 0) {
+          targetWarehouseId = warehouses[0].id;
+        } else {
+          const newWh: Warehouse = {
+            id: 1,
+            organization_id: saved.organization_id || 1,
+            name: 'انبار مرکزی',
+            code: 'MAIN',
+            type: 'warehouse',
+            status: 'active',
+          };
+          warehouses.push(newWh);
+          this.setItem('warehouses', warehouses);
+          targetWarehouseId = 1;
+        }
+      }
+
       const invIdx = inventoryList.findIndex((i) => {
         const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
         return vId === saved.id;
       });
 
-      const qtyNum = Number(variant.stock_quantity) || 0;
       if (invIdx !== -1) {
+        const item = inventoryList[invIdx];
+        const reserved = Number(item.reserved_quantity) || 0;
+        const damaged = Number(item.damaged_quantity) || 0;
         inventoryList[invIdx].quantity = qtyNum;
-        inventoryList[invIdx].available_quantity = qtyNum;
+        inventoryList[invIdx].available_quantity = Math.max(0, qtyNum - reserved - damaged);
         inventoryList[invIdx].updated_at = new Date().toISOString();
       } else {
         inventoryList.push({
           id: this.generateUniqueId(inventoryList),
           organization_id: saved.organization_id || 1,
           variant_id: saved.id,
-          warehouse_id: warehouseId,
+          warehouse_id: targetWarehouseId || 1,
           quantity: qtyNum,
           reserved_quantity: 0,
           available_quantity: qtyNum,
           damaged_quantity: 0,
+          reorder_point: 5,
+          safety_stock: 2,
           updated_at: new Date().toISOString(),
         });
+
+        // Record initial movement log
+        const movementsList = this.getItem<InventoryMovement>('inventory_movements', []);
+        movementsList.unshift({
+          id: this.generateUniqueId(movementsList),
+          organization_id: saved.organization_id || 1,
+          variant_id: saved.id,
+          warehouse_id: targetWarehouseId || 1,
+          type: 'adjustment',
+          quantity: qtyNum,
+          reference_type: 'manual',
+          reference_id: `INIT-${saved.id}`,
+          note: 'موجودی اولیه هنگام ایجاد متغیر کالا',
+          created_at: new Date().toISOString(),
+        });
+        this.setItem('inventory_movements', movementsList);
       }
       this.setItem('inventory_items', inventoryList);
     }
@@ -316,6 +396,14 @@ export class LocalOfflineAdapter implements IStorageProvider {
       return vId !== id;
     });
     this.setItem('inventory_items', inventoryList);
+
+    let movementsList = this.getItem<InventoryMovement>('inventory_movements', []);
+    movementsList = movementsList.filter((m) => {
+      const vId = typeof m.variant_id === 'number' ? m.variant_id : (m.variant_id as any)?.id;
+      return vId !== id;
+    });
+    this.setItem('inventory_movements', movementsList);
+
     return true;
   }
 
@@ -647,15 +735,78 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   // Inventory
   async getInventoryItems(params?: QueryParams): Promise<InventoryItem[]> {
-    return this.getItem<InventoryItem>('inventory_items', []);
+    let items = this.getItem<InventoryItem>('inventory_items', []);
+    if (params?.organization_id) {
+      items = items.filter((i) => i.organization_id === params.organization_id);
+    }
+    if (params?.warehouse_id) {
+      items = items.filter((i) => {
+        const wId = typeof i.warehouse_id === 'number' ? i.warehouse_id : (i.warehouse_id as any)?.id;
+        return wId === params.warehouse_id;
+      });
+    }
+    if (params?.variant_id) {
+      items = items.filter((i) => {
+        const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
+        return vId === params.variant_id;
+      });
+    }
+
+    const variants = this.getItem<ProductVariant>('product_variants', []);
+    const products = this.getItem<Product>('products', []);
+    const colors = this.getItem<Color>('colors', []);
+    const sizes = this.getItem<Size>('sizes', []);
+    const warehouses = this.getItem<Warehouse>('warehouses', []);
+    const locations = this.getItem<WarehouseLocation>('warehouse_locations', []);
+
+    return items.map((item) => {
+      const vId = typeof item.variant_id === 'number' ? item.variant_id : (item.variant_id as any)?.id;
+      const wId = typeof item.warehouse_id === 'number' ? item.warehouse_id : (item.warehouse_id as any)?.id;
+      const locId = typeof item.location_id === 'number' ? item.location_id : (item.location_id as any)?.id;
+
+      const variant = variants.find((v) => v.id === vId);
+      const prodId = variant ? (typeof variant.product_id === 'number' ? variant.product_id : (variant.product_id as any)?.id) : null;
+      const product = prodId ? products.find((p) => p.id === prodId) : null;
+
+      const colorId = variant ? (typeof variant.color_id === 'number' ? variant.color_id : (variant.color_id as any)?.id) : null;
+      const sizeId = variant ? (typeof variant.size_id === 'number' ? variant.size_id : (variant.size_id as any)?.id) : null;
+
+      const color = colorId ? colors.find((c) => c.id === colorId) : null;
+      const size = sizeId ? sizes.find((s) => s.id === sizeId) : null;
+      const warehouse = warehouses.find((w) => w.id === wId);
+      const location = locations.find((l) => l.id === locId);
+
+      return {
+        ...item,
+        sku: variant?.sku || (vId ? `SKU-${vId}` : '-'),
+        product_title: product?.title || 'محصول',
+        color_name: color?.name || '-',
+        size_name: size?.name || '-',
+        warehouse_name: warehouse?.name || 'انبار مرکزی',
+        location_name: location?.name || '-',
+      };
+    });
   }
 
   async saveInventoryItem(item: Partial<InventoryItem>): Promise<InventoryItem> {
     const list = this.getItem<InventoryItem>('inventory_items', []);
+    const qty = Math.max(0, Number(item.quantity) || 0);
+    const reserved = Math.max(0, Number(item.reserved_quantity) || 0);
+    const damaged = Math.max(0, Number(item.damaged_quantity) || 0);
+    const available = Math.max(0, qty - reserved - damaged);
+
     if (item.id) {
       const idx = list.findIndex((i) => i.id === item.id);
       if (idx !== -1) {
-        list[idx] = { ...list[idx], ...item, updated_at: new Date().toISOString() };
+        list[idx] = {
+          ...list[idx],
+          ...item,
+          quantity: qty,
+          reserved_quantity: reserved,
+          damaged_quantity: damaged,
+          available_quantity: available,
+          updated_at: new Date().toISOString(),
+        };
         this.setItem('inventory_items', list);
         return list[idx];
       }
@@ -665,14 +816,16 @@ export class LocalOfflineAdapter implements IStorageProvider {
       organization_id: item.organization_id || 1,
       variant_id: item.variant_id || 0,
       warehouse_id: item.warehouse_id || 1,
-      quantity: item.quantity !== undefined ? Number(item.quantity) : 0,
-      reserved_quantity: item.reserved_quantity || 0,
-      available_quantity: item.quantity !== undefined ? Number(item.quantity) : 0,
-      damaged_quantity: item.damaged_quantity || 0,
+      quantity: qty,
+      reserved_quantity: reserved,
+      available_quantity: available,
+      damaged_quantity: damaged,
+      reorder_point: item.reorder_point || 5,
+      safety_stock: item.safety_stock || 2,
       updated_at: new Date().toISOString(),
       ...item,
     };
-    list.push(newItem);
+    list.unshift(newItem);
     this.setItem('inventory_items', list);
     return newItem;
   }
@@ -685,23 +838,117 @@ export class LocalOfflineAdapter implements IStorageProvider {
   }
 
   async getInventoryMovements(params?: QueryParams): Promise<InventoryMovement[]> {
-    return this.getItem<InventoryMovement>('inventory_movements', []);
+    let items = this.getItem<InventoryMovement>('inventory_movements', []);
+    if (params?.organization_id) {
+      items = items.filter((m) => m.organization_id === params.organization_id);
+    }
+    if (params?.warehouse_id) {
+      items = items.filter((m) => {
+        const wId = typeof m.warehouse_id === 'number' ? m.warehouse_id : (m.warehouse_id as any)?.id;
+        return wId === params.warehouse_id;
+      });
+    }
+    if (params?.variant_id) {
+      items = items.filter((m) => {
+        const vId = typeof m.variant_id === 'number' ? m.variant_id : (m.variant_id as any)?.id;
+        return vId === params.variant_id;
+      });
+    }
+    if (params?.type) {
+      items = items.filter((m) => m.type === params.type);
+    }
+
+    const variants = this.getItem<ProductVariant>('product_variants', []);
+    const warehouses = this.getItem<Warehouse>('warehouses', []);
+
+    return items.map((m) => {
+      const vId = typeof m.variant_id === 'number' ? m.variant_id : (m.variant_id as any)?.id;
+      const wId = typeof m.warehouse_id === 'number' ? m.warehouse_id : (m.warehouse_id as any)?.id;
+      const variant = variants.find((v) => v.id === vId);
+      const warehouse = warehouses.find((w) => w.id === wId);
+
+      return {
+        ...m,
+        sku: variant?.sku || m.sku || (vId ? `VAR-#${vId}` : '-'),
+        warehouse_name: warehouse?.name || m.warehouse_name || 'انبار مرکزی',
+      };
+    });
   }
 
   async recordMovement(movement: Partial<InventoryMovement>): Promise<InventoryMovement> {
-    const list = await this.getInventoryMovements();
+    const list = this.getItem<InventoryMovement>('inventory_movements', []);
     const newMov: InventoryMovement = {
       id: this.generateUniqueId(list),
       organization_id: movement.organization_id || 1,
       variant_id: movement.variant_id || 1,
       warehouse_id: movement.warehouse_id || 1,
       type: movement.type || 'adjustment',
-      quantity: movement.quantity || 1,
+      quantity: Math.max(0, Number(movement.quantity) || 1),
+      reference_type: movement.reference_type || 'manual',
       created_at: new Date().toISOString(),
       ...movement,
     };
     list.unshift(newMov);
     this.setItem('inventory_movements', list);
+
+    // Auto-update inventory items balance
+    const inventoryList = this.getItem<InventoryItem>('inventory_items', []);
+    const vId = typeof newMov.variant_id === 'number' ? newMov.variant_id : (newMov.variant_id as any)?.id;
+    const wId = typeof newMov.warehouse_id === 'number' ? newMov.warehouse_id : (newMov.warehouse_id as any)?.id;
+    const moveQty = newMov.quantity;
+    const moveType = newMov.type;
+
+    const invIdx = inventoryList.findIndex((i) => {
+      const itemVid = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
+      const itemWid = typeof i.warehouse_id === 'number' ? i.warehouse_id : (i.warehouse_id as any)?.id;
+      return itemVid === vId && itemWid === wId;
+    });
+
+    if (invIdx !== -1) {
+      const item = inventoryList[invIdx];
+      let currentQty = Number(item.quantity) || 0;
+      let currentDamaged = Number(item.damaged_quantity) || 0;
+      let currentReserved = Number(item.reserved_quantity) || 0;
+
+      if (moveType === 'purchase' || moveType === 'transfer_in' || moveType === 'return') {
+        currentQty += moveQty;
+      } else if (moveType === 'sale' || moveType === 'transfer_out') {
+        currentQty = Math.max(0, currentQty - moveQty);
+      } else if (moveType === 'damage') {
+        currentDamaged += moveQty;
+        currentQty = Math.max(0, currentQty - moveQty);
+      } else if (moveType === 'adjustment') {
+        currentQty = moveQty;
+      }
+
+      inventoryList[invIdx].quantity = currentQty;
+      inventoryList[invIdx].damaged_quantity = currentDamaged;
+      inventoryList[invIdx].available_quantity = Math.max(0, currentQty - currentReserved - currentDamaged);
+      inventoryList[invIdx].updated_at = new Date().toISOString();
+    } else {
+      let initialQty = moveQty;
+      let initialDamaged = 0;
+      if (moveType === 'damage') {
+        initialDamaged = moveQty;
+        initialQty = 0;
+      }
+      inventoryList.unshift({
+        id: this.generateUniqueId(inventoryList),
+        organization_id: newMov.organization_id || 1,
+        variant_id: vId,
+        warehouse_id: wId,
+        location_id: newMov.location_id ? Number(newMov.location_id) : undefined,
+        quantity: initialQty,
+        reserved_quantity: 0,
+        available_quantity: initialQty,
+        damaged_quantity: initialDamaged,
+        reorder_point: 5,
+        safety_stock: 2,
+        updated_at: new Date().toISOString(),
+      });
+    }
+    this.setItem('inventory_items', inventoryList);
+
     return newMov;
   }
 

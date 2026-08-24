@@ -290,7 +290,7 @@ export const VariantsView: React.FC = () => {
               <label className="block text-xs font-semibold text-neutral-700 mb-1">سایز</label>
               <Select
                 value={editSizeId}
-                onChange={(e) => setEditSizeId(e.target.value ? Number(editSizeId) : '')}
+                onChange={(e) => setEditSizeId(e.target.value ? Number(e.target.value) : '')}
                 options={[
                   { value: '', label: 'بدون سایز مشخص' },
                   ...sizes.map((s) => ({ value: s.id, label: s.name })),

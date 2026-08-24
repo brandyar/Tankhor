@@ -366,8 +366,8 @@ export const PurchaseOrdersView: React.FC = () => {
                   className="w-full p-2 text-xs border border-slate-200 rounded-lg bg-white outline-none"
                 >
                   <option value={0}>-- انتخاب کالا --</option>
-                  {variants.map((v) => (
-                    <option key={v.id} value={v.id}>
+                  {variants.map((v, vIdx) => (
+                    <option key={`po_var_${v.id}_${vIdx}`} value={v.id}>
                       {v.sku} - {v.price} تومان
                     </option>
                   ))}

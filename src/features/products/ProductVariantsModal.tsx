@@ -175,7 +175,7 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
-                {variants.map((v) => {
+                {variants.map((v, index) => {
                   const colorObj = colors.find((c) => c.id === (typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id));
                   const sizeObj = sizes.find((s) => s.id === (typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id));
 
@@ -187,7 +187,7 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
                     .reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
 
                   return (
-                    <tr key={v.id} className="hover:bg-slate-50 transition-colors">
+                    <tr key={`pvm_var_${v.id || 'temp'}_${index}`} className="hover:bg-slate-50 transition-colors">
                       <td className="px-3 py-2.5 font-medium text-slate-900">
                         <div className="flex items-center gap-1.5">
                           <span

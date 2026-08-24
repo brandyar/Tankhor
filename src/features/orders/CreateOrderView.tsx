@@ -740,9 +740,9 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
               >
                 همه دسته‌ها
               </button>
-              {categories.map((cat) => (
+              {categories.map((cat, idx) => (
                 <button
-                  key={cat.id}
+                  key={`ord_cat_${cat.id}_${idx}`}
                   type="button"
                   onClick={() => setSelectedCategoryId(cat.id)}
                   className={`px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 ${
@@ -766,14 +766,14 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                 هیچ کالایی با این مشخصات یافت نشد.
               </div>
             ) : (
-              filteredVariants.map((v) => {
+              filteredVariants.map((v, vIdx) => {
                 const prod = products.find((p) => p.id === (typeof v.product_id === 'object' ? v.product_id.id : v.product_id));
                 const stock = v.stock_quantity ?? 0;
                 const inCart = cart.find((c) => c.variant.id === v.id);
 
                 return (
                   <div
-                    key={v.id}
+                    key={`ord_var_${v.id}_${vIdx}`}
                     onClick={() => handleAddToCart(v)}
                     className={`p-3 bg-white border rounded-xl cursor-pointer transition-all duration-150 flex flex-col justify-between space-y-2 relative group hover:shadow-md ${
                       inCart
@@ -889,9 +889,9 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   <p>فاکتور خالی است. کالاها را اسکن کنید یا از کاتالوگ انتخاب نمایید.</p>
                 </div>
               ) : (
-                cart.map((line) => (
+                cart.map((line, lIdx) => (
                   <div
-                    key={line.variant.id}
+                    key={`ord_cart_${line.variant.id}_${lIdx}`}
                     className="p-2.5 bg-[#fafafa] border border-[#ebebeb] rounded-xl space-y-2 text-xs"
                   >
                     <div className="flex items-start justify-between gap-2">
