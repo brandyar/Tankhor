@@ -82,15 +82,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (userData && (userData.id || userData.email)) {
             setUser(userData);
             setIsCloudAuthenticated(true);
+            storageManager.setMode('cloud_synced');
 
             const activeOrg = userData.active_organization || userData.activeOrganization;
-            const plan = activeOrg?.plan || userData.plan || 'free';
-            if (plan === 'free') {
-              storageManager.setMode('local_offline');
-            } else {
-              storageManager.setMode('cloud_synced');
-            }
-
             localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
 
             if (activeOrg && activeOrg.id) {
@@ -190,15 +184,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userData && (userData.id || userData.email)) {
         setUser(userData);
         setIsCloudAuthenticated(true);
+        storageManager.setMode('cloud_synced');
 
         const activeOrg = userData.active_organization || userData.activeOrganization || loginRes.activeOrganization;
-        const plan = activeOrg?.plan || userData.plan || 'free';
-        if (plan === 'free') {
-          storageManager.setMode('local_offline');
-        } else {
-          storageManager.setMode('cloud_synced');
-        }
-
         localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
 
         if (activeOrg && activeOrg.id) {
@@ -285,15 +273,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userData && (userData.id || userData.email)) {
         setUser(userData);
         setIsCloudAuthenticated(true);
+        storageManager.setMode('cloud_synced');
 
         const activeOrg = userData.active_organization || userData.activeOrganization || regRes.organization || regRes.activeOrganization;
-        const plan = activeOrg?.plan || userData.plan || 'free';
-        if (plan === 'free') {
-          storageManager.setMode('local_offline');
-        } else {
-          storageManager.setMode('cloud_synced');
-        }
-
         localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
 
         if (activeOrg && activeOrg.id) {

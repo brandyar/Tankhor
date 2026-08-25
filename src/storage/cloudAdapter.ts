@@ -282,33 +282,48 @@ export class CloudDirectusAdapter implements IStorageProvider {
 
   async getVariantsByProductId(productId: number): Promise<ProductVariant[]> {
     try {
-      const variants = await directusClient.getItems<ProductVariant>('product_variants', {
-        filter: { product_id: { _eq: productId } },
-      });
+      const normProdId = normalizeId(productId) || Number(productId);
+      let variants = await directusClient.getItems<ProductVariant>('product_variants', {
+        filter: {
+          _or: [
+            { product_id: { _eq: normProdId } },
+            { product_id: { _eq: String(normProdId) } },
+          ],
+        },
+      }).catch(() => []);
+
+      if (variants.length === 0) {
+        // Fallback filter over all variants in case Directus relation object filter was used
+        const allVariants = await directusClient.getItems<ProductVariant>('product_variants', {}).catch(() => []);
+        variants = allVariants.filter((v) => normalizeId(v.product_id) === normProdId);
+      }
+
       const [inventoryItems, colors, sizes, products] = await Promise.all([
         directusClient.getItems<InventoryItem>('inventory_items', {}).catch(() => []),
         directusClient.getItems<Color>('colors', {}).catch(() => []),
         directusClient.getItems<Size>('sizes', {}).catch(() => []),
-        directusClient.getItems<Product>('products', { filter: { id: { _eq: productId } } }).catch(() => []),
+        directusClient.getItems<Product>('products', { filter: { id: { _eq: normProdId } } }).catch(() => []),
       ]);
 
       const productTitle = products[0]?.title || 'محصول';
 
       return variants.map((v) => {
-        const vInv = inventoryItems.filter((i) => {
-          const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-          return vId === v.id;
-        });
+        const vNormId = normalizeId(v.id) || v.id;
+        const vInv = inventoryItems.filter((i) => normalizeId(i.variant_id) === vNormId);
         const totalStock = vInv.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
 
-        const cId = typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id;
-        const sId = typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id;
+        const cId = normalizeId(v.color_id);
+        const sId = normalizeId(v.size_id);
 
-        const matchedColor = colors.find((c) => c.id === cId);
-        const matchedSize = sizes.find((s) => s.id === sId);
+        const matchedColor = colors.find((c) => normalizeId(c.id) === cId);
+        const matchedSize = sizes.find((s) => normalizeId(s.id) === sId);
 
         return {
           ...v,
+          id: vNormId,
+          product_id: normProdId,
+          color_id: cId || undefined,
+          size_id: sId || undefined,
           product_title: productTitle,
           color_name: matchedColor?.name || v.color_name || '-',
           size_name: matchedSize?.name || v.size_name || '-',

@@ -192,9 +192,9 @@ class DirectusClient {
 
   public async getMe(): Promise<any> {
     try {
-      return await this.request('/auth/me');
-    } catch {
       return await this.request('/users/me');
+    } catch {
+      return await this.request('/auth/me');
     }
   }
 
