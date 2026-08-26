@@ -16,14 +16,19 @@ class DirectusClient {
     if (baseUrl) {
       this.baseUrl = baseUrl.replace(/\/+$/, '');
     } else if (typeof window !== 'undefined') {
+      const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
+      const customApiUrl = metaEnv?.VITE_API_URL || metaEnv?.VITE_GATEWAY_URL;
       const isTauri =
         window.location.protocol.includes('tauri') ||
         Boolean((window as any).__TAURI__) ||
         window.location.hostname === 'tauri.localhost';
 
-      if (isTauri) {
-        const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
-        this.baseUrl = (metaEnv?.VITE_DIRECTUS_URL || 'https://api.tankhor.com').replace(/\/+$/, '');
+      if (customApiUrl) {
+        this.baseUrl = customApiUrl.replace(/\/+$/, '');
+      } else if (isTauri) {
+        const rawServer = metaEnv?.VITE_DIRECTUS_URL || 'https://api.tankhor.com';
+        const cleanServer = rawServer.replace(/\/+$/, '');
+        this.baseUrl = cleanServer.endsWith('/api') ? cleanServer : `${cleanServer}/api`;
       } else {
         // In browser / web preview / production Cloud Run, all requests go through the same-origin Express BFF proxy at /api
         this.baseUrl = '/api';
@@ -213,22 +218,30 @@ class DirectusClient {
     }
 
     let user = res.user;
-    if (!user) {
-      user = await this.getMe().catch(() => null);
-    }
+    let activeOrg = res.activeOrganization || res.active_organization;
+    let orgs = res.organizations;
 
-    const activeOrg = res.activeOrganization || res.active_organization || { id: 1, name: 'فروشگاه من', plan: 'free' };
-    const orgs = res.organizations || [activeOrg];
+    if (!user || !activeOrg || !Array.isArray(orgs) || orgs.length === 0) {
+      const meData = await this.getMe().catch(() => null);
+      if (meData) {
+        user = user || meData;
+        activeOrg = activeOrg || meData.activeOrganization || meData.active_organization;
+        orgs = orgs || meData.organizations;
+      }
+    }
 
     if (activeOrg?.id && typeof window !== 'undefined') {
       localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
     }
 
+    const finalOrgs = Array.isArray(orgs) && orgs.length > 0 ? orgs : (activeOrg ? [activeOrg] : []);
+    const finalActiveOrg = activeOrg || (finalOrgs.length > 0 ? finalOrgs[0] : null);
+
     return {
       access_token: token,
       user: user || { email: cleanEmail, role: 'owner', plan: 'free' },
-      activeOrganization: activeOrg,
-      organizations: orgs,
+      activeOrganization: finalActiveOrg,
+      organizations: finalOrgs,
     };
   }
 
@@ -237,11 +250,16 @@ class DirectusClient {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('tankhor_cached_user_profile');
       localStorage.removeItem('tankhor_active_org_id');
+      localStorage.removeItem('tankhor_storage_mode');
     }
   }
 
   public async getMe(): Promise<any> {
-    return await this.request('/users/me');
+    try {
+      return await this.request('/auth/me');
+    } catch {
+      return await this.request('/users/me');
+    }
   }
 
   public async register(data: {
@@ -339,8 +357,14 @@ class DirectusClient {
 
   public async getOrganizations(): Promise<any[]> {
     try {
-      const res = await this.getItems('organizations');
-      return Array.isArray(res) ? res : [];
+      const me = await this.getMe().catch(() => null);
+      if (me && Array.isArray(me.organizations) && me.organizations.length > 0) {
+        return me.organizations;
+      }
+      if (me && (me.activeOrganization || me.active_organization)) {
+        return [me.activeOrganization || me.active_organization];
+      }
+      return [];
     } catch {
       return [];
     }

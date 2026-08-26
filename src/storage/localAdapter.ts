@@ -41,6 +41,18 @@ export class LocalOfflineAdapter implements IStorageProvider {
     return candidate;
   }
 
+  private getActiveOrgId(params?: QueryParams): number | undefined {
+    if (params?.organization_id) return Number(params.organization_id);
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('tankhor_active_org_id');
+      if (saved) {
+        const num = Number(saved);
+        if (!isNaN(num) && num > 0) return num;
+      }
+    }
+    return undefined;
+  }
+
   constructor() {
     this.seedSampleDataIfEmpty();
   }
@@ -48,23 +60,24 @@ export class LocalOfflineAdapter implements IStorageProvider {
   private seedSampleDataIfEmpty() {
     // Clean architecture: Do NOT inject default mock data for products, categories, or attributes.
     // The system relies on actual user inputs or live Directus data.
-    if (!localStorage.getItem('tankhor_db_organizations')) {
-      const defaultOrg: Organization = {
-        id: 1,
-        name: 'سازمان اصلی',
-        slug: 'main-org',
-        currency: 'TOMAN',
-        timezone: 'Asia/Tehran',
-        plan: 'free',
-        status: 'active',
-        date_created: new Date().toISOString(),
-      };
-      this.setItem('organizations', [defaultOrg]);
-    }
   }
 
   // Organizations
   async getOrganizations(): Promise<Organization[]> {
+    if (typeof window !== 'undefined') {
+      const cachedUserRaw = localStorage.getItem('tankhor_cached_user_profile');
+      if (cachedUserRaw) {
+        try {
+          const cachedUser = JSON.parse(cachedUserRaw);
+          if (Array.isArray(cachedUser.organizations) && cachedUser.organizations.length > 0) {
+            return cachedUser.organizations;
+          }
+          if (cachedUser.activeOrganization || cachedUser.active_organization) {
+            return [cachedUser.activeOrganization || cachedUser.active_organization];
+          }
+        } catch {}
+      }
+    }
     return this.getItem<Organization>('organizations', []);
   }
 
@@ -194,8 +207,12 @@ export class LocalOfflineAdapter implements IStorageProvider {
   // Products & Variants
   async getProducts(params?: QueryParams): Promise<Product[]> {
     let items = this.getItem<Product>('products', []);
-    if (params?.organization_id) {
-      items = items.filter((p) => p.organization_id === params.organization_id);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((p) => {
+        const pOrgId = typeof p.organization_id === 'number' ? p.organization_id : Number((p.organization_id as any)?.id || (p as any).organization_id);
+        return pOrgId === orgId;
+      });
     }
     if (params?.search) {
       const term = params.search.toLowerCase();
@@ -297,8 +314,12 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   async getVariants(params?: QueryParams): Promise<ProductVariant[]> {
     let items = this.getItem<ProductVariant>('product_variants', []);
-    if (params?.organization_id) {
-      items = items.filter((v) => v.organization_id === params.organization_id);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((v) => {
+        const vOrgId = typeof v.organization_id === 'number' ? v.organization_id : Number((v.organization_id as any)?.id || (v as any).organization_id);
+        return vOrgId === orgId;
+      });
     }
     const products = this.getItem<Product>('products', []);
     const colors = this.getItem<Color>('colors', []);
@@ -527,7 +548,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   // Catalog Attributes
   async getCategories(params?: QueryParams): Promise<Category[]> {
-    return this.getItem<Category>('categories', []);
+    let items = this.getItem<Category>('categories', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((c) => {
+        const cOrgId = typeof c.organization_id === 'number' ? c.organization_id : Number((c.organization_id as any)?.id || (c as any).organization_id);
+        return cOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async saveCategory(cat: Partial<Category>): Promise<Category> {
@@ -542,7 +571,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     }
     const newCat: Category = {
       id: this.generateUniqueId(list),
-      organization_id: cat.organization_id || 1,
+      organization_id: cat.organization_id || this.getActiveOrgId() || 1,
       name: cat.name || 'دسته‌بندی جدید',
       slug: cat.slug || 'cat-new',
       status: 'active',
@@ -561,7 +590,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
   }
 
   async getCollections(params?: QueryParams): Promise<Collection[]> {
-    return this.getItem<Collection>('collections', []);
+    let items = this.getItem<Collection>('collections', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((c) => {
+        const cOrgId = typeof c.organization_id === 'number' ? c.organization_id : Number((c.organization_id as any)?.id || (c as any).organization_id);
+        return cOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async saveCollection(col: Partial<Collection>): Promise<Collection> {
@@ -576,7 +613,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     }
     const newCol: Collection = {
       id: this.generateUniqueId(list),
-      organization_id: col.organization_id || 1,
+      organization_id: col.organization_id || this.getActiveOrgId() || 1,
       name: col.name || 'مجموعه جدید',
       slug: col.slug || 'col-new',
       status: 'active',
@@ -595,7 +632,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
   }
 
   async getBrands(params?: QueryParams): Promise<Brand[]> {
-    return this.getItem<Brand>('brands', []);
+    let items = this.getItem<Brand>('brands', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((b) => {
+        const bOrgId = typeof b.organization_id === 'number' ? b.organization_id : Number((b.organization_id as any)?.id || (b as any).organization_id);
+        return bOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async saveBrand(brand: Partial<Brand>): Promise<Brand> {
@@ -610,7 +655,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     }
     const newBrand: Brand = {
       id: this.generateUniqueId(list),
-      organization_id: brand.organization_id || 1,
+      organization_id: brand.organization_id || this.getActiveOrgId() || 1,
       name: brand.name || 'برند جدید',
       code: brand.code || '',
       status: 'active',
@@ -630,7 +675,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
   }
 
   async getSeasons(params?: QueryParams): Promise<Season[]> {
-    return this.getItem<Season>('seasons', []);
+    let items = this.getItem<Season>('seasons', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((s) => {
+        const sOrgId = typeof s.organization_id === 'number' ? s.organization_id : Number((s.organization_id as any)?.id || (s as any).organization_id);
+        return sOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async saveSeason(season: Partial<Season>): Promise<Season> {
@@ -645,7 +698,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     }
     const newSeason: Season = {
       id: this.generateUniqueId(list),
-      organization_id: season.organization_id || 1,
+      organization_id: season.organization_id || this.getActiveOrgId() || 1,
       name: season.name || 'فصل جدید',
       status: 'active',
       ...season,
@@ -663,7 +716,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
   }
 
   async getColors(params?: QueryParams): Promise<Color[]> {
-    return this.getItem<Color>('colors', []);
+    let items = this.getItem<Color>('colors', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((c) => {
+        const cOrgId = typeof c.organization_id === 'number' ? c.organization_id : Number((c.organization_id as any)?.id || (c as any).organization_id);
+        return cOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async saveColor(color: Partial<Color>): Promise<Color> {
@@ -678,7 +739,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     }
     const newColor: Color = {
       id: this.generateUniqueId(list),
-      organization_id: color.organization_id || 1,
+      organization_id: color.organization_id || this.getActiveOrgId() || 1,
       name: color.name || 'رنگ جدید',
       hex: color.hex || '#000000',
       status: 'active',
@@ -697,7 +758,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
   }
 
   async getSizeGroups(params?: QueryParams): Promise<SizeGroup[]> {
-    return this.getItem<SizeGroup>('size_groups', []);
+    let items = this.getItem<SizeGroup>('size_groups', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((g) => {
+        const gOrgId = typeof g.organization_id === 'number' ? g.organization_id : Number((g.organization_id as any)?.id || (g as any).organization_id);
+        return gOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async saveSizeGroup(group: Partial<SizeGroup>): Promise<SizeGroup> {
@@ -712,7 +781,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     }
     const newGroup: SizeGroup = {
       id: this.generateUniqueId(list),
-      organization_id: group.organization_id || 1,
+      organization_id: group.organization_id || this.getActiveOrgId() || 1,
       name: group.name || 'گروه سایز جدید',
       category: group.category || 'apparel',
       status: 'active',
@@ -731,7 +800,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
   }
 
   async getSizes(params?: QueryParams): Promise<Size[]> {
-    return this.getItem<Size>('sizes', []);
+    let items = this.getItem<Size>('sizes', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((s) => {
+        const sOrgId = typeof s.organization_id === 'number' ? s.organization_id : Number((s.organization_id as any)?.id || (s as any).organization_id);
+        return sOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async saveSize(size: Partial<Size>): Promise<Size> {
@@ -746,7 +823,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     }
     const newSize: Size = {
       id: this.generateUniqueId(list),
-      organization_id: size.organization_id || 1,
+      organization_id: size.organization_id || this.getActiveOrgId() || 1,
       name: size.name || 'سایز جدید',
       status: 'active',
       ...size,
@@ -765,7 +842,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   // Warehouses & Locations
   async getWarehouses(params?: QueryParams): Promise<Warehouse[]> {
-    return this.getItem<Warehouse>('warehouses', []);
+    let items = this.getItem<Warehouse>('warehouses', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((w) => {
+        const wOrgId = typeof w.organization_id === 'number' ? w.organization_id : Number((w.organization_id as any)?.id || (w as any).organization_id);
+        return wOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async saveWarehouse(wh: Partial<Warehouse>): Promise<Warehouse> {
@@ -1072,7 +1157,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   // Orders
   async getOrders(params?: QueryParams): Promise<Order[]> {
-    return this.getItem<Order>('orders', []);
+    let items = this.getItem<Order>('orders', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((o) => {
+        const oOrgId = typeof o.organization_id === 'number' ? o.organization_id : Number((o.organization_id as any)?.id || (o as any).organization_id);
+        return oOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async getOrderItems(orderId: number): Promise<OrderItem[]> {
@@ -1098,7 +1191,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     } else {
       savedOrder = {
         id: this.generateUniqueId(list),
-        organization_id: order.organization_id || 1,
+        organization_id: order.organization_id || this.getActiveOrgId() || 1,
         warehouse_id: order.warehouse_id || 1,
         order_number: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
         status: order.status || 'draft',
@@ -1125,7 +1218,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
       items.forEach((item) => {
         filtered.push({
           id: this.generateUniqueId(filtered),
-          organization_id: savedOrder.organization_id || 1,
+          organization_id: savedOrder.organization_id || this.getActiveOrgId() || 1,
           order_id: savedOrder.id,
           variant_id: item.variant_id || 1,
           quantity: item.quantity || 1,
@@ -1144,7 +1237,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   // Customers
   async getCustomers(params?: QueryParams): Promise<Customer[]> {
-    return this.getItem<Customer>('customers', []);
+    let items = this.getItem<Customer>('customers', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((c) => {
+        const cOrgId = typeof c.organization_id === 'number' ? c.organization_id : Number((c.organization_id as any)?.id || (c as any).organization_id);
+        return cOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async saveCustomer(cust: Partial<Customer>): Promise<Customer> {
@@ -1159,7 +1260,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     }
     const newCust: Customer = {
       id: this.generateUniqueId(list),
-      organization_id: cust.organization_id || 1,
+      organization_id: cust.organization_id || this.getActiveOrgId() || 1,
       name: cust.name || 'مشتری جدید',
       status: 'active',
       date_created: new Date().toISOString(),
@@ -1172,7 +1273,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   // Suppliers & Purchase Orders
   async getSuppliers(params?: QueryParams): Promise<Supplier[]> {
-    return this.getItem<Supplier>('suppliers', []);
+    let items = this.getItem<Supplier>('suppliers', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((s) => {
+        const sOrgId = typeof s.organization_id === 'number' ? s.organization_id : Number((s.organization_id as any)?.id || (s as any).organization_id);
+        return sOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async saveSupplier(sup: Partial<Supplier>): Promise<Supplier> {
@@ -1187,7 +1296,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     }
     const newSup: Supplier = {
       id: this.generateUniqueId(list),
-      organization_id: sup.organization_id || 1,
+      organization_id: sup.organization_id || this.getActiveOrgId() || 1,
       name: sup.name || 'تامین‌کننده جدید',
       status: 'active',
       date_created: new Date().toISOString(),
@@ -1199,7 +1308,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
   }
 
   async getPurchaseOrders(params?: QueryParams): Promise<PurchaseOrder[]> {
-    return this.getItem<PurchaseOrder>('purchase_orders', []);
+    let items = this.getItem<PurchaseOrder>('purchase_orders', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((p) => {
+        const pOrgId = typeof p.organization_id === 'number' ? p.organization_id : Number((p.organization_id as any)?.id || (p as any).organization_id);
+        return pOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async savePurchaseOrder(po: Partial<PurchaseOrder>, items?: Partial<PurchaseOrderItem>[]): Promise<PurchaseOrder> {
@@ -1217,7 +1334,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     } else {
       savedPo = {
         id: this.generateUniqueId(list),
-        organization_id: po.organization_id || 1,
+        organization_id: po.organization_id || this.getActiveOrgId() || 1,
         supplier_id: po.supplier_id || 1,
         warehouse_id: po.warehouse_id || 1,
         purchase_number: `PO-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -1238,7 +1355,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   // Stock Transfers
   async getStockTransfers(params?: QueryParams): Promise<StockTransfer[]> {
-    return this.getItem<StockTransfer>('stock_transfers', []);
+    let items = this.getItem<StockTransfer>('stock_transfers', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((s) => {
+        const sOrgId = typeof s.organization_id === 'number' ? s.organization_id : Number((s.organization_id as any)?.id || (s as any).organization_id);
+        return sOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async saveStockTransfer(st: Partial<StockTransfer>, items?: Partial<StockTransferItem>[]): Promise<StockTransfer> {
@@ -1256,7 +1381,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     } else {
       savedSt = {
         id: this.generateUniqueId(list),
-        organization_id: st.organization_id || 1,
+        organization_id: st.organization_id || this.getActiveOrgId() || 1,
         from_warehouse_id: st.from_warehouse_id || 1,
         to_warehouse_id: st.to_warehouse_id || 2,
         transfer_number: `TRF-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -1272,7 +1397,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   // Size Guides
   async getSizeGuideTemplates(params?: QueryParams): Promise<SizeGuideTemplate[]> {
-    return this.getItem<SizeGuideTemplate>('size_guide_templates', []);
+    let items = this.getItem<SizeGuideTemplate>('size_guide_templates', []);
+    const orgId = this.getActiveOrgId(params);
+    if (orgId) {
+      items = items.filter((t) => {
+        const tOrgId = typeof t.organization_id === 'number' ? t.organization_id : Number((t.organization_id as any)?.id || (t as any).organization_id);
+        return tOrgId === orgId;
+      });
+    }
+    return items;
   }
 
   async saveSizeGuideTemplate(tpl: Partial<SizeGuideTemplate>): Promise<SizeGuideTemplate> {
@@ -1287,7 +1420,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     }
     const newTpl: SizeGuideTemplate = {
       id: this.generateUniqueId(list),
-      organization_id: tpl.organization_id || 1,
+      organization_id: tpl.organization_id || this.getActiveOrgId() || 1,
       name: tpl.name || 'قالب راهنمای سایز جدید',
       type: tpl.type || 'apparel',
       unit: tpl.unit || 'cm',
