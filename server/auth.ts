@@ -44,16 +44,33 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
 }
 
 /**
- * Robustly resolve all full Organization objects that a user belongs to.
- * Handles both populated Directus relationships and raw organization_id foreign key integers.
+ * Securely resolve all full Organization objects that a user belongs to.
+ * Strictly checks organization_users memberships and prevents tenant leakage.
  */
 export async function getUserOrganizations(userId: string, targetActiveOrgId?: number): Promise<{ activeOrganization: any; organizations: any[] }> {
   try {
-    // 1. Fetch memberships from organization_users
-    const memberships = await DirectusAdminClient.getItems('organization_users', {
-      filter: { user_id: { _eq: userId } },
-      fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id'],
-    }).catch(() => []);
+    // 1. Fetch memberships from organization_users strictly for this userId
+    let memberships: any[] = [];
+    try {
+      memberships = await DirectusAdminClient.getItems('organization_users', {
+        filter: {
+          _or: [
+            { user_id: { _eq: userId } },
+            { user_id: { id: { _eq: userId } } },
+          ],
+        },
+        fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id'],
+      });
+    } catch {
+      try {
+        memberships = await DirectusAdminClient.getItems('organization_users', {
+          filter: { user_id: { _eq: userId } },
+          fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id'],
+        });
+      } catch {
+        memberships = [];
+      }
+    }
 
     const orgList: any[] = [];
     const orgIdsToFetch = new Set<number>();
@@ -62,21 +79,17 @@ export async function getUserOrganizations(userId: string, targetActiveOrgId?: n
       if (typeof m.organization_id === 'object' && m.organization_id && m.organization_id.id && m.organization_id.name) {
         orgList.push({
           ...m.organization_id,
-          user_role: m.role || 'owner',
+          user_role: m.role || 'viewer',
         });
       } else if (m.organization_id) {
         const idNum = Number(typeof m.organization_id === 'object' ? m.organization_id.id : m.organization_id);
-        if (idNum && !isNaN(idNum)) {
+        if (idNum && !isNaN(idNum) && idNum > 0) {
           orgIdsToFetch.add(idNum);
         }
       }
     }
 
-    if (targetActiveOrgId && !orgList.some((o) => Number(o.id) === Number(targetActiveOrgId))) {
-      orgIdsToFetch.add(Number(targetActiveOrgId));
-    }
-
-    // 2. Fetch full organization objects for all collected IDs
+    // 2. Fetch full organization objects ONLY for verified memberships
     for (const orgId of Array.from(orgIdsToFetch)) {
       if (!orgList.some((o) => Number(o.id) === Number(orgId))) {
         try {
@@ -87,7 +100,7 @@ export async function getUserOrganizations(userId: string, targetActiveOrgId?: n
             );
             orgList.push({
               ...org,
-              user_role: matchingMembership?.role || 'owner',
+              user_role: matchingMembership?.role || 'viewer',
             });
           }
         } catch (fetchErr: any) {
@@ -107,16 +120,50 @@ export async function getUserOrganizations(userId: string, targetActiveOrgId?: n
       }
     }
 
-    // 4. Resolve active organization
-    let activeOrg = (targetActiveOrgId && uniqueOrgs.find((o) => Number(o.id) === Number(targetActiveOrgId))) || uniqueOrgs[0] || null;
-
-    if (!activeOrg && targetActiveOrgId) {
+    // 4. If user has NO verified organizations at all, create a dedicated new private organization
+    if (uniqueOrgs.length === 0) {
       try {
-        activeOrg = await DirectusAdminClient.getItemById('organizations', targetActiveOrgId);
-        if (activeOrg && activeOrg.id && !seenIds.has(Number(activeOrg.id))) {
-          uniqueOrgs.push(activeOrg);
-        }
-      } catch {}
+        const user = await DirectusAdminClient.request(`/users/${userId}`).catch(() => null);
+        const orgName = user?.first_name ? `فروشگاه ${user.first_name}` : 'فروشگاه من';
+        const createdOrg = await DirectusAdminClient.createItem('organizations', {
+          name: orgName,
+          slug: `org-${Date.now().toString(36)}`,
+          currency: 'TOMAN',
+          timezone: 'Asia/Tehran',
+          plan: 'free',
+          status: 'active',
+        });
+
+        await DirectusAdminClient.createItem('organization_users', {
+          organization_id: createdOrg.id,
+          user_id: userId,
+          role: 'owner',
+          status: 'active',
+        });
+
+        try {
+          await DirectusAdminClient.createItem('warehouses', {
+            organization_id: createdOrg.id,
+            name: 'انبار مرکزی',
+            code: 'WH-MAIN',
+            status: 'active',
+          });
+        } catch {}
+
+        createdOrg.user_role = 'owner';
+        uniqueOrgs.push(createdOrg);
+      } catch (createErr: any) {
+        console.error('[getUserOrganizations] Auto-provision org error:', createErr.message);
+      }
+    }
+
+    // 5. Select active organization strictly among verified memberships
+    let activeOrg: any = null;
+    if (targetActiveOrgId) {
+      activeOrg = uniqueOrgs.find((o) => Number(o.id) === Number(targetActiveOrgId)) || null;
+    }
+    if (!activeOrg && uniqueOrgs.length > 0) {
+      activeOrg = uniqueOrgs[0];
     }
 
     return {
@@ -449,7 +496,7 @@ authRouter.post('/switch-org', requireAuth, async (req: AuthenticatedRequest, re
 
     const { activeOrganization, organizations } = await getUserOrganizations(userId, Number(targetOrganizationId));
 
-    if (!activeOrganization) {
+    if (!activeOrganization || Number(activeOrganization.id) !== Number(targetOrganizationId)) {
       return res.status(403).json({ error: 'شما به این سازمان دسترسی ندارید.' });
     }
 
@@ -458,7 +505,7 @@ authRouter.post('/switch-org', requireAuth, async (req: AuthenticatedRequest, re
     const newToken = generateToken({
       userId,
       email,
-      organizationId: Number(targetOrganizationId),
+      organizationId: Number(activeOrganization.id),
       role,
     });
 

@@ -97,6 +97,7 @@ const TENANT_SCOPED_COLLECTIONS = new Set([
   'size_groups',
   'sizes',
   'warehouses',
+  'warehouse_locations',
   'inventory_items',
   'inventory_movements',
   'orders',
@@ -108,6 +109,9 @@ const TENANT_SCOPED_COLLECTIONS = new Set([
   'stock_transfers',
   'stock_transfer_items',
   'size_guide_templates',
+  'size_guide_measurements',
+  'size_guide_values',
+  'organization_users',
 ]);
 
 // Generic List items with injected Tenant Scope
@@ -119,6 +123,11 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
     if (collection === 'organizations') {
       const { organizations } = await getUserOrganizations(userId, organizationId);
       return res.json({ data: organizations });
+    }
+
+    const orgIdNum = Number(organizationId);
+    if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
+      return res.status(403).json({ error: 'دسترسی غیرمجاز: سازمان فعال یافت نشد.' });
     }
 
     let clientFilter: any = {};
@@ -133,15 +142,23 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
     // Inject mandatory organization boundary for tenant-scoped collections
     let effectiveFilter = clientFilter;
     if (TENANT_SCOPED_COLLECTIONS.has(collection)) {
+      let tenantFilter: any = { organization_id: { _eq: orgIdNum } };
+      
+      if (collection === 'warehouse_locations') {
+        tenantFilter = { warehouse_id: { organization_id: { _eq: orgIdNum } } };
+      } else if (collection === 'size_guide_measurements' || collection === 'size_guide_values') {
+        tenantFilter = { template_id: { organization_id: { _eq: orgIdNum } } };
+      }
+
       if (Object.keys(clientFilter).length > 0) {
         effectiveFilter = {
           _and: [
-            { organization_id: { _eq: organizationId } },
+            tenantFilter,
             clientFilter,
           ],
         };
       } else {
-        effectiveFilter = { organization_id: { _eq: organizationId } };
+        effectiveFilter = tenantFilter;
       }
     }
 
@@ -165,6 +182,7 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
 proxyRouter.get('/items/:collection/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const { collection, id } = req.params;
   const { organizationId } = req.user!;
+  const orgIdNum = Number(organizationId);
 
   try {
     const item = await DirectusAdminClient.getItemById(collection, id, req.query.fields as string);
@@ -175,8 +193,8 @@ proxyRouter.get('/items/:collection/:id', requireAuth, async (req: Authenticated
     // Tenant check
     if (TENANT_SCOPED_COLLECTIONS.has(collection) && item.organization_id !== undefined) {
       const itemOrgId = typeof item.organization_id === 'object' ? item.organization_id?.id : item.organization_id;
-      if (itemOrgId && Number(itemOrgId) !== Number(organizationId)) {
-        return res.status(403).json({ error: 'Access denied. Record belongs to another organization.' });
+      if (itemOrgId && Number(itemOrgId) !== orgIdNum) {
+        return res.status(403).json({ error: 'دسترسی غیرمجاز: این داده متعلق به سازمان دیگری است.' });
       }
     }
 
@@ -190,13 +208,20 @@ proxyRouter.get('/items/:collection/:id', requireAuth, async (req: Authenticated
 proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const { collection } = req.params;
   const { organizationId } = req.user!;
+  const orgIdNum = Number(organizationId);
+
+  if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
+    return res.status(403).json({ error: 'سازمان فعال مشخص نشده است.' });
+  }
 
   try {
     const payload = { ...req.body };
 
     // Automatically enforce tenant ID
     if (TENANT_SCOPED_COLLECTIONS.has(collection)) {
-      payload.organization_id = organizationId;
+      if (collection !== 'warehouse_locations' && collection !== 'size_guide_measurements' && collection !== 'size_guide_values') {
+        payload.organization_id = orgIdNum;
+      }
     }
 
     const created = await DirectusAdminClient.createItem(collection, payload);
@@ -211,6 +236,7 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
 proxyRouter.patch('/items/:collection/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const { collection, id } = req.params;
   const { userId, organizationId } = req.user!;
+  const orgIdNum = Number(organizationId);
 
   try {
     // Special handling for organizations collection
@@ -243,8 +269,8 @@ proxyRouter.patch('/items/:collection/:id', requireAuth, async (req: Authenticat
         return res.status(404).json({ error: 'Item not found' });
       }
       const existingOrgId = typeof existing.organization_id === 'object' ? existing.organization_id?.id : existing.organization_id;
-      if (existingOrgId && Number(existingOrgId) !== Number(organizationId)) {
-        return res.status(403).json({ error: 'Forbidden: Cannot modify record of another organization' });
+      if (existingOrgId && Number(existingOrgId) !== orgIdNum) {
+        return res.status(403).json({ error: 'دسترسی غیرمجاز: امکان ویرایش داده‌های سازمان دیگر وجود ندارد.' });
       }
     }
 
@@ -263,6 +289,7 @@ proxyRouter.patch('/items/:collection/:id', requireAuth, async (req: Authenticat
 proxyRouter.delete('/items/:collection/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const { collection, id } = req.params;
   const { organizationId } = req.user!;
+  const orgIdNum = Number(organizationId);
 
   try {
     if (TENANT_SCOPED_COLLECTIONS.has(collection)) {
@@ -271,8 +298,8 @@ proxyRouter.delete('/items/:collection/:id', requireAuth, async (req: Authentica
         return res.status(404).json({ error: 'Item not found' });
       }
       const existingOrgId = typeof existing.organization_id === 'object' ? existing.organization_id?.id : existing.organization_id;
-      if (existingOrgId && Number(existingOrgId) !== Number(organizationId)) {
-        return res.status(403).json({ error: 'Forbidden: Cannot delete record of another organization' });
+      if (existingOrgId && Number(existingOrgId) !== orgIdNum) {
+        return res.status(403).json({ error: 'دسترسی غیرمجاز: امکان حذف داده‌های سازمان دیگر وجود ندارد.' });
       }
     }
 
