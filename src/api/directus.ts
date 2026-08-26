@@ -26,9 +26,8 @@ class DirectusClient {
       if (customApiUrl) {
         this.baseUrl = customApiUrl.replace(/\/+$/, '');
       } else if (isTauri) {
-        const rawServer = metaEnv?.VITE_DIRECTUS_URL || 'https://api.tankhor.com';
-        const cleanServer = rawServer.replace(/\/+$/, '');
-        this.baseUrl = cleanServer.endsWith('/api') ? cleanServer : `${cleanServer}/api`;
+        const rawServer = metaEnv?.VITE_DIRECTUS_URL || metaEnv?.VITE_API_URL || 'https://api.tankhor.com';
+        this.baseUrl = rawServer.replace(/\/+$/, '');
       } else {
         // In browser / web preview / production Cloud Run, all requests go through the same-origin Express BFF proxy at /api
         this.baseUrl = '/api';
@@ -364,7 +363,30 @@ class DirectusClient {
       if (me && (me.activeOrganization || me.active_organization)) {
         return [me.activeOrganization || me.active_organization];
       }
-      return [];
+
+      // If connecting directly to Directus, query organization_users for current user
+      if (me && me.id) {
+        try {
+          const memberships = await this.getItems<any>('organization_users', {
+            filter: { user_id: { _eq: me.id } },
+            fields: ['id', 'role', 'status', 'organization_id.*'],
+          });
+          if (Array.isArray(memberships) && memberships.length > 0) {
+            const orgs = memberships
+              .map((m: any) => {
+                if (m.organization_id && typeof m.organization_id === 'object' && m.organization_id.id) {
+                  return { ...m.organization_id, user_role: m.role || 'viewer' };
+                }
+                return null;
+              })
+              .filter(Boolean);
+            if (orgs.length > 0) return orgs;
+          }
+        } catch {}
+      }
+
+      const res = await this.getItems('organizations');
+      return Array.isArray(res) ? res : [];
     } catch {
       return [];
     }
