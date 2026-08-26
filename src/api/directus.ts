@@ -13,34 +13,39 @@ class DirectusClient {
   private token: string | null = null;
 
   constructor(baseUrl?: string) {
-    const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
-    const remoteUrl = (metaEnv?.VITE_DIRECTUS_URL || 'https://api.tankhor.com').replace(/\/+$/, '');
-
     if (baseUrl) {
       this.baseUrl = baseUrl.replace(/\/+$/, '');
     } else if (typeof window !== 'undefined') {
-      const isTauri = window.location.protocol.includes('tauri') || Boolean((window as any).__TAURI__) || window.location.hostname === 'tauri.localhost';
-      const isLocalServer = window.location.port === '3000' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const isTauri =
+        window.location.protocol.includes('tauri') ||
+        Boolean((window as any).__TAURI__) ||
+        window.location.hostname === 'tauri.localhost';
 
-      if (isTauri || !isLocalServer) {
-        this.baseUrl = remoteUrl;
+      if (isTauri) {
+        const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
+        this.baseUrl = (metaEnv?.VITE_DIRECTUS_URL || 'https://api.tankhor.com').replace(/\/+$/, '');
       } else {
+        // In browser / web preview / production Cloud Run, all requests go through the same-origin Express BFF proxy at /api
         this.baseUrl = '/api';
       }
     } else {
-      this.baseUrl = remoteUrl;
+      this.baseUrl = '/api';
     }
-
     this.token = typeof window !== 'undefined' ? localStorage.getItem('tankhor_directus_token') : null;
   }
 
-  public setToken(token: string | null) {
+  public setToken(token: string | null, refreshToken?: string | null) {
     this.token = token;
     if (typeof window !== 'undefined') {
       if (token) {
         localStorage.setItem('tankhor_directus_token', token);
       } else {
         localStorage.removeItem('tankhor_directus_token');
+      }
+      if (refreshToken) {
+        localStorage.setItem('tankhor_directus_refresh_token', refreshToken);
+      } else if (refreshToken === null) {
+        localStorage.removeItem('tankhor_directus_refresh_token');
       }
     }
   }
@@ -51,6 +56,53 @@ class DirectusClient {
       return localStorage.getItem('tankhor_directus_token');
     }
     return null;
+  }
+
+  public getRefreshToken(): string | null {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('tankhor_directus_refresh_token');
+    }
+    return null;
+  }
+
+  private isRefreshing = false;
+
+  private async refreshAccessToken(): Promise<string | null> {
+    const rToken = this.getRefreshToken();
+    if (!rToken) return null;
+
+    try {
+      this.isRefreshing = true;
+      const url = `${this.getBaseUrl()}/auth/refresh`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: rToken, mode: 'json' }),
+      });
+
+      if (!response.ok) {
+        this.setToken(null, null);
+        return null;
+      }
+
+      const json = await response.json();
+      const resData = json.data || json;
+      const newToken = resData.access_token || resData.token;
+      const newRefreshToken = resData.refresh_token || rToken;
+
+      if (newToken) {
+        this.setToken(newToken, newRefreshToken);
+        return newToken;
+      } else {
+        this.setToken(null, null);
+        return null;
+      }
+    } catch {
+      this.setToken(null, null);
+      return null;
+    } finally {
+      this.isRefreshing = false;
+    }
   }
 
   public getBaseUrl(): string {
@@ -119,8 +171,18 @@ class DirectusClient {
           errorMsg.includes('TOKEN_EXPIRED') ||
           errorMsg.includes('INVALID_TOKEN');
 
-        if (isExpiredOrUnauthorized) {
-          this.setToken(null);
+        if (isExpiredOrUnauthorized && !this.isRefreshing && !this.isAuthPublicEndpoint(cleanEndpoint)) {
+          const newToken = await this.refreshAccessToken();
+          if (newToken) {
+            return this.request<T>(endpoint, options);
+          } else {
+            this.setToken(null, null);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('tankhor_cached_user_profile');
+            }
+          }
+        } else if (isExpiredOrUnauthorized) {
+          this.setToken(null, null);
           if (typeof window !== 'undefined') {
             localStorage.removeItem('tankhor_cached_user_profile');
           }
@@ -139,27 +201,15 @@ class DirectusClient {
   // Auth methods
   public async login(email: string, password: string): Promise<{ access_token: string; user: any; activeOrganization: any; organizations: any[] }> {
     const cleanEmail = email.toLowerCase().trim();
-    let res: any;
-
-    try {
-      res = await this.request('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email: cleanEmail, password }),
-      });
-    } catch (err: any) {
-      try {
-        res = await this.request('/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email: cleanEmail, password, mode: 'json' }),
-        });
-      } catch (directusErr: any) {
-        throw new Error(directusErr.message || err.message || 'نام کاربری (ایمیل) یا کلمه عبور نادرست است.');
-      }
-    }
+    const res = await this.request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: cleanEmail, password, mode: 'json' }),
+    });
 
     const token = res.token || res.access_token;
+    const refreshToken = res.refresh_token;
     if (token) {
-      this.setToken(token);
+      this.setToken(token, refreshToken);
     }
 
     let user = res.user;
@@ -183,7 +233,7 @@ class DirectusClient {
   }
 
   public async logout(): Promise<void> {
-    this.setToken(null);
+    this.setToken(null, null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('tankhor_cached_user_profile');
       localStorage.removeItem('tankhor_active_org_id');
@@ -191,11 +241,7 @@ class DirectusClient {
   }
 
   public async getMe(): Promise<any> {
-    try {
-      return await this.request('/users/me');
-    } catch {
-      return await this.request('/auth/me');
-    }
+    return await this.request('/users/me');
   }
 
   public async register(data: {
@@ -244,8 +290,9 @@ class DirectusClient {
     }
 
     const token = res.token || res.access_token;
+    const refreshToken = res.refresh_token;
     if (token) {
-      this.setToken(token);
+      this.setToken(token, refreshToken);
     }
     const orgId = res.activeOrganization?.id || res.organization?.id;
     if (orgId && typeof window !== 'undefined') {
@@ -260,7 +307,7 @@ class DirectusClient {
       body: JSON.stringify({ targetOrganizationId }),
     });
     if (res.token) {
-      this.setToken(res.token);
+      this.setToken(res.token, res.refresh_token);
     }
     const orgId = res.activeOrganization?.id || targetOrganizationId;
     if (orgId && typeof window !== 'undefined') {
@@ -281,7 +328,7 @@ class DirectusClient {
       body: JSON.stringify(data),
     });
     if (res.token) {
-      this.setToken(res.token);
+      this.setToken(res.token, res.refresh_token);
     }
     const orgId = res.activeOrganization?.id || res.organization?.id;
     if (orgId && typeof window !== 'undefined') {
@@ -292,11 +339,8 @@ class DirectusClient {
 
   public async getOrganizations(): Promise<any[]> {
     try {
-      const res = await this.request('/organizations');
-      if (Array.isArray(res)) return res;
-      if (res && Array.isArray(res.data)) return res.data;
-      if (res && Array.isArray(res.organizations)) return res.organizations;
-      return [];
+      const res = await this.getItems('organizations');
+      return Array.isArray(res) ? res : [];
     } catch {
       return [];
     }

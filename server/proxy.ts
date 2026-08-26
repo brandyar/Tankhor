@@ -18,6 +18,35 @@ proxyRouter.get('/health', (req, res) => {
   });
 });
 
+// Profile / Current user endpoints (available at both /api/users/me and /api/auth/me)
+const handleMeRequest = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { userId, organizationId } = req.user!;
+    const user = await DirectusAdminClient.request(`/users/${userId}`).catch(() => null);
+    const { activeOrganization, organizations } = await getUserOrganizations(userId, organizationId);
+
+    return res.json({
+      id: user?.id || userId,
+      email: user?.email || req.user!.email,
+      first_name: user?.first_name || '',
+      last_name: user?.last_name || '',
+      avatar: user?.avatar || null,
+      title: user?.title || null,
+      status: user?.status || 'active',
+      role: req.user!.role || activeOrganization?.user_role || 'owner',
+      active_organization_id: activeOrganization?.id || organizationId,
+      active_organization: activeOrganization,
+      activeOrganization: activeOrganization,
+      organizations: organizations,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || 'Failed to fetch user profile' });
+  }
+};
+
+proxyRouter.get('/users/me', requireAuth, handleMeRequest);
+proxyRouter.get('/auth/me', requireAuth, handleMeRequest);
+
 // Organization Switcher & Access endpoints
 proxyRouter.get('/organizations', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {

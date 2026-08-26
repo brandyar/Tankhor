@@ -1,24 +1,39 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-const DIRECTUS_URL = process.env.DIRECTUS_URL || process.env.VITE_DIRECTUS_URL || 'https://api.tankhor.com';
-const DIRECTUS_ADMIN_TOKEN = process.env.DIRECTUS_ADMIN_TOKEN || process.env.VITE_DIRECTUS_ADMIN_TOKEN || '';
+function sanitizeDirectusUrl(rawUrl?: string): string {
+  if (!rawUrl || typeof rawUrl !== 'string') {
+    return 'https://api.tankhor.com';
+  }
+  const trimmed = rawUrl.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed.replace(/\/+$/, '');
+  }
+  return 'https://api.tankhor.com';
+}
 
 export class DirectusAdminClient {
   public static getBaseUrl(): string {
-    return DIRECTUS_URL.replace(/\/+$/, '');
+    const candidate = process.env.DIRECTUS_URL || process.env.VITE_DIRECTUS_URL;
+    return sanitizeDirectusUrl(candidate);
   }
 
   public static getAdminToken(): string {
-    return DIRECTUS_ADMIN_TOKEN;
+    // If DIRECTUS_URL looks like a raw token instead of a URL, use it as fallback token
+    const directusUrlEnv = (process.env.DIRECTUS_URL || '').trim();
+    if (directusUrlEnv && !directusUrlEnv.startsWith('http://') && !directusUrlEnv.startsWith('https://')) {
+      return directusUrlEnv;
+    }
+    return process.env.DIRECTUS_ADMIN_TOKEN || process.env.VITE_DIRECTUS_ADMIN_TOKEN || '';
   }
 
   public static getHeaders(): HeadersInit {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    if (DIRECTUS_ADMIN_TOKEN) {
-      headers['Authorization'] = `Bearer ${DIRECTUS_ADMIN_TOKEN}`;
+    const token = this.getAdminToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
     return headers;
   }
@@ -27,11 +42,15 @@ export class DirectusAdminClient {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${this.getBaseUrl()}${cleanEndpoint}`;
 
+    // For public auth endpoints like /auth/login, do not attach admin token
+    const isPublicAuth = cleanEndpoint.startsWith('/auth/login') || cleanEndpoint.startsWith('/auth/refresh');
+    const baseHeaders = isPublicAuth ? { 'Content-Type': 'application/json' } : this.getHeaders();
+
     try {
       const response = await fetch(url, {
         ...options,
         headers: {
-          ...this.getHeaders(),
+          ...baseHeaders,
           ...(options.headers || {}),
         },
       });

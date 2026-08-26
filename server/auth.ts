@@ -306,7 +306,8 @@ authRouter.post('/login', async (req: Request, res: Response) => {
         }),
       });
     } catch (err: any) {
-      return res.status(401).json({ error: 'نام کاربری (ایمیل) یا کلمه عبور نادرست است.' });
+      console.warn(`[Auth Login] Directus auth error for ${cleanEmail}:`, err.message);
+      return res.status(401).json({ error: err.message || 'نام کاربری (ایمیل) یا کلمه عبور نادرست است.' });
     }
 
     // 2. Fetch full user info using access_token or Admin Client
