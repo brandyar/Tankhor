@@ -100,7 +100,7 @@ jobs:
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
         run: |
-          npx tauri android build --apk --target aarch64-linux-android
+          npx tauri android build --apk --target aarch64
 
       - name: Upload Android APK Artifact
         uses: actions/upload-artifact@v4
