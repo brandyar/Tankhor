@@ -30,4 +30,7 @@ export const navigationEn = {
   orgSettings: 'Organization Profile',
   userManagement: 'Users & Permissions',
   storageSyncSettings: 'Storage Mode & Sync',
+  catalogAttributes: 'Catalog Attributes',
+  warehouseManagement: 'Warehouses & Locations',
+  stockOperations: 'Stock Logs & Transfers',
 };

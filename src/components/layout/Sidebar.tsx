@@ -1,11 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
 import {
-  LayoutDashboard, ShoppingBag, Layers, Tag, Bookmark, Sun,
-  Palette, Ruler, Warehouse as WarehouseIcon, MapPin, ArrowLeftRight,
-  ClipboardList, ShoppingCart, Truck, Users, Settings, Shirt, Award,
-  X, ChevronRight, ChevronLeft, PanelLeftClose, PanelLeft, Barcode, Printer, UserCheck
+  LayoutDashboard,
+  ShoppingBag,
+  Layers,
+  Tag,
+  Bookmark,
+  Sun,
+  Palette,
+  Ruler,
+  Warehouse as WarehouseIcon,
+  MapPin,
+  ArrowLeftRight,
+  ClipboardList,
+  ShoppingCart,
+  Truck,
+  Users,
+  Settings,
+  Shirt,
+  Award,
+  X,
+  ChevronRight,
+  ChevronLeft,
+  ChevronDown,
+  Barcode,
+  FolderTree,
+  PackagePlus,
+  Boxes,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -15,6 +38,28 @@ interface SidebarProps {
   onMobileClose?: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+}
+
+interface NavItem {
+  route: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  visible?: boolean;
+}
+
+interface NavSubmenu {
+  key: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  items: NavItem[];
+  visible?: boolean;
+}
+
+type NavEntry = ({ type: 'item' } & NavItem) | ({ type: 'submenu' } & NavSubmenu);
+
+interface NavGroup {
+  title: string | null;
+  entries: NavEntry[];
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -29,67 +74,144 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { permissions } = useOrganization();
   const isRtl = locale === 'fa';
 
-  const navGroups = [
+  // State to track open submenus
+  const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
+    catalogAttributes: false,
+    warehouseManagement: false,
+    stockOperations: false,
+  });
+
+  const toggleSubmenu = (key: string) => {
+    setOpenSubmenus((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  // Build the reordered navigation tree:
+  // 1. Dashboard
+  // 2. Orders & Sales (Create Order, All Orders, Customers)
+  // 3. Inventory & Warehouses (Overview, Barcodes, Stock Logs & Transfers submenu, Warehouses & Locations submenu)
+  // 4. Products & Catalog (All Products, Variants, Size Guides, Catalog Attributes submenu)
+  // 5. Purchasing & Procurement (Purchase Orders, Suppliers)
+  // 6. Settings (Org Settings, Storage Sync)
+  const navGroups: NavGroup[] = [
     {
       title: null,
-      items: [
-        { route: 'dashboard', label: t('navigation.dashboard'), icon: LayoutDashboard },
+      entries: [
+        { type: 'item', route: 'dashboard', label: t('navigation.dashboard'), icon: LayoutDashboard },
+      ],
+    },
+    {
+      title: t('navigation.ordersGroup'),
+      entries: [
+        { type: 'item', route: 'orders/create', label: t('navigation.createOrder'), icon: PackagePlus, visible: permissions.canCreateOrders },
+        { type: 'item', route: 'orders/all', label: t('navigation.allOrders'), icon: ShoppingCart, visible: permissions.canViewOrders },
+        { type: 'item', route: 'customers/all', label: t('navigation.allCustomers'), icon: Users, visible: permissions.canViewCustomers },
+      ],
+    },
+    {
+      title: t('navigation.inventoryGroup'),
+      entries: [
+        { type: 'item', route: 'inventory/overview', label: t('navigation.inventoryOverview'), icon: ClipboardList, visible: permissions.canViewInventory },
+        { type: 'item', route: 'inventory/barcodes', label: t('navigation.barcodePrint'), icon: Barcode, visible: permissions.canViewInventory },
+        {
+          type: 'submenu',
+          key: 'stockOperations',
+          label: t('navigation.stockOperations', 'گردش و انتقال کالا'),
+          icon: ArrowLeftRight,
+          visible: permissions.canViewInventory,
+          items: [
+            { route: 'inventory/movements', label: t('navigation.stockMovements'), icon: ClipboardList, visible: permissions.canViewInventory },
+            { route: 'inventory/transfers', label: t('navigation.stockTransfers'), icon: ArrowLeftRight, visible: permissions.canManageInventory },
+          ].filter((i) => i.visible !== false),
+        },
+        {
+          type: 'submenu',
+          key: 'warehouseManagement',
+          label: t('navigation.warehouseManagement', 'انبارها و قفسه‌بندی'),
+          icon: WarehouseIcon,
+          visible: permissions.canManageInventory,
+          items: [
+            { route: 'inventory/warehouses', label: t('navigation.warehouses'), icon: WarehouseIcon, visible: permissions.canManageInventory },
+            { route: 'inventory/locations', label: t('navigation.warehouseLocations'), icon: MapPin, visible: permissions.canManageInventory },
+          ].filter((i) => i.visible !== false),
+        },
       ],
     },
     {
       title: t('navigation.productsGroup'),
-      items: [
-        { route: 'products/all', label: t('navigation.allProducts'), icon: ShoppingBag, visible: permissions.canViewProducts },
-        { route: 'products/variants', label: t('navigation.variants'), icon: Shirt, visible: permissions.canViewProducts },
-        { route: 'products/categories', label: t('navigation.categories'), icon: Layers, visible: permissions.canViewProducts },
-        { route: 'products/collections', label: t('navigation.collections'), icon: Bookmark, visible: permissions.canViewProducts },
-        { route: 'products/brands', label: t('navigation.brands'), icon: Award, visible: permissions.canViewProducts },
-        { route: 'products/seasons', label: t('navigation.seasons'), icon: Sun, visible: permissions.canViewProducts },
-        { route: 'products/colors', label: t('navigation.colors'), icon: Palette, visible: permissions.canViewProducts },
-        { route: 'products/size-groups', label: t('navigation.sizeGroups'), icon: Layers, visible: permissions.canViewProducts },
-        { route: 'products/sizes', label: t('navigation.sizes'), icon: Tag, visible: permissions.canViewProducts },
-        { route: 'products/size-guides', label: t('navigation.sizeGuides'), icon: Ruler, visible: permissions.canViewProducts },
-      ].filter((i) => i.visible !== false),
-    },
-    {
-      title: t('navigation.inventoryGroup'),
-      items: [
-        { route: 'inventory/overview', label: t('navigation.inventoryOverview'), icon: ClipboardList, visible: permissions.canViewInventory },
-        { route: 'inventory/barcodes', label: t('navigation.barcodePrint'), icon: Barcode, visible: permissions.canViewInventory },
-        { route: 'inventory/warehouses', label: t('navigation.warehouses'), icon: WarehouseIcon, visible: permissions.canManageInventory },
-        { route: 'inventory/locations', label: t('navigation.warehouseLocations'), icon: MapPin, visible: permissions.canManageInventory },
-        { route: 'inventory/movements', label: t('navigation.stockMovements'), icon: ClipboardList, visible: permissions.canViewInventory },
-        { route: 'inventory/transfers', label: t('navigation.stockTransfers'), icon: ArrowLeftRight, visible: permissions.canManageInventory },
-      ].filter((i) => i.visible !== false),
-    },
-    {
-      title: t('navigation.ordersGroup'),
-      items: [
-        { route: 'orders/all', label: t('navigation.allOrders'), icon: ShoppingCart, visible: permissions.canViewOrders },
-        { route: 'orders/create', label: t('navigation.createOrder'), icon: ShoppingCart, visible: permissions.canCreateOrders },
-      ].filter((i) => i.visible !== false),
+      entries: [
+        { type: 'item', route: 'products/all', label: t('navigation.allProducts'), icon: ShoppingBag, visible: permissions.canViewProducts },
+        { type: 'item', route: 'products/variants', label: t('navigation.variants'), icon: Shirt, visible: permissions.canViewProducts },
+        { type: 'item', route: 'products/size-guides', label: t('navigation.sizeGuides'), icon: Ruler, visible: permissions.canViewProducts },
+        {
+          type: 'submenu',
+          key: 'catalogAttributes',
+          label: t('navigation.catalogAttributes', 'مشخصات و ویژگی‌ها'),
+          icon: SlidersHorizontal,
+          visible: permissions.canViewProducts,
+          items: [
+            { route: 'products/categories', label: t('navigation.categories'), icon: Layers, visible: permissions.canViewProducts },
+            { route: 'products/collections', label: t('navigation.collections'), icon: Bookmark, visible: permissions.canViewProducts },
+            { route: 'products/brands', label: t('navigation.brands'), icon: Award, visible: permissions.canViewProducts },
+            { route: 'products/seasons', label: t('navigation.seasons'), icon: Sun, visible: permissions.canViewProducts },
+            { route: 'products/colors', label: t('navigation.colors'), icon: Palette, visible: permissions.canViewProducts },
+            { route: 'products/size-groups', label: t('navigation.sizeGroups'), icon: FolderTree, visible: permissions.canViewProducts },
+            { route: 'products/sizes', label: t('navigation.sizes'), icon: Tag, visible: permissions.canViewProducts },
+          ].filter((i) => i.visible !== false),
+        },
+      ],
     },
     {
       title: t('navigation.purchasingGroup'),
-      items: [
-        { route: 'purchasing/suppliers', label: t('navigation.suppliers'), icon: Truck, visible: permissions.canViewPurchasing },
-        { route: 'purchasing/orders', label: t('navigation.purchaseOrders'), icon: Truck, visible: permissions.canViewPurchasing },
-      ].filter((i) => i.visible !== false),
-    },
-    {
-      title: t('navigation.customersGroup'),
-      items: [
-        { route: 'customers/all', label: t('navigation.allCustomers'), icon: Users, visible: permissions.canViewCustomers },
-      ].filter((i) => i.visible !== false),
+      entries: [
+        { type: 'item', route: 'purchasing/orders', label: t('navigation.purchaseOrders'), icon: Truck, visible: permissions.canViewPurchasing },
+        { type: 'item', route: 'purchasing/suppliers', label: t('navigation.suppliers'), icon: Boxes, visible: permissions.canViewPurchasing },
+      ],
     },
     {
       title: t('navigation.settingsGroup'),
-      items: [
-        { route: 'settings/org', label: t('navigation.orgSettings'), icon: Settings },
-        { route: 'settings/sync', label: t('navigation.storageSyncSettings'), icon: Settings },
+      entries: [
+        {
+          type: 'item',
+          route: 'settings/org',
+          label: t('navigation.orgSettings'),
+          icon: Settings,
+          visible: permissions.canManageOrgSettings || permissions.canManageUsers,
+        },
+        {
+          type: 'item',
+          route: 'settings/sync',
+          label: t('navigation.storageSyncSettings'),
+          icon: SlidersHorizontal,
+          visible: permissions.canManageSync,
+        },
       ],
     },
-  ].filter((group) => group.items.length > 0);
+  ];
+
+  const isEntryVisible = (entry: NavEntry): boolean => {
+    if (entry.visible === false) return false;
+    if (entry.type === 'submenu') {
+      return entry.items.some((item) => item.visible !== false);
+    }
+    return true;
+  };
+
+  // Auto-expand any submenu containing active route
+  useEffect(() => {
+    navGroups.forEach((group) => {
+      group.entries.forEach((entry) => {
+        if (entry.type === 'submenu' && isEntryVisible(entry)) {
+          const hasActive = entry.items.some((i) => i.visible !== false && i.route === currentRoute);
+          if (hasActive) {
+            setOpenSubmenus((prev) => ({ ...prev, [entry.key]: true }));
+          }
+        }
+      });
+    });
+  }, [currentRoute, permissions]);
 
   const handleNavClick = (route: string) => {
     onNavigate(route);
@@ -182,50 +304,141 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Navigation List */}
-        <nav className="flex-1 px-2 sm:px-3 py-4 space-y-5 overflow-y-auto custom-scrollbar">
-          {navGroups.map((group, gIdx) => (
-            <div key={gIdx} className="space-y-1">
-              {group.title && (
-                !isCollapsed ? (
-                  <h3 className="px-3 text-[10px] font-mono font-semibold uppercase tracking-widest text-neutral-500 mb-2 truncate">
-                    {group.title}
-                  </h3>
-                ) : (
-                  <div className="my-2 border-t border-neutral-800/60 mx-2" />
-                )
-              )}
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = currentRoute === item.route;
+        <nav className="flex-1 px-2 sm:px-3 py-4 space-y-4 overflow-y-auto custom-scrollbar">
+          {navGroups.map((group, gIdx) => {
+            const visibleEntries = group.entries.filter(isEntryVisible);
+            if (visibleEntries.length === 0) return null;
 
-                return (
-                  <button
-                    key={item.route}
-                    onClick={() => handleNavClick(item.route)}
-                    title={item.label}
-                    className={`w-full flex items-center transition-all cursor-pointer rounded-md text-xs ${
-                      isCollapsed
-                        ? 'justify-center p-2.5 my-0.5'
-                        : 'gap-3 px-3 py-2'
-                    } ${
-                      isActive
-                        ? 'bg-white text-neutral-900 font-bold shadow-sm'
-                        : 'text-neutral-400 hover:text-neutral-100 hover:bg-[#1a1a1a] font-medium'
-                    }`}
-                  >
-                    <Icon className={`shrink-0 ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'} ${isActive ? 'text-neutral-900' : 'text-neutral-500'}`} />
-                    {!isCollapsed && <span className="truncate">{item.label}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+            return (
+              <div key={gIdx} className="space-y-1">
+                {group.title && (
+                  !isCollapsed ? (
+                    <h3 className="px-3 text-[10px] font-mono font-semibold uppercase tracking-widest text-neutral-500 mb-1.5 truncate">
+                      {group.title}
+                    </h3>
+                  ) : (
+                    <div className="my-2 border-t border-neutral-800/60 mx-2" />
+                  )
+                )}
+
+                {visibleEntries.map((entry, eIdx) => {
+                  if (entry.type === 'item') {
+                    const Icon = entry.icon;
+                    const isActive = currentRoute === entry.route;
+
+                    return (
+                      <button
+                        key={entry.route}
+                        onClick={() => handleNavClick(entry.route)}
+                        title={entry.label}
+                        className={`w-full flex items-center transition-all cursor-pointer rounded-lg text-xs ${
+                          isCollapsed
+                            ? 'justify-center p-2.5 my-0.5'
+                            : 'gap-3 px-3 py-2'
+                        } ${
+                          isActive
+                            ? 'bg-white text-neutral-900 font-bold shadow-sm'
+                            : 'text-neutral-400 hover:text-neutral-100 hover:bg-[#1a1a1a] font-medium'
+                        }`}
+                      >
+                        <Icon className={`shrink-0 ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'} ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`} />
+                        {!isCollapsed && <span className="truncate">{entry.label}</span>}
+                      </button>
+                    );
+                  }
+
+                  // Submenu Entry
+                  if (entry.type === 'submenu') {
+                    const Icon = entry.icon;
+                    const isOpen = !!openSubmenus[entry.key];
+                    const visibleSubItems = entry.items.filter((i) => i.visible !== false);
+                    if (visibleSubItems.length === 0) return null;
+                    const hasActiveChild = visibleSubItems.some((i) => i.route === currentRoute);
+
+                    if (isCollapsed) {
+                      // In collapsed mode, render primary icon or trigger
+                      return (
+                        <div key={entry.key} className="relative group my-0.5">
+                          <button
+                            onClick={() => {
+                              if (visibleSubItems.length > 0) {
+                                handleNavClick(visibleSubItems[0].route);
+                              }
+                            }}
+                            title={entry.label}
+                            className={`w-full flex items-center justify-center p-2.5 rounded-lg transition-all cursor-pointer ${
+                              hasActiveChild
+                                ? 'bg-neutral-800 text-white font-bold'
+                                : 'text-neutral-400 hover:text-neutral-100 hover:bg-[#1a1a1a]'
+                            }`}
+                          >
+                            <Icon className="w-5 h-5 shrink-0" />
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div key={entry.key} className="space-y-1 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => toggleSubmenu(entry.key)}
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer ${
+                            hasActiveChild
+                              ? 'text-white font-bold bg-[#171717]'
+                              : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#141414] font-medium'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 truncate">
+                            <Icon className={`w-4 h-4 shrink-0 ${hasActiveChild ? 'text-white' : 'text-neutral-400'}`} />
+                            <span className="truncate">{entry.label}</span>
+                          </div>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 shrink-0 text-neutral-500 transition-transform duration-200 ${
+                              isOpen ? 'rotate-180 text-neutral-300' : ''
+                            }`}
+                          />
+                        </button>
+
+                        {/* Collapsible Submenu Items */}
+                        {isOpen && (
+                          <div className="ms-4 ps-2 border-s border-neutral-800 space-y-1 py-1">
+                            {visibleSubItems.map((subItem) => {
+                              const SubIcon = subItem.icon;
+                              const isSubActive = currentRoute === subItem.route;
+
+                              return (
+                                <button
+                                  key={subItem.route}
+                                  onClick={() => handleNavClick(subItem.route)}
+                                  className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[11px] transition-all cursor-pointer ${
+                                    isSubActive
+                                      ? 'bg-neutral-100 text-neutral-900 font-bold shadow-xs'
+                                      : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#1c1c1c]'
+                                  }`}
+                                >
+                                  <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-neutral-900' : 'text-neutral-500'}`} />
+                                  <span className="truncate">{subItem.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })}
+              </div>
+            );
+          })}
         </nav>
 
         {/* Footer Version */}
         <div className={`p-3 border-t border-neutral-800/80 bg-[#000000]/60 text-center transition-all ${isCollapsed ? 'px-1' : 'px-4'}`}>
           {!isCollapsed ? (
-            <p className="text-[11px] font-mono text-neutral-500 truncate">TANKHOR Platform · Offline & Cloud</p>
+            <p className="text-[11px] font-mono text-neutral-500 truncate">TANKHOR Platform · v1.0</p>
           ) : (
             <p className="text-[9px] font-mono text-neutral-500">v1.0</p>
           )}

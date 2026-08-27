@@ -11,7 +11,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
   const {
     login,
     register,
-    loginOfflineGuest,
     loginError,
     isLoading,
     isCloudAuthenticated,
@@ -296,24 +295,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                       : activeTab === 'login'
                       ? 'ورود به سامانه'
                       : 'ثبت‌نام و ورود به سامانه'}
-                  </Button>
-
-                  <div className="relative flex py-1 items-center">
-                    <div className="flex-grow border-t border-neutral-200"></div>
-                    <span className="shrink mx-3 text-[10px] font-bold text-neutral-400">یا</span>
-                    <div className="flex-grow border-t border-neutral-200"></div>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      loginOfflineGuest();
-                      if (onSuccess) onSuccess();
-                    }}
-                    className="w-full justify-center py-2 text-xs font-medium text-neutral-700 border-neutral-200 hover:bg-neutral-50"
-                  >
-                    ورود بدون حساب (استفاده آفلاین محلی)
                   </Button>
                 </div>
               </form>

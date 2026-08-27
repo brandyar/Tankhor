@@ -16,7 +16,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) => {
   const { t, locale, setLocale } = useTranslation();
-  const { organizations, activeOrganization, selectOrganization, refreshOrganizations, isOwner } = useOrganization();
+  const { organizations, activeOrganization, selectOrganization, refreshOrganizations, isOwner, userRole, permissions } = useOrganization();
   const { user, isCloudAuthenticated, openLoginModal, logout } = useAuth();
 
   const [mode, setModeState] = useState(storageManager.getMode());
@@ -68,14 +68,21 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
   };
 
   const getUserRoleLabel = () => {
-    if (!user) return 'کاربر ناشناس';
-    if (typeof user.role === 'object' && user.role?.name) {
-      return user.role.name;
+    if (!isCloudAuthenticated) return 'مالک سازمان (آفلاین)';
+    switch (userRole) {
+      case 'owner':
+        return 'مالک سازمان (Owner)';
+      case 'manager':
+        return 'مدیر فروشگاه (Manager)';
+      case 'warehouse':
+        return 'انباردار (Warehouse)';
+      case 'sales':
+        return 'فروشنده / صندوق‌دار (Sales)';
+      case 'viewer':
+        return 'مشاهده‌گر (Viewer)';
+      default:
+        return userRole || 'کاربر';
     }
-    if (typeof user.role === 'string') {
-      return user.role;
-    }
-    return isCloudAuthenticated ? 'کاربر سرور ابری' : 'مدیر کل (آفلاین)';
   };
 
   return (

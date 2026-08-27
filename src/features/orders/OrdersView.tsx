@@ -54,7 +54,7 @@ interface OrderItemDisplay {
 
 export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) => {
   const { t, locale } = useTranslation();
-  const { activeOrganization } = useOrganization();
+  const { activeOrganization, permissions } = useOrganization();
   const isPersian = locale === 'fa';
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -369,12 +369,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
         title="مدیریت سفارشات فروش (Sales Orders)"
         subtitle="فهرست کلیه سفارش‌های ثبت‌شده، لیست محصولات هر فاکتور و صدور/چاپ فاکتور"
         action={
-          <Button
-            onClick={onNavigateToCreate}
-            icon={<Plus className="w-4 h-4" />}
-          >
-            ثبت سفارش جدید POS
-          </Button>
+          permissions.canCreateOrders ? (
+            <Button
+              onClick={onNavigateToCreate}
+              icon={<Plus className="w-4 h-4" />}
+            >
+              ثبت سفارش جدید POS
+            </Button>
+          ) : undefined
         }
       />
 

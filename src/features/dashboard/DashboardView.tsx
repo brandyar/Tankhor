@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
 import { storageManager } from '../../storage';
-import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -10,9 +9,19 @@ import { DataTable, Column } from '../../components/ui/DataTable';
 import { formatCurrency, formatDate, toPersianDigits } from '../../utils/formatters';
 import {
   ShoppingBag, Shirt, DollarSign, AlertTriangle,
-  Plus, ArrowUpRight, ArrowDownLeft, RefreshCw, CheckCircle2
+  Plus, ArrowUpRight, ArrowDownLeft, RefreshCw, CheckCircle2,
+  Calendar, BarChart3, TrendingUp
 } from 'lucide-react';
-import { Product, ProductVariant, InventoryMovement, Order } from '../../types';
+import {
+  Product, ProductVariant, InventoryMovement, Order, Category, Warehouse
+} from '../../types';
+import {
+  TimeRange, computeSalesTrend, computeInventoryFlow, computeCategoryStock,
+  computeStockHealth, computeWarehouseDistribution, computeTopProducts
+} from './dashboardUtils';
+import { DashboardMetricsRibbon } from './DashboardMetricsRibbon';
+import { DashboardAnalyticsCharts } from './DashboardAnalyticsCharts';
+import { DashboardStockAlerts } from './DashboardStockAlerts';
 
 interface DashboardViewProps {
   onNavigate: (route: string) => void;
@@ -20,13 +29,16 @@ interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const { t, locale } = useTranslation();
-  const { activeOrganization } = useOrganization();
+  const { activeOrganization, permissions } = useOrganization();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState<TimeRange>('30d');
 
   const isPersian = locale === 'fa';
 
@@ -37,17 +49,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         const adapter = storageManager.getAdapter();
         const orgId = activeOrganization?.id;
 
-        const [pList, vList, mList, oList] = await Promise.all([
+        const [pList, vList, mList, oList, cList, wList] = await Promise.all([
           adapter.getProducts({ organization_id: orgId }),
           adapter.getVariants({ organization_id: orgId }),
           adapter.getInventoryMovements({ organization_id: orgId }),
           adapter.getOrders({ organization_id: orgId }),
+          adapter.getCategories({ organization_id: orgId }),
+          adapter.getWarehouses({ organization_id: orgId }),
         ]);
 
         setProducts(pList);
         setVariants(vList);
         setMovements(mList);
         setOrders(oList);
+        setCategories(cList);
+        setWarehouses(wList);
       } catch (err) {
         console.error('[DashboardData] Error loading metrics:', err);
       } finally {
@@ -58,10 +74,62 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     loadDashboardData();
   }, [activeOrganization]);
 
-  // Calculations
+  // Overall Aggregations
   const totalStockCount = variants.reduce((acc, v) => acc + (v.stock_quantity || 0), 0);
   const totalValue = variants.reduce((acc, v) => acc + (v.stock_quantity || 0) * (v.price || 0), 0);
-  const lowStockCount = variants.filter((v) => (v.stock_quantity || 0) <= 5).length;
+  const lowStockVariants = useMemo(
+    () => variants.filter((v) => (v.stock_quantity || 0) <= 5),
+    [variants]
+  );
+  const lowStockCount = useMemo(
+    () => variants.filter((v) => (v.stock_quantity || 0) > 0 && (v.stock_quantity || 0) <= 5).length,
+    [variants]
+  );
+  const outOfStockCount = useMemo(
+    () => variants.filter((v) => (v.stock_quantity || 0) <= 0).length,
+    [variants]
+  );
+
+  const totalSalesRevenue = useMemo(
+    () => orders.reduce((acc, o) => acc + Number(o.total || 0), 0),
+    [orders]
+  );
+
+  const averageOrderValue = useMemo(
+    () => (orders.length > 0 ? Math.round(totalSalesRevenue / orders.length) : 0),
+    [orders, totalSalesRevenue]
+  );
+
+  // Analytical Computed Data for Charts
+  const salesData = useMemo(
+    () => computeSalesTrend(orders, timeRange, isPersian),
+    [orders, timeRange, isPersian]
+  );
+
+  const inventoryFlowData = useMemo(
+    () => computeInventoryFlow(movements, timeRange, isPersian),
+    [movements, timeRange, isPersian]
+  );
+
+  const categoryStockData = useMemo(
+    () => computeCategoryStock(categories, products, variants),
+    [categories, products, variants]
+  );
+
+  const stockHealthData = useMemo(
+    () => computeStockHealth(variants),
+    [variants]
+  );
+
+  const warehouseStockData = useMemo(
+    () => computeWarehouseDistribution(warehouses, variants),
+    [warehouses, variants]
+  );
+
+  const topProducts = useMemo(
+    () => computeTopProducts(products, variants, categories, movements),
+    [products, variants, categories, movements]
+  );
 
   const movementColumns: Column<InventoryMovement>[] = [
     {
@@ -72,7 +140,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     {
       key: 'sku',
       header: t('common.sku'),
-      render: (m) => <span className="font-bold text-slate-800">{m.sku || 'TNK-SKU'}</span>,
+      render: (m) => <span className="font-bold text-slate-800 font-mono text-xs">{m.sku || 'TNK-SKU'}</span>,
     },
     {
       key: 'type',
@@ -81,9 +149,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         const isIn = m.type === 'purchase' || m.type === 'transfer_in' || m.type === 'return';
         return (
           <Badge variant={isIn ? 'success' : 'danger'}>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 text-[11px]">
               {isIn ? <ArrowDownLeft className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
-              {m.type === 'purchase' ? 'ورود خرید' : m.type === 'sale' ? 'خروج فروش' : m.type}
+              {m.type === 'purchase' ? 'ورود خرید' : m.type === 'sale' ? 'خروج فروش' : m.type === 'return' ? 'مرجوعی' : m.type}
             </span>
           </Badge>
         );
@@ -93,21 +161,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       key: 'quantity',
       header: 'تعداد',
       render: (m) => (
-        <span className="font-bold text-slate-900">
+        <span className="font-bold text-slate-900 font-mono text-xs">
           {toPersianDigits(m.quantity)} عدد
         </span>
       ),
     },
     {
       key: 'reference_id',
-      header: 'مرجع',
-      render: (m) => <span className="text-slate-500">{m.reference_id || '-'}</span>,
+      header: 'مرجع / شماره سند',
+      render: (m) => <span className="text-slate-500 font-mono text-xs">{m.reference_id || '-'}</span>,
     },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Vercel Ambient Hero Banner */}
+      {/* 1. Vercel Ambient Hero Banner */}
       <div className="relative overflow-hidden bg-white border border-neutral-200/80 rounded-xl p-6 sm:p-8 shadow-vercel-sm bg-mesh-gradient">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 max-w-2xl">
@@ -121,96 +189,91 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 }}
               />
               <span className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-neutral-900 text-white font-medium">
-                TANKHOR PLATFORM v1.0
+                TANKHOR PLATFORM
               </span>
               <span className="font-mono text-[11px] text-neutral-500">
                 {activeOrganization?.name || 'سازمان پیش‌فرض'}
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight">
-              {t('dashboard.welcomeMessage')}.
+              پیشخوان گزارشات و مدیریت جامع تن‌خور
             </h1>
-            <p className="text-sm text-neutral-600 leading-relaxed">
-              {t('dashboard.overviewSubtitle')}
+            <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed">
+              نمای زنده از موجودی انبارها، وضعیت سفارشات، گردش کالا و تحلیل شاخص‌های عملکرد کسب‌وکار
             </p>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <Button
-              onClick={() => onNavigate('products/all')}
-              icon={<Plus className="w-4 h-4" />}
-            >
-              {t('dashboard.addProduct')}
-            </Button>
+          <div className="flex items-center gap-2.5 shrink-0">
+            {permissions.canCreateOrders && (
+              <Button
+                variant="primary"
+                onClick={() => onNavigate('orders/create')}
+                icon={<Plus className="w-4 h-4" />}
+              >
+                ثبت سفارش جدید
+              </Button>
+            )}
+            {permissions.canEditProducts && (
+              <Button
+                variant="secondary"
+                onClick={() => onNavigate('products/all')}
+                icon={<Shirt className="w-4 h-4" />}
+              >
+                افزودن کالا
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="hover:shadow-vercel-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="caption-mono">{t('dashboard.totalProducts')}</p>
-              <h3 className="text-3xl font-extrabold text-neutral-900 tracking-tight mt-2 font-mono">
-                {toPersianDigits(products.length)}
-              </h3>
-            </div>
-            <div className="w-10 h-10 bg-neutral-100 text-neutral-900 rounded-lg flex items-center justify-center">
-              <ShoppingBag className="w-5 h-5" />
-            </div>
-          </div>
-        </Card>
+      {/* 2. Top Metric Ribbon (KPIs) */}
+      <DashboardMetricsRibbon
+        totalProducts={products.length}
+        totalVariants={variants.length}
+        totalStockCount={totalStockCount}
+        totalValue={totalValue}
+        lowStockCount={lowStockCount}
+        outOfStockCount={outOfStockCount}
+        totalOrdersCount={orders.length}
+        totalSalesRevenue={totalSalesRevenue}
+        averageOrderValue={averageOrderValue}
+        canViewFinancials={permissions.canViewFinancials}
+        activeOrganization={activeOrganization}
+        isPersian={isPersian}
+      />
 
-        <Card className="hover:shadow-vercel-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="caption-mono">{t('dashboard.totalVariants')}</p>
-              <h3 className="text-3xl font-extrabold text-neutral-900 tracking-tight mt-2 font-mono">
-                {toPersianDigits(variants.length)}{' '}
-                <span className="text-xs font-mono font-normal text-neutral-400">({toPersianDigits(totalStockCount)})</span>
-              </h3>
-            </div>
-            <div className="w-10 h-10 bg-neutral-100 text-neutral-900 rounded-lg flex items-center justify-center">
-              <Shirt className="w-5 h-5" />
-            </div>
-          </div>
-        </Card>
+      {/* 3. Recharts Analytics Suite (Trends, Inflow/Outflow, Donut Distribution, Warehouse Allocation) */}
+      <DashboardAnalyticsCharts
+        timeRange={timeRange}
+        onTimeRangeChange={setTimeRange}
+        salesData={salesData}
+        inventoryFlowData={inventoryFlowData}
+        categoryStockData={categoryStockData}
+        stockHealthData={stockHealthData}
+        warehouseStockData={warehouseStockData}
+        canViewFinancials={permissions.canViewFinancials}
+        activeOrganization={activeOrganization}
+        isPersian={isPersian}
+      />
 
-        <Card className="hover:shadow-vercel-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="caption-mono">{t('dashboard.totalStockValue')}</p>
-              <h3 className="text-2xl font-extrabold text-neutral-900 tracking-tight mt-2 font-mono">
-                {formatCurrency(totalValue, activeOrganization?.currency, isPersian)}
-              </h3>
-            </div>
-            <div className="w-10 h-10 bg-neutral-100 text-neutral-900 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-5 h-5" />
-            </div>
-          </div>
-        </Card>
+      {/* 4. High-Demand Products & Critical Low-Stock Alerts */}
+      <DashboardStockAlerts
+        topProducts={topProducts}
+        lowStockVariants={lowStockVariants}
+        onNavigate={onNavigate}
+        canManageInventory={permissions.canManageInventory}
+        canCreateOrders={permissions.canCreateOrders}
+        canViewPurchasing={permissions.canViewPurchasing}
+        activeOrganization={activeOrganization}
+        isPersian={isPersian}
+      />
 
-        <Card className="hover:shadow-vercel-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="caption-mono">{t('dashboard.lowStockItems')}</p>
-              <h3 className="text-3xl font-extrabold text-neutral-900 tracking-tight mt-2 font-mono">
-                {toPersianDigits(lowStockCount)}
-              </h3>
-            </div>
-            <div className="w-10 h-10 bg-amber-50 text-amber-800 rounded-lg flex items-center justify-center border border-amber-200/80">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Main Row: Recent Movements & Quick Actions */}
+      {/* 5. Bottom Row: Recent Movements & Quick Action Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Movements Table */}
         <div className="lg:col-span-2 space-y-4">
           <Card
             title={t('dashboard.recentMovements')}
+            subtitle="آخرین اسناد ورود، خروج، انتقال و تعدیل موجودی در انبار"
             action={
               <Button
                 variant="ghost"
@@ -223,7 +286,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           >
             <DataTable
               columns={movementColumns}
-              data={movements.slice(0, 5)}
+              data={movements.slice(0, 6)}
               keyExtractor={(m) => m.id}
               isLoading={isLoading}
               emptyMessage="هیچ گردش کالایی ثبت نشده است."
@@ -235,38 +298,46 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         <div className="space-y-6">
           <Card title={t('dashboard.quickActions')}>
             <div className="space-y-2">
-              <Button
-                variant="secondary"
-                className="w-full justify-start text-xs font-medium"
-                onClick={() => onNavigate('products/all')}
-                icon={<Plus className="w-4 h-4 text-neutral-700" />}
-              >
-                {t('dashboard.addProduct')}
-              </Button>
-              <Button
-                variant="secondary"
-                className="w-full justify-start text-xs font-medium"
-                onClick={() => onNavigate('orders/create')}
-                icon={<Plus className="w-4 h-4 text-neutral-700" />}
-              >
-                {t('dashboard.newOrder')}
-              </Button>
-              <Button
-                variant="secondary"
-                className="w-full justify-start text-xs font-medium"
-                onClick={() => onNavigate('inventory/movements')}
-                icon={<RefreshCw className="w-4 h-4 text-neutral-700" />}
-              >
-                {t('dashboard.newMovement')}
-              </Button>
-              <Button
-                variant="secondary"
-                className="w-full justify-start text-xs font-medium"
-                onClick={() => onNavigate('products/size-guides')}
-                icon={<Shirt className="w-4 h-4 text-neutral-700" />}
-              >
-                {t('dashboard.sizeGuideTemplate')}
-              </Button>
+              {permissions.canCreateOrders && (
+                <Button
+                  variant="secondary"
+                  className="w-full justify-start text-xs font-medium"
+                  onClick={() => onNavigate('orders/create')}
+                  icon={<Plus className="w-4 h-4 text-neutral-700" />}
+                >
+                  {t('dashboard.newOrder')}
+                </Button>
+              )}
+              {permissions.canEditProducts && (
+                <Button
+                  variant="secondary"
+                  className="w-full justify-start text-xs font-medium"
+                  onClick={() => onNavigate('products/all')}
+                  icon={<Shirt className="w-4 h-4 text-neutral-700" />}
+                >
+                  {t('dashboard.addProduct')}
+                </Button>
+              )}
+              {permissions.canManageInventory && (
+                <Button
+                  variant="secondary"
+                  className="w-full justify-start text-xs font-medium"
+                  onClick={() => onNavigate('inventory/movements')}
+                  icon={<RefreshCw className="w-4 h-4 text-neutral-700" />}
+                >
+                  {t('dashboard.newMovement')}
+                </Button>
+              )}
+              {permissions.canViewProducts && (
+                <Button
+                  variant="secondary"
+                  className="w-full justify-start text-xs font-medium"
+                  onClick={() => onNavigate('products/size-guides')}
+                  icon={<BarChart3 className="w-4 h-4 text-neutral-700" />}
+                >
+                  {t('dashboard.sizeGuideTemplate')}
+                </Button>
+              )}
             </div>
           </Card>
 
@@ -277,7 +348,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 <div>
                   <p className="font-bold">{t('dashboard.offlineReady')}</p>
                   <p className="text-[11px] text-emerald-800/90 mt-0.5 leading-relaxed">
-                    تمامی اطلاعات روی دستگاه محلی شما نگهداری شده و بدون نیاز به اینترنت سریعاً ذخیره می‌شود.
+                    تمامی محاسبات آماری و گزارشات به‌صورت بلادرنگ (Real-time) از دیتابیس محلی استخراج و نمایش داده می‌شوند.
                   </p>
                 </div>
               </div>

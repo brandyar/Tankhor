@@ -120,29 +120,32 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   // Organization Users & Roles
   async getOrganizationUsers(params?: QueryParams): Promise<OrganizationUser[]> {
-    let list = this.getItem<OrganizationUser>('organization_users', []);
-    const orgId = params?.organization_id;
+    const allUsers = this.getItem<OrganizationUser>('organization_users', []);
+    const orgId = this.getActiveOrgId(params);
+
+    let list = allUsers;
     if (orgId) {
-      list = list.filter((ou) => {
+      list = allUsers.filter((ou) => {
         const oId = typeof ou.organization_id === 'number' ? ou.organization_id : (ou.organization_id as any)?.id;
-        return oId === orgId;
+        return Number(oId) === Number(orgId);
       });
     }
 
     // Default owner user if array is empty
     if (list.length === 0 && orgId) {
+      const nextId = allUsers.reduce((max, ou) => Math.max(max, ou.id || 0), 0) + 1;
       const defaultOwner: OrganizationUser = {
-        id: 1,
-        organization_id: orgId,
-        user_id: 'local_owner_admin',
+        id: nextId,
+        organization_id: Number(orgId),
+        user_id: `local_owner_admin_${orgId}`,
         role: 'owner',
         status: 'active',
         date_joined: new Date().toISOString(),
         first_name: 'مدیر',
-        last_name: 'اصلی',
+        last_name: 'سازمان',
         email: 'owner@tankhor.com',
       };
-      this.setItem('organization_users', [defaultOwner]);
+      this.setItem('organization_users', [...allUsers, defaultOwner]);
       return [defaultOwner];
     }
     return list;
@@ -150,6 +153,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   async saveOrganizationUser(ouData: Partial<OrganizationUser>): Promise<OrganizationUser> {
     const list = this.getItem<OrganizationUser>('organization_users', []);
+    const activeOrgId = Number(ouData.organization_id || this.getActiveOrgId());
     let saved: OrganizationUser;
 
     if (ouData.id) {
@@ -158,12 +162,13 @@ export class LocalOfflineAdapter implements IStorageProvider {
         saved = {
           ...list[idx],
           ...ouData,
+          organization_id: activeOrgId,
         };
         list[idx] = saved;
       } else {
         saved = {
           id: ouData.id,
-          organization_id: ouData.organization_id || 1,
+          organization_id: activeOrgId,
           user_id: ouData.user_id || `user_${Date.now()}`,
           role: ouData.role || 'viewer',
           status: ouData.status || 'active',
@@ -178,7 +183,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
       const nextId = list.reduce((max, ou) => Math.max(max, ou.id || 0), 0) + 1;
       saved = {
         id: nextId,
-        organization_id: ouData.organization_id || 1,
+        organization_id: activeOrgId,
         user_id: ouData.user_id || `user_${Date.now()}`,
         role: ouData.role || 'viewer',
         status: ouData.status || 'active',

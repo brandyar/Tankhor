@@ -22,12 +22,14 @@ import {
   Check,
   X,
   Lock,
+  Key,
   UserCheck,
   Crown,
   Briefcase,
   Warehouse,
   ShoppingBag,
   Eye,
+  EyeOff,
 } from 'lucide-react';
 
 export const OrganizationMembersSection: React.FC = () => {
@@ -50,7 +52,8 @@ export const OrganizationMembersSection: React.FC = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [userId, setUserId] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<UserRole>('sales');
   const [status, setStatus] = useState<Status>('active');
 
@@ -61,7 +64,8 @@ export const OrganizationMembersSection: React.FC = () => {
     setFirstName('');
     setLastName('');
     setEmail('');
-    setUserId('');
+    setPassword('');
+    setShowPassword(false);
     setRole('sales');
     setStatus('active');
     setIsModalOpen(true);
@@ -72,7 +76,8 @@ export const OrganizationMembersSection: React.FC = () => {
     setFirstName(member.first_name || '');
     setLastName(member.last_name || '');
     setEmail(member.email || '');
-    setUserId(member.user_id || '');
+    setPassword('');
+    setShowPassword(false);
     setRole((member.role as UserRole) || 'viewer');
     setStatus(member.status || 'active');
     setIsModalOpen(true);
@@ -85,6 +90,16 @@ export const OrganizationMembersSection: React.FC = () => {
       return;
     }
 
+    if (!editingMember && !password.trim()) {
+      alert(isPersian ? 'لطفاً رمز عبور ورود را تعیین کنید.' : 'Please set a password.');
+      return;
+    }
+
+    if (password.trim() && password.trim().length < 6) {
+      alert(isPersian ? 'رمز عبور باید حداقل ۶ کاراکتر باشد.' : 'Password must be at least 6 characters.');
+      return;
+    }
+
     setIsSaving(true);
     try {
       await saveOrganizationUser({
@@ -92,7 +107,8 @@ export const OrganizationMembersSection: React.FC = () => {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         email: email.trim(),
-        user_id: userId.trim() || `usr_${Date.now()}`,
+        password: password.trim() || undefined,
+        user_id: editingMember?.user_id || `usr_${Date.now()}`,
         role: role,
         status: status,
       });
@@ -281,11 +297,36 @@ export const OrganizationMembersSection: React.FC = () => {
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-slate-700 font-bold">
                 <th className="p-3 text-start">قابلیت / منو</th>
-                <th className="p-3 text-center">👑 مالک</th>
-                <th className="p-3 text-center">👔 مدیر</th>
-                <th className="p-3 text-center">📦 انباردار</th>
-                <th className="p-3 text-center">🛍️ فروشنده</th>
-                <th className="p-3 text-center">👁️ مشاهده‌گر</th>
+                <th className="p-3 text-center">
+                  <span className="inline-flex items-center gap-1.5 justify-center">
+                    <Crown className="w-3.5 h-3.5 text-amber-500" />
+                    <span>مالک</span>
+                  </span>
+                </th>
+                <th className="p-3 text-center">
+                  <span className="inline-flex items-center gap-1.5 justify-center">
+                    <Briefcase className="w-3.5 h-3.5 text-blue-500" />
+                    <span>مدیر</span>
+                  </span>
+                </th>
+                <th className="p-3 text-center">
+                  <span className="inline-flex items-center gap-1.5 justify-center">
+                    <Warehouse className="w-3.5 h-3.5 text-purple-500" />
+                    <span>انباردار</span>
+                  </span>
+                </th>
+                <th className="p-3 text-center">
+                  <span className="inline-flex items-center gap-1.5 justify-center">
+                    <ShoppingBag className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>فروشنده</span>
+                  </span>
+                </th>
+                <th className="p-3 text-center">
+                  <span className="inline-flex items-center gap-1.5 justify-center">
+                    <Eye className="w-3.5 h-3.5 text-slate-500" />
+                    <span>مشاهده‌گر</span>
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -383,12 +424,30 @@ export const OrganizationMembersSection: React.FC = () => {
               placeholder="ali@example.com"
               required
             />
-            <Input
-              label="شناسه کاربر Directus (اختیاری)"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              placeholder="در صورت وجود UUID"
-            />
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                {editingMember ? 'رمز عبور جدید (اختیاری)' : 'رمز عبور ورود *'}
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={editingMember ? 'جهت تغییر رمز عبور وارد کنید' : 'حداقل ۶ کاراکتر'}
+                  className="w-full ps-3 pe-9 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white font-mono tracking-wider transition-all"
+                  required={!editingMember}
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute end-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer p-1"
+                  title={showPassword ? 'مخفی‌سازی رمز عبور' : 'نمایش رمز عبور'}
+                >
+                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -397,11 +456,11 @@ export const OrganizationMembersSection: React.FC = () => {
               value={role}
               onChange={(e) => setRole(e.target.value as UserRole)}
               options={[
-                { value: 'owner', label: '👑 مالک سازمان (Owner)' },
-                { value: 'manager', label: '👔 مدیر فروشگاه (Store Manager)' },
-                { value: 'warehouse', label: '📦 انباردار (Warehouse)' },
-                { value: 'sales', label: '🛍️ فروشنده / صندوق‌دار (Sales)' },
-                { value: 'viewer', label: '👁️ مشاهده‌گر (Viewer)' },
+                { value: 'owner', label: 'مالک سازمان (Owner)' },
+                { value: 'manager', label: 'مدیر فروشگاه (Store Manager)' },
+                { value: 'warehouse', label: 'انباردار (Warehouse)' },
+                { value: 'sales', label: 'فروشنده / صندوق‌دار (Sales)' },
+                { value: 'viewer', label: 'مشاهده‌گر (Viewer)' },
               ]}
             />
 

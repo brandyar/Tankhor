@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { I18nProvider } from './i18n';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { OrganizationProvider } from './context/OrganizationContext';
+import { OrganizationProvider, useOrganization } from './context/OrganizationContext';
 import { AppShell } from './components/layout/AppShell';
 import { LoginView } from './features/auth/LoginView';
 import { DashboardView } from './features/dashboard/DashboardView';
@@ -27,32 +27,80 @@ import { CustomersView } from './features/customers/CustomersView';
 import { SuppliersView } from './features/purchasing/SuppliersView';
 import { PurchaseOrdersView } from './features/purchasing/PurchaseOrdersView';
 import { SettingsView } from './features/settings/SettingsView';
-import { RefreshCw, Shirt } from 'lucide-react';
+import { Card } from './components/ui/Card';
+import { Button } from './components/ui/Button';
+import { ShieldAlert, RefreshCw, Shirt, Home } from 'lucide-react';
 
-const MainAppContent: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
-  const [currentRoute, setCurrentRoute] = useState<string>('dashboard');
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#fafafa] flex flex-col items-center justify-center p-6 text-center font-sans">
-        <div className="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center mb-4 shadow-md animate-bounce">
-          <Shirt className="w-6 h-6 text-white" />
-        </div>
-        <p className="text-sm font-bold text-neutral-800">سامانه تن‌خور</p>
-        <p className="text-xs text-neutral-500 font-mono mt-1 flex items-center gap-1.5">
-          <RefreshCw className="w-3.5 h-3.5 animate-spin text-neutral-400" />
-          <span>در حال بررسی نشست کاربری...</span>
-        </p>
+const AccessDeniedCard: React.FC<{ userRole: string; onReturn: () => void }> = ({ userRole, onReturn }) => (
+  <div className="py-12 px-4 max-w-xl mx-auto text-center">
+    <Card className="p-8 border-amber-200 bg-amber-50/50">
+      <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4 border border-amber-300/80 shadow-xs">
+        <ShieldAlert className="w-7 h-7" />
       </div>
-    );
-  }
+      <h3 className="text-base font-bold text-neutral-900">عدم دسترسی به این بخش</h3>
+      <p className="text-xs text-neutral-600 mt-2 leading-relaxed">
+        شما با نقش <strong className="text-amber-900 font-bold">{userRole}</strong> به این صفحه یا عملیات دسترسی ندارید.
+      </p>
+      <div className="mt-6 flex justify-center">
+        <Button variant="primary" onClick={onReturn} icon={<Home className="w-4 h-4" />}>
+          بازگشت به پیشخوان اصلی
+        </Button>
+      </div>
+    </Card>
+  </div>
+);
 
-  if (!isAuthenticated) {
-    return <LoginView />;
-  }
+const AuthenticatedApp: React.FC = () => {
+  const [currentRoute, setCurrentRoute] = useState<string>('dashboard');
+  const { permissions, userRole } = useOrganization();
+
+  const isRouteAllowed = (route: string): boolean => {
+    switch (route) {
+      case 'dashboard':
+        return true;
+      case 'orders/create':
+        return permissions.canCreateOrders;
+      case 'orders/all':
+        return permissions.canViewOrders;
+      case 'customers/all':
+        return permissions.canViewCustomers;
+      case 'inventory/overview':
+      case 'inventory/barcodes':
+      case 'products/barcodes':
+      case 'inventory/movements':
+        return permissions.canViewInventory;
+      case 'inventory/warehouses':
+      case 'inventory/locations':
+      case 'inventory/transfers':
+        return permissions.canManageInventory;
+      case 'products/all':
+      case 'products/variants':
+      case 'products/categories':
+      case 'products/collections':
+      case 'products/brands':
+      case 'products/seasons':
+      case 'products/colors':
+      case 'products/size-groups':
+      case 'products/sizes':
+      case 'products/size-guides':
+        return permissions.canViewProducts;
+      case 'purchasing/suppliers':
+      case 'purchasing/orders':
+        return permissions.canViewPurchasing;
+      case 'settings/org':
+        return permissions.canManageOrgSettings || permissions.canManageUsers;
+      case 'settings/sync':
+        return permissions.canManageSync;
+      default:
+        return true;
+    }
+  };
 
   const renderCurrentView = () => {
+    if (!isRouteAllowed(currentRoute)) {
+      return <AccessDeniedCard userRole={userRole} onReturn={() => setCurrentRoute('dashboard')} />;
+    }
+
     switch (currentRoute) {
       case 'dashboard':
         return <DashboardView onNavigate={setCurrentRoute} />;
@@ -108,10 +156,37 @@ const MainAppContent: React.FC = () => {
   };
 
   return (
+    <AppShell currentRoute={currentRoute} onNavigate={setCurrentRoute}>
+      {renderCurrentView()}
+    </AppShell>
+  );
+};
+
+const MainAppContent: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#fafafa] flex flex-col items-center justify-center p-6 text-center font-sans">
+        <div className="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center mb-4 shadow-md animate-bounce">
+          <Shirt className="w-6 h-6 text-white" />
+        </div>
+        <p className="text-sm font-bold text-neutral-800">سامانه تن‌خور</p>
+        <p className="text-xs text-neutral-500 font-mono mt-1 flex items-center gap-1.5">
+          <RefreshCw className="w-3.5 h-3.5 animate-spin text-neutral-400" />
+          <span>در حال بررسی نشست کاربری...</span>
+        </p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginView />;
+  }
+
+  return (
     <OrganizationProvider>
-      <AppShell currentRoute={currentRoute} onNavigate={setCurrentRoute}>
-        {renderCurrentView()}
-      </AppShell>
+      <AuthenticatedApp />
     </OrganizationProvider>
   );
 };

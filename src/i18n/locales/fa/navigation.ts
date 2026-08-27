@@ -30,4 +30,7 @@ export const navigationFa = {
   orgSettings: 'اطلاعات سازمان',
   userManagement: 'مدیریت کاربران و دسترسی‌ها',
   storageSyncSettings: 'حالت دیتابیس و همگام‌سازی',
+  catalogAttributes: 'مشخصات و ویژگی‌های کاتالوگ',
+  warehouseManagement: 'انبارها و قفسه‌بندی',
+  stockOperations: 'گردش و انتقال کالا',
 };

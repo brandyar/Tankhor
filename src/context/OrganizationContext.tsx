@@ -52,19 +52,28 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Compute active user role in current organization
   const currentUserRecord = organizationUsers.find((ou) => {
-    if (user?.id && ou.user_id === user.id) return true;
-    if (user?.email && ou.email?.toLowerCase() === user.email.toLowerCase()) return true;
+    const ouUserId = typeof ou.user_id === 'object' ? (ou.user_id as any)?.id : ou.user_id;
+    const ouEmail = typeof ou.user_id === 'object' ? (ou.user_id as any)?.email : ou.email;
+    if (user?.id && ouUserId && String(ouUserId) === String(user.id)) return true;
+    if (user?.email && ouEmail && String(ouEmail).toLowerCase() === String(user.email).toLowerCase()) return true;
+    if (user?.email && ou.email && String(ou.email).toLowerCase() === String(user.email).toLowerCase()) return true;
     return false;
   });
 
-  const rawRole = currentUserRecord?.role || (typeof user?.role === 'object' ? (user.role as any)?.name : user?.role);
-  
-  const userRole: UserRole | string = !isCloudAuthenticated
-    ? 'owner'
-    : (rawRole ? String(rawRole).toLowerCase() : 'owner');
+  const rawRole =
+    currentUserRecord?.role ||
+    (activeOrganization as any)?.user_role ||
+    (user as any)?.user_role ||
+    (typeof user?.role === 'string'
+      ? user.role
+      : (typeof user?.role === 'object' ? (user.role as any)?.name : null));
+
+  const userRole: UserRole | string = rawRole
+    ? String(rawRole).toLowerCase()
+    : (isCloudAuthenticated ? 'viewer' : 'owner');
 
   const permissions: RolePermissions = getRolePermissions(userRole);
-  const isOwner = permissions.canManageOrgSettings;
+  const isOwner = userRole === 'owner' || permissions.canManageOrgSettings;
 
   const refreshOrganizations = useCallback(async () => {
     try {

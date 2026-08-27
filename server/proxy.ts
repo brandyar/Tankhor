@@ -162,6 +162,26 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
       }
     }
 
+    if (collection === 'organization_users') {
+      const orgUsersQuery: any = {
+        filter: effectiveFilter,
+        fields: ['id', 'role', 'status', 'date_joined', 'organization_id', 'user_id.id', 'user_id.email', 'user_id.first_name', 'user_id.last_name', 'user_id.avatar', 'user_id.status'],
+        sort: req.query.sort || '-id',
+      };
+      const items = await DirectusAdminClient.getItems('organization_users', orgUsersQuery);
+      const mapped = (items || []).map((ou: any) => {
+        const u = typeof ou.user_id === 'object' && ou.user_id ? ou.user_id : {};
+        return {
+          ...ou,
+          first_name: u.first_name || ou.first_name || '',
+          last_name: u.last_name || ou.last_name || '',
+          email: u.email || ou.email || '',
+          user_id: typeof ou.user_id === 'string' ? ou.user_id : (u.id || ou.user_id || ''),
+        };
+      });
+      return res.json({ data: mapped });
+    }
+
     const query: any = {
       filter: effectiveFilter,
     };
@@ -204,18 +224,139 @@ proxyRouter.get('/items/:collection/:id', requireAuth, async (req: Authenticated
   }
 });
 
+function checkRolePermission(userRole: string, action: 'create' | 'update' | 'delete', collection: string): { allowed: boolean; message?: string } {
+  const role = (userRole || 'viewer').toLowerCase();
+  if (role === 'owner' || role === 'manager') {
+    return { allowed: true };
+  }
+
+  if (role === 'viewer') {
+    return { allowed: false, message: 'دسترسی فقط مشاهده (Viewer): امکان ثبت، ویرایش یا حذف اطلاعات وجود ندارد.' };
+  }
+
+  if (role === 'sales') {
+    if (action === 'delete') {
+      return { allowed: false, message: 'نقش فروشنده (Sales) اجازه حذف اطلاعات را ندارد.' };
+    }
+    const salesAllowedCollections = ['orders', 'order_items', 'customers'];
+    if (!salesAllowedCollections.includes(collection)) {
+      return { allowed: false, message: `نقش فروشنده (Sales) مجاز به انجام عملیات روی «${collection}» نیست.` };
+    }
+    return { allowed: true };
+  }
+
+  if (role === 'warehouse') {
+    if (action === 'delete' && (collection === 'products' || collection === 'product_variants' || collection === 'organizations' || collection === 'organization_users')) {
+      return { allowed: false, message: 'نقش انباردار (Warehouse) اجازه حذف این بخش را ندارد.' };
+    }
+    const warehouseRestrictedCollections = ['orders', 'order_items', 'customers', 'organizations', 'organization_users'];
+    if (warehouseRestrictedCollections.includes(collection)) {
+      return { allowed: false, message: `نقش انباردار (Warehouse) مجاز به تغییرات روی «${collection}» نیست.` };
+    }
+    return { allowed: true };
+  }
+
+  return { allowed: true };
+}
+
 // Create Item with enforced organization_id
 proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const { collection } = req.params;
-  const { organizationId } = req.user!;
+  const { organizationId, role } = req.user!;
   const orgIdNum = Number(organizationId);
 
   if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
     return res.status(403).json({ error: 'سازمان فعال مشخص نشده است.' });
   }
 
+  const permCheck = checkRolePermission(role, 'create', collection);
+  if (!permCheck.allowed) {
+    return res.status(403).json({ error: permCheck.message || 'شما دسترسی لازم برای این عملیات را ندارید.' });
+  }
+
   try {
     const payload = { ...req.body };
+
+    // Special handling for organization_users creation / member invite
+    if (collection === 'organization_users') {
+      const email = (payload.email || '').toString().trim().toLowerCase();
+      const firstName = (payload.first_name || '').toString().trim();
+      const lastName = (payload.last_name || '').toString().trim();
+      let targetUserId = payload.user_id;
+
+      if (email) {
+        const existingUsers = await DirectusAdminClient.getItems('directus_users', {
+          filter: { email: { _eq: email } },
+          limit: 1,
+        }).catch(() => []);
+
+        if (existingUsers && existingUsers.length > 0) {
+          targetUserId = existingUsers[0].id;
+          if (firstName || lastName || payload.password) {
+            await DirectusAdminClient.request(`/users/${targetUserId}`, {
+              method: 'PATCH',
+              body: JSON.stringify({
+                ...(firstName ? { first_name: firstName } : {}),
+                ...(lastName ? { last_name: lastName } : {}),
+                ...(payload.password ? { password: payload.password } : {}),
+              }),
+            }).catch(() => {});
+          }
+        } else {
+          const userPass = (payload.password || '').toString().trim() || `Tk@${Math.random().toString(36).slice(2, 10)}${Date.now()}`;
+          const newUser: any = await DirectusAdminClient.request('/users', {
+            method: 'POST',
+            body: JSON.stringify({
+              email: email,
+              first_name: firstName || 'عضو',
+              last_name: lastName || 'سازمان',
+              password: userPass,
+              status: 'active',
+            }),
+          });
+          targetUserId = newUser.id;
+        }
+      }
+
+      if (!targetUserId) {
+        return res.status(400).json({ error: 'آدرس ایمیل عضو الزامی است.' });
+      }
+
+      const existingMembers = await DirectusAdminClient.getItems('organization_users', {
+        filter: {
+          _and: [
+            { organization_id: { _eq: orgIdNum } },
+            { user_id: { _eq: targetUserId } },
+          ],
+        },
+        limit: 1,
+      }).catch(() => []);
+
+      let memberResult: any;
+      if (existingMembers && existingMembers.length > 0) {
+        memberResult = await DirectusAdminClient.updateItem('organization_users', existingMembers[0].id, {
+          role: payload.role || 'sales',
+          status: payload.status || 'active',
+        });
+      } else {
+        memberResult = await DirectusAdminClient.createItem('organization_users', {
+          organization_id: orgIdNum,
+          user_id: targetUserId,
+          role: payload.role || 'sales',
+          status: payload.status || 'active',
+          date_joined: new Date().toISOString(),
+        });
+      }
+
+      return res.status(201).json({
+        data: {
+          ...memberResult,
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+        },
+      });
+    }
 
     // Automatically enforce tenant ID
     if (TENANT_SCOPED_COLLECTIONS.has(collection)) {
@@ -235,8 +376,13 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
 // Update Item with tenant boundary validation
 proxyRouter.patch('/items/:collection/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const { collection, id } = req.params;
-  const { userId, organizationId } = req.user!;
+  const { userId, organizationId, role } = req.user!;
   const orgIdNum = Number(organizationId);
+
+  const permCheck = checkRolePermission(role, 'update', collection);
+  if (!permCheck.allowed) {
+    return res.status(403).json({ error: permCheck.message || 'شما دسترسی لازم برای ویرایش این بخش را ندارید.' });
+  }
 
   try {
     // Special handling for organizations collection
@@ -260,6 +406,44 @@ proxyRouter.patch('/items/:collection/:id', requireAuth, async (req: Authenticat
       delete payload.id;
       const updated = await DirectusAdminClient.updateItem('organizations', orgId, payload);
       return res.json({ data: updated });
+    }
+
+    // Special handling for organization_users
+    if (collection === 'organization_users') {
+      const payload: any = { ...req.body };
+      const orgUser = await DirectusAdminClient.getItemById('organization_users', id, '*,user_id.*');
+      if (!orgUser) return res.status(404).json({ error: 'عضو سازمان یافت نشد.' });
+
+      const existingOrgId = typeof orgUser.organization_id === 'object' ? orgUser.organization_id?.id : orgUser.organization_id;
+      if (existingOrgId && Number(existingOrgId) !== orgIdNum) {
+        return res.status(403).json({ error: 'دسترسی غیرمجاز: امکان ویرایش داده‌های سازمان دیگر وجود ندارد.' });
+      }
+
+      const directusUserId = typeof orgUser.user_id === 'object' ? orgUser.user_id?.id : orgUser.user_id;
+      if (directusUserId && (payload.first_name || payload.last_name || payload.password)) {
+        await DirectusAdminClient.request(`/users/${directusUserId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            ...(payload.first_name ? { first_name: payload.first_name } : {}),
+            ...(payload.last_name ? { last_name: payload.last_name } : {}),
+            ...(payload.password ? { password: payload.password } : {}),
+          }),
+        }).catch(() => {});
+      }
+
+      const updatePayload: any = {};
+      if (payload.role) updatePayload.role = payload.role;
+      if (payload.status) updatePayload.status = payload.status;
+
+      const updated = await DirectusAdminClient.updateItem('organization_users', id, updatePayload);
+      return res.json({
+        data: {
+          ...updated,
+          first_name: payload.first_name || (typeof orgUser.user_id === 'object' ? orgUser.user_id?.first_name : '') || '',
+          last_name: payload.last_name || (typeof orgUser.user_id === 'object' ? orgUser.user_id?.last_name : '') || '',
+          email: payload.email || (typeof orgUser.user_id === 'object' ? orgUser.user_id?.email : '') || '',
+        },
+      });
     }
 
     // 1. Verify existence and tenant ownership
@@ -288,8 +472,13 @@ proxyRouter.patch('/items/:collection/:id', requireAuth, async (req: Authenticat
 // Delete Item with tenant boundary validation
 proxyRouter.delete('/items/:collection/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const { collection, id } = req.params;
-  const { organizationId } = req.user!;
+  const { organizationId, role } = req.user!;
   const orgIdNum = Number(organizationId);
+
+  const permCheck = checkRolePermission(role, 'delete', collection);
+  if (!permCheck.allowed) {
+    return res.status(403).json({ error: permCheck.message || 'شما دسترسی لازم برای حذف این بخش را ندارید.' });
+  }
 
   try {
     if (TENANT_SCOPED_COLLECTIONS.has(collection)) {

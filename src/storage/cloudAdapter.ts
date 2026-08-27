@@ -107,9 +107,15 @@ export class CloudDirectusAdapter implements IStorageProvider {
   async saveOrganizationUser(user: Partial<OrganizationUser>): Promise<OrganizationUser> {
     try {
       if (user.id) {
-        return await directusClient.updateItem<OrganizationUser>('organization_users', user.id, user);
+        const updated = await directusClient.updateItem<OrganizationUser>('organization_users', user.id, user);
+        const result = { ...user, ...updated };
+        await this.localAdapter.saveOrganizationUser(result);
+        return result;
       } else {
-        return await directusClient.createItem<OrganizationUser>('organization_users', user);
+        const created = await directusClient.createItem<OrganizationUser>('organization_users', user);
+        const result = { ...user, ...created };
+        await this.localAdapter.saveOrganizationUser(result);
+        return result;
       }
     } catch (err: any) {
       console.warn('[CloudDirectusAdapter] saveOrganizationUser failed, falling back to local:', err?.message || err);

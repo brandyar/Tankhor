@@ -47,19 +47,24 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
  * Securely resolve all full Organization objects that a user belongs to.
  * Strictly checks organization_users memberships and prevents tenant leakage.
  */
-export async function getUserOrganizations(userId: string, targetActiveOrgId?: number): Promise<{ activeOrganization: any; organizations: any[] }> {
+export async function getUserOrganizations(userId: string, targetActiveOrgId?: number, userEmail?: string): Promise<{ activeOrganization: any; organizations: any[] }> {
   try {
-    // 1. Fetch memberships from organization_users strictly for this userId
+    // 1. Fetch memberships from organization_users strictly for this userId / email
     let memberships: any[] = [];
     try {
+      const filters: any[] = [
+        { user_id: { _eq: userId } },
+        { user_id: { id: { _eq: userId } } },
+      ];
+      if (userEmail) {
+        filters.push({ user_id: { email: { _eq: userEmail.toLowerCase().trim() } } });
+      }
+
       memberships = await DirectusAdminClient.getItems('organization_users', {
         filter: {
-          _or: [
-            { user_id: { _eq: userId } },
-            { user_id: { id: { _eq: userId } } },
-          ],
+          _or: filters,
         },
-        fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id'],
+        fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id', 'user_id.id', 'user_id.email'],
       });
     } catch {
       try {
@@ -390,9 +395,9 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     const userId = userRecord.id;
 
     // 3. Fetch user's organizations and active org
-    const orgsData = await getUserOrganizations(userId);
+    const orgsData = await getUserOrganizations(userId, undefined, cleanEmail);
     let activeOrg = orgsData.activeOrganization;
-    let userRole = activeOrg?.user_role || 'owner';
+    let userRole = activeOrg?.user_role || 'viewer';
 
     if (!activeOrg || orgsData.organizations.length === 0) {
       // Auto-create a default organization if none exists
@@ -462,7 +467,8 @@ authRouter.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Respon
     }
 
     // Fetch full organization details and all memberships
-    const { activeOrganization, organizations } = await getUserOrganizations(userId, organizationId);
+    const { activeOrganization, organizations } = await getUserOrganizations(userId, organizationId, user.email);
+    const userRole = activeOrganization?.user_role || req.user?.role || 'viewer';
 
     return res.json({
       id: user.id,
@@ -472,7 +478,8 @@ authRouter.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Respon
       avatar: user.avatar,
       title: user.title,
       status: user.status,
-      role: req.user!.role || activeOrganization?.user_role || 'owner',
+      role: userRole,
+      user_role: userRole,
       active_organization_id: activeOrganization?.id || organizationId,
       active_organization: activeOrganization,
       activeOrganization: activeOrganization,
@@ -494,7 +501,7 @@ authRouter.post('/switch-org', requireAuth, async (req: AuthenticatedRequest, re
       return res.status(400).json({ error: 'targetOrganizationId is required' });
     }
 
-    const { activeOrganization, organizations } = await getUserOrganizations(userId, Number(targetOrganizationId));
+    const { activeOrganization, organizations } = await getUserOrganizations(userId, Number(targetOrganizationId), email);
 
     if (!activeOrganization || Number(activeOrganization.id) !== Number(targetOrganizationId)) {
       return res.status(403).json({ error: 'شما به این سازمان دسترسی ندارید.' });
