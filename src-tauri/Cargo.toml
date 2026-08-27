@@ -5,6 +5,10 @@ description = "TANKHOR (تن‌خور) - نرم‌افزار مدیریت پوش
 authors = ["TANKHOR Team"]
 edition = "2021"
 
+[lib]
+name = "tankhor_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 [build-dependencies]
 tauri-build = { version = "2.0.0", features = [] }
 
