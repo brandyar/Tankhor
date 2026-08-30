@@ -115,6 +115,19 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     refreshOrganizations();
   }, [refreshOrganizations, isCloudAuthenticated, user?.id]);
 
+  // Listen for data restore or reset events to reload context immediately
+  useEffect(() => {
+    const handleDataRestored = () => {
+      refreshOrganizations();
+      refreshMembers();
+    };
+
+    window.addEventListener('tankhor_data_restored', handleDataRestored);
+    return () => {
+      window.removeEventListener('tankhor_data_restored', handleDataRestored);
+    };
+  }, [refreshOrganizations, refreshMembers]);
+
   const selectOrganization = async (id: number) => {
     const found = organizations.find((o) => o.id === id);
     if (!found) return;

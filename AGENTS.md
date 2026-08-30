@@ -9,8 +9,12 @@
 
 1. **Storage Adapter Pattern (MANDATORY)**:
    - ALL database read and write operations across the entire application **MUST** pass through the `storageManager` instance defined in `/src/storage/index.ts`.
-   - Never import or make direct Directus API or LocalStorage calls inside UI React components.
+   - Never import or make direct Directus API, SQLite, or LocalStorage calls inside UI React components.
    - UI components consume `useStorage()` or `storageManager` methods which conform to `IStorageProvider`.
+   - **Hybrid Storage Resolution**:
+     - Desktop (Tauri): `SqliteStorageAdapter` connects to local `sqlite:tankhor.db` using official `tauri-plugin-sql`, guaranteeing high scalability and resilience across OS resets.
+     - Web Browser: `LocalOfflineAdapter` uses scoped local storage with memory cache.
+     - Cloud Mode: `CloudDirectusAdapter` communicates with Directus REST API with automated sync queues.
 
 2. **Schema Fidelity**:
    - The canonical database schema is stored in `/directus-schema.json` (25 collections).
@@ -53,9 +57,11 @@
 
 - `/src/types/index.ts`: Strongly typed domain definitions for all Directus collections
 - `/src/storage/types.ts`: Storage provider interface & sync queue definitions
-- `/src/storage/localAdapter.ts`: Local persistence provider with multi-tenant isolation
+- `/src/storage/localAdapter.ts`: Local persistence provider with multi-tenant isolation (Browser)
+- `/src/storage/sqliteAdapter.ts`: Native SQLite persistence provider for desktop (Tauri)
 - `/src/storage/cloudAdapter.ts`: Cloud REST API provider with local mirror fallback
 - `/src/storage/syncManager.ts`: Sync manager for offline changes
+- `/src/storage/backupManager.ts`: Automated 1-click JSON backup, restore & demo data seeding engine
 - `/src/api/directus.ts`: Directus API client with desktop/web support
 - `/server/proxy.ts`: Multi-tenant API proxy and tenant isolation enforcement
 - `/server/auth.ts`: Authentication, registration, and organization provisioning

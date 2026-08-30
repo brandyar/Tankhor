@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
 import { useAuth } from '../../context/AuthContext';
-import { storageManager } from '../../storage';
+import { storageManager, isTauriEnvironment } from '../../storage';
 import { StorageSyncManager } from '../../storage/syncManager';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/Badge';
 import { EditOrganizationModal } from '../organizations/EditOrganizationModal';
 import { CreateOrganizationModal } from '../organizations/CreateOrganizationModal';
 import { OrganizationMembersSection } from '../organizations/OrganizationMembersSection';
+import { LocalBackupRestoreCard } from './LocalBackupRestoreCard';
 import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck, Building2, Edit3, Plus, ShieldAlert, Globe, Clock, CheckCircle2, Users } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
@@ -213,6 +214,9 @@ export const SettingsView: React.FC = () => {
       {/* Organization Members & Roles Section */}
       <OrganizationMembersSection />
 
+      {/* Local Backup, Restore & Demo Data Management */}
+      <LocalBackupRestoreCard />
+
       {/* Storage Mode Selector */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div
@@ -227,11 +231,22 @@ export const SettingsView: React.FC = () => {
             <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
               <Database className="w-5 h-5" />
             </div>
-            {mode === 'local_offline' && <Badge variant="success">فعال است</Badge>}
+            <div className="flex items-center gap-1.5">
+              {isTauriEnvironment() ? (
+                <Badge variant="success">SQLite Desktop</Badge>
+              ) : (
+                <Badge variant="neutral">Local Storage</Badge>
+              )}
+              {mode === 'local_offline' && <Badge variant="success">فعال</Badge>}
+            </div>
           </div>
-          <h3 className="text-base font-bold text-neutral-900">حالت آفلاین محلی (Free Desktop)</h3>
+          <h3 className="text-base font-bold text-neutral-900">
+            حالت آفلاین محلی {isTauriEnvironment() ? '(پایگاه داده SQLite)' : '(حافظه مرورگر)'}
+          </h3>
           <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
-            داده‌ها روی حافظه محلی دستگاه ذخیره می‌شوند. کاملاً رایگان، بدون نیاز به اینترنت و بسیار سریع.
+            {isTauriEnvironment()
+              ? 'داده‌ها در دیتابیس مستقل و فوق‌سریع SQLite (فایل tankhor.db در حافظه دسکتاپ) ذخیره می‌شوند. بدون محدودیت حجم و پایدار در برابر ریست ویندوز.'
+              : 'داده‌ها روی حافظه محلی دستگاه ذخیره می‌شوند. کاملاً رایگان، بدون نیاز به اینترنت و بسیار سریع.'}
           </p>
         </div>
 

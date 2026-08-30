@@ -42,4 +42,11 @@ export const commonFa = {
   sku: 'شناسه کالا (SKU)',
   barcode: 'بارکد',
   notes: 'توضیحات / یادداشت',
+  backupRestore: 'پشتیبان‌گیری و بازیابی',
+  backupDownload: 'دانلود فایل پشتیبان (JSON)',
+  backupRestoreBtn: 'بازیابی از فایل پشتیبان',
+  backupSuccess: 'نسخه پشتیبان با موفقیت تهیه شد.',
+  restoreSuccess: 'اطلاعات با موفقیت از فایل پشتیبان بازیابی شد.',
+  demoDataLoaded: 'داده‌های نمونه صنف پوشاک بارگذاری شدند.',
+  clearDataSuccess: 'پایگاه داده محلی پاکسازی شد.',
 };

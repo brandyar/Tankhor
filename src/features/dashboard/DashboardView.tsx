@@ -10,8 +10,9 @@ import { formatCurrency, formatDate, toPersianDigits } from '../../utils/formatt
 import {
   ShoppingBag, Shirt, DollarSign, AlertTriangle,
   Plus, ArrowUpRight, ArrowDownLeft, RefreshCw, CheckCircle2,
-  Calendar, BarChart3, TrendingUp
+  Calendar, BarChart3, TrendingUp, Sparkles, HardDriveDownload, HardDriveUpload
 } from 'lucide-react';
+import { BackupManager } from '../../storage/backupManager';
 import {
   Product, ProductVariant, InventoryMovement, Order, Category, Warehouse
 } from '../../types';
@@ -42,36 +43,44 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
   const isPersian = locale === 'fa';
 
+  const loadDashboardData = async () => {
+    setIsLoading(true);
+    try {
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id;
+
+      const [pList, vList, mList, oList, cList, wList] = await Promise.all([
+        adapter.getProducts({ organization_id: orgId }),
+        adapter.getVariants({ organization_id: orgId }),
+        adapter.getInventoryMovements({ organization_id: orgId }),
+        adapter.getOrders({ organization_id: orgId }),
+        adapter.getCategories({ organization_id: orgId }),
+        adapter.getWarehouses({ organization_id: orgId }),
+      ]);
+
+      setProducts(pList);
+      setVariants(vList);
+      setMovements(mList);
+      setOrders(oList);
+      setCategories(cList);
+      setWarehouses(wList);
+    } catch (err) {
+      console.error('[DashboardData] Error loading metrics:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadDashboardData = async () => {
-      setIsLoading(true);
-      try {
-        const adapter = storageManager.getAdapter();
-        const orgId = activeOrganization?.id;
-
-        const [pList, vList, mList, oList, cList, wList] = await Promise.all([
-          adapter.getProducts({ organization_id: orgId }),
-          adapter.getVariants({ organization_id: orgId }),
-          adapter.getInventoryMovements({ organization_id: orgId }),
-          adapter.getOrders({ organization_id: orgId }),
-          adapter.getCategories({ organization_id: orgId }),
-          adapter.getWarehouses({ organization_id: orgId }),
-        ]);
-
-        setProducts(pList);
-        setVariants(vList);
-        setMovements(mList);
-        setOrders(oList);
-        setCategories(cList);
-        setWarehouses(wList);
-      } catch (err) {
-        console.error('[DashboardData] Error loading metrics:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadDashboardData();
+
+    const handleDataRestored = () => {
+      loadDashboardData();
+    };
+    window.addEventListener('tankhor_data_restored', handleDataRestored);
+    return () => {
+      window.removeEventListener('tankhor_data_restored', handleDataRestored);
+    };
   }, [activeOrganization]);
 
   // Overall Aggregations
@@ -224,6 +233,48 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
         </div>
       </div>
+
+      {/* Quick Start / Demo Data Banner if Database is Empty */}
+      {!isLoading && products.length === 0 && (
+        <div className="p-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 rounded-2xl border border-emerald-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fade-in">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-neutral-900">به نرم‌افزار تن‌خور خوش آمدید!</h3>
+              <p className="text-xs text-neutral-600 mt-1 leading-relaxed max-w-2xl">
+                پایگاه داده شما خالی است. می‌توانید با یک کلیک <strong>«اطلاعات نمونه بوتیک پوشاک»</strong> (شامل پالتو، هودی، جین، کفش، انبارها، جداول سایز و فاکتورها) را بارگذاری نموده یا فایل پشتیبان سیستم قبلی خود را بازیابی کنید.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap w-full md:w-auto justify-end">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                const res = BackupManager.seedFashionDemoData(activeOrganization?.id || 1);
+                if (res.success) {
+                  loadDashboardData();
+                }
+              }}
+              icon={<Sparkles className="w-4 h-4" />}
+              className="bg-emerald-600 hover:bg-emerald-700 font-bold text-xs"
+            >
+              بارگذاری داده‌های نمونه پوشاک
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onNavigate('settings/sync')}
+              icon={<HardDriveUpload className="w-4 h-4 text-blue-600" />}
+              className="text-xs font-bold border-neutral-300 hover:bg-white"
+            >
+              بازیابی از فایل پشتیبان
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* 2. Top Metric Ribbon (KPIs) */}
       <DashboardMetricsRibbon

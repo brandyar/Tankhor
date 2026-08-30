@@ -42,4 +42,11 @@ export const commonEn = {
   sku: 'SKU',
   barcode: 'Barcode',
   notes: 'Notes / Remarks',
+  backupRestore: 'Backup & Restore',
+  backupDownload: 'Download Backup File (JSON)',
+  backupRestoreBtn: 'Restore from Backup File',
+  backupSuccess: 'Backup file created successfully.',
+  restoreSuccess: 'Data successfully restored from backup file.',
+  demoDataLoaded: 'Fashion demo data loaded successfully.',
+  clearDataSuccess: 'Local database cleared successfully.',
 };
