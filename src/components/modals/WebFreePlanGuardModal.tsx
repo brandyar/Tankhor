@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useOrganization } from '../../context/OrganizationContext';
 import { useAuth } from '../../context/AuthContext';
 import { storageManager } from '../../storage';
+import { directusClient } from '../../api/directus';
 import { useProjectSettings } from '../../hooks/useProjectSettings';
 import { Button } from '../ui/Button';
 import {
@@ -20,33 +21,39 @@ import {
   Laptop,
   ArrowDownToLine,
   RefreshCw,
+  Lock,
 } from 'lucide-react';
 
 export const WebFreePlanGuardModal: React.FC = () => {
-  const { organizations, activeOrganization, selectOrganization, updateActiveOrganization, refreshOrganizations } = useOrganization();
-  const { logout } = useAuth();
+  const { organizations, activeOrganization, selectOrganization, refreshOrganizations } = useOrganization();
+  const { logout, isCloudAuthenticated, openLoginModal } = useAuth();
   const { settings, loading: settingsLoading } = useProjectSettings();
 
-  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showOrgSelector, setShowOrgSelector] = useState(false);
   const [downloadNote, setDownloadNote] = useState<string | null>(null);
 
-  const handleInstantUpgrade = async () => {
+  const handleCheckPlanOnline = async () => {
     if (!activeOrganization) return;
-    setIsUpgrading(true);
+    setIsChecking(true);
     setError(null);
+
     try {
-      await updateActiveOrganization({
-        plan: 'pro',
-      });
-      storageManager.setMode('cloud_synced');
-      setSuccess(true);
-      await refreshOrganizations();
+      // Live online verification with Directus
+      const res = await directusClient.checkOrganizationPlan();
+      if (res && (res.isPro || res.plan === 'pro')) {
+        await refreshOrganizations();
+        storageManager.setMode('cloud_synced');
+        setSuccess(true);
+      } else {
+        setError('اشتراک این سازمان روی سرور ابری تن‌خور همچنان «رایگان (Free)» است. در صورتی که اشتراک Pro را تهیه کرده‌اید، چند لحظه دیگر بررسی مجدد را بزنید یا با پشتیبانی تماس بگیرید.');
+        setIsChecking(false);
+      }
     } catch (err: any) {
-      setError(err?.message || 'خطا در ارتقای پلن به Pro. لطفاً مجدداً تلاش کنید.');
-      setIsUpgrading(false);
+      setError(err?.message || 'خطا در ارتباط با سرور دایرکتوس. لطفاً اتصال اینترنت خود را بررسی نمایید.');
+      setIsChecking(false);
     }
   };
 
@@ -260,17 +267,17 @@ export const WebFreePlanGuardModal: React.FC = () => {
                 </p>
               </div>
 
-              {/* Instant Upgrade Action */}
+              {/* Real Online Verification Action */}
               <div className="pt-2 border-t border-blue-100">
                 <Button
                   type="button"
                   variant="primary"
-                  onClick={handleInstantUpgrade}
-                  isLoading={isUpgrading}
-                  icon={<Sparkles className="w-4 h-4 text-amber-300" />}
-                  className="w-full justify-center text-xs font-black bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md py-2.5 cursor-pointer"
+                  onClick={handleCheckPlanOnline}
+                  isLoading={isChecking}
+                  icon={<RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />}
+                  className="w-full justify-center text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md py-2.5 cursor-pointer"
                 >
-                  ارتقا آنی سازمان به پلن Pro
+                  بررسی وضعیت اشتراک از سرور
                 </Button>
               </div>
             </div>

@@ -487,6 +487,7 @@ proxyRouter.patch('/items/:collection/:id', requireAuth, async (req: Authenticat
 
       const payload = { ...req.body };
       delete payload.id;
+      delete payload.plan; // Security: Prevent plan mutation via regular proxy PATCH
       const updated = await DirectusAdminClient.updateItem('organizations', orgId, payload);
       return res.json({ data: updated });
     }

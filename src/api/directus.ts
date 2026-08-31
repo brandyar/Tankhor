@@ -356,6 +356,36 @@ class DirectusClient {
     return res.organization || res.activeOrganization;
   }
 
+  public async checkOrganizationPlan(): Promise<{
+    success: boolean;
+    organizationId: number;
+    plan: 'free' | 'pro';
+    isPro: boolean;
+    organization: any;
+    activeOrganization: any;
+    organizations: any[];
+  }> {
+    const res = await this.request<any>('/auth/check-plan');
+    if (res && res.activeOrganization) {
+      // Update cached user profile in localStorage
+      if (typeof window !== 'undefined') {
+        const cachedRaw = localStorage.getItem('tankhor_cached_user_profile');
+        if (cachedRaw) {
+          try {
+            const cached = JSON.parse(cachedRaw);
+            cached.activeOrganization = res.activeOrganization;
+            cached.active_organization = res.activeOrganization;
+            if (Array.isArray(res.organizations) && res.organizations.length > 0) {
+              cached.organizations = res.organizations;
+            }
+            localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(cached));
+          } catch {}
+        }
+      }
+    }
+    return res;
+  }
+
   public async getOrganizations(): Promise<any[]> {
     try {
       const me = await this.getMe().catch(() => null);

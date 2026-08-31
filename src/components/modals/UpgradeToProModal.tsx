@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useOrganization } from '../../context/OrganizationContext';
+import { useAuth } from '../../context/AuthContext';
 import { storageManager } from '../../storage';
+import { directusClient } from '../../api/directus';
 import { useProjectSettings } from '../../hooks/useProjectSettings';
 import { Button } from '../ui/Button';
 import {
@@ -17,6 +19,9 @@ import {
   Monitor,
   Download,
   Laptop,
+  RefreshCw,
+  Lock,
+  ExternalLink,
 } from 'lucide-react';
 
 interface UpgradeToProModalProps {
@@ -30,33 +35,46 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { activeOrganization, updateActiveOrganization, isOwner } = useOrganization();
+  const { activeOrganization, refreshOrganizations } = useOrganization();
+  const { isCloudAuthenticated, openLoginModal } = useAuth();
   const { settings } = useProjectSettings();
-  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleInstantUpgrade = async () => {
+  const handleCheckPlanOnline = async () => {
     if (!activeOrganization) return;
-    setIsUpgrading(true);
+    setIsChecking(true);
     setError(null);
+
+    if (!isCloudAuthenticated) {
+      openLoginModal();
+      setIsChecking(false);
+      return;
+    }
+
     try {
-      await updateActiveOrganization({
-        plan: 'pro',
-      });
-      // Enable cloud sync automatically upon upgrade
-      storageManager.setMode('cloud_synced');
-      setSuccess(true);
-      setTimeout(() => {
-        setIsUpgrading(false);
-        onClose();
-        if (onSuccess) onSuccess();
-      }, 1000);
+      // Query Directus online for authentic authoritative organization plan status
+      const res = await directusClient.checkOrganizationPlan();
+
+      if (res && (res.isPro || res.plan === 'pro')) {
+        await refreshOrganizations();
+        storageManager.setMode('cloud_synced');
+        setSuccess(true);
+        setTimeout(() => {
+          setIsChecking(false);
+          onClose();
+          if (onSuccess) onSuccess();
+        }, 1200);
+      } else {
+        setError('اشتراک این سازمان روی سرور ابری تن‌خور در وضعیت «رایگان (Free)» قرار دارد. برای فعال‌سازی همگام‌سازی ابری و اتصال به سرور، لطفاً ابتدا اشتراک Pro را تهیه نمایید.');
+        setIsChecking(false);
+      }
     } catch (err: any) {
-      setError(err?.message || 'خطا در ارتقای پلن به Pro. لطفاً مجدداً تلاش کنید.');
-      setIsUpgrading(false);
+      setError(err?.message || 'خطا در برقراری ارتباط با سرور ابری. لطفاً اتصال اینترنت خود را بررسی نمایید.');
+      setIsChecking(false);
     }
   };
 
@@ -65,7 +83,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
       id="upgrade-pro-modal-backdrop"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-xs animate-fade-in"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !isUpgrading) onClose();
+        if (e.target === e.currentTarget && !isChecking) onClose();
       }}
     >
       <div
@@ -76,7 +94,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
         <div className="relative bg-gradient-to-r from-neutral-900 via-neutral-800 to-blue-900 text-white p-6 pb-7">
           <button
             onClick={onClose}
-            disabled={isUpgrading}
+            disabled={isChecking}
             className="absolute top-4 end-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
@@ -84,7 +102,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
 
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-xl bg-amber-400 text-neutral-950 flex items-center justify-center font-black shadow-md">
-              <Sparkles className="w-4 h-4" />
+              <Lock className="w-4 h-4" />
             </div>
             <span className="text-xs font-bold tracking-wide uppercase text-amber-300 bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-400/20">
               ویژه نسخه حرفه‌ای (Pro)
@@ -92,17 +110,25 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
           </div>
 
           <h2 className="text-lg font-black tracking-tight text-white mt-1">
-            فعال‌سازی همگام‌سازی ابری و دسترسی چندکاربره
+            فعال‌سازی همگام‌سازی ابری و اتصال به سرور
           </h2>
           <p className="text-xs text-neutral-300 mt-1 leading-relaxed">
-            امکان اتصال به سرور ابری و همگام‌سازی اطلاعات بین شعب، منحصراً در پلن <strong className="text-white">Pro</strong> در دسترس است.
+            امکان فعال‌سازی حالت ابری و همگام‌سازی اطلاعات، منحصراً در پلن <strong className="text-white">Pro</strong> فعال می‌باشد.
           </p>
         </div>
 
         {/* Pro Benefits List */}
         <div className="p-6 space-y-4">
+          {/* Current Organization Info Badge */}
+          <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-xl border border-neutral-200 text-xs">
+            <span className="text-neutral-600">سازمان فعال: <strong>{activeOrganization?.name || 'سازمان من'}</strong></span>
+            <span className="px-2.5 py-1 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-200">
+              پلن فعلی: {activeOrganization?.plan === 'pro' ? 'حرفه‌ای (Pro)' : 'رایگان (Free)'}
+            </span>
+          </div>
+
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl">
+            <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl leading-relaxed">
               {error}
             </div>
           )}
@@ -110,7 +136,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
           {success && (
             <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-xl flex items-center gap-2 font-bold">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>سازمان شما با موفقیت به پلن Pro ارتقا یافت و همگام‌سازی ابری فعال شد!</span>
+              <span>اشتراک Pro شما در سرور ابری تأیید شد و همگام‌سازی ابری با موفقیت فعال گردید!</span>
             </div>
           )}
 
@@ -162,7 +188,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
               <div className="text-xs text-blue-900">
                 <span className="font-bold">استفاده آفلاین رایگان در دسکتاپ:</span>
                 <p className="text-[11px] text-blue-700 mt-0.5">
-                  پلن رایگان (Free) روی نسخه دسکتاپ تن‌خور با پایگاه داده پرسرعت SQLite همیشه رایگان است.
+                  پلن رایگان (Free) روی نسخه دسکتاپ تن‌خور با دیتابیس SQLite همیشه و بدون محدودیت رایگان است.
                 </p>
               </div>
             </div>
@@ -181,25 +207,26 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-100">
+          <div className="flex items-center justify-between gap-3 pt-3 border-t border-neutral-100">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              disabled={isUpgrading}
+              disabled={isChecking}
               className="text-xs"
             >
-              انصراف
+              بستن
             </Button>
+            
             <Button
               type="button"
               variant="primary"
-              onClick={handleInstantUpgrade}
-              isLoading={isUpgrading}
-              icon={<Sparkles className="w-4 h-4 text-amber-300" />}
-              className="text-xs font-black bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md cursor-pointer"
+              onClick={handleCheckPlanOnline}
+              isLoading={isChecking}
+              icon={<RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />}
+              className="text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md cursor-pointer"
             >
-              ارتقا آنی به پلن Pro
+              بررسی وضعیت اشتراک از سرور
             </Button>
           </div>
         </div>

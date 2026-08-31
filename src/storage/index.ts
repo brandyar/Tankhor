@@ -38,6 +38,23 @@ class StorageManagerSingleton {
   }
 
   public setMode(mode: StorageMode) {
+    if (mode === 'cloud_synced') {
+      // Validate that active organization is on 'pro' plan before allowing cloud sync
+      try {
+        const cachedRaw = typeof window !== 'undefined' ? localStorage.getItem('tankhor_cached_user_profile') : null;
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          const activeOrg = cached.activeOrganization || cached.active_organization;
+          if (activeOrg && activeOrg.plan === 'free') {
+            console.warn('[StorageManager] Cloud sync denied: organization plan is free.');
+            localStorage.setItem('tankhor_storage_mode', 'local_offline');
+            this.activeAdapter = this.isTauri ? this.sqliteAdapter : this.localAdapter;
+            return;
+          }
+        }
+      } catch {}
+    }
+
     localStorage.setItem('tankhor_storage_mode', mode);
     if (mode === 'cloud_synced') {
       this.activeAdapter = this.cloudAdapter;

@@ -530,6 +530,39 @@ authRouter.post('/switch-org', requireAuth, async (req: AuthenticatedRequest, re
   }
 });
 
+// Check live organization plan status directly from Directus
+authRouter.get('/check-plan', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { userId, organizationId, email } = req.user!;
+    const orgIdNum = Number(organizationId);
+    if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
+      return res.status(400).json({ error: 'سازمان فعالی مشخص نشده است.' });
+    }
+
+    // Always fetch fresh organization directly from Directus Admin
+    const org = await DirectusAdminClient.getItemById('organizations', orgIdNum);
+    if (!org) {
+      return res.status(404).json({ error: 'سازمان یافت نشد.' });
+    }
+
+    const { activeOrganization, organizations } = await getUserOrganizations(userId, orgIdNum, email);
+    const isPro = org.plan === 'pro';
+
+    return res.json({
+      success: true,
+      organizationId: orgIdNum,
+      plan: org.plan || 'free',
+      isPro,
+      organization: org,
+      activeOrganization: activeOrganization || org,
+      organizations,
+    });
+  } catch (error: any) {
+    console.error('[Auth /check-plan Error]:', error);
+    return res.status(500).json({ error: error.message || 'خطا در بررسی وضعیت اشتراک از سرور' });
+  }
+});
+
 // Create new organization and assign current user as owner
 authRouter.post('/create-org', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {

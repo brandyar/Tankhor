@@ -30,6 +30,20 @@ export class StorageSyncManager {
   }
 
   public static async syncLocalToCloud(cloudAdapter: CloudDirectusAdapter): Promise<{ success: number; failed: number }> {
+    // Enforce Pro plan for cloud sync
+    const cachedUserRaw = typeof window !== 'undefined' ? localStorage.getItem('tankhor_cached_user_profile') : null;
+    if (cachedUserRaw) {
+      try {
+        const cached = JSON.parse(cachedUserRaw);
+        const activeOrg = cached.activeOrganization || cached.active_organization;
+        if (activeOrg && activeOrg.plan === 'free') {
+          throw new Error('همگام‌سازی ابری منحصراً برای سازمان‌های دارای اشتراک Pro در دسترس است.');
+        }
+      } catch (err: any) {
+        if (err.message.includes('اشتراک Pro')) throw err;
+      }
+    }
+
     const queue = this.getQueue();
     if (queue.length === 0) return { success: 0, failed: 0 };
 
