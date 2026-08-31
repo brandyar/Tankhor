@@ -149,31 +149,13 @@ export class LocalOfflineAdapter implements IStorageProvider {
     const allUsers = this.getItem<OrganizationUser>('organization_users', []);
     const orgId = this.getActiveOrgId(params);
 
-    let list = allUsers;
-    if (orgId) {
-      list = allUsers.filter((ou) => {
-        const oId = typeof ou.organization_id === 'number' ? ou.organization_id : (ou.organization_id as any)?.id;
-        return Number(oId) === Number(orgId);
-      });
-    }
+    if (!orgId) return [];
 
-    // Default owner user if array is empty
-    if (list.length === 0 && orgId) {
-      const nextId = allUsers.reduce((max, ou) => Math.max(max, ou.id || 0), 0) + 1;
-      const defaultOwner: OrganizationUser = {
-        id: nextId,
-        organization_id: Number(orgId),
-        user_id: `local_owner_admin_${orgId}`,
-        role: 'owner',
-        status: 'active',
-        date_joined: new Date().toISOString(),
-        first_name: 'مدیر',
-        last_name: 'سازمان',
-        email: 'owner@tankhor.com',
-      };
-      this.setItem('organization_users', [...allUsers, defaultOwner]);
-      return [defaultOwner];
-    }
+    const list = allUsers.filter((ou) => {
+      const oId = typeof ou.organization_id === 'number' ? ou.organization_id : (ou.organization_id as any)?.id;
+      return Number(oId) === Number(orgId);
+    });
+
     return list;
   }
 

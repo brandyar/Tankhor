@@ -229,6 +229,14 @@ class DirectusClient {
       }
     }
 
+    if (!Array.isArray(orgs) || orgs.length === 0) {
+      const verifiedOrgs = await this.getOrganizations().catch(() => []);
+      if (verifiedOrgs.length > 0) {
+        orgs = verifiedOrgs;
+        if (!activeOrg) activeOrg = verifiedOrgs[0];
+      }
+    }
+
     if (activeOrg?.id && typeof window !== 'undefined') {
       localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
     }
@@ -238,7 +246,13 @@ class DirectusClient {
 
     return {
       access_token: token,
-      user: user || { email: cleanEmail, role: 'owner', plan: 'free' },
+      user: {
+        ...(user || {}),
+        email: cleanEmail,
+        activeOrganization: finalActiveOrg,
+        active_organization: finalActiveOrg,
+        organizations: finalOrgs,
+      },
       activeOrganization: finalActiveOrg,
       organizations: finalOrgs,
     };
@@ -396,29 +410,54 @@ class DirectusClient {
         return [me.activeOrganization || me.active_organization];
       }
 
-      // If connecting directly to Directus, query organization_users for current user
-      if (me && me.id) {
+      // If connecting directly to Directus, query organization_users strictly for current user
+      if (me && (me.id || me.email)) {
         try {
+          const filters: any[] = [];
+          if (me.id) {
+            filters.push({ user_id: { _eq: me.id } });
+            filters.push({ user_id: { id: { _eq: me.id } } });
+          }
+          if (me.email) {
+            filters.push({ email: { _eq: me.email.toLowerCase().trim() } });
+            filters.push({ user_id: { email: { _eq: me.email.toLowerCase().trim() } } });
+          }
+
           const memberships = await this.getItems<any>('organization_users', {
-            filter: { user_id: { _eq: me.id } },
-            fields: ['id', 'role', 'status', 'organization_id.*'],
+            filter: { _or: filters },
+            fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id'],
           });
           if (Array.isArray(memberships) && memberships.length > 0) {
-            const orgs = memberships
-              .map((m: any) => {
-                if (m.organization_id && typeof m.organization_id === 'object' && m.organization_id.id) {
-                  return { ...m.organization_id, user_role: m.role || 'viewer' };
+            const orgs: any[] = [];
+            for (const m of memberships) {
+              if (m.organization_id && typeof m.organization_id === 'object' && m.organization_id.id) {
+                orgs.push({ ...m.organization_id, user_role: m.role || 'viewer' });
+              } else if (m.organization_id) {
+                const orgId = Number(m.organization_id);
+                if (orgId && !isNaN(orgId)) {
+                  const org = await this.getItemById<any>('organizations', orgId).catch(() => null);
+                  if (org && typeof org === 'object') {
+                    orgs.push({ ...org, user_role: m.role || 'viewer' });
+                  }
                 }
-                return null;
-              })
-              .filter(Boolean);
-            if (orgs.length > 0) return orgs;
+              }
+            }
+            if (orgs.length > 0) {
+              const seen = new Set();
+              return orgs.filter((o) => {
+                if (!o || !o.id || seen.has(o.id)) return false;
+                seen.add(o.id);
+                return true;
+              });
+            }
           }
-        } catch {}
+        } catch (err) {
+          console.warn('[directusClient.getOrganizations] Error fetching user memberships:', err);
+        }
       }
 
-      const res = await this.getItems('organizations');
-      return Array.isArray(res) ? res : [];
+      // Security: Never fall back to returning all organizations across tenants!
+      return [];
     } catch {
       return [];
     }

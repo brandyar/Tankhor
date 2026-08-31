@@ -281,6 +281,20 @@ export class SqliteStorageAdapter implements IStorageProvider {
   // Organizations
   // ==========================================
   async getOrganizations(): Promise<Organization[]> {
+    if (typeof window !== 'undefined') {
+      const cachedUserRaw = localStorage.getItem('tankhor_cached_user_profile');
+      if (cachedUserRaw) {
+        try {
+          const cachedUser = JSON.parse(cachedUserRaw);
+          if (Array.isArray(cachedUser.organizations) && cachedUser.organizations.length > 0) {
+            return cachedUser.organizations;
+          }
+          if (cachedUser.activeOrganization || cachedUser.active_organization) {
+            return [cachedUser.activeOrganization || cachedUser.active_organization];
+          }
+        } catch {}
+      }
+    }
     return this.getItems<Organization>('organizations');
   }
 
@@ -320,25 +334,10 @@ export class SqliteStorageAdapter implements IStorageProvider {
   // ==========================================
   async getOrganizationUsers(params?: QueryParams): Promise<OrganizationUser[]> {
     const orgId = this.getActiveOrgId(params);
-    const list = await this.getItems<OrganizationUser>('organization_users', orgId);
-
-    if (list.length === 0 && orgId) {
-      const all = await this.getItems<OrganizationUser>('organization_users');
-      const nextId = all.reduce((max, ou) => Math.max(max, ou.id || 0), 0) + 1;
-      const defaultOwner: OrganizationUser = {
-        id: nextId,
-        organization_id: Number(orgId),
-        user_id: `local_owner_admin_${orgId}`,
-        role: 'owner',
-        status: 'active',
-        date_joined: new Date().toISOString(),
-        first_name: 'مدیر',
-        last_name: 'سازمان',
-        email: 'owner@tankhor.com',
-      };
-      await this.saveItem('organization_users', defaultOwner);
-      return [defaultOwner];
+    if (!orgId) {
+      return [];
     }
+    const list = await this.getItems<OrganizationUser>('organization_users', orgId);
     return list;
   }
 

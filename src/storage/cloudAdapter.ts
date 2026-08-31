@@ -91,16 +91,21 @@ export class CloudDirectusAdapter implements IStorageProvider {
 
   // Organization Users & Roles
   async getOrganizationUsers(params?: QueryParams): Promise<OrganizationUser[]> {
-    const orgId = params?.organization_id;
-    const query: any = { sort: '-id' };
-    if (orgId) {
-      query.filter = { organization_id: { _eq: orgId } };
-    }
+    const orgId = params?.organization_id || (typeof window !== 'undefined' ? localStorage.getItem('tankhor_active_org_id') : null);
+    if (!orgId) return [];
+
+    const numOrgId = Number(orgId);
+    if (isNaN(numOrgId) || numOrgId <= 0) return [];
+
+    const query: any = {
+      sort: '-id',
+      filter: { organization_id: { _eq: numOrgId } },
+    };
     try {
       return await directusClient.getItems<OrganizationUser>('organization_users', query);
     } catch (err: any) {
       console.warn('[CloudDirectusAdapter] getOrganizationUsers failed, using local adapter:', err?.message || err);
-      return this.localAdapter.getOrganizationUsers(params);
+      return this.localAdapter.getOrganizationUsers({ organization_id: numOrgId });
     }
   }
 

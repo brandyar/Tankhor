@@ -119,12 +119,16 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const refreshOrganizations = useCallback(async () => {
     try {
-      const adapter = storageManager.getAdapter();
-      let list = await adapter.getOrganizations();
+      let list: Organization[] = [];
 
-      // If user has specific organizations in profile, prioritize them
+      // 1. If user has verified organizations in profile, prioritize them exclusively
       if (user && (user as any).organizations && Array.isArray((user as any).organizations) && (user as any).organizations.length > 0) {
         list = (user as any).organizations;
+      } else if (user && ((user as any).activeOrganization || (user as any).active_organization)) {
+        list = [(user as any).activeOrganization || (user as any).active_organization];
+      } else {
+        const adapter = storageManager.getAdapter();
+        list = await adapter.getOrganizations();
       }
 
       // Filter out placeholder dummy "سازمان اصلی" if real organizations exist
@@ -173,8 +177,11 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, [refreshOrganizations, refreshMembers]);
 
   const selectOrganization = async (id: number) => {
-    const found = organizations.find((o) => o.id === id);
-    if (!found) return;
+    const found = organizations.find((o) => Number(o.id) === Number(id));
+    if (!found) {
+      console.warn(`[OrganizationContext] Denied switching to unauthorized organization #${id}`);
+      return;
+    }
 
     try {
       if (isCloudAuthenticated && directusClient.getToken()) {
