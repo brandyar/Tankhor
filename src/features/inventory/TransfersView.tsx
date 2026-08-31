@@ -19,6 +19,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
 import { formatDate } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import {
   ArrowLeftRight,
   Plus,
@@ -228,7 +229,7 @@ export const TransfersView: React.FC = () => {
 
   const handleDeleteTransfer = async (trf: StockTransfer) => {
     if (!trf.id) return;
-    const isConfirmed = window.confirm(`آیا از حذف حواله انتقال «${trf.transfer_number}» اطمینان دارید؟`);
+    const isConfirmed = await confirmAction(`آیا از حذف حواله انتقال «${trf.transfer_number}» اطمینان دارید؟`);
     if (!isConfirmed) return;
 
     try {

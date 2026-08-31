@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Palette, Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { confirmAction } from '../../utils/confirm';
 
 export const ColorsView: React.FC = () => {
   const { t } = useTranslation();
@@ -92,7 +93,7 @@ export const ColorsView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('آیا از حذف این رنگ مطمئن هستید؟')) {
+    if (await confirmAction('آیا از حذف این رنگ مطمئن هستید؟')) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteColor(id);
       await loadColors();

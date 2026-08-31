@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { toPersianDigits } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import { Layers, MapPin, Barcode as BarcodeIcon, Plus, Trash2, Edit } from 'lucide-react';
 
 export const LocationsView: React.FC = () => {
@@ -112,7 +113,7 @@ export const LocationsView: React.FC = () => {
   };
 
   const handleDeleteLocation = async (id: number) => {
-    if (confirm(t('common.confirmDeleteMessage'))) {
+    if (await confirmAction(t('common.confirmDeleteMessage'))) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteWarehouseLocation(id);
       await loadData();

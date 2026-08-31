@@ -20,6 +20,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
+import { confirmAction } from '../../utils/confirm';
 import {
   Ruler,
   Plus,
@@ -229,7 +230,7 @@ export const SizeGuidesView: React.FC = () => {
 
   // Delete Template
   const handleDeleteTemplate = async (id: number) => {
-    if (!confirm('آیا از حذف این قالب راهنمای سایز اطمینان دارید؟')) return;
+    if (!(await confirmAction('آیا از حذف این قالب راهنمای سایز اطمینان دارید؟'))) return;
     try {
       const adapter = storageManager.getAdapter();
       await adapter.deleteSizeGuideTemplate(id);
@@ -286,7 +287,7 @@ export const SizeGuidesView: React.FC = () => {
 
   // Delete Measurement Parameter
   const handleDeleteMeasurement = async (measId: number) => {
-    if (!confirm('آیا از حذف این پارامتر اندازه اطمینان دارید؟')) return;
+    if (!(await confirmAction('آیا از حذف این پارامتر اندازه اطمینان دارید؟'))) return;
     try {
       const adapter = storageManager.getAdapter();
       await adapter.deleteSizeGuideMeasurement(measId);

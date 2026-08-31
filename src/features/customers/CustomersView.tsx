@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
 import { formatDate, formatCurrency } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import {
   Users,
   Plus,
@@ -128,7 +129,7 @@ export const CustomersView: React.FC = () => {
 
   const handleDeleteCustomer = async (cust: Customer) => {
     if (!cust.id) return;
-    const isConfirmed = window.confirm(`آیا از حذف مشتری «${cust.name}» اطمینان دارید؟`);
+    const isConfirmed = await confirmAction(`آیا از حذف مشتری «${cust.name}» اطمینان دارید؟`);
     if (!isConfirmed) return;
 
     try {

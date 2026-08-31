@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { ImageUpload } from '../../components/ui/ImageUpload';
 import { directusClient } from '../../api/directus';
+import { confirmAction } from '../../utils/confirm';
 import {
   FolderTree,
   Plus,
@@ -126,7 +127,7 @@ export const CategoriesView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('آیا از حذف این دسته‌بندی مطمئن هستید؟')) {
+    if (await confirmAction('آیا از حذف این دسته‌بندی مطمئن هستید؟')) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteCategory(id);
       await loadCategories();

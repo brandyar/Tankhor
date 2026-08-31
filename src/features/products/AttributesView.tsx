@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { toPersianDigits, formatDate } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import { Layers, Bookmark, Sun, Palette, Tag, Plus, Trash2, Edit, Folder, CornerDownLeft, Calendar, Hash } from 'lucide-react';
 
 interface AttributesViewProps {
@@ -201,7 +202,7 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
   };
 
   const handleDeleteItem = async (id: number) => {
-    if (!confirm('آیا از حذف این آیتم اطمینان دارید؟')) return;
+    if (!(await confirmAction('آیا از حذف این آیتم اطمینان دارید؟'))) return;
     const adapter = storageManager.getAdapter();
 
     if (activeTab === 'categories') await adapter.deleteCategory(id);

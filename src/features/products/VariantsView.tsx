@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { formatCurrency, toPersianDigits } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import { Search, Shirt, Barcode as BarcodeIcon, Tag, Trash2, Edit, Save, Plus } from 'lucide-react';
 
 export const VariantsView: React.FC = () => {
@@ -118,7 +119,7 @@ export const VariantsView: React.FC = () => {
   };
 
   const handleDeleteVariant = async (id: number) => {
-    if (confirm(t('common.confirmDeleteMessage'))) {
+    if (await confirmAction(t('common.confirmDeleteMessage'))) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteVariant(id);
       await loadVariants();

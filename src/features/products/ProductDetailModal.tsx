@@ -10,6 +10,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { ImageUpload } from '../../components/ui/ImageUpload';
 import { formatCurrency, toPersianDigits } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import { Image, Shirt, Plus, Trash2, Tag, Layers, Sun } from 'lucide-react';
 
 interface ProductDetailModalProps {
@@ -140,7 +141,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   };
 
   const handleDeleteVariant = async (variantId: number) => {
-    if (confirm('آیا از حذف این تنوع مطمئن هستید؟')) {
+    if (await confirmAction('آیا از حذف این تنوع مطمئن هستید؟')) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteVariant(variantId);
       if (product) {

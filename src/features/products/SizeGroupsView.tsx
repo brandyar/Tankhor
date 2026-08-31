@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Layers, Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { confirmAction } from '../../utils/confirm';
 
 export const SizeGroupsView: React.FC = () => {
   const { t } = useTranslation();
@@ -88,7 +89,7 @@ export const SizeGroupsView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('آیا از حذف این گروه سایز مطمئن هستید؟')) {
+    if (await confirmAction('آیا از حذف این گروه سایز مطمئن هستید؟')) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteSizeGroup(id);
       await loadGroups();

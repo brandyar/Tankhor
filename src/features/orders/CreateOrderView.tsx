@@ -21,6 +21,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { formatDate, formatCurrency } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import {
   ShoppingCart,
   Search,
@@ -225,9 +226,9 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
     setCart(cart.filter((c) => c.variant.id !== variantId));
   };
 
-  const handleClearCart = () => {
+  const handleClearCart = async () => {
     if (cart.length === 0) return;
-    if (window.confirm('آیا از پاک کردن کامل سبد خرید و فاکتور جاری اطمینان دارید؟')) {
+    if (await confirmAction('آیا از پاک کردن کامل سبد خرید و فاکتور جاری اطمینان دارید؟')) {
       setCart([]);
       setExtraDiscount(0);
       setOrderNotes('');

@@ -13,6 +13,7 @@ import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { ImageUpload } from '../../components/ui/ImageUpload';
 import { directusClient } from '../../api/directus';
+import { confirmAction } from '../../utils/confirm';
 import { Layers, Plus, Search, Edit, Trash2 } from 'lucide-react';
 
 export const CollectionsView: React.FC = () => {
@@ -103,7 +104,7 @@ export const CollectionsView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('آیا از حذف این مجموعه مطمئن هستید؟')) {
+    if (await confirmAction('آیا از حذف این مجموعه مطمئن هستید؟')) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteCollection(id);
       await loadCollections();

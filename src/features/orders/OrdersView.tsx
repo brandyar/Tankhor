@@ -21,6 +21,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
 import { formatDate, formatCurrency } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import {
   ShoppingCart,
   Plus,
@@ -118,7 +119,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
 
   const handleDeleteOrder = async (ord: Order) => {
     if (!ord.id) return;
-    const isConfirmed = window.confirm(`آیا از حذف سفارش شماره «${ord.order_number}» اطمینان دارید؟`);
+    const isConfirmed = await confirmAction(`آیا از حذف سفارش شماره «${ord.order_number}» اطمینان دارید؟`);
     if (!isConfirmed) return;
 
     try {

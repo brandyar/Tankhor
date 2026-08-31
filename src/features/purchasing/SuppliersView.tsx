@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
 import { formatDate } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import { Truck, Plus, Search, Edit, Phone, Mail, MapPin, UserCheck, Trash2 } from 'lucide-react';
 
 export const SuppliersView: React.FC = () => {
@@ -51,7 +52,7 @@ export const SuppliersView: React.FC = () => {
 
   const handleDeleteSupplier = async (sup: Supplier) => {
     if (!sup.id) return;
-    const isConfirmed = window.confirm(`آیا از حذف تامین‌کننده «${sup.name}» اطمینان دارید؟`);
+    const isConfirmed = await confirmAction(`آیا از حذف تامین‌کننده «${sup.name}» اطمینان دارید؟`);
     if (!isConfirmed) return;
 
     try {

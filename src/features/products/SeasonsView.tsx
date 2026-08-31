@@ -13,6 +13,7 @@ import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Sun, Plus, Search, Edit, Trash2, Calendar } from 'lucide-react';
 import { toPersianDigits } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 
 export const SeasonsView: React.FC = () => {
   const { t } = useTranslation();
@@ -97,7 +98,7 @@ export const SeasonsView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('آیا از حذف این فصل مطمئن هستید؟')) {
+    if (await confirmAction('آیا از حذف این فصل مطمئن هستید؟')) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteSeason(id);
       await loadSeasons();

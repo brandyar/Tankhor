@@ -29,6 +29,7 @@ import { PurchaseOrdersView } from './features/purchasing/PurchaseOrdersView';
 import { SettingsView } from './features/settings/SettingsView';
 import { isTauriEnvironment } from './storage';
 import { WebFreePlanGuardModal } from './components/modals/WebFreePlanGuardModal';
+import { ConfirmModalHost } from './components/ui/ConfirmModal';
 import { Card } from './components/ui/Card';
 import { Button } from './components/ui/Button';
 import { ShieldAlert, RefreshCw, Shirt, Home } from 'lucide-react';
@@ -207,6 +208,7 @@ export default function App() {
     <I18nProvider>
       <AuthProvider>
         <MainAppContent />
+        <ConfirmModalHost />
       </AuthProvider>
     </I18nProvider>
   );

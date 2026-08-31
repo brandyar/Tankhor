@@ -13,6 +13,7 @@ import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { ImageUpload } from '../../components/ui/ImageUpload';
 import { directusClient } from '../../api/directus';
+import { confirmAction } from '../../utils/confirm';
 import { Award, Plus, Search, Edit, Trash2 } from 'lucide-react';
 
 export const BrandsView: React.FC = () => {
@@ -98,7 +99,7 @@ export const BrandsView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('آیا از حذف این برند مطمئن هستید؟')) {
+    if (await confirmAction('آیا از حذف این برند مطمئن هستید؟')) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteBrand(id);
       await loadBrands();

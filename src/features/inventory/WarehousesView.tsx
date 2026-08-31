@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { toPersianDigits, formatDate } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import { Warehouse as WarehouseIcon, Building2, Store, Plus, Trash2, Edit, Phone, MapPin } from 'lucide-react';
 
 export const WarehousesView: React.FC = () => {
@@ -117,7 +118,7 @@ export const WarehousesView: React.FC = () => {
   };
 
   const handleDeleteWarehouse = async (id: number) => {
-    if (confirm(t('common.confirmDeleteMessage'))) {
+    if (await confirmAction(t('common.confirmDeleteMessage'))) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteWarehouse(id);
       await loadWarehouses();

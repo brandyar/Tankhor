@@ -13,6 +13,7 @@ import { toPersianDigits, formatDate, normalizeId } from '../../utils/formatters
 import { ProductEditView } from './ProductEditView';
 import { ProductVariantsModal } from './ProductVariantsModal';
 import { directusClient } from '../../api/directus';
+import { confirmAction } from '../../utils/confirm';
 import { Plus, Search, Trash2, Edit, Layers, Filter, X, RefreshCw } from 'lucide-react';
 
 export const ProductsView: React.FC = () => {
@@ -153,7 +154,7 @@ export const ProductsView: React.FC = () => {
   };
 
   const handleDeleteProduct = async (id: number) => {
-    if (confirm(t('common.confirmDeleteMessage'))) {
+    if (await confirmAction(t('common.confirmDeleteMessage'))) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteProduct(id);
       await loadData();

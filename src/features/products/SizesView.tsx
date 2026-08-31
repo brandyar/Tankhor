@@ -13,6 +13,7 @@ import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Tag, Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { toPersianDigits } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 
 export const SizesView: React.FC = () => {
   const { t } = useTranslation();
@@ -105,7 +106,7 @@ export const SizesView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('آیا از حذف این سایز مطمئن هستید؟')) {
+    if (await confirmAction('آیا از حذف این سایز مطمئن هستید؟')) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteSize(id);
       await loadData();
