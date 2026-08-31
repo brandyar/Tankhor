@@ -44,10 +44,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const isPersian = locale === 'fa';
 
   const loadDashboardData = async () => {
+    const orgId = activeOrganization?.id;
+    if (!orgId) {
+      setProducts([]);
+      setVariants([]);
+      setMovements([]);
+      setOrders([]);
+      setCategories([]);
+      setWarehouses([]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const adapter = storageManager.getAdapter();
-      const orgId = activeOrganization?.id;
 
       const [pList, vList, mList, oList, cList, wList] = await Promise.all([
         adapter.getProducts({ organization_id: orgId }),
@@ -72,16 +83,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   };
 
   useEffect(() => {
-    loadDashboardData();
+    if (activeOrganization?.id) {
+      loadDashboardData();
+    } else {
+      setProducts([]);
+      setVariants([]);
+      setMovements([]);
+      setOrders([]);
+      setCategories([]);
+      setWarehouses([]);
+      setIsLoading(false);
+    }
 
     const handleDataRestored = () => {
-      loadDashboardData();
+      if (activeOrganization?.id) {
+        loadDashboardData();
+      }
     };
     window.addEventListener('tankhor_data_restored', handleDataRestored);
     return () => {
       window.removeEventListener('tankhor_data_restored', handleDataRestored);
     };
-  }, [activeOrganization]);
+  }, [activeOrganization?.id]);
 
   // Overall Aggregations
   const totalStockCount = variants.reduce((acc, v) => acc + (v.stock_quantity || 0), 0);

@@ -169,14 +169,17 @@ export class SqliteStorageAdapter implements IStorageProvider {
     }
   }
 
-  private async getItems<T>(col: string, orgId?: number): Promise<T[]> {
+  private async getItems<T>(col: string, orgId?: number, isExplicitEmpty = false): Promise<T[]> {
+    if (isExplicitEmpty) {
+      return [];
+    }
     const db = await this.initDatabase();
     if (db) {
       try {
         let rows: { data: string }[];
         if (orgId) {
           rows = await db.select<{ data: string }[]>(
-            `SELECT data FROM ${col} WHERE organization_id = $1 OR organization_id IS NULL`,
+            `SELECT data FROM ${col} WHERE organization_id = $1`,
             [orgId]
           );
         } else {
@@ -192,7 +195,7 @@ export class SqliteStorageAdapter implements IStorageProvider {
     if (orgId) {
       return list.filter((item: any) => {
         const itemOrgId = typeof item.organization_id === 'number' ? item.organization_id : item.organization_id?.id;
-        return !itemOrgId || Number(itemOrgId) === Number(orgId);
+        return Number(itemOrgId) === Number(orgId);
       });
     }
     return list;
@@ -253,7 +256,13 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
 
   private getActiveOrgId(params?: QueryParams): number | undefined {
-    if (params?.organization_id) return Number(params.organization_id);
+    if (params && 'organization_id' in params) {
+      if (params.organization_id !== undefined && params.organization_id !== null) {
+        const num = Number(params.organization_id);
+        if (!isNaN(num) && num > 0) return num;
+      }
+      return undefined;
+    }
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('tankhor_active_org_id');
       if (saved) {
@@ -262,6 +271,10 @@ export class SqliteStorageAdapter implements IStorageProvider {
       }
     }
     return undefined;
+  }
+
+  private isExplicitEmptyOrg(params?: QueryParams): boolean {
+    return Boolean(params && 'organization_id' in params && !this.getActiveOrgId(params));
   }
 
   // ==========================================

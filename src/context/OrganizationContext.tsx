@@ -26,10 +26,52 @@ const OrganizationContext = createContext<OrganizationContextType | undefined>(u
 
 export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isCloudAuthenticated } = useAuth();
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [activeOrganization, setActiveOrganization] = useState<Organization | null>(null);
+  const [organizations, setOrganizations] = useState<Organization[]>(() => {
+    if (typeof window !== 'undefined') {
+      const cachedUserRaw = localStorage.getItem('tankhor_cached_user_profile');
+      if (cachedUserRaw) {
+        try {
+          const cachedUser = JSON.parse(cachedUserRaw);
+          if (Array.isArray(cachedUser.organizations) && cachedUser.organizations.length > 0) {
+            return cachedUser.organizations;
+          }
+          if (cachedUser.activeOrganization || cachedUser.active_organization) {
+            return [cachedUser.activeOrganization || cachedUser.active_organization];
+          }
+        } catch {}
+      }
+    }
+    return [];
+  });
+
+  const [activeOrganization, setActiveOrganization] = useState<Organization | null>(() => {
+    if (typeof window !== 'undefined') {
+      const savedOrgId = localStorage.getItem('tankhor_active_org_id');
+      const cachedUserRaw = localStorage.getItem('tankhor_cached_user_profile');
+      if (cachedUserRaw) {
+        try {
+          const cachedUser = JSON.parse(cachedUserRaw);
+          const activeOrg = cachedUser.active_organization || cachedUser.activeOrganization;
+          if (activeOrg && activeOrg.id) {
+            if (!savedOrgId || String(activeOrg.id) === String(savedOrgId)) {
+              return activeOrg;
+            }
+          }
+          if (Array.isArray(cachedUser.organizations) && cachedUser.organizations.length > 0) {
+            if (savedOrgId) {
+              const matched = cachedUser.organizations.find((o: any) => String(o.id) === String(savedOrgId));
+              if (matched) return matched;
+            }
+            return cachedUser.organizations[0];
+          }
+        } catch {}
+      }
+    }
+    return null;
+  });
+
   const [organizationUsers, setOrganizationUsers] = useState<OrganizationUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Load organization users for active organization
   const refreshMembers = useCallback(async () => {
@@ -77,9 +119,13 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const refreshOrganizations = useCallback(async () => {
     try {
-      setIsLoading(true);
       const adapter = storageManager.getAdapter();
       let list = await adapter.getOrganizations();
+
+      // If user has specific organizations in profile, prioritize them
+      if (user && (user as any).organizations && Array.isArray((user as any).organizations) && (user as any).organizations.length > 0) {
+        list = (user as any).organizations;
+      }
 
       // Filter out placeholder dummy "سازمان اصلی" if real organizations exist
       if (list.length > 1) {
@@ -106,10 +152,8 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     } catch (err) {
       console.error('[OrganizationContext] Failed to load organizations:', err);
-    } finally {
-      setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     refreshOrganizations();

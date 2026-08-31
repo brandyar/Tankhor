@@ -42,7 +42,13 @@ export class LocalOfflineAdapter implements IStorageProvider {
   }
 
   private getActiveOrgId(params?: QueryParams): number | undefined {
-    if (params?.organization_id) return Number(params.organization_id);
+    if (params && 'organization_id' in params) {
+      if (params.organization_id !== undefined && params.organization_id !== null) {
+        const num = Number(params.organization_id);
+        if (!isNaN(num) && num > 0) return num;
+      }
+      return undefined;
+    }
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('tankhor_active_org_id');
       if (saved) {
@@ -51,6 +57,26 @@ export class LocalOfflineAdapter implements IStorageProvider {
       }
     }
     return undefined;
+  }
+
+  private filterByOrg<T extends { organization_id?: any }>(items: T[], params?: QueryParams): T[] {
+    const hasExplicitOrgParam = params && 'organization_id' in params;
+    const orgId = this.getActiveOrgId(params);
+
+    if (hasExplicitOrgParam && !orgId) {
+      return [];
+    }
+
+    if (orgId) {
+      return items.filter((item) => {
+        const itemOrgId = typeof item.organization_id === 'number'
+          ? item.organization_id
+          : Number((item.organization_id as any)?.id || item.organization_id);
+        return itemOrgId === orgId;
+      });
+    }
+
+    return items;
   }
 
   constructor() {
