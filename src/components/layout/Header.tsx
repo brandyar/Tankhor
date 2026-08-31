@@ -6,7 +6,8 @@ import { storageManager } from '../../storage';
 import { StorageSyncManager } from '../../storage/syncManager';
 import { LoginModal } from '../../features/auth/LoginModal';
 import { CreateOrganizationModal } from '../../features/organizations/CreateOrganizationModal';
-import { Building2, Globe, Database, RefreshCw, User as UserIcon, CheckCircle2, Menu, PanelLeft, LogIn, LogOut, ShieldCheck, Cloud, Settings, ChevronDown, Plus, Store } from 'lucide-react';
+import { UpgradeToProModal } from '../modals/UpgradeToProModal';
+import { Building2, Globe, Database, RefreshCw, User as UserIcon, CheckCircle2, Menu, PanelLeft, LogIn, LogOut, ShieldCheck, Cloud, Settings, ChevronDown, Plus, Store, Sparkles } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 
 interface HeaderProps {
@@ -25,6 +26,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isOrgMenuOpen, setIsOrgMenuOpen] = useState(false);
   const [isCreateOrgOpen, setIsCreateOrgOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const orgMenuRef = useRef<HTMLDivElement>(null);
@@ -48,6 +50,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
         openLoginModal();
         return;
       }
+      if (activeOrganization?.plan !== 'pro') {
+        setIsUpgradeModalOpen(true);
+        return;
+      }
       storageManager.setMode('cloud_synced');
       setModeState('cloud_synced');
     } else {
@@ -57,6 +63,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
   };
 
   const handleSyncNow = async () => {
+    if (activeOrganization?.plan !== 'pro') {
+      setIsUpgradeModalOpen(true);
+      return;
+    }
     setSyncing(true);
     try {
       await StorageSyncManager.syncLocalToCloud(storageManager.getCloudAdapter());
@@ -323,6 +333,16 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
         isOpen={isCreateOrgOpen}
         onClose={() => setIsCreateOrgOpen(false)}
         onSuccess={() => refreshOrganizations()}
+      />
+
+      {/* Upgrade to Pro Modal */}
+      <UpgradeToProModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        onSuccess={() => {
+          setModeState('cloud_synced');
+          refreshOrganizations();
+        }}
       />
     </>
   );

@@ -27,6 +27,8 @@ import { CustomersView } from './features/customers/CustomersView';
 import { SuppliersView } from './features/purchasing/SuppliersView';
 import { PurchaseOrdersView } from './features/purchasing/PurchaseOrdersView';
 import { SettingsView } from './features/settings/SettingsView';
+import { isTauriEnvironment } from './storage';
+import { WebFreePlanGuardModal } from './components/modals/WebFreePlanGuardModal';
 import { Card } from './components/ui/Card';
 import { Button } from './components/ui/Button';
 import { ShieldAlert, RefreshCw, Shirt, Home } from 'lucide-react';
@@ -52,7 +54,9 @@ const AccessDeniedCard: React.FC<{ userRole: string; onReturn: () => void }> = (
 
 const AuthenticatedApp: React.FC = () => {
   const [currentRoute, setCurrentRoute] = useState<string>('dashboard');
-  const { permissions, userRole } = useOrganization();
+  const { permissions, userRole, activeOrganization } = useOrganization();
+  const isDesktop = isTauriEnvironment();
+  const isWebFreeLocked = !isDesktop && !!activeOrganization && activeOrganization.plan === 'free';
 
   const isRouteAllowed = (route: string): boolean => {
     switch (route) {
@@ -87,10 +91,10 @@ const AuthenticatedApp: React.FC = () => {
       case 'purchasing/suppliers':
       case 'purchasing/orders':
         return permissions.canViewPurchasing;
+      case 'settings':
       case 'settings/org':
-        return permissions.canManageOrgSettings || permissions.canManageUsers;
       case 'settings/sync':
-        return permissions.canManageSync;
+        return permissions.canManageOrgSettings || permissions.canManageUsers;
       default:
         return true;
     }
@@ -147,6 +151,7 @@ const AuthenticatedApp: React.FC = () => {
         return <SuppliersView />;
       case 'purchasing/orders':
         return <PurchaseOrdersView />;
+      case 'settings':
       case 'settings/org':
       case 'settings/sync':
         return <SettingsView />;
@@ -156,9 +161,12 @@ const AuthenticatedApp: React.FC = () => {
   };
 
   return (
-    <AppShell currentRoute={currentRoute} onNavigate={setCurrentRoute}>
-      {renderCurrentView()}
-    </AppShell>
+    <>
+      <AppShell currentRoute={currentRoute} onNavigate={setCurrentRoute}>
+        {renderCurrentView()}
+      </AppShell>
+      {isWebFreeLocked && <WebFreePlanGuardModal />}
+    </>
   );
 };
 

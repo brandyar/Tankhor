@@ -221,13 +221,15 @@ authRouter.post('/register', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'این ایمیل قبلاً در سیستم ثبت شده است. لطفاً وارد شوید.' });
     }
 
-    // 2. Create User in Directus via Admin Client
+    // 2. Create User in Directus via Admin Client with tenant role
+    const DIRECTUS_TENANT_ROLE_ID = 'dbc2022f-0dea-4ef4-bb00-00a577e3208d';
     const userPayload: any = {
       email: email.toLowerCase().trim(),
       password: password,
       first_name: first_name || '',
       last_name: last_name || '',
       status: 'active',
+      role: DIRECTUS_TENANT_ROLE_ID,
     };
 
     let newUser: any;

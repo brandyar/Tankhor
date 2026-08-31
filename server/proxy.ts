@@ -304,6 +304,7 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
           }
         } else {
           const userPass = (payload.password || '').toString().trim() || `Tk@${Math.random().toString(36).slice(2, 10)}${Date.now()}`;
+          const DIRECTUS_TENANT_ROLE_ID = 'dbc2022f-0dea-4ef4-bb00-00a577e3208d';
           const newUser: any = await DirectusAdminClient.request('/users', {
             method: 'POST',
             body: JSON.stringify({
@@ -312,6 +313,7 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
               last_name: lastName || 'سازمان',
               password: userPass,
               status: 'active',
+              role: DIRECTUS_TENANT_ROLE_ID,
             }),
           });
           targetUserId = newUser.id;

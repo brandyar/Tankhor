@@ -12,7 +12,8 @@ import { EditOrganizationModal } from '../organizations/EditOrganizationModal';
 import { CreateOrganizationModal } from '../organizations/CreateOrganizationModal';
 import { OrganizationMembersSection } from '../organizations/OrganizationMembersSection';
 import { LocalBackupRestoreCard } from './LocalBackupRestoreCard';
-import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck, Building2, Edit3, Plus, ShieldAlert, Globe, Clock, CheckCircle2, Users } from 'lucide-react';
+import { UpgradeToProModal } from '../../components/modals/UpgradeToProModal';
+import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck, Building2, Edit3, Plus, ShieldAlert, Globe, Clock, CheckCircle2, Users, Sparkles, Lock } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
   const { t } = useTranslation();
@@ -29,17 +30,28 @@ export const SettingsView: React.FC = () => {
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
   const [isEditOrgOpen, setIsEditOrgOpen] = useState(false);
   const [isCreateOrgOpen, setIsCreateOrgOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   const handleModeChange = (newMode: 'local_offline' | 'cloud_synced') => {
-    if (newMode === 'cloud_synced' && !isCloudAuthenticated) {
-      openLoginModal();
-      return;
+    if (newMode === 'cloud_synced') {
+      if (!isCloudAuthenticated) {
+        openLoginModal();
+        return;
+      }
+      if (activeOrganization?.plan !== 'pro') {
+        setIsUpgradeModalOpen(true);
+        return;
+      }
     }
     storageManager.setMode(newMode);
     setMode(newMode);
   };
 
   const handleManualSync = async () => {
+    if (activeOrganization?.plan !== 'pro') {
+      setIsUpgradeModalOpen(true);
+      return;
+    }
     setIsSyncing(true);
     setSyncStatusMsg(null);
     try {
@@ -67,8 +79,8 @@ export const SettingsView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('navigation.storageSyncSettings')}
-        subtitle="پیکربندی حالت ذخیره‌سازی، وضعیت همگام‌سازی ابری و مدیریت اطلاعات سازمان"
+        title={t('navigation.orgSettings', 'تنظیمات')}
+        subtitle="مدیریت اطلاعات سازمان، کاربران و دسترسی‌ها، پشتیبان‌گیری پایگاه داده و پیکربندی سیستم"
       />
 
       {/* Cloud Account Status Banner */}
@@ -262,9 +274,24 @@ export const SettingsView: React.FC = () => {
             <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
               <Cloud className="w-5 h-5" />
             </div>
-            {mode === 'cloud_synced' && <Badge variant="info">فعال است</Badge>}
+            <div className="flex items-center gap-1.5">
+              {activeOrganization?.plan !== 'pro' && (
+                <Badge variant="warning" className="flex items-center gap-1 text-[10px]">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  پلن Pro
+                </Badge>
+              )}
+              {mode === 'cloud_synced' && <Badge variant="info">فعال است</Badge>}
+            </div>
           </div>
-          <h3 className="text-base font-bold text-neutral-900">همگام‌سازی ابری (نسخه پیشرفته)</h3>
+          <h3 className="text-base font-bold text-neutral-900 flex items-center justify-between">
+            <span>همگام‌سازی ابری (نسخه پیشرفته)</span>
+            {activeOrganization?.plan !== 'pro' && (
+              <span className="text-[11px] font-bold text-blue-600 hover:underline">
+                ارتقا به Pro
+              </span>
+            )}
+          </h3>
           <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
             اتصال به سرور ابری جهت اشتراک‌گذاری هم‌زمان داده‌ها بین شعبه‌ها و دستگاه‌های مختلف.
           </p>
@@ -296,6 +323,16 @@ export const SettingsView: React.FC = () => {
           )}
         </div>
       </Card>
+
+      {/* Upgrade to Pro Modal */}
+      <UpgradeToProModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        onSuccess={() => {
+          setMode('cloud_synced');
+          refreshOrganizations();
+        }}
+      />
 
       {/* Edit Organization Modal */}
       <EditOrganizationModal

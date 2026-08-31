@@ -289,7 +289,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onNavigate('settings/sync')}
+              onClick={() => onNavigate('settings/org')}
               icon={<HardDriveUpload className="w-4 h-4 text-blue-600" />}
               className="text-xs font-bold border-neutral-300 hover:bg-white"
             >

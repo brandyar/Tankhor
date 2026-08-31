@@ -184,9 +184,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userData && (userData.id || userData.email)) {
         setUser(userData);
         setIsCloudAuthenticated(true);
-        storageManager.setMode('cloud_synced');
 
         const activeOrg = userData.active_organization || userData.activeOrganization || loginRes.activeOrganization;
+        if (activeOrg && activeOrg.plan === 'pro') {
+          storageManager.setMode('cloud_synced');
+        } else {
+          storageManager.setMode('local_offline');
+        }
+
         localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
 
         if (activeOrg && activeOrg.id) {
@@ -273,9 +278,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userData && (userData.id || userData.email)) {
         setUser(userData);
         setIsCloudAuthenticated(true);
-        storageManager.setMode('cloud_synced');
 
         const activeOrg = userData.active_organization || userData.activeOrganization || regRes.organization || regRes.activeOrganization;
+        if (activeOrg && activeOrg.plan === 'pro') {
+          storageManager.setMode('cloud_synced');
+        } else {
+          storageManager.setMode('local_offline');
+        }
+
         localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
 
         if (activeOrg && activeOrg.id) {

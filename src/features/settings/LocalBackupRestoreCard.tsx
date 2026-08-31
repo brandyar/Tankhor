@@ -57,7 +57,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadStats = () => {
-    const s = BackupManager.getLocalStats();
+    const s = BackupManager.getLocalStats(activeOrganization?.id);
     setStats(s);
   };
 
@@ -70,7 +70,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
     return () => {
       window.removeEventListener('tankhor_data_restored', handleDataRestored);
     };
-  }, []);
+  }, [activeOrganization?.id]);
 
   // Handle Full JSON Backup Export
   const handleExportBackup = () => {
@@ -78,11 +78,11 @@ export const LocalBackupRestoreCard: React.FC = () => {
     try {
       BackupManager.exportBackupFile(activeOrganization);
       const now = new Date().toISOString();
-      localStorage.setItem('tankhor_last_backup_at', now);
+      localStorage.setItem(`tankhor_last_backup_${activeOrganization?.id || 'default'}`, now);
       setLastBackupTime(now);
       setFeedback({
         type: 'success',
-        message: 'فایل پشتیبان کامل دیتابیس با موفقیت دانلود شد. این فایل را در مکانی امن نگهداری کنید.',
+        message: `فایل پشتیبان سازمان "${activeOrganization?.name || 'فعلی'}" با موفقیت دانلود شد. این فایل را در مکانی امن نگهداری کنید.`,
       });
     } catch (err: any) {
       setFeedback({
@@ -140,7 +140,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
     if (!inspectedData || !inspectedData.data) return;
     setIsRestoring(true);
     try {
-      const res = BackupManager.restoreBackup(inspectedData.data, restoreMode);
+      const res = BackupManager.restoreBackup(inspectedData.data, restoreMode, activeOrganization?.id);
       if (res.success) {
         setInspectionModalOpen(false);
         setInspectedData(null);
@@ -195,7 +195,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
   // Handle Clear Local Data
   const handleClearData = () => {
     try {
-      const res = BackupManager.clearLocalData(true);
+      const res = BackupManager.clearLocalData(true, activeOrganization?.id);
       if (res.success) {
         setClearConfirmModalOpen(false);
         refreshOrganizations();

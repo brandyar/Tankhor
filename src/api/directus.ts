@@ -282,6 +282,7 @@ class DirectusClient {
       });
     } catch (err: any) {
       try {
+        const DIRECTUS_TENANT_ROLE_ID = 'dbc2022f-0dea-4ef4-bb00-00a577e3208d';
         const newUser = await this.request('/users', {
           method: 'POST',
           body: JSON.stringify({
@@ -290,6 +291,7 @@ class DirectusClient {
             first_name: data.first_name || '',
             last_name: data.last_name || '',
             status: 'active',
+            role: DIRECTUS_TENANT_ROLE_ID,
           }),
         });
 

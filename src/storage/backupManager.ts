@@ -90,30 +90,202 @@ export class BackupManager {
   }
 
   /**
-   * Retrieves summary counts of all stored local collections
+   * Helper to filter collection items by organization ID
    */
-  public static getLocalStats(): Record<string, number> {
+  public static filterCollectionByOrg(
+    collection: BackupCollectionKey,
+    items: any[],
+    orgId: number,
+    allCollections?: Partial<Record<BackupCollectionKey, any[]>>
+  ): any[] {
+    if (!Array.isArray(items)) return [];
+    if (!orgId) return items;
+
+    const matchDirectOrg = (item: any) => {
+      if (!item) return false;
+      const itemOrgId = typeof item.organization_id === 'number'
+        ? item.organization_id
+        : item.organization_id?.id !== undefined
+        ? Number(item.organization_id.id)
+        : item.organization_id !== undefined
+        ? Number(item.organization_id)
+        : undefined;
+      return itemOrgId === orgId;
+    };
+
+    switch (collection) {
+      case 'organizations':
+        return items.filter((o) => Number(o.id) === orgId);
+
+      case 'organization_users':
+        return items.filter((ou) => {
+          const ouOrgId = typeof ou.organization_id === 'number'
+            ? ou.organization_id
+            : Number(ou.organization_id?.id || ou.organization_id);
+          return ouOrgId === orgId;
+        });
+
+      case 'warehouse_locations': {
+        const rawWarehouses = allCollections?.warehouses || this.getRawCollection('warehouses');
+        const validWarehouseIds = new Set(
+          rawWarehouses.filter(matchDirectOrg).map((w: any) => Number(w.id))
+        );
+        return items.filter((l) => {
+          if (matchDirectOrg(l)) return true;
+          const whId = typeof l.warehouse_id === 'number'
+            ? l.warehouse_id
+            : Number(l.warehouse_id?.id || l.warehouse_id);
+          return validWarehouseIds.has(whId);
+        });
+      }
+
+      case 'product_variants': {
+        const rawProducts = allCollections?.products || this.getRawCollection('products');
+        const validProductIds = new Set(
+          rawProducts.filter(matchDirectOrg).map((p: any) => Number(p.id))
+        );
+        return items.filter((v) => {
+          if (matchDirectOrg(v)) return true;
+          const pId = typeof v.product_id === 'number'
+            ? v.product_id
+            : Number(v.product_id?.id || v.product_id);
+          return validProductIds.has(pId);
+        });
+      }
+
+      case 'inventory_items': {
+        const rawVariants = allCollections?.product_variants || this.getRawCollection('product_variants');
+        const validVariantIds = new Set(
+          this.filterCollectionByOrg('product_variants', rawVariants, orgId, allCollections).map((v: any) => Number(v.id))
+        );
+        return items.filter((i) => {
+          if (matchDirectOrg(i)) return true;
+          const varId = typeof i.variant_id === 'number'
+            ? i.variant_id
+            : Number(i.variant_id?.id || i.variant_id);
+          return validVariantIds.has(varId);
+        });
+      }
+
+      case 'order_items': {
+        const rawOrders = allCollections?.orders || this.getRawCollection('orders');
+        const validOrderIds = new Set(
+          rawOrders.filter(matchDirectOrg).map((o: any) => Number(o.id))
+        );
+        return items.filter((oi) => {
+          if (matchDirectOrg(oi)) return true;
+          const ordId = typeof oi.order_id === 'number'
+            ? oi.order_id
+            : Number(oi.order_id?.id || oi.order_id);
+          return validOrderIds.has(ordId);
+        });
+      }
+
+      case 'purchase_order_items': {
+        const rawPOs = allCollections?.purchase_orders || this.getRawCollection('purchase_orders');
+        const validPOIds = new Set(
+          rawPOs.filter(matchDirectOrg).map((po: any) => Number(po.id))
+        );
+        return items.filter((poi) => {
+          if (matchDirectOrg(poi)) return true;
+          const poId = typeof poi.purchase_order_id === 'number'
+            ? poi.purchase_order_id
+            : Number(poi.purchase_order_id?.id || poi.purchase_order_id);
+          return validPOIds.has(poId);
+        });
+      }
+
+      case 'stock_transfer_items': {
+        const rawTransfers = allCollections?.stock_transfers || this.getRawCollection('stock_transfers');
+        const validTransferIds = new Set(
+          rawTransfers.filter(matchDirectOrg).map((t: any) => Number(t.id))
+        );
+        return items.filter((sti) => {
+          if (matchDirectOrg(sti)) return true;
+          const tId = typeof sti.transfer_id === 'number'
+            ? sti.transfer_id
+            : Number(sti.transfer_id?.id || sti.transfer_id);
+          return validTransferIds.has(tId);
+        });
+      }
+
+      case 'size_guide_measurements': {
+        const rawTemplates = allCollections?.size_guide_templates || this.getRawCollection('size_guide_templates');
+        const validTemplateIds = new Set(
+          rawTemplates.filter(matchDirectOrg).map((t: any) => Number(t.id))
+        );
+        return items.filter((m) => {
+          if (matchDirectOrg(m)) return true;
+          const tId = typeof m.template_id === 'number'
+            ? m.template_id
+            : Number(m.template_id?.id || m.template_id);
+          return validTemplateIds.has(tId);
+        });
+      }
+
+      case 'size_guide_values': {
+        const rawTemplates = allCollections?.size_guide_templates || this.getRawCollection('size_guide_templates');
+        const validTemplateIds = new Set(
+          rawTemplates.filter(matchDirectOrg).map((t: any) => Number(t.id))
+        );
+        return items.filter((v) => {
+          if (matchDirectOrg(v)) return true;
+          const tId = typeof v.template_id === 'number'
+            ? v.template_id
+            : Number(v.template_id?.id || v.template_id);
+          return validTemplateIds.has(tId);
+        });
+      }
+
+      case 'sizes': {
+        const rawSizeGroups = allCollections?.size_groups || this.getRawCollection('size_groups');
+        const validSizeGroupIds = new Set(
+          rawSizeGroups.filter(matchDirectOrg).map((sg: any) => Number(sg.id))
+        );
+        return items.filter((s) => {
+          if (matchDirectOrg(s)) return true;
+          const sgId = typeof s.size_group_id === 'number'
+            ? s.size_group_id
+            : Number(s.size_group_id?.id || s.size_group_id);
+          return validSizeGroupIds.has(sgId);
+        });
+      }
+
+      default:
+        // Direct tenant scoped items
+        return items.filter(matchDirectOrg);
+    }
+  }
+
+  /**
+   * Retrieves summary counts of all stored local collections scoped to an organization
+   */
+  public static getLocalStats(orgId?: number): Record<string, number> {
     const stats: Record<string, number> = {};
     for (const key of BACKUP_COLLECTIONS) {
-      const items = this.getRawCollection(key);
-      stats[key] = items.length;
+      const raw = this.getRawCollection(key);
+      const filtered = orgId ? this.filterCollectionByOrg(key, raw, orgId) : raw;
+      stats[key] = filtered.length;
     }
     return stats;
   }
 
   /**
-   * Generates a complete JSON backup of the local database
+   * Generates a complete JSON backup of the local database strictly scoped to the active organization
    */
   public static generateBackup(organization?: { id: number; name: string; slug?: string } | null): TankhorBackupFile {
     const data: Record<string, any[]> = {};
     const summary: Record<string, number> = {};
     let totalRecords = 0;
+    const orgId = organization?.id ? Number(organization.id) : undefined;
 
     for (const col of BACKUP_COLLECTIONS) {
-      const items = this.getRawCollection(col);
-      data[col] = items;
-      summary[col] = items.length;
-      totalRecords += items.length;
+      const rawItems = this.getRawCollection(col);
+      const scopedItems = orgId ? this.filterCollectionByOrg(col, rawItems, orgId) : rawItems;
+
+      data[col] = scopedItems;
+      summary[col] = scopedItems.length;
+      totalRecords += scopedItems.length;
     }
 
     const now = new Date();
@@ -213,29 +385,49 @@ export class BackupManager {
   }
 
   /**
-   * Restores data from a backup object
+   * Restores data from a backup object with tenant isolation
    */
   public static restoreBackup(
     backupData: Record<string, any[]>,
-    mode: 'replace' | 'merge' = 'replace'
+    mode: 'replace' | 'merge' = 'replace',
+    targetOrgId?: number
   ): { success: boolean; restoredCount: number; error?: string } {
     try {
       let totalRestored = 0;
+      const activeOrgId = targetOrgId || Number(localStorage.getItem('tankhor_active_org_id') || 1);
 
       for (const col of BACKUP_COLLECTIONS) {
         const incoming = backupData[col];
         if (!Array.isArray(incoming)) continue;
 
+        // Ensure incoming records carry targetOrgId if applicable
+        const normalizedIncoming = incoming.map((item) => {
+          if (col !== 'organizations' && (item.organization_id === undefined || item.organization_id === null)) {
+            return { ...item, organization_id: activeOrgId };
+          }
+          return item;
+        });
+
         if (mode === 'replace') {
-          this.setRawCollection(col, incoming);
-          totalRestored += incoming.length;
+          // In multi-tenant replace: Keep other orgs' data and replace only activeOrgId's data
+          const existing = this.getRawCollection(col);
+          const otherOrgsItems = existing.filter((item) => {
+            const itemOrg = typeof item.organization_id === 'number'
+              ? item.organization_id
+              : Number(item.organization_id?.id || item.organization_id);
+            return itemOrg && itemOrg !== activeOrgId;
+          });
+
+          const finalCollection = [...otherOrgsItems, ...normalizedIncoming];
+          this.setRawCollection(col, finalCollection);
+          totalRestored += normalizedIncoming.length;
         } else {
           // Merge mode: append or update by ID
           const existing = this.getRawCollection(col);
           const existingIds = new Set(existing.map((item) => String(item.id)));
           const merged = [...existing];
 
-          for (const item of incoming) {
+          for (const item of normalizedIncoming) {
             const idStr = String(item.id);
             if (existingIds.has(idStr)) {
               const idx = merged.findIndex((m) => String(m.id) === idStr);
@@ -249,14 +441,17 @@ export class BackupManager {
           }
 
           this.setRawCollection(col, merged);
-          totalRestored += incoming.length;
+          totalRestored += normalizedIncoming.length;
         }
       }
 
-      // Check if organizations collection was restored, update active org
+      // Check if organizations collection was restored, update active org if needed
       const restoredOrgs = backupData['organizations'];
       if (Array.isArray(restoredOrgs) && restoredOrgs.length > 0) {
-        localStorage.setItem('tankhor_active_org_id', String(restoredOrgs[0].id));
+        const orgToSelect = restoredOrgs.find((o) => Number(o.id) === activeOrgId) || restoredOrgs[0];
+        if (orgToSelect?.id) {
+          localStorage.setItem('tankhor_active_org_id', String(orgToSelect.id));
+        }
       }
 
       // Notify the application
@@ -278,12 +473,7 @@ export class BackupManager {
   public static exportToCsv(collectionName: BackupCollectionKey, orgId?: number): void {
     let items = this.getRawCollection(collectionName);
     if (orgId) {
-      items = items.filter((item) => {
-        const itemOrgId = typeof item.organization_id === 'number'
-          ? item.organization_id
-          : Number((item.organization_id as any)?.id || item.organization_id);
-        return !itemOrgId || itemOrgId === orgId;
-      });
+      items = this.filterCollectionByOrg(collectionName, items, orgId);
     }
 
     if (items.length === 0) {
@@ -609,23 +799,38 @@ export class BackupManager {
   }
 
   /**
-   * Resets local collections (clearing or preparing for clean start)
+   * Resets local collections for a specific organization
    */
-  public static clearLocalData(preserveOrganization: boolean = true): { success: boolean; message: string } {
+  public static clearLocalData(preserveOrganization: boolean = true, targetOrgId?: number): { success: boolean; message: string } {
     try {
-      const activeOrgId = localStorage.getItem('tankhor_active_org_id');
+      const activeOrgId = targetOrgId || Number(localStorage.getItem('tankhor_active_org_id') || 1);
       const orgs = this.getRawCollection('organizations');
-      const activeOrg = orgs.find((o) => String(o.id) === String(activeOrgId));
+      const activeOrg = orgs.find((o) => Number(o.id) === activeOrgId);
 
       for (const col of BACKUP_COLLECTIONS) {
         if (preserveOrganization && (col === 'organizations' || col === 'organization_users')) {
           continue;
         }
-        localStorage.removeItem(`tankhor_db_${col}`);
+
+        const existing = this.getRawCollection(col);
+        // Keep records from OTHER organizations
+        const otherOrgsItems = existing.filter((item) => {
+          const itemOrg = typeof item.organization_id === 'number'
+            ? item.organization_id
+            : Number(item.organization_id?.id || item.organization_id);
+          return itemOrg && itemOrg !== activeOrgId;
+        });
+
+        if (otherOrgsItems.length > 0) {
+          this.setRawCollection(col, otherOrgsItems);
+        } else {
+          localStorage.removeItem(`tankhor_db_${col}`);
+        }
       }
 
       if (preserveOrganization && activeOrg) {
-        this.setRawCollection('organizations', [activeOrg]);
+        const remainingOrgs = orgs.filter((o) => Number(o.id) !== activeOrgId);
+        this.setRawCollection('organizations', [...remainingOrgs, activeOrg]);
       }
 
       if (typeof window !== 'undefined') {
@@ -634,7 +839,7 @@ export class BackupManager {
         }));
       }
 
-      return { success: true, message: 'پایگاه داده محلی با موفقیت پاکسازی و بازنشانی شد.' };
+      return { success: true, message: 'اطلاعات محلی سازمان با موفقیت پاکسازی شد.' };
     } catch (e: any) {
       return { success: false, message: `خطا در پاکسازی داده‌ها: ${e.message}` };
     }

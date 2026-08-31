@@ -180,13 +180,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon: Settings,
           visible: permissions.canManageOrgSettings || permissions.canManageUsers,
         },
-        {
-          type: 'item',
-          route: 'settings/sync',
-          label: t('navigation.storageSyncSettings'),
-          icon: SlidersHorizontal,
-          visible: permissions.canManageSync,
-        },
       ],
     },
   ];
