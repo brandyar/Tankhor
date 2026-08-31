@@ -78,24 +78,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (token) {
       setIsLoading(true);
       directusClient.getMe()
-        .then(async (userData) => {
-          if (userData && (userData.id || userData.email)) {
-            setUser(userData);
-            setIsCloudAuthenticated(true);
-            storageManager.setMode('cloud_synced');
+        .then(async (meData) => {
+          if (meData && (meData.id || meData.email)) {
+            let activeOrg = meData.active_organization || meData.activeOrganization;
+            let orgsList = Array.isArray(meData.organizations) ? meData.organizations : [];
 
-            const activeOrg = userData.active_organization || userData.activeOrganization;
-            localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
+            if (orgsList.length === 0) {
+              const verifiedOrgs = await directusClient.getOrganizations().catch(() => []);
+              if (verifiedOrgs.length > 0) {
+                orgsList = verifiedOrgs;
+                if (!activeOrg) activeOrg = verifiedOrgs[0];
+              }
+            }
+
+            const finalUser: User = {
+              ...meData,
+              activeOrganization: activeOrg,
+              active_organization: activeOrg,
+              organizations: orgsList,
+            };
+
+            setUser(finalUser);
+            setIsCloudAuthenticated(true);
+
+            if (activeOrg && activeOrg.plan === 'pro') {
+              storageManager.setMode('cloud_synced');
+            } else {
+              storageManager.setMode('local_offline');
+            }
+
+            localStorage.setItem(CACHED_USER_KEY, JSON.stringify(finalUser));
 
             if (activeOrg && activeOrg.id) {
               localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
               await storageManager.getLocalAdapter().saveOrganization(activeOrg);
             }
-            if (Array.isArray(userData.organizations)) {
-              for (const org of userData.organizations) {
-                if (org && org.id && org.name) {
-                  await storageManager.getLocalAdapter().saveOrganization(org);
-                }
+            for (const org of orgsList) {
+              if (org && org.id && org.name) {
+                await storageManager.getLocalAdapter().saveOrganization(org);
               }
             }
           } else {
@@ -178,31 +198,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     directusClient.setToken(null);
     try {
       const loginRes = await directusClient.login(email, pass);
-      let userData = await directusClient.getMe().catch(() => loginRes.user);
-      if (!userData) userData = loginRes.user;
+      let userData = await directusClient.getMe().catch(() => null);
 
-      if (userData && (userData.id || userData.email)) {
-        setUser(userData);
+      const activeOrg = loginRes.activeOrganization || userData?.activeOrganization || userData?.active_organization;
+      const orgsList = (Array.isArray(loginRes.organizations) && loginRes.organizations.length > 0)
+        ? loginRes.organizations
+        : (Array.isArray(userData?.organizations) && userData.organizations.length > 0)
+        ? userData.organizations
+        : (activeOrg ? [activeOrg] : []);
+
+      const finalUser: User = {
+        ...(loginRes.user || {}),
+        ...(userData || {}),
+        email: email.toLowerCase().trim(),
+        activeOrganization: activeOrg,
+        active_organization: activeOrg,
+        organizations: orgsList,
+      };
+
+      if (finalUser && (finalUser.id || finalUser.email)) {
+        setUser(finalUser);
         setIsCloudAuthenticated(true);
 
-        const activeOrg = userData.active_organization || userData.activeOrganization || loginRes.activeOrganization;
         if (activeOrg && activeOrg.plan === 'pro') {
           storageManager.setMode('cloud_synced');
         } else {
           storageManager.setMode('local_offline');
         }
 
-        localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
+        localStorage.setItem(CACHED_USER_KEY, JSON.stringify(finalUser));
 
         if (activeOrg && activeOrg.id) {
           localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
           await storageManager.getLocalAdapter().saveOrganization(activeOrg);
         }
-        if (Array.isArray(userData.organizations)) {
-          for (const org of userData.organizations) {
-            if (org && org.id && org.name) {
-              await storageManager.getLocalAdapter().saveOrganization(org);
-            }
+        for (const org of orgsList) {
+          if (org && org.id && org.name) {
+            await storageManager.getLocalAdapter().saveOrganization(org);
           }
         }
 

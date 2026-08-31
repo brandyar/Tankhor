@@ -268,11 +268,108 @@ class DirectusClient {
   }
 
   public async getMe(): Promise<any> {
+    let meData: any;
     try {
-      return await this.request('/auth/me');
+      meData = await this.request('/auth/me');
     } catch {
-      return await this.request('/users/me');
+      meData = await this.request('/users/me');
     }
+
+    if (meData && (meData.id || meData.email)) {
+      if (!Array.isArray(meData.organizations) || meData.organizations.length === 0) {
+        const orgs = await this.resolveUserOrganizations(meData).catch(() => []);
+        if (orgs.length > 0) {
+          meData.organizations = orgs;
+          if (!meData.activeOrganization && !meData.active_organization) {
+            meData.activeOrganization = orgs[0];
+            meData.active_organization = orgs[0];
+          }
+        }
+      }
+    }
+    return meData;
+  }
+
+  public async getOrganizations(): Promise<any[]> {
+    try {
+      const me = await this.getMe().catch(() => null);
+      if (me && Array.isArray(me.organizations) && me.organizations.length > 0) {
+        return me.organizations;
+      }
+      if (me && (me.activeOrganization || me.active_organization)) {
+        return [me.activeOrganization || me.active_organization];
+      }
+
+      // If connecting directly to Directus, query organization_users strictly for current user
+      if (me && (me.id || me.email)) {
+        return await this.resolveUserOrganizations(me);
+      }
+
+      // Security: Never fall back to returning all organizations across tenants!
+      return [];
+    } catch {
+      return [];
+    }
+  }
+
+  private async resolveUserOrganizations(user: { id?: string; email?: string }): Promise<any[]> {
+    if (!user || (!user.id && !user.email)) return [];
+
+    let memberships: any[] = [];
+    if (user.id) {
+      try {
+        memberships = await this.getItems<any>('organization_users', {
+          filter: { user_id: { _eq: user.id } },
+          fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id'],
+        });
+      } catch {}
+    }
+
+    if ((!memberships || memberships.length === 0) && user.id) {
+      try {
+        memberships = await this.getItems<any>('organization_users', {
+          filter: { user_id: { id: { _eq: user.id } } },
+          fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id'],
+        });
+      } catch {}
+    }
+
+    if ((!memberships || memberships.length === 0) && user.email) {
+      try {
+        memberships = await this.getItems<any>('organization_users', {
+          filter: { user_id: { email: { _eq: user.email.toLowerCase().trim() } } },
+          fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id'],
+        });
+      } catch {}
+    }
+
+    if (Array.isArray(memberships) && memberships.length > 0) {
+      const orgs: any[] = [];
+      for (const m of memberships) {
+        if (m.organization_id && typeof m.organization_id === 'object' && m.organization_id.id && m.organization_id.name) {
+          orgs.push({ ...m.organization_id, user_role: m.role || 'viewer' });
+        } else if (m.organization_id) {
+          const orgId = Number(typeof m.organization_id === 'object' ? m.organization_id.id : m.organization_id);
+          if (orgId && !isNaN(orgId)) {
+            const org = await this.getItemById<any>('organizations', orgId).catch(() => null);
+            if (org && typeof org === 'object' && org.id && org.name) {
+              orgs.push({ ...org, user_role: m.role || 'viewer' });
+            }
+          }
+        }
+      }
+
+      if (orgs.length > 0) {
+        const seen = new Set<number>();
+        return orgs.filter((o) => {
+          const numId = Number(o.id);
+          if (!numId || seen.has(numId)) return false;
+          seen.add(numId);
+          return true;
+        });
+      }
+    }
+    return [];
   }
 
   public async register(data: {
@@ -398,69 +495,6 @@ class DirectusClient {
       }
     }
     return res;
-  }
-
-  public async getOrganizations(): Promise<any[]> {
-    try {
-      const me = await this.getMe().catch(() => null);
-      if (me && Array.isArray(me.organizations) && me.organizations.length > 0) {
-        return me.organizations;
-      }
-      if (me && (me.activeOrganization || me.active_organization)) {
-        return [me.activeOrganization || me.active_organization];
-      }
-
-      // If connecting directly to Directus, query organization_users strictly for current user
-      if (me && (me.id || me.email)) {
-        try {
-          const filters: any[] = [];
-          if (me.id) {
-            filters.push({ user_id: { _eq: me.id } });
-            filters.push({ user_id: { id: { _eq: me.id } } });
-          }
-          if (me.email) {
-            filters.push({ email: { _eq: me.email.toLowerCase().trim() } });
-            filters.push({ user_id: { email: { _eq: me.email.toLowerCase().trim() } } });
-          }
-
-          const memberships = await this.getItems<any>('organization_users', {
-            filter: { _or: filters },
-            fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id'],
-          });
-          if (Array.isArray(memberships) && memberships.length > 0) {
-            const orgs: any[] = [];
-            for (const m of memberships) {
-              if (m.organization_id && typeof m.organization_id === 'object' && m.organization_id.id) {
-                orgs.push({ ...m.organization_id, user_role: m.role || 'viewer' });
-              } else if (m.organization_id) {
-                const orgId = Number(m.organization_id);
-                if (orgId && !isNaN(orgId)) {
-                  const org = await this.getItemById<any>('organizations', orgId).catch(() => null);
-                  if (org && typeof org === 'object') {
-                    orgs.push({ ...org, user_role: m.role || 'viewer' });
-                  }
-                }
-              }
-            }
-            if (orgs.length > 0) {
-              const seen = new Set();
-              return orgs.filter((o) => {
-                if (!o || !o.id || seen.has(o.id)) return false;
-                seen.add(o.id);
-                return true;
-              });
-            }
-          }
-        } catch (err) {
-          console.warn('[directusClient.getOrganizations] Error fetching user memberships:', err);
-        }
-      }
-
-      // Security: Never fall back to returning all organizations across tenants!
-      return [];
-    } catch {
-      return [];
-    }
   }
 
   // Generic collection helpers

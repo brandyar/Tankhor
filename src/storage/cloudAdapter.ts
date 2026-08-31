@@ -34,11 +34,7 @@ export class CloudDirectusAdapter implements IStorageProvider {
   // Organizations
   async getOrganizations(): Promise<Organization[]> {
     try {
-      let orgs = await directusClient.getOrganizations();
-      if (!Array.isArray(orgs) || orgs.length === 0) {
-        orgs = await directusClient.getItems<Organization>('organizations');
-      }
-
+      const orgs = await directusClient.getOrganizations();
       const validOrgs: Organization[] = (Array.isArray(orgs) ? orgs : [])
         .filter((o: any) => o && typeof o === 'object' && o.id && o.name);
 
@@ -100,9 +96,25 @@ export class CloudDirectusAdapter implements IStorageProvider {
     const query: any = {
       sort: '-id',
       filter: { organization_id: { _eq: numOrgId } },
+      fields: ['id', 'organization_id', 'role', 'status', 'date_joined', 'user_id.*', 'user_id.id', 'user_id.email', 'user_id.first_name', 'user_id.last_name', 'user_id.avatar'],
     };
     try {
-      return await directusClient.getItems<OrganizationUser>('organization_users', query);
+      const items = await directusClient.getItems<any>('organization_users', query);
+      if (Array.isArray(items) && items.length > 0) {
+        return items.map((ou: any) => {
+          const u = typeof ou.user_id === 'object' && ou.user_id ? ou.user_id : {};
+          return {
+            ...ou,
+            organization_id: numOrgId,
+            user_id: u.id || ou.user_id,
+            first_name: ou.first_name || u.first_name || '',
+            last_name: ou.last_name || u.last_name || '',
+            email: ou.email || u.email || '',
+            avatar: ou.avatar || u.avatar || null,
+          };
+        });
+      }
+      return [];
     } catch (err: any) {
       console.warn('[CloudDirectusAdapter] getOrganizationUsers failed, using local adapter:', err?.message || err);
       return this.localAdapter.getOrganizationUsers({ organization_id: numOrgId });
