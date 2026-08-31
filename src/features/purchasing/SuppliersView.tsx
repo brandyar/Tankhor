@@ -11,7 +11,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
 import { formatDate } from '../../utils/formatters';
-import { Truck, Plus, Search, Edit, Phone, Mail, MapPin, UserCheck } from 'lucide-react';
+import { Truck, Plus, Search, Edit, Phone, Mail, MapPin, UserCheck, Trash2 } from 'lucide-react';
 
 export const SuppliersView: React.FC = () => {
   const { t, locale } = useTranslation();
@@ -48,6 +48,20 @@ export const SuppliersView: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [activeOrganization]);
+
+  const handleDeleteSupplier = async (sup: Supplier) => {
+    if (!sup.id) return;
+    const isConfirmed = window.confirm(`آیا از حذف تامین‌کننده «${sup.name}» اطمینان دارید؟`);
+    if (!isConfirmed) return;
+
+    try {
+      const adapter = storageManager.getAdapter();
+      await adapter.deleteSupplier(sup.id);
+      await loadData();
+    } catch (err) {
+      console.error('[SuppliersView] Error deleting supplier:', err);
+    }
+  };
 
   const handleOpenModal = (sup?: Supplier) => {
     if (sup) {
@@ -205,6 +219,15 @@ export const SuppliersView: React.FC = () => {
                 icon={<Edit className="w-3.5 h-3.5" />}
               >
                 ویرایش
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-rose-600 hover:bg-rose-50"
+                onClick={() => handleDeleteSupplier(s)}
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                حذف
               </Button>
             </div>
           )}

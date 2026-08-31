@@ -205,7 +205,7 @@ export const PurchaseOrdersView: React.FC = () => {
 
       // If completing/receiving, add stock
       if (newStatus === 'received') {
-        const whId = typeof po.warehouse_id === 'object' ? po.warehouse_id.id : po.warehouse_id;
+        const whId = typeof po.warehouse_id === 'object' ? (po.warehouse_id as any)?.id : po.warehouse_id;
         if (variants.length > 0) {
           await adapter.recordMovement({
             organization_id: activeOrganization?.id || 1,
@@ -223,6 +223,24 @@ export const PurchaseOrdersView: React.FC = () => {
       await loadData();
     } catch (err) {
       console.error('[PurchaseOrdersView] Error updating status:', err);
+    }
+  };
+
+  const handleDeletePO = async (po: PurchaseOrder) => {
+    if (!po.id) return;
+    const isConfirmed = window.confirm(`آیا از حذف سفارش خرید «${po.purchase_number}» اطمینان دارید؟`);
+    if (!isConfirmed) return;
+
+    try {
+      const adapter = storageManager.getAdapter();
+      await adapter.deletePurchaseOrder(po.id);
+      if (selectedPO?.id === po.id) {
+        setIsDetailModalOpen(false);
+        setSelectedPO(null);
+      }
+      await loadData();
+    } catch (err) {
+      console.error('[PurchaseOrdersView] Error deleting purchase order:', err);
     }
   };
 
@@ -342,9 +360,19 @@ export const PurchaseOrdersView: React.FC = () => {
                   onClick={() => handleUpdateStatus(po, 'received')}
                   icon={<PackageCheck className="w-3.5 h-3.5" />}
                 >
-                  رسید انبار (افزایش موجودی)
+                  رسید انبار
                 </Button>
               )}
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-rose-600 hover:bg-rose-50"
+                onClick={() => handleDeletePO(po)}
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                حذف
+              </Button>
             </div>
           )}
         />

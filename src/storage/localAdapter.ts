@@ -1187,15 +1187,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
     if (order.id) {
       const idx = list.findIndex((o) => o.id === order.id);
       if (idx !== -1) {
-        list[idx] = { ...list[idx], ...order };
+        list[idx] = { ...list[idx], ...order, id: order.id };
         savedOrder = list[idx];
         this.setItem('orders', list);
       } else {
-        savedOrder = { id: order.id, ...order } as Order;
+        savedOrder = { ...order, id: order.id } as Order;
       }
     } else {
+      const newId = this.generateUniqueId(list);
       savedOrder = {
-        id: this.generateUniqueId(list),
         organization_id: order.organization_id || this.getActiveOrgId() || 1,
         warehouse_id: order.warehouse_id || 1,
         order_number: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -1208,6 +1208,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
         total: order.total || 0,
         date_created: new Date().toISOString(),
         ...order,
+        id: newId,
       };
       list.unshift(savedOrder);
       this.setItem('orders', list);
@@ -1221,8 +1222,8 @@ export class LocalOfflineAdapter implements IStorageProvider {
       });
 
       items.forEach((item) => {
+        const itmId = typeof item.id === 'number' && item.id > 0 ? item.id : this.generateUniqueId(filtered);
         filtered.push({
-          id: this.generateUniqueId(filtered),
           organization_id: savedOrder.organization_id || this.getActiveOrgId() || 1,
           order_id: savedOrder.id,
           variant_id: item.variant_id || 1,
@@ -1232,12 +1233,27 @@ export class LocalOfflineAdapter implements IStorageProvider {
           total: item.total || 0,
           created_at: new Date().toISOString(),
           ...item,
+          id: itmId,
         });
       });
       this.setItem('order_items', filtered);
     }
 
     return savedOrder;
+  }
+
+  async deleteOrder(id: number): Promise<boolean> {
+    const list = this.getItem<Order>('orders', []);
+    const filtered = list.filter((o) => o.id !== id);
+    this.setItem('orders', filtered);
+
+    const allOrderItems = this.getItem<OrderItem>('order_items', []);
+    const filteredItems = allOrderItems.filter((it) => {
+      const itemOrderId = typeof it.order_id === 'object' ? (it.order_id as any)?.id : it.order_id;
+      return Number(itemOrderId) !== Number(id);
+    });
+    this.setItem('order_items', filteredItems);
+    return true;
   }
 
   // Customers
@@ -1258,22 +1274,29 @@ export class LocalOfflineAdapter implements IStorageProvider {
     if (cust.id) {
       const idx = list.findIndex((c) => c.id === cust.id);
       if (idx !== -1) {
-        list[idx] = { ...list[idx], ...cust };
+        list[idx] = { ...list[idx], ...cust, id: cust.id };
         this.setItem('customers', list);
         return list[idx];
       }
     }
     const newCust: Customer = {
-      id: this.generateUniqueId(list),
       organization_id: cust.organization_id || this.getActiveOrgId() || 1,
       name: cust.name || 'مشتری جدید',
       status: 'active',
       date_created: new Date().toISOString(),
       ...cust,
+      id: this.generateUniqueId(list),
     };
     list.push(newCust);
     this.setItem('customers', list);
     return newCust;
+  }
+
+  async deleteCustomer(id: number): Promise<boolean> {
+    const list = this.getItem<Customer>('customers', []);
+    const filtered = list.filter((c) => c.id !== id);
+    this.setItem('customers', filtered);
+    return true;
   }
 
   // Suppliers & Purchase Orders
@@ -1294,22 +1317,29 @@ export class LocalOfflineAdapter implements IStorageProvider {
     if (sup.id) {
       const idx = list.findIndex((s) => s.id === sup.id);
       if (idx !== -1) {
-        list[idx] = { ...list[idx], ...sup };
+        list[idx] = { ...list[idx], ...sup, id: sup.id };
         this.setItem('suppliers', list);
         return list[idx];
       }
     }
     const newSup: Supplier = {
-      id: this.generateUniqueId(list),
       organization_id: sup.organization_id || this.getActiveOrgId() || 1,
       name: sup.name || 'تامین‌کننده جدید',
       status: 'active',
       date_created: new Date().toISOString(),
       ...sup,
+      id: this.generateUniqueId(list),
     };
     list.push(newSup);
     this.setItem('suppliers', list);
     return newSup;
+  }
+
+  async deleteSupplier(id: number): Promise<boolean> {
+    const list = this.getItem<Supplier>('suppliers', []);
+    const filtered = list.filter((s) => s.id !== id);
+    this.setItem('suppliers', filtered);
+    return true;
   }
 
   async getPurchaseOrders(params?: QueryParams): Promise<PurchaseOrder[]> {
@@ -1330,15 +1360,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
     if (po.id) {
       const idx = list.findIndex((p) => p.id === po.id);
       if (idx !== -1) {
-        list[idx] = { ...list[idx], ...po };
+        list[idx] = { ...list[idx], ...po, id: po.id };
         savedPo = list[idx];
         this.setItem('purchase_orders', list);
       } else {
-        savedPo = { id: po.id, ...po } as PurchaseOrder;
+        savedPo = { ...po, id: po.id } as PurchaseOrder;
       }
     } else {
+      const newId = this.generateUniqueId(list);
       savedPo = {
-        id: this.generateUniqueId(list),
         organization_id: po.organization_id || this.getActiveOrgId() || 1,
         supplier_id: po.supplier_id || 1,
         warehouse_id: po.warehouse_id || 1,
@@ -1351,11 +1381,54 @@ export class LocalOfflineAdapter implements IStorageProvider {
         total: po.total || 0,
         date_created: new Date().toISOString(),
         ...po,
+        id: newId,
       };
       list.unshift(savedPo);
       this.setItem('purchase_orders', list);
     }
+
+    if (items && items.length > 0) {
+      const allPoItems = this.getItem<PurchaseOrderItem>('purchase_order_items', []);
+      const filtered = allPoItems.filter((it) => {
+        const poId = typeof it.purchase_order_id === 'object' ? (it.purchase_order_id as any)?.id : it.purchase_order_id;
+        return Number(poId) !== Number(savedPo.id);
+      });
+
+      items.forEach((item) => {
+        const itmId = typeof item.id === 'number' && item.id > 0 ? item.id : this.generateUniqueId(filtered);
+        const qty = Number(item.quantity_ordered) || 1;
+        const cost = Number(item.unit_cost) || 0;
+        const total = item.total !== undefined ? Number(item.total) : qty * cost;
+        filtered.push({
+          organization_id: savedPo.organization_id || this.getActiveOrgId() || 1,
+          purchase_order_id: savedPo.id,
+          variant_id: item.variant_id || 1,
+          quantity_ordered: qty,
+          quantity_received: Number(item.quantity_received) || 0,
+          unit_cost: cost,
+          total,
+          ...item,
+          id: itmId,
+        } as PurchaseOrderItem);
+      });
+      this.setItem('purchase_order_items', filtered);
+    }
+
     return savedPo;
+  }
+
+  async deletePurchaseOrder(id: number): Promise<boolean> {
+    const list = this.getItem<PurchaseOrder>('purchase_orders', []);
+    const filtered = list.filter((p) => p.id !== id);
+    this.setItem('purchase_orders', filtered);
+
+    const allPoItems = this.getItem<PurchaseOrderItem>('purchase_order_items', []);
+    const filteredItems = allPoItems.filter((it) => {
+      const poId = typeof it.purchase_order_id === 'object' ? (it.purchase_order_id as any)?.id : it.purchase_order_id;
+      return Number(poId) !== Number(id);
+    });
+    this.setItem('purchase_order_items', filteredItems);
+    return true;
   }
 
   // Stock Transfers
@@ -1377,15 +1450,15 @@ export class LocalOfflineAdapter implements IStorageProvider {
     if (st.id) {
       const idx = list.findIndex((s) => s.id === st.id);
       if (idx !== -1) {
-        list[idx] = { ...list[idx], ...st };
+        list[idx] = { ...list[idx], ...st, id: st.id };
         savedSt = list[idx];
         this.setItem('stock_transfers', list);
       } else {
-        savedSt = { id: st.id, ...st } as StockTransfer;
+        savedSt = { ...st, id: st.id } as StockTransfer;
       }
     } else {
+      const newId = this.generateUniqueId(list);
       savedSt = {
-        id: this.generateUniqueId(list),
         organization_id: st.organization_id || this.getActiveOrgId() || 1,
         from_warehouse_id: st.from_warehouse_id || 1,
         to_warehouse_id: st.to_warehouse_id || 2,
@@ -1393,11 +1466,48 @@ export class LocalOfflineAdapter implements IStorageProvider {
         status: st.status || 'draft',
         date_created: new Date().toISOString(),
         ...st,
+        id: newId,
       };
       list.unshift(savedSt);
       this.setItem('stock_transfers', list);
     }
+
+    if (items && items.length > 0) {
+      const allTransferItems = this.getItem<StockTransferItem>('stock_transfer_items', []);
+      const filtered = allTransferItems.filter((it) => {
+        const tId = typeof it.transfer_id === 'object' ? (it.transfer_id as any)?.id : it.transfer_id;
+        return Number(tId) !== Number(savedSt.id);
+      });
+
+      items.forEach((item) => {
+        const itmId = typeof item.id === 'number' && item.id > 0 ? item.id : this.generateUniqueId(filtered);
+        filtered.push({
+          organization_id: savedSt.organization_id || this.getActiveOrgId() || 1,
+          transfer_id: savedSt.id,
+          variant_id: item.variant_id || 1,
+          quantity: item.quantity || 1,
+          ...item,
+          id: itmId,
+        });
+      });
+      this.setItem('stock_transfer_items', filtered);
+    }
+
     return savedSt;
+  }
+
+  async deleteStockTransfer(id: number): Promise<boolean> {
+    const list = this.getItem<StockTransfer>('stock_transfers', []);
+    const filtered = list.filter((s) => s.id !== id);
+    this.setItem('stock_transfers', filtered);
+
+    const allTransferItems = this.getItem<StockTransferItem>('stock_transfer_items', []);
+    const filteredItems = allTransferItems.filter((it) => {
+      const tId = typeof it.transfer_id === 'object' ? (it.transfer_id as any)?.id : it.transfer_id;
+      return Number(tId) !== Number(id);
+    });
+    this.setItem('stock_transfer_items', filteredItems);
+    return true;
   }
 
   // Size Guides

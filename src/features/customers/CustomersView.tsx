@@ -24,6 +24,7 @@ import {
   History,
   User,
   CheckCircle2,
+  Trash2,
 } from 'lucide-react';
 
 export const CustomersView: React.FC = () => {
@@ -125,9 +126,23 @@ export const CustomersView: React.FC = () => {
     setIsHistoryModalOpen(true);
   };
 
+  const handleDeleteCustomer = async (cust: Customer) => {
+    if (!cust.id) return;
+    const isConfirmed = window.confirm(`آیا از حذف مشتری «${cust.name}» اطمینان دارید؟`);
+    if (!isConfirmed) return;
+
+    try {
+      const adapter = storageManager.getAdapter();
+      await adapter.deleteCustomer(cust.id);
+      await loadData();
+    } catch (err) {
+      console.error('[CustomersView] Error deleting customer:', err);
+    }
+  };
+
   const filteredCustomers = customers.filter((c) => {
     return (
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      (c.name || '').toLowerCase().includes(search.toLowerCase()) ||
       (c.phone && c.phone.includes(search)) ||
       (c.email && c.email.toLowerCase().includes(search.toLowerCase()))
     );
@@ -135,10 +150,10 @@ export const CustomersView: React.FC = () => {
 
   const getCustomerOrderStats = (customerId: number) => {
     const custOrders = orders.filter((o) => {
-      const cId = typeof o.customer_id === 'object' ? o.customer_id.id : o.customer_id;
-      return cId === customerId;
+      const cId = typeof o.customer_id === 'object' ? (o.customer_id as any)?.id : o.customer_id;
+      return Number(cId) === Number(customerId);
     });
-    const totalSpent = custOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const totalSpent = custOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
     return { count: custOrders.length, totalSpent, orders: custOrders };
   };
 
@@ -253,7 +268,7 @@ export const CustomersView: React.FC = () => {
                 onClick={() => handleOpenHistory(c)}
                 icon={<History className="w-3.5 h-3.5" />}
               >
-                سابقه خریدهای مشتری
+                سابقه
               </Button>
               <Button
                 variant="outline"
@@ -262,6 +277,15 @@ export const CustomersView: React.FC = () => {
                 icon={<Edit className="w-3.5 h-3.5" />}
               >
                 ویرایش
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-rose-600 hover:bg-rose-50"
+                onClick={() => handleDeleteCustomer(c)}
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                حذف
               </Button>
             </div>
           )}

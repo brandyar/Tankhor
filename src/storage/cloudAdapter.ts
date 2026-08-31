@@ -992,113 +992,287 @@ export class CloudDirectusAdapter implements IStorageProvider {
 
   // Orders
   async getOrders(params?: QueryParams): Promise<Order[]> {
-    return directusClient.getItems<Order>('orders', {
-      filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-      sort: '-date_created',
-    });
+    try {
+      const orders = await directusClient.getItems<Order>('orders', {
+        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+        sort: '-date_created',
+      });
+      return orders;
+    } catch {
+      return this.localAdapter.getOrders(params);
+    }
   }
 
   async getOrderItems(orderId: number): Promise<OrderItem[]> {
-    return directusClient.getItems<OrderItem>('order_items', {
-      filter: { order_id: { _eq: orderId } },
-    });
+    try {
+      return await directusClient.getItems<OrderItem>('order_items', {
+        filter: { order_id: { _eq: orderId } },
+      });
+    } catch {
+      return this.localAdapter.getOrderItems(orderId);
+    }
   }
 
   async saveOrder(order: Partial<Order>, items?: Partial<OrderItem>[]): Promise<Order> {
-    let savedOrder: Order;
-    if (order.id) {
-      savedOrder = await directusClient.updateItem<Order>('orders', order.id, order);
-    } else {
-      savedOrder = await directusClient.createItem<Order>('orders', order);
-    }
+    try {
+      const payload: any = { ...order };
+      delete payload.customer_name;
+      delete payload.warehouse_name;
+      delete payload.items_count;
+      delete payload.items;
 
-    if (items && items.length > 0) {
-      for (const item of items) {
-        await directusClient.createItem<OrderItem>('order_items', {
-          ...item,
-          order_id: savedOrder.id,
-          organization_id: savedOrder.organization_id,
-        });
+      let savedOrder: Order;
+      if (payload.id) {
+        const id = payload.id;
+        delete payload.id;
+        savedOrder = await directusClient.updateItem<Order>('orders', id, payload);
+      } else {
+        delete payload.id;
+        savedOrder = await directusClient.createItem<Order>('orders', payload);
       }
+
+      if (items && items.length > 0) {
+        for (const item of items) {
+          const itemPayload: any = { ...item };
+          delete itemPayload.id;
+          await directusClient.createItem<OrderItem>('order_items', {
+            ...itemPayload,
+            order_id: savedOrder.id,
+            organization_id: savedOrder.organization_id,
+          });
+        }
+      }
+
+      await this.localAdapter.saveOrder(savedOrder, items);
+      return savedOrder;
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] Cloud saveOrder failed, using local adapter:', err?.message || err);
+      const saved = await this.localAdapter.saveOrder(order, items);
+      StorageSyncManager.enqueue({ action: order.id ? 'UPDATE' : 'CREATE', collection: 'orders', payload: saved });
+      return saved;
     }
-    return savedOrder;
+  }
+
+  async deleteOrder(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('orders', id);
+      await this.localAdapter.deleteOrder(id);
+      return true;
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] deleteOrder failed, fallback to local:', err?.message || err);
+      const res = await this.localAdapter.deleteOrder(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'orders', payload: { id } });
+      return res;
+    }
   }
 
   // Customers
   async getCustomers(params?: QueryParams): Promise<Customer[]> {
-    return directusClient.getItems<Customer>('customers', {
-      filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-    });
+    try {
+      return await directusClient.getItems<Customer>('customers', {
+        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+      });
+    } catch {
+      return this.localAdapter.getCustomers(params);
+    }
   }
 
   async saveCustomer(cust: Partial<Customer>): Promise<Customer> {
-    if (cust.id) return directusClient.updateItem<Customer>('customers', cust.id, cust);
-    return directusClient.createItem<Customer>('customers', cust);
+    try {
+      const payload: any = { ...cust };
+      let savedCust: Customer;
+      if (payload.id) {
+        const id = payload.id;
+        delete payload.id;
+        savedCust = await directusClient.updateItem<Customer>('customers', id, payload);
+      } else {
+        delete payload.id;
+        savedCust = await directusClient.createItem<Customer>('customers', payload);
+      }
+      await this.localAdapter.saveCustomer(savedCust);
+      return savedCust;
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] saveCustomer failed, fallback to local:', err?.message || err);
+      const saved = await this.localAdapter.saveCustomer(cust);
+      StorageSyncManager.enqueue({ action: cust.id ? 'UPDATE' : 'CREATE', collection: 'customers', payload: saved });
+      return saved;
+    }
+  }
+
+  async deleteCustomer(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('customers', id);
+      await this.localAdapter.deleteCustomer(id);
+      return true;
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] deleteCustomer failed, fallback to local:', err?.message || err);
+      const res = await this.localAdapter.deleteCustomer(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'customers', payload: { id } });
+      return res;
+    }
   }
 
   // Suppliers & Purchase Orders
   async getSuppliers(params?: QueryParams): Promise<Supplier[]> {
-    return directusClient.getItems<Supplier>('suppliers', {
-      filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-    });
+    try {
+      return await directusClient.getItems<Supplier>('suppliers', {
+        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+      });
+    } catch {
+      return this.localAdapter.getSuppliers(params);
+    }
   }
 
   async saveSupplier(sup: Partial<Supplier>): Promise<Supplier> {
-    if (sup.id) return directusClient.updateItem<Supplier>('suppliers', sup.id, sup);
-    return directusClient.createItem<Supplier>('suppliers', sup);
+    try {
+      const payload: any = { ...sup };
+      let savedSup: Supplier;
+      if (payload.id) {
+        const id = payload.id;
+        delete payload.id;
+        savedSup = await directusClient.updateItem<Supplier>('suppliers', id, payload);
+      } else {
+        delete payload.id;
+        savedSup = await directusClient.createItem<Supplier>('suppliers', payload);
+      }
+      await this.localAdapter.saveSupplier(savedSup);
+      return savedSup;
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] saveSupplier failed, fallback to local:', err?.message || err);
+      const saved = await this.localAdapter.saveSupplier(sup);
+      StorageSyncManager.enqueue({ action: sup.id ? 'UPDATE' : 'CREATE', collection: 'suppliers', payload: saved });
+      return saved;
+    }
+  }
+
+  async deleteSupplier(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('suppliers', id);
+      await this.localAdapter.deleteSupplier(id);
+      return true;
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] deleteSupplier failed, fallback to local:', err?.message || err);
+      const res = await this.localAdapter.deleteSupplier(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'suppliers', payload: { id } });
+      return res;
+    }
   }
 
   async getPurchaseOrders(params?: QueryParams): Promise<PurchaseOrder[]> {
-    return directusClient.getItems<PurchaseOrder>('purchase_orders', {
-      filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-    });
+    try {
+      return await directusClient.getItems<PurchaseOrder>('purchase_orders', {
+        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+      });
+    } catch {
+      return this.localAdapter.getPurchaseOrders(params);
+    }
   }
 
   async savePurchaseOrder(po: Partial<PurchaseOrder>, items?: Partial<PurchaseOrderItem>[]): Promise<PurchaseOrder> {
-    let savedPo: PurchaseOrder;
-    if (po.id) {
-      savedPo = await directusClient.updateItem<PurchaseOrder>('purchase_orders', po.id, po);
-    } else {
-      savedPo = await directusClient.createItem<PurchaseOrder>('purchase_orders', po);
-    }
-
-    if (items && items.length > 0) {
-      for (const item of items) {
-        await directusClient.createItem<PurchaseOrderItem>('purchase_order_items', {
-          ...item,
-          purchase_order_id: savedPo.id,
-          organization_id: savedPo.organization_id,
-        });
+    try {
+      const payload: any = { ...po };
+      let savedPo: PurchaseOrder;
+      if (payload.id) {
+        const id = payload.id;
+        delete payload.id;
+        savedPo = await directusClient.updateItem<PurchaseOrder>('purchase_orders', id, payload);
+      } else {
+        delete payload.id;
+        savedPo = await directusClient.createItem<PurchaseOrder>('purchase_orders', payload);
       }
+
+      if (items && items.length > 0) {
+        for (const item of items) {
+          const itemPayload: any = { ...item };
+          delete itemPayload.id;
+          await directusClient.createItem<PurchaseOrderItem>('purchase_order_items', {
+            ...itemPayload,
+            purchase_order_id: savedPo.id,
+            organization_id: savedPo.organization_id,
+          });
+        }
+      }
+
+      await this.localAdapter.savePurchaseOrder(savedPo, items);
+      return savedPo;
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] savePurchaseOrder failed, fallback to local:', err?.message || err);
+      const saved = await this.localAdapter.savePurchaseOrder(po, items);
+      StorageSyncManager.enqueue({ action: po.id ? 'UPDATE' : 'CREATE', collection: 'purchase_orders', payload: saved });
+      return saved;
     }
-    return savedPo;
+  }
+
+  async deletePurchaseOrder(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('purchase_orders', id);
+      await this.localAdapter.deletePurchaseOrder(id);
+      return true;
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] deletePurchaseOrder failed, fallback to local:', err?.message || err);
+      const res = await this.localAdapter.deletePurchaseOrder(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'purchase_orders', payload: { id } });
+      return res;
+    }
   }
 
   // Stock Transfers
   async getStockTransfers(params?: QueryParams): Promise<StockTransfer[]> {
-    return directusClient.getItems<StockTransfer>('stock_transfers', {
-      filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-    });
+    try {
+      return await directusClient.getItems<StockTransfer>('stock_transfers', {
+        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+      });
+    } catch {
+      return this.localAdapter.getStockTransfers(params);
+    }
   }
 
   async saveStockTransfer(st: Partial<StockTransfer>, items?: Partial<StockTransferItem>[]): Promise<StockTransfer> {
-    let savedSt: StockTransfer;
-    if (st.id) {
-      savedSt = await directusClient.updateItem<StockTransfer>('stock_transfers', st.id, st);
-    } else {
-      savedSt = await directusClient.createItem<StockTransfer>('stock_transfers', st);
-    }
-
-    if (items && items.length > 0) {
-      for (const item of items) {
-        await directusClient.createItem<StockTransferItem>('stock_transfer_items', {
-          ...item,
-          transfer_id: savedSt.id,
-          organization_id: savedSt.organization_id,
-        });
+    try {
+      const payload: any = { ...st };
+      let savedSt: StockTransfer;
+      if (payload.id) {
+        const id = payload.id;
+        delete payload.id;
+        savedSt = await directusClient.updateItem<StockTransfer>('stock_transfers', id, payload);
+      } else {
+        delete payload.id;
+        savedSt = await directusClient.createItem<StockTransfer>('stock_transfers', payload);
       }
+
+      if (items && items.length > 0) {
+        for (const item of items) {
+          const itemPayload: any = { ...item };
+          delete itemPayload.id;
+          await directusClient.createItem<StockTransferItem>('stock_transfer_items', {
+            ...itemPayload,
+            transfer_id: savedSt.id,
+            organization_id: savedSt.organization_id,
+          });
+        }
+      }
+
+      await this.localAdapter.saveStockTransfer(savedSt, items);
+      return savedSt;
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] saveStockTransfer failed, fallback to local:', err?.message || err);
+      const saved = await this.localAdapter.saveStockTransfer(st, items);
+      StorageSyncManager.enqueue({ action: st.id ? 'UPDATE' : 'CREATE', collection: 'stock_transfers', payload: saved });
+      return saved;
     }
-    return savedSt;
+  }
+
+  async deleteStockTransfer(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('stock_transfers', id);
+      await this.localAdapter.deleteStockTransfer(id);
+      return true;
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] deleteStockTransfer failed, fallback to local:', err?.message || err);
+      const res = await this.localAdapter.deleteStockTransfer(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'stock_transfers', payload: { id } });
+      return res;
+    }
   }
 
   // Size Guides

@@ -432,25 +432,25 @@ export class SqliteStorageAdapter implements IStorageProvider {
         };
       } else {
         saved = {
-          id: pId,
           organization_id: product.organization_id || 1,
           title: product.title || '',
           slug: product.slug || `prod-${pId}`,
           status: product.status || 'published',
           date_created: new Date().toISOString(),
           ...product,
+          id: pId,
         };
       }
     } else {
       const newId = this.generateUniqueId(list);
       saved = {
-        id: newId,
         organization_id: product.organization_id || 1,
         title: product.title || '',
         slug: product.slug || `prod-${newId}`,
         status: product.status || 'published',
         date_created: new Date().toISOString(),
         ...product,
+        id: newId,
       };
     }
 
@@ -543,7 +543,6 @@ export class SqliteStorageAdapter implements IStorageProvider {
         };
       } else {
         saved = {
-          id: vId,
           organization_id: variant.organization_id || 1,
           product_id: productId || 0,
           color_id: colorId,
@@ -551,11 +550,12 @@ export class SqliteStorageAdapter implements IStorageProvider {
           sku: variant.sku || `SKU-${Date.now().toString().slice(-6)}`,
           status: 'published',
           ...variant,
+          id: vId,
         };
       }
     } else {
+      const newVarId = this.generateUniqueId(list);
       saved = {
-        id: this.generateUniqueId(list),
         organization_id: variant.organization_id || 1,
         product_id: productId || 0,
         color_id: colorId,
@@ -564,6 +564,7 @@ export class SqliteStorageAdapter implements IStorageProvider {
         status: 'published',
         date_created: new Date().toISOString(),
         ...variant,
+        id: newVarId,
       };
     }
 
@@ -650,14 +651,14 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveCategory(cat: Partial<Category>): Promise<Category> {
     const list = await this.getItems<Category>('categories');
-    const id = cat.id || this.generateUniqueId(list);
+    const validId = typeof cat.id === 'number' && cat.id > 0 ? cat.id : this.generateUniqueId(list);
     const saved: Category = {
-      id,
       name: cat.name || 'دسته‌بندی جدید',
-      slug: cat.slug || `cat-${id}`,
+      slug: cat.slug || `cat-${validId}`,
       status: 'active',
       organization_id: cat.organization_id || 1,
       ...cat,
+      id: validId,
     };
     await this.saveItem('categories', saved);
     return saved;
@@ -671,14 +672,14 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveCollection(col: Partial<Collection>): Promise<Collection> {
     const list = await this.getItems<Collection>('collections');
-    const id = col.id || this.generateUniqueId(list);
+    const validId = typeof col.id === 'number' && col.id > 0 ? col.id : this.generateUniqueId(list);
     const saved: Collection = {
-      id,
       name: col.name || 'کالکشن جدید',
-      slug: col.slug || `col-${id}`,
+      slug: col.slug || `col-${validId}`,
       status: 'active',
       organization_id: col.organization_id || 1,
       ...col,
+      id: validId,
     };
     await this.saveItem('collections', saved);
     return saved;
@@ -692,8 +693,14 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveBrand(brand: Partial<Brand>): Promise<Brand> {
     const list = await this.getItems<Brand>('brands');
-    const id = brand.id || this.generateUniqueId(list);
-    const saved: Brand = { id, name: brand.name || 'برند جدید', status: 'active', organization_id: brand.organization_id || 1, ...brand };
+    const validId = typeof brand.id === 'number' && brand.id > 0 ? brand.id : this.generateUniqueId(list);
+    const saved: Brand = {
+      name: brand.name || 'برند جدید',
+      status: 'active',
+      organization_id: brand.organization_id || 1,
+      ...brand,
+      id: validId,
+    };
     await this.saveItem('brands', saved);
     return saved;
   }
@@ -706,8 +713,14 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveSeason(season: Partial<Season>): Promise<Season> {
     const list = await this.getItems<Season>('seasons');
-    const id = season.id || this.generateUniqueId(list);
-    const saved: Season = { id, name: season.name || 'فصل جدید', status: 'active', organization_id: season.organization_id || 1, ...season };
+    const validId = typeof season.id === 'number' && season.id > 0 ? season.id : this.generateUniqueId(list);
+    const saved: Season = {
+      name: season.name || 'فصل جدید',
+      status: 'active',
+      organization_id: season.organization_id || 1,
+      ...season,
+      id: validId,
+    };
     await this.saveItem('seasons', saved);
     return saved;
   }
@@ -720,8 +733,15 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveColor(color: Partial<Color>): Promise<Color> {
     const list = await this.getItems<Color>('colors');
-    const id = color.id || this.generateUniqueId(list);
-    const saved: Color = { id, name: color.name || 'رنگ جدید', hex: color.hex || '#000000', status: 'active', organization_id: color.organization_id || 1, ...color };
+    const validId = typeof color.id === 'number' && color.id > 0 ? color.id : this.generateUniqueId(list);
+    const saved: Color = {
+      name: color.name || 'رنگ جدید',
+      hex: color.hex || '#000000',
+      status: 'active',
+      organization_id: color.organization_id || 1,
+      ...color,
+      id: validId,
+    };
     await this.saveItem('colors', saved);
     return saved;
   }
@@ -734,8 +754,15 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveSizeGroup(group: Partial<SizeGroup>): Promise<SizeGroup> {
     const list = await this.getItems<SizeGroup>('size_groups');
-    const id = group.id || this.generateUniqueId(list);
-    const saved: SizeGroup = { id, name: group.name || 'گروه سایز جدید', category: group.category || 'apparel', status: 'active', organization_id: group.organization_id || 1, ...group };
+    const validId = typeof group.id === 'number' && group.id > 0 ? group.id : this.generateUniqueId(list);
+    const saved: SizeGroup = {
+      name: group.name || 'گروه سایز جدید',
+      category: group.category || 'apparel',
+      status: 'active',
+      organization_id: group.organization_id || 1,
+      ...group,
+      id: validId,
+    };
     await this.saveItem('size_groups', saved);
     return saved;
   }
@@ -748,8 +775,14 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveSize(size: Partial<Size>): Promise<Size> {
     const list = await this.getItems<Size>('sizes');
-    const id = size.id || this.generateUniqueId(list);
-    const saved: Size = { id, name: size.name || 'سایز جدید', status: 'active', organization_id: size.organization_id || 1, ...size };
+    const validId = typeof size.id === 'number' && size.id > 0 ? size.id : this.generateUniqueId(list);
+    const saved: Size = {
+      name: size.name || 'سایز جدید',
+      status: 'active',
+      organization_id: size.organization_id || 1,
+      ...size,
+      id: validId,
+    };
     await this.saveItem('sizes', saved);
     return saved;
   }
@@ -765,14 +798,14 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveWarehouse(wh: Partial<Warehouse>): Promise<Warehouse> {
     const list = await this.getItems<Warehouse>('warehouses');
-    const id = wh.id || this.generateUniqueId(list);
+    const validId = typeof wh.id === 'number' && wh.id > 0 ? wh.id : this.generateUniqueId(list);
     const saved: Warehouse = {
-      id,
       name: wh.name || 'انبار جدید',
       type: wh.type || 'warehouse',
       status: 'active',
       organization_id: wh.organization_id || 1,
       ...wh,
+      id: validId,
     };
     await this.saveItem('warehouses', saved);
     return saved;
@@ -799,14 +832,14 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveWarehouseLocation(loc: Partial<WarehouseLocation>): Promise<WarehouseLocation> {
     const list = await this.getItems<WarehouseLocation>('warehouse_locations');
-    const id = loc.id || this.generateUniqueId(list);
+    const validId = typeof loc.id === 'number' && loc.id > 0 ? loc.id : this.generateUniqueId(list);
     const saved: WarehouseLocation = {
-      id,
       name: loc.name || 'موقعیت جدید',
       warehouse_id: loc.warehouse_id || 1,
       type: loc.type || 'rack',
       status: 'active',
       ...loc,
+      id: validId,
     };
     await this.saveItem('warehouse_locations', saved);
     return saved;
@@ -875,14 +908,13 @@ export class SqliteStorageAdapter implements IStorageProvider {
 
   async saveInventoryItem(item: Partial<InventoryItem>): Promise<InventoryItem> {
     const list = await this.getItems<InventoryItem>('inventory_items');
-    const id = item.id || this.generateUniqueId(list);
+    const validId = typeof item.id === 'number' && item.id > 0 ? item.id : this.generateUniqueId(list);
     const qty = Math.max(0, Number(item.quantity) || 0);
     const reserved = Math.max(0, Number(item.reserved_quantity) || 0);
     const damaged = Math.max(0, Number(item.damaged_quantity) || 0);
     const available = Math.max(0, qty - reserved - damaged);
 
     const saved: InventoryItem = {
-      id,
       variant_id: item.variant_id || 0,
       warehouse_id: item.warehouse_id || 1,
       quantity: qty,
@@ -891,6 +923,7 @@ export class SqliteStorageAdapter implements IStorageProvider {
       available_quantity: available,
       organization_id: item.organization_id || 1,
       ...item,
+      id: validId,
     };
     await this.saveItem('inventory_items', saved);
     return saved;
@@ -923,9 +956,8 @@ export class SqliteStorageAdapter implements IStorageProvider {
 
   async recordMovement(movement: Partial<InventoryMovement>): Promise<InventoryMovement> {
     const list = await this.getItems<InventoryMovement>('inventory_movements');
-    const id = movement.id || this.generateUniqueId(list);
+    const validId = typeof movement.id === 'number' && movement.id > 0 ? movement.id : this.generateUniqueId(list);
     const saved: InventoryMovement = {
-      id,
       organization_id: movement.organization_id || 1,
       variant_id: movement.variant_id || 1,
       warehouse_id: movement.warehouse_id || 1,
@@ -934,6 +966,7 @@ export class SqliteStorageAdapter implements IStorageProvider {
       reference_type: movement.reference_type || 'manual',
       created_at: new Date().toISOString(),
       ...movement,
+      id: validId,
     };
     await this.saveItem('inventory_movements', saved);
     return saved;
@@ -956,9 +989,8 @@ export class SqliteStorageAdapter implements IStorageProvider {
 
   async saveOrder(order: Partial<Order>, items?: Partial<OrderItem>[]): Promise<Order> {
     const list = await this.getItems<Order>('orders');
-    const id = order.id || this.generateUniqueId(list);
+    const validId = typeof order.id === 'number' && order.id > 0 ? order.id : this.generateUniqueId(list);
     const savedOrder: Order = {
-      id,
       warehouse_id: order.warehouse_id || 1,
       order_number: order.order_number || `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
       status: order.status || 'draft',
@@ -971,16 +1003,15 @@ export class SqliteStorageAdapter implements IStorageProvider {
       date_created: new Date().toISOString(),
       organization_id: order.organization_id || 1,
       ...order,
+      id: validId,
     };
     await this.saveItem('orders', savedOrder);
 
     if (items && Array.isArray(items) && items.length > 0) {
       const allOrderItems = await this.getItems<OrderItem>('order_items');
       for (const itm of items) {
-        const itmId = itm.id || this.generateUniqueId(allOrderItems);
-        await this.saveItem('order_items', {
-          id: itmId,
-          order_id: id,
+        const itmId = typeof itm.id === 'number' && itm.id > 0 ? itm.id : this.generateUniqueId(allOrderItems);
+        const savedItem: OrderItem = {
           variant_id: itm.variant_id || 1,
           quantity: itm.quantity || 1,
           unit_price: itm.unit_price || 0,
@@ -988,11 +1019,27 @@ export class SqliteStorageAdapter implements IStorageProvider {
           total: itm.total || ((itm.quantity || 1) * (itm.unit_price || 0)),
           created_at: new Date().toISOString(),
           ...itm,
-        });
+          id: itmId,
+          order_id: validId,
+          organization_id: savedOrder.organization_id || 1,
+        };
+        await this.saveItem('order_items', savedItem);
       }
     }
 
     return savedOrder;
+  }
+
+  async deleteOrder(id: number): Promise<boolean> {
+    await this.deleteItem('orders', id);
+    const allOrderItems = await this.getItems<OrderItem>('order_items');
+    for (const itm of allOrderItems) {
+      const itemOrderId = typeof itm.order_id === 'object' ? (itm.order_id as any)?.id : itm.order_id;
+      if (Number(itemOrderId) === Number(id)) {
+        await this.deleteItem('order_items', itm.id);
+      }
+    }
+    return true;
   }
 
   // ==========================================
@@ -1003,17 +1050,20 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveCustomer(cust: Partial<Customer>): Promise<Customer> {
     const list = await this.getItems<Customer>('customers');
-    const id = cust.id || this.generateUniqueId(list);
+    const validId = typeof cust.id === 'number' && cust.id > 0 ? cust.id : this.generateUniqueId(list);
     const saved: Customer = {
-      id,
       name: cust.name || 'مشتری جدید',
       status: 'active',
       date_created: new Date().toISOString(),
       organization_id: cust.organization_id || 1,
       ...cust,
+      id: validId,
     };
     await this.saveItem('customers', saved);
     return saved;
+  }
+  async deleteCustomer(id: number): Promise<boolean> {
+    return this.deleteItem('customers', id);
   }
 
   // ==========================================
@@ -1024,17 +1074,20 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveSupplier(sup: Partial<Supplier>): Promise<Supplier> {
     const list = await this.getItems<Supplier>('suppliers');
-    const id = sup.id || this.generateUniqueId(list);
+    const validId = typeof sup.id === 'number' && sup.id > 0 ? sup.id : this.generateUniqueId(list);
     const saved: Supplier = {
-      id,
       name: sup.name || 'تامین‌کننده جدید',
       status: 'active',
       date_created: new Date().toISOString(),
       organization_id: sup.organization_id || 1,
       ...sup,
+      id: validId,
     };
     await this.saveItem('suppliers', saved);
     return saved;
+  }
+  async deleteSupplier(id: number): Promise<boolean> {
+    return this.deleteItem('suppliers', id);
   }
 
   async getPurchaseOrders(params?: QueryParams): Promise<PurchaseOrder[]> {
@@ -1042,9 +1095,8 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async savePurchaseOrder(po: Partial<PurchaseOrder>, items?: Partial<PurchaseOrderItem>[]): Promise<PurchaseOrder> {
     const list = await this.getItems<PurchaseOrder>('purchase_orders');
-    const id = po.id || this.generateUniqueId(list);
+    const validId = typeof po.id === 'number' && po.id > 0 ? po.id : this.generateUniqueId(list);
     const saved: PurchaseOrder = {
-      id,
       supplier_id: po.supplier_id || 1,
       warehouse_id: po.warehouse_id || 1,
       purchase_number: po.purchase_number || `PO-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -1057,25 +1109,37 @@ export class SqliteStorageAdapter implements IStorageProvider {
       date_created: new Date().toISOString(),
       organization_id: po.organization_id || 1,
       ...po,
+      id: validId,
     };
     await this.saveItem('purchase_orders', saved);
 
     if (items && Array.isArray(items) && items.length > 0) {
       const allPoItems = await this.getItems<PurchaseOrderItem>('purchase_order_items');
       for (const itm of items) {
-        const itmId = itm.id || this.generateUniqueId(allPoItems);
+        const itmId = typeof itm.id === 'number' && itm.id > 0 ? itm.id : this.generateUniqueId(allPoItems);
         await this.saveItem('purchase_order_items', {
-          id: itmId,
-          purchase_order_id: id,
           variant_id: itm.variant_id || 1,
           quantity_ordered: itm.quantity_ordered || 1,
           quantity_received: itm.quantity_received || 0,
           unit_cost: itm.unit_cost || 0,
           ...itm,
+          id: itmId,
+          purchase_order_id: validId,
         });
       }
     }
     return saved;
+  }
+  async deletePurchaseOrder(id: number): Promise<boolean> {
+    await this.deleteItem('purchase_orders', id);
+    const allPoItems = await this.getItems<PurchaseOrderItem>('purchase_order_items');
+    for (const itm of allPoItems) {
+      const poId = typeof itm.purchase_order_id === 'object' ? (itm.purchase_order_id as any)?.id : itm.purchase_order_id;
+      if (Number(poId) === Number(id)) {
+        await this.deleteItem('purchase_order_items', itm.id);
+      }
+    }
+    return true;
   }
 
   // ==========================================
@@ -1086,9 +1150,8 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveStockTransfer(st: Partial<StockTransfer>, items?: Partial<StockTransferItem>[]): Promise<StockTransfer> {
     const list = await this.getItems<StockTransfer>('stock_transfers');
-    const id = st.id || this.generateUniqueId(list);
+    const validId = typeof st.id === 'number' && st.id > 0 ? st.id : this.generateUniqueId(list);
     const saved: StockTransfer = {
-      id,
       from_warehouse_id: st.from_warehouse_id || 1,
       to_warehouse_id: st.to_warehouse_id || 2,
       transfer_number: st.transfer_number || `TRF-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -1096,23 +1159,35 @@ export class SqliteStorageAdapter implements IStorageProvider {
       date_created: new Date().toISOString(),
       organization_id: st.organization_id || 1,
       ...st,
+      id: validId,
     };
     await this.saveItem('stock_transfers', saved);
 
     if (items && Array.isArray(items) && items.length > 0) {
       const allTransferItems = await this.getItems<StockTransferItem>('stock_transfer_items');
       for (const itm of items) {
-        const itmId = itm.id || this.generateUniqueId(allTransferItems);
+        const itmId = typeof itm.id === 'number' && itm.id > 0 ? itm.id : this.generateUniqueId(allTransferItems);
         await this.saveItem('stock_transfer_items', {
-          id: itmId,
-          transfer_id: id,
           variant_id: itm.variant_id || 1,
           quantity: itm.quantity || 1,
           ...itm,
+          id: itmId,
+          transfer_id: validId,
         });
       }
     }
     return saved;
+  }
+  async deleteStockTransfer(id: number): Promise<boolean> {
+    await this.deleteItem('stock_transfers', id);
+    const allTransferItems = await this.getItems<StockTransferItem>('stock_transfer_items');
+    for (const itm of allTransferItems) {
+      const tId = typeof itm.transfer_id === 'object' ? (itm.transfer_id as any)?.id : itm.transfer_id;
+      if (Number(tId) === Number(id)) {
+        await this.deleteItem('stock_transfer_items', itm.id);
+      }
+    }
+    return true;
   }
 
   // ==========================================
@@ -1123,9 +1198,8 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveSizeGuideTemplate(tpl: Partial<SizeGuideTemplate>): Promise<SizeGuideTemplate> {
     const list = await this.getItems<SizeGuideTemplate>('size_guide_templates');
-    const id = tpl.id || this.generateUniqueId(list);
+    const validId = typeof tpl.id === 'number' && tpl.id > 0 ? tpl.id : this.generateUniqueId(list);
     const saved: SizeGuideTemplate = {
-      id,
       name: tpl.name || 'قالب راهنمای سایز جدید',
       type: tpl.type || 'apparel',
       unit: tpl.unit || 'cm',
@@ -1133,6 +1207,7 @@ export class SqliteStorageAdapter implements IStorageProvider {
       date_created: new Date().toISOString(),
       organization_id: tpl.organization_id || 1,
       ...tpl,
+      id: validId,
     };
     await this.saveItem('size_guide_templates', saved);
     return saved;
@@ -1147,15 +1222,15 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveSizeGuideMeasurement(meas: Partial<SizeGuideMeasurement>): Promise<SizeGuideMeasurement> {
     const list = await this.getItems<SizeGuideMeasurement>('size_guide_measurements');
-    const id = meas.id || this.generateUniqueId(list);
+    const validId = typeof meas.id === 'number' && meas.id > 0 ? meas.id : this.generateUniqueId(list);
     const saved: SizeGuideMeasurement = {
-      id,
       name: meas.name || 'اندازه جدید',
       template_id: meas.template_id || 1,
       unit: meas.unit || 'cm',
       type: meas.type || 'width',
       status: 'active',
       ...meas,
+      id: validId,
     };
     await this.saveItem('size_guide_measurements', saved);
     return saved;
@@ -1170,14 +1245,14 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async saveSizeGuideValue(val: Partial<SizeGuideValue>): Promise<SizeGuideValue> {
     const list = await this.getItems<SizeGuideValue>('size_guide_values');
-    const id = val.id || this.generateUniqueId(list);
+    const validId = typeof val.id === 'number' && val.id > 0 ? val.id : this.generateUniqueId(list);
     const saved: SizeGuideValue = {
-      id,
       template_id: val.template_id || 1,
       size_id: val.size_id || 1,
       measurement_id: val.measurement_id || 1,
       value: val.value || 0,
       ...val,
+      id: validId,
     };
     await this.saveItem('size_guide_values', saved);
     return saved;

@@ -34,6 +34,7 @@ import {
   Building2,
   AlertCircle,
   Tag,
+  Trash2,
 } from 'lucide-react';
 
 interface OrdersViewProps {
@@ -87,15 +88,15 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
       ]);
 
       const enriched = orderList.map((ord) => {
-        const custId = typeof ord.customer_id === 'object' ? ord.customer_id.id : ord.customer_id;
-        const cust = custList.find((c) => c.id === custId);
-        const whId = typeof ord.warehouse_id === 'object' ? ord.warehouse_id.id : ord.warehouse_id;
-        const wh = whList.find((w) => w.id === whId);
+        const custId = typeof ord.customer_id === 'object' ? (ord.customer_id as any)?.id : ord.customer_id;
+        const cust = custList.find((c) => Number(c.id) === Number(custId));
+        const whId = typeof ord.warehouse_id === 'object' ? (ord.warehouse_id as any)?.id : ord.warehouse_id;
+        const wh = whList.find((w) => Number(w.id) === Number(whId));
 
         return {
           ...ord,
-          customer_name: cust ? cust.name : 'مشتری عمومی (کافه‌فروش)',
-          warehouse_name: wh ? wh.name : 'انبار اصلی',
+          customer_name: cust ? cust.name : ((ord as any).customer_name || 'مشتری عمومی (کافه‌فروش)'),
+          warehouse_name: wh ? wh.name : ((ord as any).warehouse_name || 'انبار اصلی'),
         };
       });
 
@@ -115,6 +116,24 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
     loadData();
   }, [activeOrganization]);
 
+  const handleDeleteOrder = async (ord: Order) => {
+    if (!ord.id) return;
+    const isConfirmed = window.confirm(`آیا از حذف سفارش شماره «${ord.order_number}» اطمینان دارید؟`);
+    if (!isConfirmed) return;
+
+    try {
+      const adapter = storageManager.getAdapter();
+      await adapter.deleteOrder(ord.id);
+      if (selectedOrder?.id === ord.id) {
+        setIsDetailModalOpen(false);
+        setSelectedOrder(null);
+      }
+      await loadData();
+    } catch (err) {
+      console.error('[OrdersView] Error deleting order:', err);
+    }
+  };
+
   const handleOpenOrderDetails = async (ord: Order) => {
     setSelectedOrder(ord);
     setIsDetailModalOpen(true);
@@ -125,16 +144,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
       const rawItems = await adapter.getOrderItems(ord.id);
 
       const itemsDisplay: OrderItemDisplay[] = rawItems.map((it) => {
-        const varId = typeof it.variant_id === 'object' ? it.variant_id.id : it.variant_id;
-        const matchedVar = variants.find((v) => v.id === varId);
+        const varId = typeof it.variant_id === 'object' ? (it.variant_id as any)?.id : it.variant_id;
+        const matchedVar = variants.find((v) => Number(v.id) === Number(varId));
         let prodTitle = 'کالای سفارش داده شده';
         let sku = it.variant_sku || matchedVar?.sku || '-';
         let colorName = matchedVar?.color_name;
         let sizeName = matchedVar?.size_name;
 
         if (matchedVar) {
-          const prodId = typeof matchedVar.product_id === 'object' ? matchedVar.product_id.id : matchedVar.product_id;
-          const matchedProd = products.find((p) => p.id === prodId);
+          const prodId = typeof matchedVar.product_id === 'object' ? (matchedVar.product_id as any)?.id : matchedVar.product_id;
+          const matchedProd = products.find((p) => Number(p.id) === Number(prodId));
           if (matchedProd) prodTitle = matchedProd.title;
         }
 
@@ -473,7 +492,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
                 onClick={() => handleOpenOrderDetails(ord)}
                 icon={<Eye className="w-3.5 h-3.5" />}
               >
-                جزییات و چاپ فاکتور
+                جزییات و چاپ
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-rose-600 hover:bg-rose-50"
+                onClick={() => handleDeleteOrder(ord)}
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                حذف
               </Button>
             </div>
           )}

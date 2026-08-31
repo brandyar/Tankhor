@@ -33,6 +33,7 @@ import {
   Calendar,
   AlertCircle,
   FileText,
+  Trash2,
 } from 'lucide-react';
 
 export const TransfersView: React.FC = () => {
@@ -182,8 +183,8 @@ export const TransfersView: React.FC = () => {
   const handleUpdateStatus = async (transfer: StockTransfer, newStatus: TransferStatus) => {
     try {
       const adapter = storageManager.getAdapter();
-      const fromId = typeof transfer.from_warehouse_id === 'object' ? transfer.from_warehouse_id.id : transfer.from_warehouse_id;
-      const toId = typeof transfer.to_warehouse_id === 'object' ? transfer.to_warehouse_id.id : transfer.to_warehouse_id;
+      const fromId = typeof transfer.from_warehouse_id === 'object' ? (transfer.from_warehouse_id as any)?.id : transfer.from_warehouse_id;
+      const toId = typeof transfer.to_warehouse_id === 'object' ? (transfer.to_warehouse_id as any)?.id : transfer.to_warehouse_id;
 
       const updated = await adapter.saveStockTransfer({
         id: transfer.id,
@@ -222,6 +223,24 @@ export const TransfersView: React.FC = () => {
       await loadData();
     } catch (err) {
       console.error('[TransfersView] Error updating transfer status:', err);
+    }
+  };
+
+  const handleDeleteTransfer = async (trf: StockTransfer) => {
+    if (!trf.id) return;
+    const isConfirmed = window.confirm(`آیا از حذف حواله انتقال «${trf.transfer_number}» اطمینان دارید؟`);
+    if (!isConfirmed) return;
+
+    try {
+      const adapter = storageManager.getAdapter();
+      await adapter.deleteStockTransfer(trf.id);
+      if (selectedTransfer?.id === trf.id) {
+        setIsDetailModalOpen(false);
+        setSelectedTransfer(null);
+      }
+      await loadData();
+    } catch (err) {
+      console.error('[TransfersView] Error deleting transfer:', err);
     }
   };
 
@@ -424,6 +443,16 @@ export const TransfersView: React.FC = () => {
                   تایید تحویل
                 </Button>
               )}
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-rose-600 hover:bg-rose-50"
+                onClick={() => handleDeleteTransfer(trf)}
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                حذف
+              </Button>
             </div>
           )}
         />

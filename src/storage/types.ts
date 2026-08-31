@@ -104,21 +104,26 @@ export interface IStorageProvider {
   getOrders(params?: QueryParams): Promise<Order[]>;
   getOrderItems(orderId: number): Promise<OrderItem[]>;
   saveOrder(order: Partial<Order>, items?: Partial<OrderItem>[]): Promise<Order>;
+  deleteOrder?(id: number): Promise<boolean>;
 
   // Customers
   getCustomers(params?: QueryParams): Promise<Customer[]>;
   saveCustomer(cust: Partial<Customer>): Promise<Customer>;
+  deleteCustomer?(id: number): Promise<boolean>;
 
   // Suppliers & Purchase Orders
   getSuppliers(params?: QueryParams): Promise<Supplier[]>;
   saveSupplier(sup: Partial<Supplier>): Promise<Supplier>;
+  deleteSupplier?(id: number): Promise<boolean>;
 
   getPurchaseOrders(params?: QueryParams): Promise<PurchaseOrder[]>;
   savePurchaseOrder(po: Partial<PurchaseOrder>, items?: Partial<PurchaseOrderItem>[]): Promise<PurchaseOrder>;
+  deletePurchaseOrder?(id: number): Promise<boolean>;
 
   // Stock Transfers
   getStockTransfers(params?: QueryParams): Promise<StockTransfer[]>;
   saveStockTransfer(st: Partial<StockTransfer>, items?: Partial<StockTransferItem>[]): Promise<StockTransfer>;
+  deleteStockTransfer?(id: number): Promise<boolean>;
 
   // Size Guides
   getSizeGuideTemplates(params?: QueryParams): Promise<SizeGuideTemplate[]>;
