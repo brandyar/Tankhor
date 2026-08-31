@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useOrganization } from '../../context/OrganizationContext';
 import { useAuth } from '../../context/AuthContext';
 import { storageManager } from '../../storage';
+import { useProjectSettings } from '../../hooks/useProjectSettings';
 import { Button } from '../ui/Button';
 import {
   Download,
@@ -14,20 +15,23 @@ import {
   LogOut,
   ChevronDown,
   ShieldAlert,
-  Laptop,
-  Layers,
-  ArrowRight,
+  Smartphone,
   ExternalLink,
+  Laptop,
+  ArrowDownToLine,
+  RefreshCw,
 } from 'lucide-react';
 
 export const WebFreePlanGuardModal: React.FC = () => {
-  const { organizations, activeOrganization, selectOrganization, updateActiveOrganization, refreshOrganizations, isOwner } = useOrganization();
-  const { user, logout } = useAuth();
+  const { organizations, activeOrganization, selectOrganization, updateActiveOrganization, refreshOrganizations } = useOrganization();
+  const { logout } = useAuth();
+  const { settings, loading: settingsLoading } = useProjectSettings();
 
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showOrgSelector, setShowOrgSelector] = useState(false);
+  const [downloadNote, setDownloadNote] = useState<string | null>(null);
 
   const handleInstantUpgrade = async () => {
     if (!activeOrganization) return;
@@ -46,13 +50,39 @@ export const WebFreePlanGuardModal: React.FC = () => {
     }
   };
 
-  const handleDownloadApp = (platform: 'windows' | 'mac' | 'linux') => {
-    // Generate a direct link or guide user to desktop build download
-    const filename = platform === 'windows' ? 'Tankhor-Desktop-Setup.exe' : platform === 'mac' ? 'Tankhor-Desktop.dmg' : 'Tankhor-Desktop.AppImage';
-    const fakeBlob = new Blob([
-      `TANKHOR Desktop Application - ${platform.toUpperCase()}\nTo install native desktop version with SQLite offline support, download official releases at https://tankhor.com/desktop`
-    ], { type: 'text/plain' });
-    const url = URL.createObjectURL(fakeBlob);
+  const handleDownloadApp = (platform: 'windows' | 'mac' | 'android') => {
+    let targetUrl: string | null | undefined = null;
+    let filename = '';
+
+    if (platform === 'windows') {
+      targetUrl = settings.windows_setup;
+      filename = 'Tankhor-Desktop-Setup.exe';
+    } else if (platform === 'mac') {
+      targetUrl = settings.macos_setup;
+      filename = 'Tankhor-Desktop.dmg';
+    } else if (platform === 'android') {
+      targetUrl = settings.adnroid_setup || settings.android_setup;
+      filename = 'Tankhor-Android.apk';
+    }
+
+    if (targetUrl && (targetUrl.startsWith('http://') || targetUrl.startsWith('https://'))) {
+      const link = document.createElement('a');
+      link.href = targetUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setDownloadNote(`در حال شروع دانلود نسخه ${platform === 'windows' ? 'ویندوز' : platform === 'mac' ? 'مک' : 'اندروید'}...`);
+      setTimeout(() => setDownloadNote(null), 5000);
+      return;
+    }
+
+    // Fallback if URL is not yet configured in Directus project_settings
+    const fallbackContent = `TANKHOR Official Setup - ${platform.toUpperCase()}\n\nلینک مستقیم دریافت نسخه ${platform} از دایرکتوس به زودی بارگذاری می‌شود.\nOfficial Repository & Releases: https://tankhor.com/download`;
+    const blob = new Blob([fallbackContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
@@ -60,19 +90,21 @@ export const WebFreePlanGuardModal: React.FC = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    setDownloadNote(`فایل راهنمای نصب نسخه ${platform === 'windows' ? 'ویندوز' : platform === 'mac' ? 'مک' : 'اندروید'} دریافت شد.`);
+    setTimeout(() => setDownloadNote(null), 5000);
   };
 
   return (
     <div
-      id="web-free-guard-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/75 backdrop-blur-md animate-fade-in overflow-y-auto"
+      id="web-free-guard-viewport"
+      className="min-h-screen w-full bg-neutral-900/95 flex items-center justify-center p-4 sm:p-6 backdrop-blur-md overflow-y-auto"
     >
       <div
         id="web-free-guard-card"
-        className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col my-auto animate-scale-up"
+        className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col my-auto animate-scale-up"
       >
         {/* Banner Header */}
-        <div className="relative bg-gradient-to-r from-neutral-900 via-neutral-850 to-blue-950 text-white p-6 sm:p-8">
+        <div className="relative bg-gradient-to-r from-neutral-950 via-neutral-900 to-blue-950 text-white p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-bold tracking-wide uppercase text-amber-300 bg-amber-400/15 px-3 py-1 rounded-full border border-amber-400/30 flex items-center gap-1.5">
@@ -83,7 +115,7 @@ export const WebFreePlanGuardModal: React.FC = () => {
 
             {/* Current Active Org & User info */}
             <div className="flex items-center gap-2 text-xs text-neutral-300">
-              <span>سازمان فعال:</span>
+              <span>سازمان انتخابی:</span>
               <strong className="text-white bg-white/10 px-2 py-0.5 rounded-lg font-mono">
                 {activeOrganization?.name || 'سازمان من'}
               </strong>
@@ -93,8 +125,8 @@ export const WebFreePlanGuardModal: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
             استفاده از سامانه تحت وب، ویژه نسخه حرفه‌ای (Pro) است
           </h1>
-          <p className="text-xs sm:text-sm text-neutral-300 mt-2 leading-relaxed max-w-xl">
-            شما با موفقیت وارد حساب کاربری شدید. در نسخه وب تن‌خور، دسترسی به پنل مدیریت نیازمند پلن <strong className="text-white font-bold">Pro</strong> است. جهت استفاده کاملاً رایگان، لطفاً <strong className="text-emerald-300">نسخه دسکتاپ</strong> را دانلود و نصب نمایید.
+          <p className="text-xs sm:text-sm text-neutral-300 mt-2 leading-relaxed max-w-2xl">
+            شما با موفقیت وارد شدید. در نسخه وب تن‌خور، دسترسی به پنل مدیریت نیازمند پلن <strong className="text-white font-bold">Pro</strong> است. جهت استفاده کاملاً رایگان، لطفاً <strong className="text-emerald-300">نسخه دسکتاپ یا اندروید</strong> را دانلود و نصب نمایید.
           </p>
         </div>
 
@@ -112,14 +144,21 @@ export const WebFreePlanGuardModal: React.FC = () => {
               <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
               <div>
                 <p>پلن سازمان شما با موفقیت به Pro ارتقا یافت!</p>
-                <p className="font-normal text-[11px] text-emerald-700 mt-0.5">در حال بارگذاری مجدد و راه‌اندازی میزکار...</p>
+                <p className="font-normal text-[11px] text-emerald-700 mt-0.5">در حال بارگذاری مجدد و راه‌اندازی میزکار ابری...</p>
               </div>
             </div>
           )}
 
+          {downloadNote && (
+            <div className="p-3 bg-blue-50 border border-blue-200 text-blue-800 text-xs rounded-2xl flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>{downloadNote}</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Option 1: Desktop App (100% Free with SQLite) */}
-            <div className="flex flex-col justify-between p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-200/90 hover:border-neutral-300 transition-all space-y-4">
+            {/* Option 1: Native Apps (100% Free with SQLite) */}
+            <div className="flex flex-col justify-between p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 hover:border-neutral-300 transition-all space-y-4">
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="w-10 h-10 rounded-xl bg-neutral-900 text-white flex items-center justify-center shadow-xs">
@@ -130,41 +169,74 @@ export const WebFreePlanGuardModal: React.FC = () => {
                   </span>
                 </div>
                 <h3 className="text-sm font-bold text-neutral-900">
-                  دانلود نسخه دسکتاپ تن‌خور
+                  دانلود نرم‌افزار تن‌خور (ویندوز / مک / اندروید)
                 </h3>
                 <p className="text-xs text-neutral-600 leading-relaxed">
-                  نسخه دسکتاپ با پایگاه داده پرسرعت <strong className="text-neutral-900">SQLite</strong> روی رایانه شما کاملاً رایگان و نامحدود اجرا می‌شود و نیازی به پلن Pro ندارد.
+                  نسخه‌های دسکتاپ و موبایل با پایگاه داده پرسرعت <strong className="text-neutral-900">SQLite</strong> روی دستگاه شما کاملاً رایگان، نامحدود و آفلاین اجرا می‌شوند.
                 </p>
               </div>
 
-              {/* Download Buttons for OS */}
+              {/* Download Buttons for OS / Mobile */}
               <div className="space-y-2 pt-2 border-t border-neutral-200/60">
-                <button
-                  onClick={() => handleDownloadApp('windows')}
-                  className="w-full flex items-center justify-between px-3 py-2 bg-white hover:bg-neutral-100 border border-neutral-200 rounded-xl text-xs font-bold text-neutral-800 transition-colors cursor-pointer shadow-2xs"
+                {/* Windows Download */}
+                <a
+                  href={settings.windows_setup || '#'}
+                  onClick={(e) => {
+                    if (!settings.windows_setup) {
+                      e.preventDefault();
+                      handleDownloadApp('windows');
+                    }
+                  }}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={settings.windows_setup ? undefined : 'Tankhor-Desktop-Setup.exe'}
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 bg-white hover:bg-neutral-100 border border-neutral-200 rounded-xl text-xs font-bold text-neutral-800 transition-colors cursor-pointer shadow-2xs group text-decoration-none"
                 >
                   <span className="flex items-center gap-2">
-                    <Download className="w-3.5 h-3.5 text-neutral-600" />
-                    دانلود برای ویندوز (Windows)
+                    <Laptop className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                    <span>دانلود نسخه ویندوز (Windows)</span>
                   </span>
-                  <span className="text-[10px] font-mono text-neutral-400">.exe</span>
-                </button>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-neutral-400">.exe</span>
+                    <ArrowDownToLine className="w-3.5 h-3.5 text-neutral-500 group-hover:translate-y-0.5 transition-transform" />
+                  </div>
+                </a>
 
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button
-                    onClick={() => handleDownloadApp('mac')}
-                    className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-neutral-100 border border-neutral-200 rounded-xl text-[11px] font-medium text-neutral-700 transition-colors cursor-pointer"
+                {/* macOS & Android Grid */}
+                <div className="grid grid-cols-2 gap-2">
+                  <a
+                    href={settings.macos_setup || '#'}
+                    onClick={(e) => {
+                      if (!settings.macos_setup) {
+                        e.preventDefault();
+                        handleDownloadApp('mac');
+                      }
+                    }}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download={settings.macos_setup ? undefined : 'Tankhor-Desktop.dmg'}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-white hover:bg-neutral-100 border border-neutral-200 rounded-xl text-[11px] font-bold text-neutral-700 transition-colors cursor-pointer shadow-2xs group text-decoration-none"
                   >
-                    <Download className="w-3 h-3 text-neutral-500" />
-                    نسخه مک (macOS)
-                  </button>
-                  <button
-                    onClick={() => handleDownloadApp('linux')}
-                    className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-neutral-100 border border-neutral-200 rounded-xl text-[11px] font-medium text-neutral-700 transition-colors cursor-pointer"
+                    <Download className="w-3.5 h-3.5 text-neutral-500 group-hover:scale-110 transition-transform" />
+                    <span>نسخه مک (macOS)</span>
+                  </a>
+
+                  <a
+                    href={settings.adnroid_setup || settings.android_setup || '#'}
+                    onClick={(e) => {
+                      if (!settings.adnroid_setup && !settings.android_setup) {
+                        e.preventDefault();
+                        handleDownloadApp('android');
+                      }
+                    }}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download={(settings.adnroid_setup || settings.android_setup) ? undefined : 'Tankhor-Android.apk'}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-[11px] font-bold text-emerald-800 transition-colors cursor-pointer shadow-2xs group text-decoration-none"
                   >
-                    <Download className="w-3 h-3 text-neutral-500" />
-                    لینوکس (Linux)
-                  </button>
+                    <Smartphone className="w-3.5 h-3.5 text-emerald-600 group-hover:scale-110 transition-transform" />
+                    <span>نسخه اندروید (Android)</span>
+                  </a>
                 </div>
               </div>
             </div>
@@ -184,7 +256,7 @@ export const WebFreePlanGuardModal: React.FC = () => {
                   ارتقا سازمان به پلن Pro
                 </h3>
                 <p className="text-xs text-neutral-600 leading-relaxed">
-                  دسترسی نامحدود به پنل تحت وب، همگام‌سازی ابری زنده بین چندین دستگاه و شعبه، و تعریف پرسنل و شعب نامحدود.
+                  دسترسی نامحدود به پنل تحت وب، همگام‌سازی ابری زنده بین چندین شعبه، و اتصال نامحدود حساب‌های پرسنل.
                 </p>
               </div>
 
@@ -204,7 +276,7 @@ export const WebFreePlanGuardModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Additional Options: Switch Organization if multiple & Logout */}
+          {/* Footer Controls: Switch Organization or Logout */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-neutral-100">
             {organizations.length > 1 && (
               <div className="relative">
@@ -224,6 +296,7 @@ export const WebFreePlanGuardModal: React.FC = () => {
                     {organizations.map((org) => (
                       <button
                         key={org.id}
+                        type="button"
                         onClick={() => {
                           selectOrganization(org.id);
                           setShowOrgSelector(false);

@@ -675,6 +675,36 @@
                 "versioning": false
             },
             "schema": {}
+        },
+        {
+            "collection": "directus_users",
+            "meta": {
+                "collection": "directus_users",
+                "hidden": false,
+                "singleton": false,
+                "icon": "people_alt",
+                "note": "$t:directus_collection.directus_users",
+                "translations": null,
+                "display_template": "{{ first_name }} {{ last_name }}",
+                "accountability": "all",
+                "archive_field": "status",
+                "archive_value": "archived",
+                "unarchive_value": "draft",
+                "system": true
+            },
+            "schema": {}
+        },
+        {
+            "collection": "project_settings",
+            "meta": {
+                "collection": "project_settings",
+                "hidden": false,
+                "singleton": true,
+                "icon": "settings_suggest",
+                "note": "App Setup and Download Links",
+                "system": false
+            },
+            "schema": {}
         }
     ],
     "fields": [
@@ -13065,56 +13095,6 @@
         },
         {
             "collection": "brands",
-            "field": "organization_id",
-            "type": "integer",
-            "schema": {
-                "name": "organization_id",
-                "table": "brands",
-                "data_type": "integer",
-                "default_value": null,
-                "generation_expression": null,
-                "max_length": null,
-                "numeric_precision": 32,
-                "numeric_scale": 0,
-                "is_generated": false,
-                "is_nullable": true,
-                "is_unique": false,
-                "is_indexed": false,
-                "is_primary_key": false,
-                "has_auto_increment": false,
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "comment": null
-            },
-            "meta": {
-                "collection": "brands",
-                "field": "organization_id",
-                "special": [
-                    "m2o"
-                ],
-                "interface": "select-dropdown-m2o",
-                "options": {
-                    "template": "{{name}}"
-                },
-                "display": null,
-                "display_options": null,
-                "readonly": false,
-                "hidden": false,
-                "sort": 1,
-                "width": "full",
-                "translations": null,
-                "note": null,
-                "conditions": null,
-                "required": false,
-                "group": null,
-                "validation": null,
-                "validation_message": null,
-                "searchable": true
-            }
-        },
-        {
-            "collection": "brands",
             "field": "id",
             "type": "integer",
             "schema": {
@@ -13251,6 +13231,1589 @@
                 "validation": null,
                 "validation_message": null,
                 "searchable": true
+            }
+        },
+        {
+            "collection": "brands",
+            "field": "organization_id",
+            "type": "integer",
+            "schema": {
+                "name": "organization_id",
+                "table": "brands",
+                "data_type": "integer",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": null,
+                "numeric_precision": 32,
+                "numeric_scale": 0,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": "public",
+                "foreign_key_table": "organizations",
+                "foreign_key_column": "id",
+                "comment": null
+            },
+            "meta": {
+                "collection": "brands",
+                "field": "organization_id",
+                "special": [
+                    "m2o"
+                ],
+                "interface": "select-dropdown-m2o",
+                "options": null,
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 5,
+                "width": "full",
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "group": null,
+                "validation": null,
+                "validation_message": null,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "first_name",
+            "type": "string",
+            "schema": {
+                "name": "first_name",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 50,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "first_name",
+                "special": null,
+                "interface": "input",
+                "options": {
+                    "iconRight": "account_circle"
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 1,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "last_name",
+            "type": "string",
+            "schema": {
+                "name": "last_name",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 50,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "last_name",
+                "special": null,
+                "interface": "input",
+                "options": {
+                    "iconRight": "account_circle"
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 2,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "email",
+            "type": "string",
+            "schema": {
+                "name": "email",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 128,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": true,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "email",
+                "special": null,
+                "interface": "input",
+                "options": {
+                    "iconRight": "email"
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 3,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "password",
+            "type": "hash",
+            "schema": {
+                "name": "password",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 255,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "password",
+                "special": [
+                    "hash",
+                    "conceal"
+                ],
+                "interface": "input-hash",
+                "options": {
+                    "iconRight": "lock",
+                    "masked": true
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 4,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "avatar",
+            "type": "uuid",
+            "schema": {
+                "name": "avatar",
+                "table": "directus_users",
+                "data_type": "uuid",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": null,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "avatar",
+                "special": null,
+                "interface": "file",
+                "options": null,
+                "display": "image",
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 5,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "location",
+            "type": "string",
+            "schema": {
+                "name": "location",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 255,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "location",
+                "special": null,
+                "interface": "input",
+                "options": {
+                    "iconRight": "place"
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 6,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "title",
+            "type": "string",
+            "schema": {
+                "name": "title",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 50,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "title",
+                "special": null,
+                "interface": "input",
+                "options": {
+                    "iconRight": "work"
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 7,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "description",
+            "type": "text",
+            "schema": {
+                "name": "description",
+                "table": "directus_users",
+                "data_type": "text",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": null,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "description",
+                "special": null,
+                "interface": "input-multiline",
+                "options": null,
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 8,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "tags",
+            "type": "json",
+            "schema": {
+                "name": "tags",
+                "table": "directus_users",
+                "data_type": "json",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": null,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "tags",
+                "special": [
+                    "cast-json"
+                ],
+                "interface": "tags",
+                "options": {
+                    "iconRight": "local_offer"
+                },
+                "display": "labels",
+                "display_options": {
+                    "choices": null,
+                    "format": false
+                },
+                "readonly": false,
+                "hidden": false,
+                "sort": 9,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "preferences_divider",
+            "type": "alias",
+            "schema": null,
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "preferences_divider",
+                "special": [
+                    "alias",
+                    "no-data"
+                ],
+                "interface": "presentation-divider",
+                "options": {
+                    "icon": "face",
+                    "title": "User Preferences"
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 10,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "language",
+            "type": "string",
+            "schema": {
+                "name": "language",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 255,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "language",
+                "special": null,
+                "interface": "system-language",
+                "options": {
+                    "includeProjectDefault": true
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 11,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "text_direction",
+            "type": "string",
+            "schema": {
+                "name": "text_direction",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": "auto",
+                "generation_expression": null,
+                "max_length": 255,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": false,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "text_direction",
+                "special": null,
+                "interface": "select-dropdown",
+                "options": {
+                    "choices": [
+                        {
+                            "value": "auto",
+                            "text": "Automatic (Match Language)"
+                        },
+                        {
+                            "value": "ltr",
+                            "text": "Left to Right (LTR)"
+                        },
+                        {
+                            "value": "rtl",
+                            "text": "Right to Left (RTL)"
+                        }
+                    ]
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 12,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "tfa_secret",
+            "type": "string",
+            "schema": {
+                "name": "tfa_secret",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 255,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "tfa_secret",
+                "special": [
+                    "conceal"
+                ],
+                "interface": "system-mfa-setup",
+                "options": null,
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 13,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "email_notifications",
+            "type": "boolean",
+            "schema": {
+                "name": "email_notifications",
+                "table": "directus_users",
+                "data_type": "boolean",
+                "default_value": true,
+                "generation_expression": null,
+                "max_length": null,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "email_notifications",
+                "special": [
+                    "cast-boolean"
+                ],
+                "interface": "boolean",
+                "options": null,
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 14,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "theming_divider",
+            "type": "alias",
+            "schema": null,
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "theming_divider",
+                "special": [
+                    "alias",
+                    "no-data"
+                ],
+                "interface": "presentation-divider",
+                "options": {
+                    "icon": "palette",
+                    "title": "Theme"
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 15,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "appearance",
+            "type": "string",
+            "schema": {
+                "name": "appearance",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 255,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "appearance",
+                "special": null,
+                "interface": "select-dropdown",
+                "options": {
+                    "choices": [
+                        {
+                            "value": null,
+                            "text": "Default (Sync with Project)"
+                        },
+                        {
+                            "value": "auto",
+                            "text": "Automatic (Sync with System)"
+                        },
+                        {
+                            "value": "light",
+                            "text": "Light"
+                        },
+                        {
+                            "value": "dark",
+                            "text": "Dark"
+                        }
+                    ]
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 16,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "theme_light",
+            "type": "string",
+            "schema": {
+                "name": "theme_light",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 255,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "theme_light",
+                "special": null,
+                "interface": "system-theme",
+                "options": {
+                    "appearance": "light",
+                    "includeNull": true
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 17,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "theme_light_overrides",
+            "type": "json",
+            "schema": {
+                "name": "theme_light_overrides",
+                "table": "directus_users",
+                "data_type": "json",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": null,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "theme_light_overrides",
+                "special": [
+                    "cast-json"
+                ],
+                "interface": "system-theme-overrides",
+                "options": {
+                    "appearance": "light"
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 18,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "theme_dark",
+            "type": "string",
+            "schema": {
+                "name": "theme_dark",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 255,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "theme_dark",
+                "special": null,
+                "interface": "system-theme",
+                "options": {
+                    "appearance": "dark",
+                    "includeNull": true
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 19,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "theme_dark_overrides",
+            "type": "json",
+            "schema": {
+                "name": "theme_dark_overrides",
+                "table": "directus_users",
+                "data_type": "json",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": null,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "theme_dark_overrides",
+                "special": [
+                    "cast-json"
+                ],
+                "interface": "system-theme-overrides",
+                "options": {
+                    "appearance": "dark"
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 20,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "admin_divider",
+            "type": "alias",
+            "schema": null,
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "admin_divider",
+                "special": [
+                    "alias",
+                    "no-data"
+                ],
+                "interface": "presentation-divider",
+                "options": {
+                    "icon": "verified_user",
+                    "title": "Admin Options",
+                    "color": "var(--theme--danger)"
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 21,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "status",
+            "type": "string",
+            "schema": {
+                "name": "status",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": "active",
+                "generation_expression": null,
+                "max_length": 16,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": false,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "status",
+                "special": null,
+                "interface": "select-dropdown",
+                "options": {
+                    "choices": [
+                        {
+                            "text": "Draft",
+                            "value": "draft"
+                        },
+                        {
+                            "text": "Invited",
+                            "value": "invited"
+                        },
+                        {
+                            "text": "Unverified",
+                            "value": "unverified"
+                        },
+                        {
+                            "text": "Active",
+                            "value": "active"
+                        },
+                        {
+                            "text": "Suspended",
+                            "value": "suspended"
+                        },
+                        {
+                            "text": "Archived",
+                            "value": "archived"
+                        }
+                    ]
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 22,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "role",
+            "type": "uuid",
+            "schema": {
+                "name": "role",
+                "table": "directus_users",
+                "data_type": "uuid",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": null,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": "public",
+                "foreign_key_table": "directus_roles",
+                "foreign_key_column": "id",
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "role",
+                "special": [
+                    "m2o"
+                ],
+                "interface": "select-dropdown-m2o",
+                "options": {
+                    "template": "{{ name }}"
+                },
+                "display": "related-values",
+                "display_options": {
+                    "template": "{{ name }}"
+                },
+                "readonly": false,
+                "hidden": false,
+                "sort": 23,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "policies",
+            "type": "alias",
+            "schema": null,
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "policies",
+                "special": [
+                    "m2m"
+                ],
+                "interface": "list-m2m",
+                "options": {
+                    "layout": "list"
+                },
+                "display": "related-values",
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 24,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "token",
+            "type": "string",
+            "schema": {
+                "name": "token",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 255,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": true,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "token",
+                "special": [
+                    "conceal"
+                ],
+                "interface": "system-token",
+                "options": null,
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 25,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "id",
+            "type": "uuid",
+            "schema": {
+                "name": "id",
+                "table": "directus_users",
+                "data_type": "uuid",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": null,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": false,
+                "is_unique": true,
+                "is_indexed": false,
+                "is_primary_key": true,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "id",
+                "special": [
+                    "uuid"
+                ],
+                "interface": "input",
+                "options": {
+                    "iconRight": "vpn_key"
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 26,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "last_page",
+            "type": "string",
+            "schema": {
+                "name": "last_page",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 255,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "last_page",
+                "special": null,
+                "interface": null,
+                "options": null,
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 27,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "last_access",
+            "type": "timestamp",
+            "schema": {
+                "name": "last_access",
+                "table": "directus_users",
+                "data_type": "timestamp with time zone",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": null,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "last_access",
+                "special": null,
+                "interface": null,
+                "options": null,
+                "display": "datetime",
+                "display_options": null,
+                "readonly": true,
+                "hidden": false,
+                "sort": 28,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "provider",
+            "type": "string",
+            "schema": {
+                "name": "provider",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": "default",
+                "generation_expression": null,
+                "max_length": 128,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": false,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "provider",
+                "special": null,
+                "interface": "select-dropdown",
+                "options": {
+                    "choices": []
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 29,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "external_identifier",
+            "type": "string",
+            "schema": {
+                "name": "external_identifier",
+                "table": "directus_users",
+                "data_type": "character varying",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": 255,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": true,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "external_identifier",
+                "special": null,
+                "interface": "input",
+                "options": {
+                    "iconRight": "account_circle"
+                },
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 30,
+                "width": "half",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "directus_users",
+            "field": "auth_data",
+            "type": "json",
+            "schema": {
+                "name": "auth_data",
+                "table": "directus_users",
+                "data_type": "json",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": null,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": null,
+                "foreign_key_table": null,
+                "foreign_key_column": null,
+                "comment": null
+            },
+            "meta": {
+                "system": true,
+                "collection": "directus_users",
+                "field": "auth_data",
+                "special": null,
+                "interface": null,
+                "options": null,
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": true,
+                "sort": 31,
+                "width": "full",
+                "group": null,
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "project_settings",
+            "field": "id",
+            "type": "integer",
+            "schema": {
+                "name": "id",
+                "table": "project_settings",
+                "data_type": "integer",
+                "is_primary_key": true,
+                "has_auto_increment": true
+            },
+            "meta": {
+                "collection": "project_settings",
+                "field": "id",
+                "readonly": true,
+                "hidden": true,
+                "sort": 1
+            }
+        },
+        {
+            "collection": "project_settings",
+            "field": "windows_setup",
+            "type": "string",
+            "schema": {
+                "name": "windows_setup",
+                "table": "project_settings",
+                "data_type": "character varying",
+                "is_nullable": true
+            },
+            "meta": {
+                "collection": "project_settings",
+                "field": "windows_setup",
+                "interface": "input",
+                "sort": 2,
+                "width": "full"
+            }
+        },
+        {
+            "collection": "project_settings",
+            "field": "macos_setup",
+            "type": "string",
+            "schema": {
+                "name": "macos_setup",
+                "table": "project_settings",
+                "data_type": "character varying",
+                "is_nullable": true
+            },
+            "meta": {
+                "collection": "project_settings",
+                "field": "macos_setup",
+                "interface": "input",
+                "sort": 3,
+                "width": "full"
+            }
+        },
+        {
+            "collection": "project_settings",
+            "field": "adnroid_setup",
+            "type": "string",
+            "schema": {
+                "name": "adnroid_setup",
+                "table": "project_settings",
+                "data_type": "character varying",
+                "is_nullable": true
+            },
+            "meta": {
+                "collection": "project_settings",
+                "field": "adnroid_setup",
+                "interface": "input",
+                "sort": 4,
+                "width": "full"
             }
         }
     ],
@@ -13434,1646 +14997,18 @@
                 "one_allowed_collections": null,
                 "junction_field": null,
                 "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "colors",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "colors_organization_id_foreign",
-                "table": "colors",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "colors",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "size_groups",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "size_groups_organization_id_foreign",
-                "table": "size_groups",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "size_groups",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "sizes",
-            "field": "size_group_id",
-            "related_collection": "size_groups",
-            "schema": {
-                "constraint_name": "sizes_size_group_id_foreign",
-                "table": "sizes",
-                "column": "size_group_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "size_groups",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "sizes",
-                "many_field": "size_group_id",
-                "one_collection": "size_groups",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "sizes",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "sizes_organization_id_foreign",
-                "table": "sizes",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "sizes",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "size_guide_templates",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "size_guide_templates_organization_id_foreign",
-                "table": "size_guide_templates",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "size_guide_templates",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "size_guide_measurements",
-            "field": "template_id",
-            "related_collection": "size_guide_templates",
-            "schema": {
-                "constraint_name": "size_guide_measurements_template_id_foreign",
-                "table": "size_guide_measurements",
-                "column": "template_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "size_guide_templates",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "size_guide_measurements",
-                "many_field": "template_id",
-                "one_collection": "size_guide_templates",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "size_guide_values",
-            "field": "measurement_id",
-            "related_collection": "size_guide_measurements",
-            "schema": {
-                "constraint_name": "size_guide_values_measurement_id_foreign",
-                "table": "size_guide_values",
-                "column": "measurement_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "size_guide_measurements",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "size_guide_values",
-                "many_field": "measurement_id",
-                "one_collection": "size_guide_measurements",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "size_guide_values",
-            "field": "size_id",
-            "related_collection": "sizes",
-            "schema": {
-                "constraint_name": "size_guide_values_size_id_foreign",
-                "table": "size_guide_values",
-                "column": "size_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "sizes",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "size_guide_values",
-                "many_field": "size_id",
-                "one_collection": "sizes",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "size_guide_values",
-            "field": "template_id",
-            "related_collection": "size_guide_templates",
-            "schema": {
-                "constraint_name": "size_guide_values_template_id_foreign",
-                "table": "size_guide_values",
-                "column": "template_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "size_guide_templates",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "size_guide_values",
-                "many_field": "template_id",
-                "one_collection": "size_guide_templates",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "products",
-            "field": "brand_id",
-            "related_collection": "brands",
-            "schema": {
-                "constraint_name": "products_brand_id_foreign",
-                "table": "products",
-                "column": "brand_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "brands",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "products",
-                "many_field": "brand_id",
-                "one_collection": "brands",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "products",
-            "field": "main_image",
-            "related_collection": "directus_files",
-            "schema": {
-                "constraint_name": "products_main_image_foreign",
-                "table": "products",
-                "column": "main_image",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "directus_files",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "products",
-                "many_field": "main_image",
-                "one_collection": "directus_files",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "products",
-            "field": "season_id",
-            "related_collection": "seasons",
-            "schema": {
-                "constraint_name": "products_season_id_foreign",
-                "table": "products",
-                "column": "season_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "seasons",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "products",
-                "many_field": "season_id",
-                "one_collection": "seasons",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "products",
-            "field": "collection_id",
-            "related_collection": "collections",
-            "schema": {
-                "constraint_name": "products_collection_id_foreign",
-                "table": "products",
-                "column": "collection_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "collections",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "products",
-                "many_field": "collection_id",
-                "one_collection": "collections",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "products",
-            "field": "category_id",
-            "related_collection": "categories",
-            "schema": {
-                "constraint_name": "products_category_id_foreign",
-                "table": "products",
-                "column": "category_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "categories",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "products",
-                "many_field": "category_id",
-                "one_collection": "categories",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "products",
-            "field": "user_updated",
-            "related_collection": "directus_users",
-            "schema": {
-                "constraint_name": "products_user_updated_foreign",
-                "table": "products",
-                "column": "user_updated",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "directus_users",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "products",
-                "many_field": "user_updated",
-                "one_collection": "directus_users",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "products",
-            "field": "user_created",
-            "related_collection": "directus_users",
-            "schema": {
-                "constraint_name": "products_user_created_foreign",
-                "table": "products",
-                "column": "user_created",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "directus_users",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "products",
-                "many_field": "user_created",
-                "one_collection": "directus_users",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "products",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "products_organization_id_foreign",
-                "table": "products",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "products",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "product_variants",
-            "field": "user_updated",
-            "related_collection": "directus_users",
-            "schema": {
-                "constraint_name": "product_variants_user_updated_foreign",
-                "table": "product_variants",
-                "column": "user_updated",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "directus_users",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "product_variants",
-                "many_field": "user_updated",
-                "one_collection": "directus_users",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "product_variants",
-            "field": "user_created",
-            "related_collection": "directus_users",
-            "schema": {
-                "constraint_name": "product_variants_user_created_foreign",
-                "table": "product_variants",
-                "column": "user_created",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "directus_users",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "product_variants",
-                "many_field": "user_created",
-                "one_collection": "directus_users",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "product_variants",
-            "field": "image",
-            "related_collection": "directus_files",
-            "schema": {
-                "constraint_name": "product_variants_image_foreign",
-                "table": "product_variants",
-                "column": "image",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "directus_files",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "product_variants",
-                "many_field": "image",
-                "one_collection": "directus_files",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "product_variants",
-            "field": "size_id",
-            "related_collection": "sizes",
-            "schema": {
-                "constraint_name": "product_variants_size_id_foreign",
-                "table": "product_variants",
-                "column": "size_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "sizes",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "product_variants",
-                "many_field": "size_id",
-                "one_collection": "sizes",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "product_variants",
-            "field": "color_id",
-            "related_collection": "colors",
-            "schema": {
-                "constraint_name": "product_variants_color_id_foreign",
-                "table": "product_variants",
-                "column": "color_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "colors",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "product_variants",
-                "many_field": "color_id",
-                "one_collection": "colors",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "product_variants",
-            "field": "product_id",
-            "related_collection": "products",
-            "schema": {
-                "constraint_name": "product_variants_product_id_foreign",
-                "table": "product_variants",
-                "column": "product_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "products",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "product_variants",
-                "many_field": "product_id",
-                "one_collection": "products",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "product_variants",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "product_variants_organization_id_foreign",
-                "table": "product_variants",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "product_variants",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "warehouses",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "warehouses_organization_id_foreign",
-                "table": "warehouses",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "warehouses",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "warehouse_locations",
-            "field": "parent_id",
-            "related_collection": "warehouse_locations",
-            "schema": {
-                "constraint_name": "warehouse_locations_parent_id_foreign",
-                "table": "warehouse_locations",
-                "column": "parent_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "warehouse_locations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "warehouse_locations",
-                "many_field": "parent_id",
-                "one_collection": "warehouse_locations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "warehouse_locations",
-            "field": "warehouse_id",
-            "related_collection": "warehouses",
-            "schema": {
-                "constraint_name": "warehouse_locations_warehouse_id_foreign",
-                "table": "warehouse_locations",
-                "column": "warehouse_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "warehouses",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "warehouse_locations",
-                "many_field": "warehouse_id",
-                "one_collection": "warehouses",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "inventory_items",
-            "field": "location_id",
-            "related_collection": "warehouse_locations",
-            "schema": {
-                "constraint_name": "inventory_items_location_id_foreign",
-                "table": "inventory_items",
-                "column": "location_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "warehouse_locations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "inventory_items",
-                "many_field": "location_id",
-                "one_collection": "warehouse_locations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "inventory_items",
-            "field": "warehouse_id",
-            "related_collection": "warehouses",
-            "schema": {
-                "constraint_name": "inventory_items_warehouse_id_foreign",
-                "table": "inventory_items",
-                "column": "warehouse_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "warehouses",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "inventory_items",
-                "many_field": "warehouse_id",
-                "one_collection": "warehouses",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "inventory_items",
-            "field": "variant_id",
-            "related_collection": "product_variants",
-            "schema": {
-                "constraint_name": "inventory_items_variant_id_foreign",
-                "table": "inventory_items",
-                "column": "variant_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "product_variants",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "inventory_items",
-                "many_field": "variant_id",
-                "one_collection": "product_variants",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "inventory_items",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "inventory_items_organization_id_foreign",
-                "table": "inventory_items",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "inventory_items",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "inventory_movements",
-            "field": "user_id",
-            "related_collection": "directus_users",
-            "schema": {
-                "constraint_name": "inventory_movements_user_id_foreign",
-                "table": "inventory_movements",
-                "column": "user_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "directus_users",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "inventory_movements",
-                "many_field": "user_id",
-                "one_collection": "directus_users",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "inventory_movements",
-            "field": "location_id",
-            "related_collection": "warehouse_locations",
-            "schema": {
-                "constraint_name": "inventory_movements_location_id_foreign",
-                "table": "inventory_movements",
-                "column": "location_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "warehouse_locations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "inventory_movements",
-                "many_field": "location_id",
-                "one_collection": "warehouse_locations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "inventory_movements",
-            "field": "warehouse_id",
-            "related_collection": "warehouses",
-            "schema": {
-                "constraint_name": "inventory_movements_warehouse_id_foreign",
-                "table": "inventory_movements",
-                "column": "warehouse_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "warehouses",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "inventory_movements",
-                "many_field": "warehouse_id",
-                "one_collection": "warehouses",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "inventory_movements",
-            "field": "variant_id",
-            "related_collection": "product_variants",
-            "schema": {
-                "constraint_name": "inventory_movements_variant_id_foreign",
-                "table": "inventory_movements",
-                "column": "variant_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "product_variants",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "inventory_movements",
-                "many_field": "variant_id",
-                "one_collection": "product_variants",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "inventory_movements",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "inventory_movements_organization_id_foreign",
-                "table": "inventory_movements",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "inventory_movements",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "customers",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "customers_organization_id_foreign",
-                "table": "customers",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "customers",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "orders",
-            "field": "user_updated",
-            "related_collection": "directus_users",
-            "schema": {
-                "constraint_name": "orders_user_updated_foreign",
-                "table": "orders",
-                "column": "user_updated",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "directus_users",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "orders",
-                "many_field": "user_updated",
-                "one_collection": "directus_users",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "orders",
-            "field": "user_created",
-            "related_collection": "directus_users",
-            "schema": {
-                "constraint_name": "orders_user_created_foreign",
-                "table": "orders",
-                "column": "user_created",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "directus_users",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "orders",
-                "many_field": "user_created",
-                "one_collection": "directus_users",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "orders",
-            "field": "warehouse_id",
-            "related_collection": "warehouses",
-            "schema": {
-                "constraint_name": "orders_warehouse_id_foreign",
-                "table": "orders",
-                "column": "warehouse_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "warehouses",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "orders",
-                "many_field": "warehouse_id",
-                "one_collection": "warehouses",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "orders",
-            "field": "customer_id",
-            "related_collection": "customers",
-            "schema": {
-                "constraint_name": "orders_customer_id_foreign",
-                "table": "orders",
-                "column": "customer_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "customers",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "orders",
-                "many_field": "customer_id",
-                "one_collection": "customers",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "orders",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "orders_organization_id_foreign",
-                "table": "orders",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "orders",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "order_items",
-            "field": "variant_id",
-            "related_collection": "product_variants",
-            "schema": {
-                "constraint_name": "order_items_variant_id_foreign",
-                "table": "order_items",
-                "column": "variant_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "product_variants",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "order_items",
-                "many_field": "variant_id",
-                "one_collection": "product_variants",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "order_items",
-            "field": "order_id",
-            "related_collection": "orders",
-            "schema": {
-                "constraint_name": "order_items_order_id_foreign",
-                "table": "order_items",
-                "column": "order_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "orders",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "order_items",
-                "many_field": "order_id",
-                "one_collection": "orders",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "order_items",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "order_items_organization_id_foreign",
-                "table": "order_items",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "order_items",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "suppliers",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "suppliers_organization_id_foreign",
-                "table": "suppliers",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "suppliers",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "purchase_orders",
-            "field": "user_created",
-            "related_collection": "directus_users",
-            "schema": {
-                "constraint_name": "purchase_orders_user_created_foreign",
-                "table": "purchase_orders",
-                "column": "user_created",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "directus_users",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "purchase_orders",
-                "many_field": "user_created",
-                "one_collection": "directus_users",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "purchase_orders",
-            "field": "warehouse_id",
-            "related_collection": "warehouses",
-            "schema": {
-                "constraint_name": "purchase_orders_warehouse_id_foreign",
-                "table": "purchase_orders",
-                "column": "warehouse_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "warehouses",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "purchase_orders",
-                "many_field": "warehouse_id",
-                "one_collection": "warehouses",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "purchase_orders",
-            "field": "supplier_id",
-            "related_collection": "suppliers",
-            "schema": {
-                "constraint_name": "purchase_orders_supplier_id_foreign",
-                "table": "purchase_orders",
-                "column": "supplier_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "suppliers",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "purchase_orders",
-                "many_field": "supplier_id",
-                "one_collection": "suppliers",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "purchase_orders",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "purchase_orders_organization_id_foreign",
-                "table": "purchase_orders",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "purchase_orders",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "purchase_order_items",
-            "field": "variant_id",
-            "related_collection": "product_variants",
-            "schema": {
-                "constraint_name": "purchase_order_items_variant_id_foreign",
-                "table": "purchase_order_items",
-                "column": "variant_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "product_variants",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "purchase_order_items",
-                "many_field": "variant_id",
-                "one_collection": "product_variants",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "purchase_order_items",
-            "field": "purchase_order_id",
-            "related_collection": "purchase_orders",
-            "schema": {
-                "constraint_name": "purchase_order_items_purchase_order_id_foreign",
-                "table": "purchase_order_items",
-                "column": "purchase_order_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "purchase_orders",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "purchase_order_items",
-                "many_field": "purchase_order_id",
-                "one_collection": "purchase_orders",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "purchase_order_items",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "purchase_order_items_organization_id_foreign",
-                "table": "purchase_order_items",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "purchase_order_items",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "stock_transfers",
-            "field": "user_created",
-            "related_collection": "directus_users",
-            "schema": {
-                "constraint_name": "stock_transfers_user_created_foreign",
-                "table": "stock_transfers",
-                "column": "user_created",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "directus_users",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "stock_transfers",
-                "many_field": "user_created",
-                "one_collection": "directus_users",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "stock_transfers",
-            "field": "to_warehouse_id",
-            "related_collection": "warehouses",
-            "schema": {
-                "constraint_name": "stock_transfers_to_warehouse_id_foreign",
-                "table": "stock_transfers",
-                "column": "to_warehouse_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "warehouses",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "stock_transfers",
-                "many_field": "to_warehouse_id",
-                "one_collection": "warehouses",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "stock_transfers",
-            "field": "from_warehouse_id",
-            "related_collection": "warehouses",
-            "schema": {
-                "constraint_name": "stock_transfers_from_warehouse_id_foreign",
-                "table": "stock_transfers",
-                "column": "from_warehouse_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "warehouses",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "stock_transfers",
-                "many_field": "from_warehouse_id",
-                "one_collection": "warehouses",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "stock_transfers",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "stock_transfers_organization_id_foreign",
-                "table": "stock_transfers",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "stock_transfers",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "stock_transfer_items",
-            "field": "to_location_id",
-            "related_collection": "warehouse_locations",
-            "schema": {
-                "constraint_name": "stock_transfer_items_to_location_id_foreign",
-                "table": "stock_transfer_items",
-                "column": "to_location_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "warehouse_locations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "stock_transfer_items",
-                "many_field": "to_location_id",
-                "one_collection": "warehouse_locations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "stock_transfer_items",
-            "field": "from_location_id",
-            "related_collection": "warehouse_locations",
-            "schema": {
-                "constraint_name": "stock_transfer_items_from_location_id_foreign",
-                "table": "stock_transfer_items",
-                "column": "from_location_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "warehouse_locations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "stock_transfer_items",
-                "many_field": "from_location_id",
-                "one_collection": "warehouse_locations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "stock_transfer_items",
-            "field": "variant_id",
-            "related_collection": "product_variants",
-            "schema": {
-                "constraint_name": "stock_transfer_items_variant_id_foreign",
-                "table": "stock_transfer_items",
-                "column": "variant_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "product_variants",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "stock_transfer_items",
-                "many_field": "variant_id",
-                "one_collection": "product_variants",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "stock_transfer_items",
-            "field": "transfer_id",
-            "related_collection": "stock_transfers",
-            "schema": {
-                "constraint_name": "stock_transfer_items_transfer_id_foreign",
-                "table": "stock_transfer_items",
-                "column": "transfer_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "stock_transfers",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "stock_transfer_items",
-                "many_field": "transfer_id",
-                "one_collection": "stock_transfers",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "stock_transfer_items",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "stock_transfer_items_organization_id_foreign",
-                "table": "stock_transfer_items",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "stock_transfer_items",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        },
-        {
-            "collection": "brands",
-            "field": "organization_id",
-            "related_collection": "organizations",
-            "schema": {
-                "constraint_name": "brands_organization_id_foreign",
-                "table": "brands",
-                "column": "organization_id",
-                "foreign_key_schema": "public",
-                "foreign_key_table": "organizations",
-                "foreign_key_column": "id",
-                "on_update": "NO ACTION",
-                "on_delete": "SET NULL"
-            },
-            "meta": {
-                "many_collection": "brands",
-                "many_field": "organization_id",
-                "one_collection": "organizations",
-                "one_field": null,
-                "one_collection_field": null,
-                "one_allowed_collections": null,
-                "junction_field": null,
-                "sort_field": null,
-                "one_deselect_action": "nullify"
-            }
-        }
-    ]
-}
+                "one_deselect_actxœìM£8†ïû+Z9Ï/ØÛjµ‡•F3‡=®¸{Ø!!â£G=«ùïK0Æ|Øe
+l’âÔ­¨zÃób—I²Ëá×§Ã¥JÓäåýðËSoûÙý÷óC÷çƒ&‡c–¦ìX&ü0õY^>Û¼$,=Ý>Îò×ø’üˆoÍ£ä4n—³4.Ù)³¿ÓäÐÅñ+;Çu³aXmh—¢ÌãäRF—øÌd|Ñ(Žè%ËYòz¼9H?§L›š :OBæÇµà§Š¾±÷¨þp­žÓähjßÅI2ÙK†§Ž¨µºžjáoM>}~úí÷/~þ¤iyb)ã-ÿúãËÓ§¿?~]2£ïçÌJÍ·sŽ/ï‘ÅÕ#[^Fm¨Ìá2êv§¸á`<ªMë8M³ïƒKºÐïðou±:p‘å¥ÍÉO¬`·³Fq§çEòƒE¯yV]†½ä,âõI
+Eûv[„½Agb¿ß.öõÔË/ÓšyÀLf_Dƒ¬I70åÅÀ Ü€Â~ù¶ Û¨ð”kƒ\D5ÕAÜËçßÅéþ ßtçñèµJN,*Ùùzc6päÇÑ.èÇƒi±ÈÚ¡Coœü¡ß.(8³¸¨rvf—RoâËuìéÃ4ß%ú1G½Ø\MÈ]ˆÖ‚¨€…7$0Ã´{«0É>tƒôº±‚YG2ŒY†ñ§Ð›è}¹sÜ²£ù†ÁcŽ†±¹º…2q¡UK!˜=
+Ù*L0íÞ-ô²}Â,=h&É-Öp‹¦¥‹Mà›BÂn ÎŽ+€e= °švb{3¶4´¸/.Ø O…§í]€†Ã5ÏNÕ("<çñådmMë¥ø‹˜"qn+ä5™ˆœ[Ž4éðœ10W*0i¾°!Y‡<CÒNaÖëDø"â{®ÉŠ’süÊì >%yýOUÔi¥‹ïãÈ2
+D”µ©q0`Õ˜ìvPÃ"O±6+Fx#â]°¸p˜ÿãÍÑ°îÎŽHµ.#ž7JG\)Â¤ý=ÒŠ«èpë•"Š)î©dKr_"$šQ eÇuÀ Z/ÈdŸ{$Û(ò”nƒbD8&áõÕôšåïö|ó¼>x/L¸µ‰qPÐÖi1Ùå.É†VpÊEX#b],o¯(K®»ñÑmW4¶ûq Â¤Çu@c«™ìv„›dFÙZÍslÌ9ó6lÌÕéqsñÉbÌ™	sÏ˜{_Rß>g½ë´t~#Úi¹| ¼GoqžÄÐ:ù0zñ]œ³{óºL…6Ô«o6 ¥¦Þ½l·7ðÞËÙÀŒÞ¾‹P¯¿Ûe Þø6ày±Œäßy½Œ%ø´d¦ÝeeâiÕLè¨oþË„q—ÇXÜ(§§XVÆ›b	–ëãíE….Ki/Å\J¶ˆa´5éqÖÒh^ôø(pC+WÒhô"¼WÀ[4´\Wø_Š¸ŒcÈµIr-00‡ŠÙ:,óuH3‚}ØC™”“Ø/˜œ³dŸ&é6vš¬óíßãœ}Íª"ä7ÞÉgy€6E!Ñßn‹è‡e&îûíâ>J³£šRÙW«Û:¼ŸÊâÐs@1ê‚ró mLB#1ÐäÌ•Á°Ëvnpr£1¤ùÔ,ÏA®°Ž+È¶ÎÆ°†ôÃYÇ€„¹2¨®ðèf`Rð²…6\Þj#nž}*ÙYoâëôØ5…õB²r8U¡Mš>_®uŸLÀBí¡§NAwrÿnà±C0vçÎ€“PG@î².þÔ	û¶Úë:+¨Xˆ¾|mª\Ä¹A°†þ ðÃjk§AéÈ ðÀûüÀØæL8ù Ílë4]Žœ³7ÃÏß4O\Øú ê£<Š(£6GÐe)¤é?Ë³¢Üëc<–B+žä±¥Ÿâñ…PEAéóƒ–^@ÅA¦@Â}¹CEBé
+
+…–¶@ÅB¹Ëúv@Ã}Ø@0ECi³‡–F@ÅÃ­Í€
+ˆû1„€ŠˆÒ–-}Š‰Û;}{Ã±*Êì¬(ù…ã]ˆ³|@— Ð‚èo·Eôƒ*óývþ™Ïò¼ç×òèÜ_¨ÌJdO¯þk¶EŒë¦þÉvûÀÛßkþúx»¼ÜÏoz¥_·ËzxÓ‹üBÅÛca¿EÛ¹–oƒ6•ïå.«`Mû`‘ƒ+û7zéõó€îg}N<w”×xAƒÒû¦Ù ¯â^VÄ2ËÞ«i-ÓsJi6\Sm¾©ˆça?’ÓÑuV]Ÿ‚fÓ›m9íôÎý ß¶±¾­«º
+ §ÇE\“Ïç^®»é= Öºª[¸N*Bå:êž¤sà›ºìÛÑNýv¿ìÕõš&AÑ»gq¯KPhAÔ·Û"êA•‰ù~;ÿÌ_«üø5.XöÔø(Ì?€æ)„¡Éòf[öŠm³Ò4k.ÛíÇ<NŸñwžGwÂŸ&Ôå.ë¢O3ëác/ºsö¿†§F,„¾>óú,¹(¿‹uŒ„xƒÎSàAÑˆw|Þ½ñÇÜÏúQöi¼¿­Ð¨?,/{ª^«ëœ½E¾B%š¼o6DG Yü;4…qc[o€;!Ö0‰l%‡0)ÀõB1
+óö‘|ÂJx…]˜U$·XÉ-S,X:àî4ºðà4ÄðíE™¿E5†—â%à‰ÅQ˜î‹pžBšXl¶eë
+ÌJÓÄ¢l·(³ÈãÜâØFÑà› œ.—†f‘<ÀBlšdôo/yvÉ&ñàÛ€)e.’XÉMVàß
+¼×
+Æ^0k¥±‹P…`[+ â@X^`(Ö]¸ ~°Cr4m†3ØÁü¹TôÃƒOLa[E4+O?ÞÑ<·húy¡úÅ8¸•Ã Œ<cð	–gØhO®Ñ<×ð¼ÆIiŽkœÜm‚Ö8mî´ÆiG¦ ›Ù>ù —8PF2¦µ†Ú¬¹:(OB˜‡ìä
+ÉE˜õ#WXÉ«O.XËäîT©ôàT®ôíÏõ7v
+Øx|³<@™š€¨o·EÔë%&Îûíüs¯,ì¾¨<«¯W+È»ÞvYJù0ºæVˆ›µI–©ñÜQ&ªÔ˜ì¶ÀÍA×‰¬GÔ*ÖÇû ®ZtbÖÝ *Wö„â½¨;Rõçe^±m ~‹Ë8wô€—ò€irë^„ÊšvÀe¨J¡Ûû¾qw×`ó×?¿üü  ÿÿ ½ú´L

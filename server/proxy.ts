@@ -18,6 +18,70 @@ proxyRouter.get('/health', (req, res) => {
   });
 });
 
+// Public Project Settings (Desktop & Mobile Download Links from Directus project_settings collection)
+proxyRouter.get('/project-settings', async (req, res) => {
+  try {
+    let settingsData: any = null;
+    try {
+      const resp: any = await DirectusAdminClient.request('/items/project_settings');
+      if (resp) {
+        if (resp.data) {
+          settingsData = Array.isArray(resp.data) ? resp.data[0] : resp.data;
+        } else if (Array.isArray(resp)) {
+          settingsData = resp[0];
+        } else if (typeof resp === 'object' && resp.id) {
+          settingsData = resp;
+        }
+      }
+    } catch (e: any) {
+      console.warn('[proxy] /items/project_settings fetch fallback:', e?.message);
+      try {
+        const items = await DirectusAdminClient.getItems('project_settings', { limit: 1 });
+        if (items && items.length > 0) {
+          settingsData = items[0];
+        }
+      } catch {
+        // empty / fallback
+      }
+    }
+
+    const resolveUrl = (val?: string | null) => {
+      if (!val) return null;
+      const str = String(val).trim();
+      if (!str) return null;
+      if (str.startsWith('http://') || str.startsWith('https://')) return str;
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+      if (isUuid) {
+        return `${DirectusAdminClient.getBaseUrl()}/assets/${str}?download`;
+      }
+      return str;
+    };
+
+    const windowsUrl = resolveUrl(settingsData?.windows_setup);
+    const macosUrl = resolveUrl(settingsData?.macos_setup);
+    const androidUrl = resolveUrl(settingsData?.adnroid_setup || settingsData?.android_setup);
+
+    return res.json({
+      windows_setup: windowsUrl,
+      macos_setup: macosUrl,
+      adnroid_setup: androidUrl,
+      android_setup: androidUrl,
+      zarinpal_merchant: settingsData?.zarinpal_merchant || null,
+      raw: settingsData || null,
+    });
+  } catch (err: any) {
+    console.error('[proxy] Error in /project-settings:', err);
+    return res.json({
+      windows_setup: null,
+      macos_setup: null,
+      adnroid_setup: null,
+      android_setup: null,
+      zarinpal_merchant: null,
+      raw: null,
+    });
+  }
+});
+
 // Profile / Current user endpoints (available at both /api/users/me and /api/auth/me)
 const handleMeRequest = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -120,6 +184,11 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
   const { userId, organizationId } = req.user!;
 
   try {
+    if (collection === 'project_settings') {
+      const items = await DirectusAdminClient.getItems('project_settings', req.query).catch(() => []);
+      return res.json({ data: items });
+    }
+
     if (collection === 'organizations') {
       const { organizations } = await getUserOrganizations(userId, organizationId);
       return res.json({ data: organizations });
@@ -128,6 +197,18 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
     const orgIdNum = Number(organizationId);
     if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
       return res.status(403).json({ error: 'دسترسی غیرمجاز: سازمان فعال یافت نشد.' });
+    }
+
+    // Check Plan Gate for Web Clients
+    const isDesktop = req.headers['x-tankhor-platform'] === 'desktop';
+    if (!isDesktop && TENANT_SCOPED_COLLECTIONS.has(collection)) {
+      const { activeOrganization } = await getUserOrganizations(userId, organizationId);
+      if (activeOrganization && activeOrganization.plan === 'free') {
+        return res.status(403).json({
+          error: 'دسترسی تحت وب برای این سازمان نیازمند پلن Pro است. لطفاً پلن خود را ارتقا دهید یا از نسخه دسکتاپ رایگان تن‌خور استفاده کنید.',
+          code: 'WEB_FREE_PLAN_LOCKED'
+        });
+      }
     }
 
     let clientFilter: any = {};

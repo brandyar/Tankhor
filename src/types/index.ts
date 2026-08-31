@@ -398,3 +398,12 @@ export interface SizeGuideValue {
   max_value?: number;
   sort?: number;
 }
+
+export interface ProjectSettings {
+  id?: number;
+  windows_setup?: string | null;
+  macos_setup?: string | null;
+  adnroid_setup?: string | null;
+  android_setup?: string | null;
+  date_updated?: string | null;
+}

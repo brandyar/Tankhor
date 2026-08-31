@@ -160,13 +160,16 @@ const AuthenticatedApp: React.FC = () => {
     }
   };
 
+  // If user is on the Web with a Free plan organization, render the Dedicated Guard View only.
+  // No AppShell, sidebar, dashboard, or data components are mounted in the DOM.
+  if (isWebFreeLocked) {
+    return <WebFreePlanGuardModal />;
+  }
+
   return (
-    <>
-      <AppShell currentRoute={currentRoute} onNavigate={setCurrentRoute}>
-        {renderCurrentView()}
-      </AppShell>
-      {isWebFreeLocked && <WebFreePlanGuardModal />}
-    </>
+    <AppShell currentRoute={currentRoute} onNavigate={setCurrentRoute}>
+      {renderCurrentView()}
+    </AppShell>
   );
 };
 

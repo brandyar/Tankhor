@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useOrganization } from '../../context/OrganizationContext';
 import { storageManager } from '../../storage';
+import { useProjectSettings } from '../../hooks/useProjectSettings';
 import { Button } from '../ui/Button';
 import {
   Sparkles,
@@ -14,6 +15,8 @@ import {
   Server,
   ArrowRight,
   Monitor,
+  Download,
+  Laptop,
 } from 'lucide-react';
 
 interface UpgradeToProModalProps {
@@ -28,6 +31,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
   onSuccess,
 }) => {
   const { activeOrganization, updateActiveOrganization, isOwner } = useOrganization();
+  const { settings } = useProjectSettings();
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -151,8 +155,8 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
             </div>
           </div>
 
-          {/* Offline reminder */}
-          <div className="p-3.5 bg-blue-50/70 border border-blue-100 rounded-2xl flex items-center justify-between gap-3">
+          {/* Offline reminder & Direct Download */}
+          <div className="p-3.5 bg-blue-50/70 border border-blue-100 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Monitor className="w-4 h-4 text-blue-700 shrink-0" />
               <div className="text-xs text-blue-900">
@@ -162,6 +166,18 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
                 </p>
               </div>
             </div>
+
+            {settings.windows_setup && (
+              <a
+                href={settings.windows_setup}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors text-decoration-none shadow-2xs cursor-pointer"
+              >
+                <Laptop className="w-3.5 h-3.5" />
+                <span>دانلود ویندوز</span>
+              </a>
+            )}
           </div>
 
           {/* Action Buttons */}

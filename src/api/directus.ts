@@ -470,6 +470,28 @@ class DirectusClient {
     const directusUrl = metaEnv?.VITE_DIRECTUS_URL || 'https://api.tankhor.com';
     return `${directusUrl.replace(/\/+$/, '')}/assets/${fileId}`;
   }
+
+  public async getProjectSettings(): Promise<{
+    windows_setup?: string | null;
+    macos_setup?: string | null;
+    adnroid_setup?: string | null;
+    android_setup?: string | null;
+  }> {
+    try {
+      const res = await fetch(`${this.getBaseUrl()}/project-settings`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Failed to fetch project settings:', e);
+    }
+    return {
+      windows_setup: null,
+      macos_setup: null,
+      adnroid_setup: null,
+      android_setup: null,
+    };
+  }
 }
 
 export const directusClient = new DirectusClient();
