@@ -56,6 +56,96 @@ jobs:
           includeUpdaterJson: true
           args: ${{ matrix.args }}
 
+  generate-updater-json:
+    name: 'Generate & Upload latest.json'
+    needs: release-desktop
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download release assets and publish latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          mkdir -p assets
+          cd assets
+          gh release download "$TAG_NAME" --repo "$REPO" --dir . || true
+          ls -la
+
+          node -e '
+          const fs = require("fs");
+
+          const tag = process.env.TAG_NAME || "v1.0.1";
+          const version = tag.replace(/^v/, "");
+          const repo = process.env.REPO || "brandyar/Tankhor";
+          const files = fs.readdirSync(".");
+
+          const platforms = {};
+
+          function getSignature(filename) {
+            const sigFile = filename + ".sig";
+            if (fs.existsSync(sigFile)) {
+              return fs.readFileSync(sigFile, "utf8").trim();
+            }
+            return null;
+          }
+
+          files.forEach(file => {
+            if (file.endsWith(".sig") || file === "latest.json") return;
+
+            const sig = getSignature(file);
+            if (!sig) return;
+
+            const downloadUrl = `https://github.com/${repo}/releases/download/${tag}/${file}`;
+
+            // macOS assets
+            if (file.includes("universal") || file.endsWith(".app.tar.gz") || file.endsWith(".dmg")) {
+              platforms["darwin-aarch64"] = { signature: sig, url: downloadUrl };
+              platforms["darwin-x86_64"] = { signature: sig, url: downloadUrl };
+            } else if (file.includes("aarch64") && (file.endsWith(".tar.gz") || file.endsWith(".dmg"))) {
+              platforms["darwin-aarch64"] = { signature: sig, url: downloadUrl };
+            } else if (file.includes("x86_64") && file.includes("apple") && (file.endsWith(".tar.gz") || file.endsWith(".dmg"))) {
+              platforms["darwin-x86_64"] = { signature: sig, url: downloadUrl };
+            }
+
+            // Windows assets
+            if (file.endsWith(".nsis.zip") || file.endsWith(".msi.zip") || (file.includes("x64") && file.endsWith(".zip"))) {
+              platforms["windows-x86_64"] = { signature: sig, url: downloadUrl };
+            } else if (file.endsWith(".exe") && sig) {
+              if (!platforms["windows-x86_64"]) {
+                platforms["windows-x86_64"] = { signature: sig, url: downloadUrl };
+              }
+            }
+          });
+
+          const manifest = {
+            version: version,
+            notes: `بروزرسانی نسخه ${version} نرم‌افزار تن‌خور`,
+            pub_date: new Date().toISOString(),
+            platforms: platforms
+          };
+
+          console.log("Generated latest.json:\n", JSON.stringify(manifest, null, 2));
+          fs.writeFileSync("../latest.json", JSON.stringify(manifest, null, 2));
+          '
+
+          if [ -f "../latest.json" ]; then
+            gh release upload "$TAG_NAME" ../latest.json --repo "$REPO" --clobber
+            echo "latest.json uploaded successfully!"
+          else
+            echo "latest.json creation skipped or failed"
+          fi
+
   release-android:
     name: 'Build Android APK'
     runs-on: ubuntu-latest
