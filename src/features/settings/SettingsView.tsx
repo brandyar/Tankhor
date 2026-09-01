@@ -13,7 +13,8 @@ import { CreateOrganizationModal } from '../organizations/CreateOrganizationModa
 import { OrganizationMembersSection } from '../organizations/OrganizationMembersSection';
 import { LocalBackupRestoreCard } from './LocalBackupRestoreCard';
 import { UpgradeToProModal } from '../../components/modals/UpgradeToProModal';
-import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck, Building2, Edit3, Plus, ShieldAlert, Globe, Clock, CheckCircle2, Users, Sparkles, Lock } from 'lucide-react';
+import { checkDesktopUpdate } from '../../utils/updater';
+import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck, Building2, Edit3, Plus, ShieldAlert, Globe, Clock, CheckCircle2, Users, Sparkles, Lock, ArrowUpCircle } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
   const { t } = useTranslation();
@@ -28,7 +29,17 @@ export const SettingsView: React.FC = () => {
   const [mode, setMode] = useState(storageManager.getMode());
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [isEditOrgOpen, setIsEditOrgOpen] = useState(false);
+
+  const handleManualCheckUpdate = async () => {
+    setIsCheckingUpdate(true);
+    const info = await checkDesktopUpdate();
+    setIsCheckingUpdate(false);
+    if (!info.available) {
+      alert('شما در حال استفاده از آخرین نسخه برنامه تن‌خور هستید.');
+    }
+  };
   const [isCreateOrgOpen, setIsCreateOrgOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
@@ -297,6 +308,33 @@ export const SettingsView: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Desktop App Updater Card */}
+      {isTauriEnvironment() && (
+        <Card title="بروزرسانی نسخه دسکتاپ" subtitle="بررسی انتشار نسخه‌های جدید برنامه تن‌خور از طریق GitHub Releases">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50 border border-neutral-200/80">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <ArrowUpCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-neutral-900">نسخه نصب‌شده دسکتاپ: v1.0.0</p>
+                <p className="text-[11px] text-neutral-500 mt-0.5">ارتقای خودکار بدون از دست رفتن اطلاعات SQLite و تنظیمات سازمان</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualCheckUpdate}
+              isLoading={isCheckingUpdate}
+              icon={<RefreshCw className="w-3.5 h-3.5" />}
+              className="text-xs font-bold shrink-0"
+            >
+              بررسی بروزرسانی نسخه جدید
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Cloud Sync Manual Trigger Card */}
       <Card title="وضعیت همگام‌سازی ابری" subtitle="ارسال تغییرات محلی به پایگاه داده ابری تن‌خور">

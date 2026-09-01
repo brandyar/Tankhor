@@ -51,6 +51,13 @@
    - Size Guides are generic (`size_guide_templates` -> `size_guide_measurements` -> `size_guide_values`).
    - Do **NOT** hardcode apparel-specific dimensions (like chest/waist). Render measurement definitions dynamically based on the active template type (apparel, shoes, bags, accessories, custom).
 
+8. **Automated Desktop Releases & Self-Updater**:
+   - Automated multi-platform releases built via GitHub Actions (`/.github/workflows/release-tauri.yml`).
+   - Desktop auto-update system powered by Tauri Updater (`tauri-plugin-updater`) and GitHub Releases.
+   - Background check via `checkDesktopUpdate()` (`/src/utils/updater.ts`) on startup or manual trigger in Settings.
+   - Universal RTL update notification modal (`UpdateNotificationModal.tsx`) showing release notes, real-time download progress, and zero-downtime relaunch via `@tauri-apps/plugin-process`.
+   - Preservation of local SQLite database (`tankhor.db`) across desktop application updates.
+
 ---
 
 ## 📂 Key Code Structure
@@ -68,9 +75,11 @@
 - `/src/i18n/`: Translation keys (`fa`, `en`) and i18n helper hooks
 - `/src/context/`: AuthContext, OrganizationContext, and I18nProvider
 - `/src/components/ui/`: Reusable, locale-agnostic design system controls
+- `/src/components/modals/UpdateNotificationModal.tsx`: Interactive modal for desktop app updates with progress bar and release notes
 - `/src/components/layout/`: Responsive App Shell (Sidebar, Top Header, Org Switcher)
 - `/src/features/`: Modular domain views (Dashboard, Products, Inventory, Orders, Purchasing, Size Guides, Settings, Organizations)
-- `/src/utils/`: Jalali date formatting, Persian number formatters, currency formatters, permissions matrix
+- `/src/utils/updater.ts`: Desktop update checker and installation helper using `@tauri-apps/plugin-updater` and `@tauri-apps/plugin-process`
+- `/.github/workflows/release-tauri.yml`: Multi-platform release pipeline for Tauri desktop (Windows, macOS) and Android APK
 
 ---
 

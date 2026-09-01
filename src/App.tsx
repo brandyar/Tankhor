@@ -30,6 +30,7 @@ import { SettingsView } from './features/settings/SettingsView';
 import { isTauriEnvironment } from './storage';
 import { WebFreePlanGuardModal } from './components/modals/WebFreePlanGuardModal';
 import { ConfirmModalHost } from './components/ui/ConfirmModal';
+import { UpdateNotificationModal } from './components/modals/UpdateNotificationModal';
 import { Card } from './components/ui/Card';
 import { Button } from './components/ui/Button';
 import { ShieldAlert, RefreshCw, Shirt, Home } from 'lucide-react';
@@ -209,6 +210,7 @@ export default function App() {
       <AuthProvider>
         <MainAppContent />
         <ConfirmModalHost />
+        <UpdateNotificationModal />
       </AuthProvider>
     </I18nProvider>
   );

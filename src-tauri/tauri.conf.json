@@ -37,5 +37,13 @@
     "category": "Business",
     "shortDescription": "پلتفرم مدیریت پوشاک و انبارداری تن‌خور",
     "longDescription": "تن‌خور یک سیستم جامع مدیریت پوشاک، راهنمای سایز اختصاصی و انبارداری با قابلیت کارکرد آفلاین محلی و همگام‌سازی ابری است."
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERFNUZERDUxNUZFODk5NjMKUldSam1laGZVZDFmM29lQ3B4UlVqQ0xnZnlxdFZzVkJDVVJVMklaOTJKOFgxTjBPSitUQVc2MkYK",
+      "endpoints": [
+        "https://github.com/tankhor-app/tankhor/releases/latest/download/latest.json"
+      ]
+    }
   }
 }
