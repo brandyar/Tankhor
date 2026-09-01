@@ -34,5 +34,5 @@ export const navigationEn = {
   warehouseManagement: 'Warehouses & Locations',
   stockOperations: 'Stock Logs & Transfers',
   reportsGroup: 'Reports & Analytics',
-  apparelReports: 'Apparel Analytics',
+  apparelReports: 'Reports',
 };

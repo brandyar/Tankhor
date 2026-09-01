@@ -34,5 +34,5 @@ export const navigationFa = {
   warehouseManagement: 'انبارها و قفسه‌بندی',
   stockOperations: 'گردش و انتقال کالا',
   reportsGroup: 'گزارش‌ها و تحلیل‌ها',
-  apparelReports: 'گزارش‌های تخصصی پوشاک',
+  apparelReports: 'گزارش‌ها',
 };

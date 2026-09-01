@@ -174,7 +174,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       title: t('navigation.reportsGroup', 'گزارش‌ها و تحلیل‌ها'),
       entries: [
-        { type: 'item', route: 'reports/apparel', label: t('navigation.apparelReports', 'گزارش‌های تخصصی پوشاک'), icon: BarChart3, visible: permissions.canViewOrders || permissions.canViewFinancials },
+        { type: 'item', route: 'reports/apparel', label: t('navigation.apparelReports', 'گزارش‌ها'), icon: BarChart3, visible: permissions.canViewOrders || permissions.canViewFinancials },
       ],
     },
     {

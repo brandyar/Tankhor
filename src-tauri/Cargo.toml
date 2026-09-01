@@ -1,6 +1,6 @@
 [package]
 name = "tankhor"
-version = "1.0.2"
+version = "1.0.3"
 description = "TANKHOR (تن‌خور) - نرم‌افزار مدیریت پوشاک و انبارداری"
 authors = ["TANKHOR Team"]
 edition = "2021"
