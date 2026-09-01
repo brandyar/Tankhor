@@ -14,6 +14,7 @@ import { OrganizationMembersSection } from '../organizations/OrganizationMembers
 import { LocalBackupRestoreCard } from './LocalBackupRestoreCard';
 import { UpgradeToProModal } from '../../components/modals/UpgradeToProModal';
 import { checkDesktopUpdate } from '../../utils/updater';
+import { getCurrentAppVersion, APP_VERSION } from '../../utils/version';
 import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck, Building2, Edit3, Plus, ShieldAlert, Globe, Clock, CheckCircle2, Users, Sparkles, Lock, ArrowUpCircle } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
@@ -31,21 +32,29 @@ export const SettingsView: React.FC = () => {
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [isEditOrgOpen, setIsEditOrgOpen] = useState(false);
-  const [desktopVersion, setDesktopVersion] = useState<string>('1.0.1');
+  const [desktopVersion, setDesktopVersion] = useState<string>(APP_VERSION);
 
   useEffect(() => {
-    if (isTauriEnvironment()) {
-      import('@tauri-apps/api/app')
-        .then(({ getVersion }) => getVersion().then(setDesktopVersion))
-        .catch(() => {});
-    }
+    getCurrentAppVersion().then(setDesktopVersion);
   }, []);
 
   const handleManualCheckUpdate = async () => {
     setIsCheckingUpdate(true);
     const info = await checkDesktopUpdate();
     setIsCheckingUpdate(false);
-    if (!info.available) {
+    if (info.available) {
+      // Automatic update modal will trigger, or we notify user
+      return;
+    }
+    if (info.error) {
+      if (info.error.includes('plugin') || info.error.includes('not found') || info.error.includes('ipc')) {
+        alert(`نسخه دسکتاپ فعلی شما (v${desktopVersion}) قبل از افزودن ماژول بروزرسانی خودکار بیلد شده است. لطفاً نسخه جدیدتر را یک‌بار به صورت دستی دانلود و نصب نمایید تا نسخه‌های بعدی خودکار دریافت شوند.`);
+      } else if (info.error.includes('404')) {
+        alert('فایل متادیتای بروزرسانی (latest.json) روی گیتهاب یافت نشد. لطفاً بررسی کنید که کلید TAURI_PRIVATE_KEY در GitHub Secrets قرار داده شده باشد.');
+      } else {
+        alert(`خطا در بررسی بروزرسانی: ${info.error}`);
+      }
+    } else {
       alert('شما در حال استفاده از آخرین نسخه برنامه تن‌خور هستید.');
     }
   };

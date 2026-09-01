@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Download, Sparkles, X, CheckCircle, RefreshCw, ArrowUpCircle } from 'lucide-react';
 import { checkDesktopUpdate, downloadAndInstallUpdate, AppUpdateInfo } from '../../utils/updater';
+import { getCurrentAppVersion, APP_VERSION } from '../../utils/version';
 import { isTauriEnvironment } from '../../storage';
 
 export const UpdateNotificationModal: React.FC = () => {
   const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | null>(null);
+  const [currentAppVer, setCurrentAppVer] = useState<string>(APP_VERSION);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [statusText, setStatusText] = useState<string>('');
@@ -13,6 +15,8 @@ export const UpdateNotificationModal: React.FC = () => {
 
   // Auto check on app launch in desktop
   useEffect(() => {
+    getCurrentAppVersion().then(setCurrentAppVer);
+
     if (!isTauriEnvironment()) return;
 
     const timer = setTimeout(() => {
@@ -78,7 +82,7 @@ export const UpdateNotificationModal: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                نسخه فعلی شما: {updateInfo.currentVersion || '1.0.0'}
+                نسخه فعلی شما: {updateInfo.currentVersion || currentAppVer}
               </p>
             </div>
           </div>

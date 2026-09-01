@@ -7,6 +7,7 @@ export interface AppUpdateInfo {
   body?: string;
   date?: string;
   updateObj?: any;
+  error?: string;
 }
 
 export async function checkDesktopUpdate(): Promise<AppUpdateInfo> {
@@ -30,11 +31,14 @@ export async function checkDesktopUpdate(): Promise<AppUpdateInfo> {
         updateObj: update,
       };
     }
-  } catch (err) {
-    console.warn('[Updater] Check failed or not in desktop bundle:', err);
+    return { available: false };
+  } catch (err: any) {
+    console.warn('[Updater] Check failed:', err);
+    return {
+      available: false,
+      error: err?.message || String(err),
+    };
   }
-
-  return { available: false };
 }
 
 export async function downloadAndInstallUpdate(
