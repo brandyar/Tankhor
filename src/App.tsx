@@ -27,6 +27,7 @@ import { CustomersView } from './features/customers/CustomersView';
 import { SuppliersView } from './features/purchasing/SuppliersView';
 import { PurchaseOrdersView } from './features/purchasing/PurchaseOrdersView';
 import { SettingsView } from './features/settings/SettingsView';
+import { ReportsView } from './features/reports/ReportsView';
 import { isTauriEnvironment } from './storage';
 import { WebFreePlanGuardModal } from './components/modals/WebFreePlanGuardModal';
 import { ConfirmModalHost } from './components/ui/ConfirmModal';
@@ -93,6 +94,8 @@ const AuthenticatedApp: React.FC = () => {
       case 'purchasing/suppliers':
       case 'purchasing/orders':
         return permissions.canViewPurchasing;
+      case 'reports/apparel':
+        return permissions.canViewOrders || permissions.canViewFinancials;
       case 'settings':
       case 'settings/org':
       case 'settings/sync':
@@ -153,6 +156,8 @@ const AuthenticatedApp: React.FC = () => {
         return <SuppliersView />;
       case 'purchasing/orders':
         return <PurchaseOrdersView />;
+      case 'reports/apparel':
+        return <ReportsView />;
       case 'settings':
       case 'settings/org':
       case 'settings/sync':

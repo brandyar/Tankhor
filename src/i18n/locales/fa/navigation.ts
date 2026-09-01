@@ -33,4 +33,6 @@ export const navigationFa = {
   catalogAttributes: 'مشخصات و ویژگی‌های کاتالوگ',
   warehouseManagement: 'انبارها و قفسه‌بندی',
   stockOperations: 'گردش و انتقال کالا',
+  reportsGroup: 'گزارش‌ها و تحلیل‌ها',
+  apparelReports: 'گزارش‌های تخصصی پوشاک',
 };

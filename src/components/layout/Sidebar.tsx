@@ -29,6 +29,7 @@ import {
   PackagePlus,
   Boxes,
   SlidersHorizontal,
+  BarChart3,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -168,6 +169,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       entries: [
         { type: 'item', route: 'purchasing/orders', label: t('navigation.purchaseOrders'), icon: Truck, visible: permissions.canViewPurchasing },
         { type: 'item', route: 'purchasing/suppliers', label: t('navigation.suppliers'), icon: Boxes, visible: permissions.canViewPurchasing },
+      ],
+    },
+    {
+      title: t('navigation.reportsGroup', 'گزارش‌ها و تحلیل‌ها'),
+      entries: [
+        { type: 'item', route: 'reports/apparel', label: t('navigation.apparelReports', 'گزارش‌های تخصصی پوشاک'), icon: BarChart3, visible: permissions.canViewOrders || permissions.canViewFinancials },
       ],
     },
     {

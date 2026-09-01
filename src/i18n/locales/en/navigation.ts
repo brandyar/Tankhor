@@ -33,4 +33,6 @@ export const navigationEn = {
   catalogAttributes: 'Catalog Attributes',
   warehouseManagement: 'Warehouses & Locations',
   stockOperations: 'Stock Logs & Transfers',
+  reportsGroup: 'Reports & Analytics',
+  apparelReports: 'Apparel Analytics',
 };
