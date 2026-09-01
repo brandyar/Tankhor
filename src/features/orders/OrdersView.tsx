@@ -22,6 +22,7 @@ import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
+import { printElement } from '../../utils/print';
 import {
   ShoppingCart,
   Plus,
@@ -181,7 +182,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
   };
 
   const triggerPrint = () => {
-    window.print();
+    printElement('printable-order-invoice', { title: `فاکتور_${selectedOrder?.order_number || 'سفارش'}` });
   };
 
   const getOrderStatusBadge = (status: OrderStatus) => {
@@ -226,7 +227,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
     <div className="space-y-6 font-sans">
       {/* Printable Invoice Section for Print Trigger */}
       {selectedOrder && (
-        <div className="hidden print:block print:fixed print:inset-0 print:bg-white print:p-6 print:text-black font-sans z-[9999]">
+        <div id="printable-order-invoice" className="hidden print:block print:fixed print:inset-0 print:bg-white print:p-6 print:text-black font-sans z-[9999]">
           {receiptType === 'thermal' ? (
             /* POS 80mm Thermal Receipt */
             <div className="w-[80mm] mx-auto text-xs space-y-3 font-mono leading-tight">

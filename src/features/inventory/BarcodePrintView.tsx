@@ -10,6 +10,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { formatCurrency, toPersianDigits } from '../../utils/formatters';
+import { printElement } from '../../utils/print';
 import { generateBarcodeSvg, generateRandomBarcode } from '../../utils/barcode';
 import {
   Printer,
@@ -268,7 +269,7 @@ export const BarcodePrintView: React.FC = () => {
       alert('لطفاً حداقل یک کالا را برای چاپ انتخاب کنید.');
       return;
     }
-    window.print();
+    printElement('tankhor-print-container', { title: 'چاپ_لیبل_کالا' });
   };
 
   // Sample variant for preview

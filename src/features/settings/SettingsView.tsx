@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
 import { useAuth } from '../../context/AuthContext';
@@ -31,6 +31,15 @@ export const SettingsView: React.FC = () => {
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [isEditOrgOpen, setIsEditOrgOpen] = useState(false);
+  const [desktopVersion, setDesktopVersion] = useState<string>('1.0.1');
+
+  useEffect(() => {
+    if (isTauriEnvironment()) {
+      import('@tauri-apps/api/app')
+        .then(({ getVersion }) => getVersion().then(setDesktopVersion))
+        .catch(() => {});
+    }
+  }, []);
 
   const handleManualCheckUpdate = async () => {
     setIsCheckingUpdate(true);
@@ -318,7 +327,7 @@ export const SettingsView: React.FC = () => {
                 <ArrowUpCircle className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-neutral-900">نسخه نصب‌شده دسکتاپ: v1.0.0</p>
+                <p className="text-xs font-bold text-neutral-900">نسخه نصب‌شده دسکتاپ: v{desktopVersion}</p>
                 <p className="text-[11px] text-neutral-500 mt-0.5">ارتقای خودکار بدون از دست رفتن اطلاعات SQLite و تنظیمات سازمان</p>
               </div>
             </div>

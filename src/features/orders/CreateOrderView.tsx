@@ -22,6 +22,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
+import { printElement } from '../../utils/print';
 import {
   ShoppingCart,
   Search,
@@ -434,14 +435,14 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
   });
 
   const triggerPrint = () => {
-    window.print();
+    printElement('printable-create-order-invoice', { title: `فاکتور_${lastSavedOrder?.order.order_number || 'جدید'}` });
   };
 
   return (
     <div className="space-y-5 font-sans">
       {/* Printable Area for Invoices (Hidden on screen, active on Ctrl+P) */}
       {lastSavedOrder && (
-        <div className="hidden print:block print:fixed print:inset-0 print:bg-white print:p-6 print:text-black font-sans z-[9999]">
+        <div id="printable-create-order-invoice" className="hidden print:block print:fixed print:inset-0 print:bg-white print:p-6 print:text-black font-sans z-[9999]">
           {receiptType === 'thermal' ? (
             /* 80mm POS Thermal Receipt */
             <div className="w-[80mm] mx-auto text-xs space-y-3 font-mono leading-tight">
