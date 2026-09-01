@@ -53,6 +53,7 @@ jobs:
           releaseBody: 'انتشار نسخه چندپلتفرمه تن‌خور (ویندوز، مک و اندروید) با پشتیبانی کامل از دیتابیس آفلاین محلی و همگام‌سازی ابری.'
           releaseDraft: false
           prerelease: false
+          includeUpdaterJson: true
           args: ${{ matrix.args }}
 
   release-android:
