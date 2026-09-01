@@ -40,22 +40,27 @@ export const SettingsView: React.FC = () => {
 
   const handleManualCheckUpdate = async () => {
     setIsCheckingUpdate(true);
-    const info = await checkDesktopUpdate();
-    setIsCheckingUpdate(false);
-    if (info.available) {
-      // Automatic update modal will trigger, or we notify user
-      return;
-    }
-    if (info.error) {
-      if (info.error.includes('plugin') || info.error.includes('not found') || info.error.includes('ipc')) {
-        alert(`نسخه دسکتاپ فعلی شما (v${desktopVersion}) قبل از افزودن ماژول بروزرسانی خودکار بیلد شده است. لطفاً نسخه جدیدتر را یک‌بار به صورت دستی دانلود و نصب نمایید تا نسخه‌های بعدی خودکار دریافت شوند.`);
-      } else if (info.error.includes('404')) {
-        alert('فایل متادیتای بروزرسانی (latest.json) روی گیتهاب یافت نشد. لطفاً بررسی کنید که کلید TAURI_PRIVATE_KEY در GitHub Secrets قرار داده شده باشد.');
-      } else {
-        alert(`خطا در بررسی بروزرسانی: ${info.error}`);
+    try {
+      const info = await checkDesktopUpdate();
+      setIsCheckingUpdate(false);
+      if (info.available) {
+        // Modal will open automatically via listener, or trigger explicitly
+        return;
       }
-    } else {
-      alert('شما در حال استفاده از آخرین نسخه برنامه تن‌خور هستید.');
+      if (info.error) {
+        if (info.error.includes('plugin') || info.error.includes('not found') || info.error.includes('ipc') || info.error.includes('deny')) {
+          alert(`دسترسی ماژول بروزرسانی خودکار در این بیلد اولیه فعال نبوده است (نسخه فعلی: v${desktopVersion}). لطفاً یک‌بار نسخه جدیدتر را به صورت دستی دانلود و نصب کنید تا بروزرسانی‌های بعدی به شکل خودکار کار کنند.`);
+        } else if (info.error.includes('404')) {
+          alert('فایل متادیتای بروزرسانی (latest.json) روی سرور یافت نشد یا هنوز ریلیز در گیتهاب نهایی نشده است.');
+        } else {
+          alert(`خطا در بررسی بروزرسانی: ${info.error}`);
+        }
+      } else {
+        alert('شما در حال حاضر از آخرین نسخه برنامه تن‌خور استفاده می‌کنید و آپدیت جدیدی یافت نشد.');
+      }
+    } catch (e: any) {
+      setIsCheckingUpdate(false);
+      alert(`خطای غیرمنتظره در بررسی نسخه جدید: ${e?.message || e}`);
     }
   };
   const [isCreateOrgOpen, setIsCreateOrgOpen] = useState(false);

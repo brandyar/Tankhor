@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Download, Sparkles, X, CheckCircle, RefreshCw, ArrowUpCircle } from 'lucide-react';
-import { checkDesktopUpdate, downloadAndInstallUpdate, AppUpdateInfo } from '../../utils/updater';
+import { Download, Sparkles, X, RefreshCw, AlertCircle } from 'lucide-react';
+import { onUpdateAvailable, downloadAndInstallUpdate, checkDesktopUpdate, AppUpdateInfo } from '../../utils/updater';
 import { getCurrentAppVersion, APP_VERSION } from '../../utils/version';
 import { isTauriEnvironment } from '../../storage';
 
@@ -11,40 +11,42 @@ export const UpdateNotificationModal: React.FC = () => {
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [statusText, setStatusText] = useState<string>('');
   const [isOpen, setIsOpen] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
+  const [installError, setInstallError] = useState<string | null>(null);
 
-  // Auto check on app launch in desktop
   useEffect(() => {
     getCurrentAppVersion().then(setCurrentAppVer);
 
-    if (!isTauriEnvironment()) return;
+    // Subscribe to update events
+    const unsubscribe = onUpdateAvailable((info) => {
+      if (info.available) {
+        setUpdateInfo(info);
+        setIsOpen(true);
+      }
+    });
 
-    const timer = setTimeout(() => {
-      checkForUpdates(false);
-    }, 4000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  const checkForUpdates = async (manual: boolean = false) => {
-    setIsChecking(true);
-    const info = await checkDesktopUpdate();
-    setIsChecking(false);
-
-    if (info.available) {
-      setUpdateInfo(info);
-      setIsOpen(true);
-    } else if (manual) {
-      alert('شما در حال استفاده از آخرین نسخه نرم‌افزار تن‌خور هستید.');
+    // Auto check after 3 seconds on desktop launch
+    if (isTauriEnvironment()) {
+      const timer = setTimeout(() => {
+        checkDesktopUpdate().catch((e) => console.error('[AutoUpdateCheck] Error:', e));
+      }, 3000);
+      return () => {
+        clearTimeout(timer);
+        unsubscribe();
+      };
     }
-  };
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   if (!isOpen || !updateInfo) return null;
 
   const handleStartUpdate = async () => {
     try {
       setIsDownloading(true);
-      setStatusText('در حال دریافت بسته‌ی بروزرسانی...');
+      setInstallError(null);
+      setStatusText('در حال اتصال و دریافت بسته‌ی بروزرسانی...');
 
       await downloadAndInstallUpdate(updateInfo.updateObj, (downloaded, total) => {
         if (total > 0) {
@@ -56,33 +58,33 @@ export const UpdateNotificationModal: React.FC = () => {
         }
       });
 
-      setStatusText('دریافت تکمیل شد. در حال راه‌اندازی مجدد برنامه...');
+      setStatusText('دریافت تکمیل شد. در حال اعمال و راه‌اندازی مجدد برنامه...');
     } catch (err: any) {
       console.error('Update install error:', err);
       setIsDownloading(false);
-      alert(`خطا در نصب بروزرسانی: ${err?.message || 'مشکل در برقراری ارتباط با سرور بروزرسانی'}`);
+      setInstallError(err?.message || 'مشکل در برقراری ارتباط با سرور یا نصب بروزرسانی');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100">
         
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400 shrink-0">
               <Sparkles className="h-6 w-6 animate-pulse" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold">نسخه جدید تن‌خور آماده نصب است</h3>
-                <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
-                  {updateInfo.version}
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white">نسخه جدید تن‌خور آماده نصب است</h3>
+                <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 font-mono">
+                  v{updateInfo.version}
                 </span>
               </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                نسخه فعلی شما: {updateInfo.currentVersion || currentAppVer}
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-mono">
+                نسخه فعلی شما: v{updateInfo.currentVersion || currentAppVer}
               </p>
             </div>
           </div>
@@ -99,10 +101,18 @@ export const UpdateNotificationModal: React.FC = () => {
         {/* Release Notes */}
         {updateInfo.body && (
           <div className="mt-5 rounded-xl bg-zinc-50 p-4 border border-zinc-100 dark:bg-zinc-800/50 dark:border-zinc-800">
-            <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-2">تغییرات و امکانات جدید این نسخه:</p>
-            <div className="max-h-36 overflow-y-auto text-xs text-zinc-700 dark:text-zinc-300 whitespace-pre-line leading-relaxed pl-1">
+            <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">تغییرات و امکانات نسخه جدید:</p>
+            <div className="max-h-36 overflow-y-auto text-xs text-zinc-600 dark:text-zinc-300 whitespace-pre-line leading-relaxed pl-1">
               {updateInfo.body}
             </div>
+          </div>
+        )}
+
+        {/* Error Alert */}
+        {installError && (
+          <div className="mt-4 flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs dark:bg-red-950/40 dark:border-red-900 dark:text-red-400">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>خطا در نصب بروزرسانی: {installError}</span>
           </div>
         )}
 
@@ -111,12 +121,12 @@ export const UpdateNotificationModal: React.FC = () => {
           <div className="mt-5 space-y-2">
             <div className="flex justify-between text-xs font-medium text-zinc-600 dark:text-zinc-400">
               <span>{statusText}</span>
-              <span>%{downloadProgress}</span>
+              {downloadProgress > 0 && <span className="font-mono">%{downloadProgress}</span>}
             </div>
             <div className="h-2.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
               <div
                 className="h-full bg-indigo-600 transition-all duration-300 dark:bg-indigo-500 rounded-full"
-                style={{ width: `${downloadProgress}%` }}
+                style={{ width: `${Math.max(5, downloadProgress)}%` }}
               />
             </div>
           </div>
