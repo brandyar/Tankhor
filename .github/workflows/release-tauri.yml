@@ -85,10 +85,12 @@ jobs:
           node -e '
           const fs = require("fs");
 
-          const tag = process.env.TAG_NAME || "v1.0.1";
+          const tag = process.env.TAG_NAME || "v1.0.3";
           const version = tag.replace(/^v/, "");
           const repo = process.env.REPO || "brandyar/Tankhor";
           const files = fs.readdirSync(".");
+
+          console.log("Found release assets:", files);
 
           const platforms = {};
 
@@ -100,31 +102,67 @@ jobs:
             return null;
           }
 
+          // Scan all signature files and corresponding binary archives
           files.forEach(file => {
             if (file.endsWith(".sig") || file === "latest.json") return;
 
             const sig = getSignature(file);
-            if (!sig) return;
-
             const downloadUrl = `https://github.com/${repo}/releases/download/${tag}/${file}`;
 
-            // macOS assets
-            if (file.includes("universal") || file.endsWith(".app.tar.gz") || file.endsWith(".dmg")) {
-              platforms["darwin-aarch64"] = { signature: sig, url: downloadUrl };
-              platforms["darwin-x86_64"] = { signature: sig, url: downloadUrl };
-            } else if (file.includes("aarch64") && (file.endsWith(".tar.gz") || file.endsWith(".dmg"))) {
-              platforms["darwin-aarch64"] = { signature: sig, url: downloadUrl };
-            } else if (file.includes("x86_64") && file.includes("apple") && (file.endsWith(".tar.gz") || file.endsWith(".dmg"))) {
-              platforms["darwin-x86_64"] = { signature: sig, url: downloadUrl };
-            }
+            console.log(`Evaluating asset: ${file} (has sig: ${Boolean(sig)})`);
 
-            // Windows assets
-            if (file.endsWith(".nsis.zip") || file.endsWith(".msi.zip") || (file.includes("x64") && file.endsWith(".zip"))) {
-              platforms["windows-x86_64"] = { signature: sig, url: downloadUrl };
+            // Windows NSIS / MSI / Setup files
+            if (
+              file.endsWith(".nsis.zip") ||
+              file.endsWith(".msi.zip") ||
+              file.endsWith(".zip") ||
+              file.includes("x64-setup.exe") ||
+              file.includes("setup.exe") ||
+              file.includes("x64_en-US.msi")
+            ) {
+              if (sig) {
+                platforms["windows-x86_64"] = { signature: sig, url: downloadUrl };
+                platforms["windows-i686"] = { signature: sig, url: downloadUrl };
+                platforms["windows-x86"] = { signature: sig, url: downloadUrl };
+              }
             } else if (file.endsWith(".exe") && sig) {
               if (!platforms["windows-x86_64"]) {
                 platforms["windows-x86_64"] = { signature: sig, url: downloadUrl };
               }
+            }
+
+            // macOS Universal / Apple Silicon / Intel bundles
+            if (
+              file.includes("universal") ||
+              file.endsWith(".dmg") ||
+              file.endsWith(".app.tar.gz") ||
+              file.includes("Tankhor_") && (file.endsWith(".tar.gz") || file.endsWith(".dmg"))
+            ) {
+              if (sig) {
+                platforms["darwin-aarch64"] = { signature: sig, url: downloadUrl };
+                platforms["darwin-x86_64"] = { signature: sig, url: downloadUrl };
+                platforms["darwin-universal"] = { signature: sig, url: downloadUrl };
+              }
+            }
+
+            // Linux packages
+            if (file.endsWith(".AppImage.tar.gz") && sig) {
+              platforms["linux-x86_64"] = { signature: sig, url: downloadUrl };
+            }
+          });
+
+          // Check if any signatures were present as standalone .sig files
+          files.filter(f => f.endsWith(".sig")).forEach(sigFile => {
+            const baseFile = sigFile.slice(0, -4);
+            const sigContent = fs.readFileSync(sigFile, "utf8").trim();
+            const downloadUrl = `https://github.com/${repo}/releases/download/${tag}/${baseFile}`;
+
+            if (baseFile.includes("universal") || baseFile.endsWith(".app.tar.gz")) {
+              if (!platforms["darwin-aarch64"]) platforms["darwin-aarch64"] = { signature: sigContent, url: downloadUrl };
+              if (!platforms["darwin-x86_64"]) platforms["darwin-x86_64"] = { signature: sigContent, url: downloadUrl };
+            }
+            if (baseFile.endsWith(".nsis.zip") || baseFile.endsWith(".msi.zip") || baseFile.endsWith(".exe") || baseFile.includes("x64")) {
+              if (!platforms["windows-x86_64"]) platforms["windows-x86_64"] = { signature: sigContent, url: downloadUrl };
             }
           });
 
@@ -135,7 +173,7 @@ jobs:
             platforms: platforms
           };
 
-          console.log("Generated latest.json:\n", JSON.stringify(manifest, null, 2));
+          console.log("Final Generated latest.json:\n", JSON.stringify(manifest, null, 2));
           fs.writeFileSync("../latest.json", JSON.stringify(manifest, null, 2));
           '
 

@@ -33,6 +33,7 @@ export const SettingsView: React.FC = () => {
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [isEditOrgOpen, setIsEditOrgOpen] = useState(false);
   const [desktopVersion, setDesktopVersion] = useState<string>(APP_VERSION);
+  const [updateStatusMsg, setUpdateStatusMsg] = useState<{ type: 'info' | 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     getCurrentAppVersion().then(setDesktopVersion);
@@ -40,27 +41,46 @@ export const SettingsView: React.FC = () => {
 
   const handleManualCheckUpdate = async () => {
     setIsCheckingUpdate(true);
+    setUpdateStatusMsg(null);
     try {
       const info = await checkDesktopUpdate();
       setIsCheckingUpdate(false);
       if (info.available) {
-        // Modal will open automatically via listener, or trigger explicitly
+        setUpdateStatusMsg({
+          type: 'success',
+          text: `نسخه جدید v${info.version} یافت شد. پنجره دانلود و نصب باز گردید.`,
+        });
         return;
       }
       if (info.error) {
         if (info.error.includes('plugin') || info.error.includes('not found') || info.error.includes('ipc') || info.error.includes('deny')) {
-          alert(`دسترسی ماژول بروزرسانی خودکار در این بیلد اولیه فعال نبوده است (نسخه فعلی: v${desktopVersion}). لطفاً یک‌بار نسخه جدیدتر را به صورت دستی دانلود و نصب کنید تا بروزرسانی‌های بعدی به شکل خودکار کار کنند.`);
+          setUpdateStatusMsg({
+            type: 'error',
+            text: `دسترسی ماژول بروزرسانی خودکار در این بیلد فعال نبوده است (نسخه فعلی: v${desktopVersion}). لطفاً یک‌بار نسخه جدیدتر را به صورت دستی دانلود و نصب کنید.`,
+          });
         } else if (info.error.includes('404')) {
-          alert('فایل متادیتای بروزرسانی (latest.json) روی سرور یافت نشد یا هنوز ریلیز در گیتهاب نهایی نشده است.');
+          setUpdateStatusMsg({
+            type: 'error',
+            text: 'فایل متادیتای بروزرسانی (latest.json) روی سرور یافت نشد یا هنوز ریلیز در گیتهاب نهایی نشده است.',
+          });
         } else {
-          alert(`خطا در بررسی بروزرسانی: ${info.error}`);
+          setUpdateStatusMsg({
+            type: 'error',
+            text: `خطا در بررسی بروزرسانی: ${info.error}`,
+          });
         }
       } else {
-        alert('شما در حال حاضر از آخرین نسخه برنامه تن‌خور استفاده می‌کنید و آپدیت جدیدی یافت نشد.');
+        setUpdateStatusMsg({
+          type: 'info',
+          text: `شما در حال حاضر از آخرین نسخه برنامه تن‌خور (v${desktopVersion}) استفاده می‌کنید و آپدیت جدیدتری منتشر نشده است.`,
+        });
       }
     } catch (e: any) {
       setIsCheckingUpdate(false);
-      alert(`خطای غیرمنتظره در بررسی نسخه جدید: ${e?.message || e}`);
+      setUpdateStatusMsg({
+        type: 'error',
+        text: `خطای غیرمنتظره در بررسی نسخه جدید: ${e?.message || e}`,
+      });
     }
   };
   const [isCreateOrgOpen, setIsCreateOrgOpen] = useState(false);
@@ -356,6 +376,25 @@ export const SettingsView: React.FC = () => {
               بررسی بروزرسانی نسخه جدید
             </Button>
           </div>
+
+          {updateStatusMsg && (
+            <div className={`mt-3 p-3 rounded-xl border text-xs leading-relaxed flex items-center justify-between gap-2 ${
+              updateStatusMsg.type === 'error'
+                ? 'bg-rose-50 border-rose-200 text-rose-800'
+                : updateStatusMsg.type === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-blue-50 border-blue-200 text-blue-800'
+            }`}>
+              <span>{updateStatusMsg.text}</span>
+              <button
+                type="button"
+                onClick={() => setUpdateStatusMsg(null)}
+                className="text-neutral-400 hover:text-neutral-600 font-bold px-1"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </Card>
       )}
 

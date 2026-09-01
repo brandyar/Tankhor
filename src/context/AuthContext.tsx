@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { directusClient } from '../api/directus';
 import { storageManager } from '../storage';
 
@@ -57,6 +57,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const CACHED_USER_KEY = 'tankhor_cached_user_profile';
+const LAST_ACTIVITY_KEY = 'tankhor_last_activity_timestamp';
+const MAX_INACTIVITY_MS = 24 * 60 * 60 * 1000; // 24 hours of inactivity requires re-login
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -71,9 +73,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoginError(null);
   };
 
+  const updateActivity = useCallback(() => {
+    try {
+      localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+    } catch {}
+  }, []);
+
+  const clearAllSessionData = useCallback(() => {
+    directusClient.setToken(null);
+    localStorage.removeItem(CACHED_USER_KEY);
+    localStorage.removeItem('tankhor_directus_token');
+    localStorage.removeItem('tankhor_directus_refresh_token');
+    localStorage.removeItem('tankhor_active_org_id');
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
+    setUser(null);
+    setIsCloudAuthenticated(false);
+    storageManager.setMode('local_offline');
+  }, []);
+
+  // Monitor user inactivity
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      updateActivity();
+    };
+
+    window.addEventListener('mousedown', handleUserInteraction);
+    window.addEventListener('keydown', handleUserInteraction);
+    window.addEventListener('touchstart', handleUserInteraction);
+
+    return () => {
+      window.removeEventListener('mousedown', handleUserInteraction);
+      window.removeEventListener('keydown', handleUserInteraction);
+      window.removeEventListener('touchstart', handleUserInteraction);
+    };
+  }, [updateActivity]);
+
   useEffect(() => {
     const token = localStorage.getItem('tankhor_directus_token');
-    const cachedUserRaw = localStorage.getItem(CACHED_USER_KEY);
+    const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
+
+    // Check inactivity timeout
+    if (lastActivity) {
+      const elapsed = Date.now() - Number(lastActivity);
+      if (elapsed > MAX_INACTIVITY_MS) {
+        console.warn('[Auth] Session expired due to inactivity. Forcing re-login.');
+        clearAllSessionData();
+        setIsLoading(false);
+        return;
+      }
+    }
 
     if (token) {
       setIsLoading(true);
@@ -100,6 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             setUser(finalUser);
             setIsCloudAuthenticated(true);
+            updateActivity();
 
             if (activeOrg && activeOrg.plan === 'pro') {
               storageManager.setMode('cloud_synced');
@@ -120,43 +169,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           } else {
             // Token was invalid or unauthenticated
-            directusClient.setToken(null);
-            localStorage.removeItem(CACHED_USER_KEY);
-            setUser(null);
-            setIsCloudAuthenticated(false);
-            storageManager.setMode('local_offline');
+            clearAllSessionData();
           }
         })
-        .catch((err) => {
-          const errMsg = err?.message || '';
-          const isAuthError =
-            errMsg.toLowerCase().includes('token expired') ||
-            errMsg.toLowerCase().includes('unauthorized') ||
-            errMsg.toLowerCase().includes('invalid token') ||
-            errMsg.includes('TOKEN_EXPIRED') ||
-            errMsg.includes('INVALID_TOKEN') ||
-            !directusClient.getToken();
-
-          if (isAuthError) {
-            // Expired/Invalid token! Wipe tokens and profile so user lands on Login screen
-            directusClient.setToken(null);
-            localStorage.removeItem(CACHED_USER_KEY);
-            setUser(null);
-            setIsCloudAuthenticated(false);
-            storageManager.setMode('local_offline');
-          } else {
-            handleOfflineFallback(cachedUserRaw);
-          }
+        .catch(() => {
+          // In case of any validation or authentication failure, force user to login screen
+          clearAllSessionData();
         })
         .finally(() => setIsLoading(false));
     } else {
-      // No token present -> User must see LoginView
-      setUser(null);
-      setIsCloudAuthenticated(false);
-      storageManager.setMode('local_offline');
+      // No token present -> User must always see LoginView (No auto-login or guest bypassing)
+      clearAllSessionData();
       setIsLoading(false);
     }
-  }, []);
+  }, [clearAllSessionData, updateActivity]);
 
   const handleOfflineFallback = (cachedUserRaw: string | null) => {
     if (cachedUserRaw) {

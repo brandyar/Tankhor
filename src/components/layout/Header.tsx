@@ -257,7 +257,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                     {user?.first_name} {user?.last_name}
                   </p>
                   <p className="text-[11px] text-neutral-500 font-mono truncate mt-0.5">
-                    {user?.email || 'admin@tankhor.com'}
+                    {user?.email || ''}
                   </p>
                   <div className="mt-2 flex items-center gap-1.5">
                     <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border ${isCloudAuthenticated ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
