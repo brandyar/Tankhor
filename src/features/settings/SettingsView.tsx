@@ -53,20 +53,21 @@ export const SettingsView: React.FC = () => {
         return;
       }
       if (info.error) {
-        if (info.error.includes('plugin') || info.error.includes('not found') || info.error.includes('ipc') || info.error.includes('deny')) {
+        const errLower = info.error.toLowerCase();
+        if (errLower.includes('plugin') || errLower.includes('not found') || errLower.includes('ipc') || errLower.includes('deny')) {
           setUpdateStatusMsg({
             type: 'error',
             text: `دسترسی ماژول بروزرسانی خودکار در این بیلد فعال نبوده است (نسخه فعلی: v${desktopVersion}). لطفاً یک‌بار نسخه جدیدتر را به صورت دستی دانلود و نصب کنید.`,
           });
-        } else if (info.error.includes('404')) {
+        } else if (errLower.includes('404')) {
           setUpdateStatusMsg({
             type: 'error',
             text: 'فایل متادیتای بروزرسانی (latest.json) روی سرور یافت نشد یا هنوز ریلیز در گیتهاب نهایی نشده است.',
           });
-        } else if (info.error.includes('fallback platforms') || info.error.includes('platforms')) {
+        } else if (errLower.includes('could not find a release') || errLower.includes('no release')) {
           setUpdateStatusMsg({
-            type: 'error',
-            text: 'کلید پلتفرم مکینتاش در فایل نسخه قبلی سرور ناقص بوده است. با انتشار ریلیز v1.0.4 و جدیدتر، ساختار پلتفرم‌های مک (Apple Silicon و Intel) به صورت خودکار پشتیبانی می‌شوند.',
+            type: 'info',
+            text: `شما در حال حاضر از آخرین نسخه برنامه تن‌خور (v${desktopVersion}) استفاده می‌کنید و آپدیت جدیدتری منتشر نشده است.`,
           });
         } else {
           setUpdateStatusMsg({

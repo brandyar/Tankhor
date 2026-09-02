@@ -37,6 +37,7 @@ export function triggerUpdateModal(info: AppUpdateInfo) {
 
 /**
  * Checks for updates using @tauri-apps/plugin-updater and notifies listeners if available.
+ * Supports intelligent fallback targets for Windows and macOS.
  */
 export async function checkDesktopUpdate(options?: { target?: string }): Promise<AppUpdateInfo> {
   if (!isTauriEnvironment()) {
@@ -49,10 +50,51 @@ export async function checkDesktopUpdate(options?: { target?: string }): Promise
     const updaterModule = await import('@tauri-apps/plugin-updater');
     
     if (!updaterModule || typeof updaterModule.check !== 'function') {
-      throw new Error('ماژول updater در دسترس نیست یا در این نسخه بیلد نشده است.');
+      throw new Error('ماژول بروزرسانی (Updater) در این بیلد در دسترس نیست.');
     }
 
-    const update = await updaterModule.check(options);
+    // Attempt default check first
+    let update: any = null;
+    let lastError: any = null;
+
+    try {
+      update = await updaterModule.check(options);
+    } catch (checkErr: any) {
+      lastError = checkErr;
+      console.warn('[Updater] Standard check encountered issue, attempting target fallbacks:', checkErr);
+      
+      // If error mentions platforms or target, try explicit platform targets
+      const errMsg = String(checkErr?.message || checkErr).toLowerCase();
+      if (errMsg.includes('platform') || errMsg.includes('target') || errMsg.includes('fallback') || errMsg.includes('not found')) {
+        const fallbackTargets = [
+          'windows-x86_64-nsis',
+          'windows-x86_64',
+          'windows-x86_64-msi',
+          'darwin-universal',
+          'darwin-aarch64',
+          'darwin-x86_64'
+        ];
+
+        for (const target of fallbackTargets) {
+          try {
+            console.log(`[Updater] Trying fallback target: ${target}`);
+            const fallbackResult = await updaterModule.check({ target });
+            if (fallbackResult) {
+              update = fallbackResult;
+              lastError = null;
+              break;
+            }
+          } catch (fbErr) {
+            // continue trying other targets
+          }
+        }
+      }
+    }
+
+    if (lastError && !update) {
+      throw lastError;
+    }
+
     console.log('[Updater] Check result:', update);
 
     if (update && update.available) {
