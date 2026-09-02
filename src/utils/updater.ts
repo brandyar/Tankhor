@@ -96,22 +96,28 @@ export async function downloadAndInstallUpdate(
 
   console.log('[Updater] Starting downloadAndInstall...');
 
-  await updateObj.downloadAndInstall((event: any) => {
-    console.log('[Updater] Download event:', event);
-    switch (event.event) {
-      case 'Started':
-        contentLength = event.data?.contentLength || 0;
-        if (onProgress) onProgress(0, contentLength);
-        break;
-      case 'Progress':
-        downloaded += event.data?.chunkLength || 0;
-        if (onProgress) onProgress(downloaded, contentLength);
-        break;
-      case 'Finished':
-        if (onProgress) onProgress(contentLength || downloaded, contentLength || downloaded);
-        break;
-    }
-  });
+  try {
+    await updateObj.downloadAndInstall((event: any) => {
+      console.log('[Updater] Download event:', event);
+      switch (event.event) {
+        case 'Started':
+          contentLength = event.data?.contentLength || 0;
+          if (onProgress) onProgress(0, contentLength);
+          break;
+        case 'Progress':
+          downloaded += event.data?.chunkLength || 0;
+          if (onProgress) onProgress(downloaded, contentLength);
+          break;
+        case 'Finished':
+          if (onProgress) onProgress(contentLength || downloaded, contentLength || downloaded);
+          break;
+      }
+    });
+  } catch (downloadErr: any) {
+    console.error('[Updater] Error during updateObj.downloadAndInstall:', downloadErr);
+    const rawMsg = downloadErr?.message || String(downloadErr);
+    throw new Error(rawMsg);
+  }
 
   console.log('[Updater] Update downloaded and installed. Triggering relaunch...');
 
@@ -121,7 +127,8 @@ export async function downloadAndInstallUpdate(
     if (processModule && typeof processModule.relaunch === 'function') {
       await processModule.relaunch();
     }
-  } catch (err) {
-    console.error('[Updater] Failed to relaunch application automatically:', err);
+  } catch (err: any) {
+    console.warn('[Updater] Auto relaunch failed (will require manual restart):', err);
+    // Don't fail the whole installation if only relaunch had an issue
   }
 }
