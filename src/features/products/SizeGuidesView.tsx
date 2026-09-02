@@ -20,6 +20,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
+import { SizeChartModal } from '../../components/modals/SizeChartModal';
 import { confirmAction } from '../../utils/confirm';
 import {
   Ruler,
@@ -33,6 +34,7 @@ import {
   Check,
   Info,
   Sparkles,
+  Eye,
 } from 'lucide-react';
 
 export const SizeGuidesView: React.FC = () => {
@@ -49,6 +51,9 @@ export const SizeGuidesView: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<SizeGuideTemplate | null>(null);
   const [measurements, setMeasurements] = useState<SizeGuideMeasurement[]>([]);
   const [guideValues, setGuideValues] = useState<SizeGuideValue[]>([]);
+
+  // Preview Chart Modal State
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
   // Modals state
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -516,6 +521,14 @@ export const SizeGuidesView: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => setIsPreviewModalOpen(true)}
+                      icon={<Eye className="w-3.5 h-3.5" />}
+                    >
+                      پیش‌نمایش و چاپ کارت
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleOpenMeasModal()}
                       icon={<Plus className="w-3.5 h-3.5" />}
                     >
@@ -799,6 +812,18 @@ export const SizeGuidesView: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Modal: Interactive & Printable Size Chart Preview */}
+      {selectedTemplate && (
+        <SizeChartModal
+          isOpen={isPreviewModalOpen}
+          onClose={() => setIsPreviewModalOpen(false)}
+          template={selectedTemplate}
+          measurements={measurements}
+          guideValues={guideValues}
+          sizes={sizes}
+        />
+      )}
     </div>
   );
 };
