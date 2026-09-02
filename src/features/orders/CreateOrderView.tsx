@@ -602,19 +602,19 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
       )}
 
       {/* POS Top Header & Action Controls */}
-      <div className="bg-white border border-[#ebebeb] rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-white dark:bg-[#13151a] border border-[#ebebeb] dark:border-neutral-800 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-[#171717] text-white flex items-center justify-center shrink-0 shadow-xs">
+          <div className="w-11 h-11 rounded-xl bg-[#171717] dark:bg-neutral-800 text-white flex items-center justify-center shrink-0 shadow-xs">
             <Receipt className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-[#171717]">پایانه فروش و صدور فاکتور (TANKHOR POS)</h1>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold">
+              <h1 className="text-lg font-bold text-[#171717] dark:text-neutral-100">پایانه فروش و صدور فاکتور (TANKHOR POS)</h1>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 font-bold">
                 فعال و متصل
               </span>
             </div>
-            <p className="text-xs text-[#888888] mt-0.5">
+            <p className="text-xs text-[#888888] dark:text-neutral-400 mt-0.5">
               صدور سریع فاکتور خرید، اسکن بارکد، ثبت شیوه پرداخت و بروزرسانی آنی موجودی انبار
             </p>
           </div>
@@ -683,13 +683,13 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         {/* Left Side: Barcode Scanner, Filters & Product Catalog (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
           {/* Quick Barcode Scanner Bar */}
-          <form onSubmit={handleBarcodeSubmit} className="bg-white border border-[#ebebeb] rounded-xl p-3 shadow-2xs space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-[#171717]">
+          <form onSubmit={handleBarcodeSubmit} className="bg-white dark:bg-[#13151a] border border-[#ebebeb] dark:border-neutral-800 rounded-xl p-3 shadow-2xs space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold text-[#171717] dark:text-neutral-100">
               <span className="flex items-center gap-1.5">
-                <Barcode className="w-4 h-4 text-emerald-600" />
+                <Barcode className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 اسکن بارکد یا ورود سریع SKU کالا:
               </span>
-              <span className="text-[10px] text-[#888888] font-mono">[کلید Enter جهت ثبت]</span>
+              <span className="text-[10px] text-[#888888] dark:text-neutral-400 font-mono">[کلید Enter جهت ثبت]</span>
             </div>
 
             <div className="relative">
@@ -699,9 +699,9 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                 value={barcodeQuery}
                 onChange={(e) => setBarcodeQuery(e.target.value)}
                 placeholder="بارکدخوان فعال است... بارکد کالا را اسکن کنید یا کد SKU بنویسید"
-                className="w-full ps-9 pe-24 py-2 bg-[#fafafa] border border-[#ebebeb] focus:border-[#171717] focus:bg-white rounded-lg text-xs font-mono text-[#171717] focus:outline-none transition-all shadow-inner"
+                className="w-full ps-9 pe-24 py-2 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 focus:border-[#171717] dark:focus:border-neutral-400 focus:bg-white dark:focus:bg-[#13151a] rounded-lg text-xs font-mono text-[#171717] dark:text-neutral-100 placeholder:text-[#a1a1a1] dark:placeholder:text-neutral-500 focus:outline-none transition-all shadow-inner"
               />
-              <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-[#888888]">
+              <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-[#888888] dark:text-neutral-400">
                 <Barcode className="w-4 h-4" />
               </div>
               <div className="absolute inset-y-0 end-1.5 flex items-center">
@@ -713,7 +713,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
           </form>
 
           {/* Catalog Filter Bar */}
-          <div className="bg-white border border-[#ebebeb] rounded-xl p-3 shadow-2xs space-y-3">
+          <div className="bg-white dark:bg-[#13151a] border border-[#ebebeb] dark:border-neutral-800 rounded-xl p-3 shadow-2xs space-y-3">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="w-full sm:w-64">
                 <Input
@@ -724,8 +724,8 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                 />
               </div>
 
-              <div className="text-xs font-mono text-[#888888]">
-                موجودی کالاها: <strong className="text-[#171717]">{filteredVariants.length} قلم</strong>
+              <div className="text-xs font-mono text-[#888888] dark:text-neutral-400">
+                موجودی کالاها: <strong className="text-[#171717] dark:text-neutral-100">{filteredVariants.length} قلم</strong>
               </div>
             </div>
 
@@ -736,8 +736,8 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                 onClick={() => setSelectedCategoryId('all')}
                 className={`px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 ${
                   selectedCategoryId === 'all'
-                    ? 'bg-[#171717] text-white shadow-xs'
-                    : 'bg-[#fafafa] text-[#4d4d4d] border border-[#ebebeb] hover:border-[#a1a1a1]'
+                    ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 shadow-xs'
+                    : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
                 }`}
               >
                 همه دسته‌ها
@@ -749,8 +749,8 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   onClick={() => setSelectedCategoryId(cat.id)}
                   className={`px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 ${
                     selectedCategoryId === cat.id
-                      ? 'bg-[#171717] text-white shadow-xs'
-                      : 'bg-[#fafafa] text-[#4d4d4d] border border-[#ebebeb] hover:border-[#a1a1a1]'
+                      ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 shadow-xs'
+                      : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
                   }`}
                 >
                   {cat.name}
@@ -762,9 +762,9 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
           {/* Catalog Items Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto custom-scrollbar p-1">
             {isLoading ? (
-              <div className="col-span-3 p-12 text-center text-[#888888] text-xs">در حال بارگذاری کاتالوگ محصولات...</div>
+              <div className="col-span-3 p-12 text-center text-[#888888] dark:text-neutral-400 text-xs">در حال بارگذاری کاتالوگ محصولات...</div>
             ) : filteredVariants.length === 0 ? (
-              <div className="col-span-3 p-12 text-center text-[#888888] text-xs bg-white rounded-xl border border-[#ebebeb]">
+              <div className="col-span-3 p-12 text-center text-[#888888] dark:text-neutral-400 text-xs bg-white dark:bg-[#13151a] rounded-xl border border-[#ebebeb] dark:border-neutral-800">
                 هیچ کالایی با این مشخصات یافت نشد.
               </div>
             ) : (
@@ -777,10 +777,10 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   <div
                     key={`ord_var_${v.id}_${vIdx}`}
                     onClick={() => handleAddToCart(v)}
-                    className={`p-3 bg-white border rounded-xl cursor-pointer transition-all duration-150 flex flex-col justify-between space-y-2 relative group hover:shadow-md ${
+                    className={`p-3 bg-white dark:bg-[#13151a] border rounded-xl cursor-pointer transition-all duration-150 flex flex-col justify-between space-y-2 relative group hover:shadow-md ${
                       inCart
-                        ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20'
-                        : 'border-[#ebebeb] hover:border-[#171717]'
+                        ? 'border-emerald-500 dark:border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/20'
+                        : 'border-[#ebebeb] dark:border-neutral-800 hover:border-[#171717] dark:hover:border-neutral-500'
                     }`}
                   >
                     {inCart && (
@@ -790,40 +790,40 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                     )}
 
                     <div>
-                      <div className="font-bold text-[#171717] text-xs leading-snug group-hover:text-black line-clamp-2">
+                      <div className="font-bold text-[#171717] dark:text-neutral-100 text-xs leading-snug group-hover:text-black dark:group-hover:text-white line-clamp-2">
                         {prod ? prod.title : 'محصول تن‌خور'}
                       </div>
 
                       {/* Variant Specs Badge */}
                       <div className="flex flex-wrap items-center gap-1 mt-1.5">
                         {v.color_name && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-[#fafafa] border border-[#ebebeb] rounded text-[#4d4d4d]">
+                          <span className="text-[10px] px-1.5 py-0.5 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 rounded text-[#4d4d4d] dark:text-neutral-300">
                             {v.color_name}
                           </span>
                         )}
                         {v.size_name && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-[#fafafa] border border-[#ebebeb] rounded text-[#171717] font-bold">
+                          <span className="text-[10px] px-1.5 py-0.5 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 rounded text-[#171717] dark:text-neutral-100 font-bold">
                             سایز: {v.size_name}
                           </span>
                         )}
                       </div>
 
-                      <div className="text-[10px] text-[#888888] font-mono mt-1">
+                      <div className="text-[10px] text-[#888888] dark:text-neutral-400 font-mono mt-1">
                         SKU: {v.sku}
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-[#ebebeb] flex items-center justify-between">
+                    <div className="pt-2 border-t border-[#ebebeb] dark:border-neutral-800 flex items-center justify-between">
                       <div>
-                        <div className="font-bold text-[#171717] text-xs font-mono">
+                        <div className="font-bold text-[#171717] dark:text-neutral-100 text-xs font-mono">
                           {formatCurrency(v.price, 'TOMAN', isPersian)}
                         </div>
-                        <div className={`text-[10px] font-mono mt-0.5 ${stock > 5 ? 'text-emerald-700' : stock > 0 ? 'text-amber-700' : 'text-red-600 font-bold'}`}>
+                        <div className={`text-[10px] font-mono mt-0.5 ${stock > 5 ? 'text-emerald-700 dark:text-emerald-400' : stock > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-red-600 dark:text-red-400 font-bold'}`}>
                           {stock > 0 ? `موجودی: ${stock} عدد` : 'اتمام موجودی'}
                         </div>
                       </div>
 
-                      <div className="w-7 h-7 rounded-lg bg-[#fafafa] group-hover:bg-[#171717] group-hover:text-white text-[#171717] border border-[#ebebeb] group-hover:border-[#171717] flex items-center justify-center transition-all">
+                      <div className="w-7 h-7 rounded-lg bg-[#fafafa] dark:bg-[#181a20] group-hover:bg-[#171717] dark:group-hover:bg-neutral-100 group-hover:text-white dark:group-hover:text-neutral-900 text-[#171717] dark:text-neutral-300 border border-[#ebebeb] dark:border-neutral-700 group-hover:border-[#171717] flex items-center justify-center transition-all">
                         <Plus className="w-3.5 h-3.5" />
                       </div>
                     </div>
@@ -836,12 +836,12 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
         {/* Right Side: Digital Receipt & POS Checkout Terminal (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
-          <form onSubmit={handleSubmitOrder} className="bg-white border border-[#ebebeb] rounded-2xl p-4 shadow-sm space-y-4">
+          <form onSubmit={handleSubmitOrder} className="bg-white dark:bg-[#13151a] border border-[#ebebeb] dark:border-neutral-800 rounded-2xl p-4 shadow-sm space-y-4">
             {/* Invoice Terminal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#ebebeb]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#ebebeb] dark:border-neutral-800">
               <div className="flex items-center gap-2">
-                <ShoppingCart className="w-4 h-4 text-emerald-600" />
-                <h2 className="font-bold text-[#171717] text-sm">اقلام فاکتور فروش</h2>
+                <ShoppingCart className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <h2 className="font-bold text-[#171717] dark:text-neutral-100 text-sm">اقلام فاکتور فروش</h2>
               </div>
               <Badge variant="neutral">{cart.length} کالا</Badge>
             </div>
@@ -850,13 +850,13 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             <div className="grid grid-cols-1 gap-2.5">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-[#171717]">
+                  <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200">
                     مشتری فاکتور
                   </label>
                   <button
                     type="button"
                     onClick={() => setSelectedCustomerId(0)}
-                    className="text-[10px] text-emerald-700 font-bold hover:underline"
+                    className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold hover:underline"
                   >
                     + انتخاب مشتری عمومی
                   </button>
@@ -872,7 +872,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#171717] mb-1">
+                <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200 mb-1">
                   انبار تحویل کالا
                 </label>
                 <Select
@@ -884,22 +884,22 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             </div>
 
             {/* Cart Items Table */}
-            <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar border-y border-[#ebebeb] py-3">
+            <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar border-y border-[#ebebeb] dark:border-neutral-800 py-3">
               {cart.length === 0 ? (
-                <div className="p-8 text-center text-[#888888] text-xs space-y-2">
-                  <Package className="w-8 h-8 text-[#a1a1a1] mx-auto stroke-1" />
+                <div className="p-8 text-center text-[#888888] dark:text-neutral-400 text-xs space-y-2">
+                  <Package className="w-8 h-8 text-[#a1a1a1] dark:text-neutral-500 mx-auto stroke-1" />
                   <p>فاکتور خالی است. کالاها را اسکن کنید یا از کاتالوگ انتخاب نمایید.</p>
                 </div>
               ) : (
                 cart.map((line, lIdx) => (
                   <div
                     key={`ord_cart_${line.variant.id}_${lIdx}`}
-                    className="p-2.5 bg-[#fafafa] border border-[#ebebeb] rounded-xl space-y-2 text-xs"
+                    className="p-2.5 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 rounded-xl space-y-2 text-xs"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <span className="font-bold text-[#171717] block leading-tight">{line.productTitle}</span>
-                        <div className="text-[10px] text-[#888888] font-mono mt-0.5">
+                        <span className="font-bold text-[#171717] dark:text-neutral-100 block leading-tight">{line.productTitle}</span>
+                        <div className="text-[10px] text-[#888888] dark:text-neutral-400 font-mono mt-0.5">
                           SKU: {line.variant.sku}
                           {line.variant.size_name ? ` | سایز: ${line.variant.size_name}` : ''}
                           {line.variant.color_name ? ` | رنگ: ${line.variant.color_name}` : ''}
@@ -909,20 +909,20 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                       <button
                         type="button"
                         onClick={() => handleRemoveLine(line.variant.id)}
-                        className="text-[#888888] hover:text-red-600 p-1 transition-colors"
+                        className="text-[#888888] dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400 p-1 transition-colors"
                         title="حذف از فاکتور"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 border-t border-[#ebebeb]/60">
+                    <div className="flex items-center justify-between pt-1 border-t border-[#ebebeb]/60 dark:border-neutral-700/60">
                       {/* Quantity Buttons */}
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => handleUpdateQty(line.variant.id, line.quantity - 1)}
-                          className="w-6 h-6 rounded bg-white border border-[#ebebeb] font-bold text-[#171717] flex items-center justify-center hover:bg-[#ebebeb] transition-all"
+                          className="w-6 h-6 rounded bg-white dark:bg-[#13151a] border border-[#ebebeb] dark:border-neutral-700 font-bold text-[#171717] dark:text-neutral-100 flex items-center justify-center hover:bg-[#ebebeb] dark:hover:bg-neutral-800 transition-all"
                         >
                           -
                         </button>
@@ -931,12 +931,12 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                           min="1"
                           value={line.quantity}
                           onChange={(e) => handleUpdateQty(line.variant.id, parseInt(e.target.value) || 1)}
-                          className="w-9 text-center font-bold font-mono text-[#171717] bg-white border border-[#ebebeb] rounded py-0.5 text-xs"
+                          className="w-9 text-center font-bold font-mono text-[#171717] dark:text-neutral-100 bg-white dark:bg-[#13151a] border border-[#ebebeb] dark:border-neutral-700 rounded py-0.5 text-xs"
                         />
                         <button
                           type="button"
                           onClick={() => handleUpdateQty(line.variant.id, line.quantity + 1)}
-                          className="w-6 h-6 rounded bg-white border border-[#ebebeb] font-bold text-[#171717] flex items-center justify-center hover:bg-[#ebebeb] transition-all"
+                          className="w-6 h-6 rounded bg-white dark:bg-[#13151a] border border-[#ebebeb] dark:border-neutral-700 font-bold text-[#171717] dark:text-neutral-100 flex items-center justify-center hover:bg-[#ebebeb] dark:hover:bg-neutral-800 transition-all"
                         >
                           +
                         </button>
@@ -944,10 +944,10 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
                       {/* Line Discount & Total */}
                       <div className="text-end">
-                        <div className="font-bold font-mono text-[#171717]">
+                        <div className="font-bold font-mono text-[#171717] dark:text-neutral-100">
                           {formatCurrency(line.quantity * line.unitPrice - line.discount * line.quantity, 'TOMAN', isPersian)}
                         </div>
-                        <div className="text-[10px] text-[#888888] font-mono">
+                        <div className="text-[10px] text-[#888888] dark:text-neutral-400 font-mono">
                           {formatCurrency(line.unitPrice, 'TOMAN', isPersian)} × {line.quantity}
                         </div>
                       </div>
@@ -960,7 +960,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             {/* Discounts & Tax Adjustments */}
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <label className="block text-[11px] font-bold text-[#4d4d4d] mb-1">
+                <label className="block text-[11px] font-bold text-[#4d4d4d] dark:text-neutral-300 mb-1">
                   تخفیف ویژه فاکتور (تومان)
                 </label>
                 <input
@@ -969,26 +969,26 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   value={extraDiscount || ''}
                   onChange={(e) => setExtraDiscount(Math.max(0, Number(e.target.value)))}
                   placeholder="۰"
-                  className="w-full px-2.5 py-1.5 bg-[#fafafa] border border-[#ebebeb] rounded-lg text-xs font-mono text-[#171717] focus:outline-none focus:ring-1 focus:ring-[#171717]"
+                  className="w-full px-2.5 py-1.5 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 rounded-lg text-xs font-mono text-[#171717] dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-[#171717] dark:focus:ring-neutral-400"
                 />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[11px] font-bold text-[#4d4d4d]">
+                  <label className="block text-[11px] font-bold text-[#4d4d4d] dark:text-neutral-300">
                     ارزش افزوده (٪۹)
                   </label>
                   <button
                     type="button"
                     onClick={() => setHasTax(!hasTax)}
                     className={`text-[10px] px-1.5 py-0.5 rounded font-bold transition-all ${
-                      hasTax ? 'bg-emerald-600 text-white' : 'bg-[#ebebeb] text-[#4d4d4d]'
+                      hasTax ? 'bg-emerald-600 text-white' : 'bg-[#ebebeb] dark:bg-neutral-800 text-[#4d4d4d] dark:text-neutral-300'
                     }`}
                   >
                     {hasTax ? 'فعال' : 'غیرفعال'}
                   </button>
                 </div>
-                <div className="px-2.5 py-1.5 bg-[#fafafa] border border-[#ebebeb] rounded-lg text-xs font-mono text-[#888888]">
+                <div className="px-2.5 py-1.5 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 rounded-lg text-xs font-mono text-[#888888] dark:text-neutral-400">
                   {hasTax ? `${formatCurrency(taxAmount, 'TOMAN', isPersian)}` : 'بدون مالیات'}
                 </div>
               </div>
@@ -996,15 +996,15 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
             {/* Payment Method Selector Cards */}
             <div className="space-y-1.5 pt-1">
-              <label className="block text-xs font-bold text-[#171717]">روش پرداخت POS:</label>
+              <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200">روش پرداخت POS:</label>
               <div className="grid grid-cols-4 gap-1.5">
                 <button
                   type="button"
                   onClick={() => setPaymentType('pos')}
                   className={`py-2 px-1 rounded-xl border text-center transition-all ${
                     paymentType === 'pos'
-                      ? 'bg-[#171717] text-white border-[#171717] shadow-xs'
-                      : 'bg-[#fafafa] text-[#4d4d4d] border-[#ebebeb] hover:border-[#a1a1a1]'
+                      ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
+                      : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
                   }`}
                 >
                   <CreditCard className="w-4 h-4 mx-auto mb-1" />
@@ -1016,8 +1016,8 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   onClick={() => setPaymentType('cash')}
                   className={`py-2 px-1 rounded-xl border text-center transition-all ${
                     paymentType === 'cash'
-                      ? 'bg-[#171717] text-white border-[#171717] shadow-xs'
-                      : 'bg-[#fafafa] text-[#4d4d4d] border-[#ebebeb] hover:border-[#a1a1a1]'
+                      ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
+                      : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
                   }`}
                 >
                   <DollarSign className="w-4 h-4 mx-auto mb-1" />
@@ -1029,8 +1029,8 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   onClick={() => setPaymentType('card_to_card')}
                   className={`py-2 px-1 rounded-xl border text-center transition-all ${
                     paymentType === 'card_to_card'
-                      ? 'bg-[#171717] text-white border-[#171717] shadow-xs'
-                      : 'bg-[#fafafa] text-[#4d4d4d] border-[#ebebeb] hover:border-[#a1a1a1]'
+                      ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
+                      : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
                   }`}
                 >
                   <Tag className="w-4 h-4 mx-auto mb-1" />
@@ -1042,8 +1042,8 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   onClick={() => setPaymentType('credit')}
                   className={`py-2 px-1 rounded-xl border text-center transition-all ${
                     paymentType === 'credit'
-                      ? 'bg-[#171717] text-white border-[#171717] shadow-xs'
-                      : 'bg-[#fafafa] text-[#4d4d4d] border-[#ebebeb] hover:border-[#a1a1a1]'
+                      ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
+                      : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
                   }`}
                 >
                   <User className="w-4 h-4 mx-auto mb-1" />

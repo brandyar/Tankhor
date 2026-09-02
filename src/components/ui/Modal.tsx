@@ -55,14 +55,14 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
       <div
-        className={`w-full bg-white rounded-xl border border-neutral-200/80 shadow-vercel-lg overflow-hidden flex flex-col max-h-[90vh] ${getMaxWidthClass(maxWidth)}`}
+        className={`w-full bg-white dark:bg-[#13151a] rounded-xl border border-neutral-200/80 dark:border-neutral-800/80 shadow-vercel-lg overflow-hidden flex flex-col max-h-[90vh] text-neutral-900 dark:text-neutral-100 ${getMaxWidthClass(maxWidth)}`}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
-          <h3 className="text-base font-bold text-neutral-900 tracking-tight">{title}</h3>
+        <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800/80 flex items-center justify-between">
+          <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">{title}</h3>
           <button
             onClick={onClose}
-            className="p-1 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+            className="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -73,7 +73,7 @@ export const Modal: React.FC<ModalProps> = ({
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-3.5 bg-[#fafafa] border-t border-neutral-100 flex items-center justify-end gap-3">
+          <div className="px-6 py-3.5 bg-[#fafafa] dark:bg-[#181a20] border-t border-neutral-100 dark:border-neutral-800/80 flex items-center justify-end gap-3">
             {footer}
           </div>
         )}

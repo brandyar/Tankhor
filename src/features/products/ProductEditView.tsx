@@ -580,7 +580,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#13151a] p-4 sm:p-6 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-xs transition-colors">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -592,14 +592,14 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-extrabold text-slate-900">
+              <h1 className="text-xl font-extrabold text-slate-900 dark:text-neutral-100">
                 {productId ? `ویرایش محصول: ${title || 'بدون نام'}` : 'ایجاد محصول جدید'}
               </h1>
               <Badge variant={status === 'published' ? 'success' : 'warning'}>
                 {status === 'published' ? 'منتشر شده' : 'پیش‌نویس'}
               </Badge>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
               مدیریت تمام مشخصات کالا و جدول کامل واریانت‌ها، قیمت‌ها و موجودی انبار
             </p>
           </div>
@@ -718,19 +718,19 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
               </div>
 
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-slate-700">توضیحات و مشخصات تکمیلی</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">توضیحات و مشخصات تکمیلی</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
-                  className="w-full bg-white border border-slate-300 rounded-xl text-slate-900 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-neutral-100 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="توضیحات جنس پارچه، نحوه نگهداری، شستشو..."
                 />
               </div>
             </div>
 
             {/* Main Product Image Upload */}
-            <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <div className="space-y-3 bg-slate-50 dark:bg-[#181a20] p-4 rounded-2xl border border-slate-200 dark:border-neutral-800 transition-colors">
               <ImageUpload
                 label="تصویر اصلی کاتالوگ *"
                 value={mainImage}
@@ -744,14 +744,14 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
         {/* Section 2: جدول تنوع‌ها و موجودی انبار */}
         <Card>
           {/* Interactive Color & Size Selector Card */}
-          <div className="bg-[#fafafa] border border-neutral-200/80 rounded-xl p-4 sm:p-5 mb-6 space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-200/60 pb-3">
+          <div className="bg-[#fafafa] dark:bg-[#181a20] border border-neutral-200/80 dark:border-neutral-800 rounded-xl p-4 sm:p-5 mb-6 space-y-5 transition-colors">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-200/60 dark:border-neutral-800 pb-3">
               <div>
-                <h4 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-blue-600" />
+                <h4 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   <span>انتخاب رنگ‌ها و سایزهای محصول (تولید همزمان واریانت‌ها)</span>
                 </h4>
-                <p className="text-xs text-neutral-500 mt-0.5">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                   با انتخاب هر رنگ و سایز، سطر واریانت آن به‌صورت همزمان و هوشمند در جدول پایین ایجاد می‌شود.
                 </p>
               </div>
@@ -1050,19 +1050,19 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
 
           {/* Variants Editable Table */}
           {variants.length === 0 ? (
-            <div className="text-center py-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+            <div className="text-center py-12 bg-slate-50 dark:bg-[#181a20] rounded-2xl border-2 border-dashed border-slate-200 dark:border-neutral-800 space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto">
                 <Shirt className="w-6 h-6" />
               </div>
-              <h4 className="text-sm font-bold text-slate-800">هیچ تنوعی برای این محصول انتخاب نشده است</h4>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">
+              <h4 className="text-sm font-bold text-slate-800 dark:text-neutral-200">هیچ تنوعی برای این محصول انتخاب نشده است</h4>
+              <p className="text-xs text-slate-500 dark:text-neutral-400 max-w-md mx-auto">
                 برای ایجاد تنوع‌های کالا، رنگ‌ها و سایزهای مورد نظر را از کادر بالا انتخاب کنید.
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-neutral-800">
               <table className="w-full text-right text-xs">
-                <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                <thead className="bg-slate-100 dark:bg-[#181a20] text-slate-700 dark:text-neutral-300 font-bold border-b border-slate-200 dark:border-neutral-800">
                   <tr>
                     <th className="py-3 px-3">#</th>
                     <th className="py-3 px-3">رنگ</th>
@@ -1076,9 +1076,9 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                     <th className="py-3 px-3 text-center">حذف</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 bg-white">
+                <tbody className="divide-y divide-slate-200 dark:divide-neutral-800 bg-white dark:bg-[#13151a]">
                   {variants.map((v, index) => (
-                    <tr key={`pe_vrow_${v.id || v._tempId || 'idx'}_${index}`} className="hover:bg-slate-50 transition-colors">
+                    <tr key={`pe_vrow_${v.id || v._tempId || 'idx'}_${index}`} className="hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
                       <td className="py-2.5 px-3 font-bold text-slate-400">
                         {toPersianDigits(index + 1)}
                       </td>
@@ -1088,7 +1088,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                         <select
                           value={v.color_id || ''}
                           onChange={(e) => handleUpdateVariantRow(index, 'color_id', e.target.value ? Number(e.target.value) : undefined)}
-                          className="bg-white border border-slate-300 rounded-lg text-slate-800 text-xs px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                          className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-800 dark:text-neutral-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                         >
                           <option value="">بدون رنگ</option>
                           {colors.map((c, cIdx) => (
@@ -1104,7 +1104,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                         <select
                           value={v.size_id || ''}
                           onChange={(e) => handleUpdateVariantRow(index, 'size_id', e.target.value ? Number(e.target.value) : undefined)}
-                          className="bg-white border border-slate-300 rounded-lg text-slate-800 text-xs px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                          className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-800 dark:text-neutral-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                         >
                           <option value="">بدون سایز</option>
                           {sizes.map((s, sIdx) => (
@@ -1122,7 +1122,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                           value={v.sku || ''}
                           onChange={(e) => handleUpdateVariantRow(index, 'sku', e.target.value)}
                           placeholder="SKU-1001"
-                          className="w-full bg-white border border-slate-300 rounded-lg text-slate-900 text-xs px-2.5 py-1.5 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-neutral-100 text-xs px-2.5 py-1.5 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </td>
 
@@ -1133,7 +1133,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                           value={v.barcode || ''}
                           onChange={(e) => handleUpdateVariantRow(index, 'barcode', e.target.value)}
                           placeholder="62600000000"
-                          className="w-full bg-white border border-slate-300 rounded-lg text-slate-900 text-xs px-2.5 py-1.5 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-neutral-100 text-xs px-2.5 py-1.5 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </td>
 
@@ -1144,7 +1144,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                           value={v.price !== undefined ? v.price : ''}
                           onChange={(e) => handleUpdateVariantRow(index, 'price', e.target.value !== '' ? Number(e.target.value) : 0)}
                           placeholder="0"
-                          className="w-full bg-white border border-slate-300 rounded-lg text-slate-900 text-xs px-2.5 py-1.5 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-neutral-100 text-xs px-2.5 py-1.5 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </td>
 
@@ -1155,7 +1155,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                           value={v.cost !== undefined ? v.cost : ''}
                           onChange={(e) => handleUpdateVariantRow(index, 'cost', e.target.value !== '' ? Number(e.target.value) : 0)}
                           placeholder="0"
-                          className="w-full bg-white border border-slate-300 rounded-lg text-slate-700 text-xs px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-700 dark:text-neutral-200 text-xs px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </td>
 
@@ -1166,7 +1166,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                           value={v.stock_quantity !== undefined ? v.stock_quantity : ''}
                           onChange={(e) => handleUpdateVariantRow(index, 'stock_quantity', e.target.value !== '' ? Number(e.target.value) : 0)}
                           placeholder="0"
-                          className="w-full bg-amber-50 border border-amber-300 rounded-lg text-amber-950 font-extrabold text-xs px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          className="w-full bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-lg text-amber-950 dark:text-amber-200 font-extrabold text-xs px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500"
                         />
                       </td>
 
@@ -1175,7 +1175,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                         <select
                           value={v.status || 'published'}
                           onChange={(e) => handleUpdateVariantRow(index, 'status', e.target.value)}
-                          className="bg-white border border-slate-300 rounded-lg text-slate-800 text-[11px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-800 dark:text-neutral-100 text-[11px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         >
                           <option value="published">فعال</option>
                           <option value="draft">غیرفعال</option>
@@ -1187,7 +1187,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                         <button
                           type="button"
                           onClick={() => handleDeleteVariantRow(index)}
-                          className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 cursor-pointer transition-colors"
+                          className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer transition-colors"
                           title="حذف این واریانت"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1199,10 +1199,10 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
               </table>
 
               {/* Table Footer Summary */}
-              <div className="bg-slate-100 p-3.5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-xs font-bold text-slate-800 gap-3">
+              <div className="bg-slate-100 dark:bg-[#181a20] p-3.5 border-t border-slate-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between text-xs font-bold text-slate-800 dark:text-neutral-200 gap-3">
                 <div className="flex items-center gap-4">
                   <span>مجموع کل تنوع‌ها: {toPersianDigits(totalVariants)} SKU</span>
-                  <span className="text-amber-700 bg-amber-100 px-2.5 py-1 rounded-lg">
+                  <span className="text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-2.5 py-1 rounded-lg">
                     مجموع موجودی انبار: {toPersianDigits(totalStockSum)} عدد
                   </span>
                 </div>
@@ -1232,12 +1232,12 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
       {/* Bulk Price / Stock Applicator Modal */}
       {isBulkModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
-            <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-              <Sliders className="w-5 h-5 text-indigo-600" />
+          <div className="bg-white dark:bg-[#13151a] rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-neutral-800 space-y-4">
+            <h3 className="text-base font-extrabold text-slate-900 dark:text-neutral-100 flex items-center gap-2">
+              <Sliders className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               <span>تغییر گروهی قیمت و موجودی تمام تنوع‌ها</span>
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-neutral-400">
               مقادیر وارد شده به تمامی {toPersianDigits(totalVariants)} واریانت جدول اعمال خواهد شد (هرکدام را که نمی‌خواهید خالی بگذارید).
             </p>
 
@@ -1280,16 +1280,16 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
       {/* Inline Add Color Modal */}
       {isAddColorModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-xl p-5 max-w-sm w-full shadow-vercel-lg border border-neutral-200/80 space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
-                <Palette className="w-4 h-4 text-blue-600" />
+          <div className="bg-white dark:bg-[#13151a] rounded-xl p-5 max-w-sm w-full shadow-vercel-lg border border-neutral-200/80 dark:border-neutral-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                <Palette className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span>تعریف رنگ جدید</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setIsAddColorModalOpen(false)}
-                className="text-neutral-400 hover:text-neutral-800"
+                className="text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1303,26 +1303,26 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                 placeholder="نام رنگ"
               />
               <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">کد رنگ (HEX)</label>
+                <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">کد رنگ (HEX)</label>
                 <div className="flex items-center gap-3">
                   <input
                     type="color"
                     value={newColorHex}
                     onChange={(e) => setNewColorHex(e.target.value)}
-                    className="w-10 h-10 rounded-md border border-neutral-200 cursor-pointer p-0.5"
+                    className="w-10 h-10 rounded-md border border-neutral-200 dark:border-neutral-700 cursor-pointer p-0.5 bg-white dark:bg-[#181a20]"
                   />
                   <input
                     type="text"
                     value={newColorHex}
                     onChange={(e) => setNewColorHex(e.target.value)}
-                    className="flex-1 bg-white border border-neutral-200 rounded-md text-xs px-3 py-2 font-mono uppercase"
+                    className="flex-1 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-md text-xs px-3 py-2 font-mono uppercase text-neutral-900 dark:text-neutral-100"
                     placeholder="#000000"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
               <Button variant="outline" size="sm" onClick={() => setIsAddColorModalOpen(false)}>
                 انصراف
               </Button>
@@ -1337,16 +1337,16 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
       {/* Inline Add Size Modal */}
       {isAddSizeModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-xl p-5 max-w-sm w-full shadow-vercel-lg border border-neutral-200/80 space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
-                <Ruler className="w-4 h-4 text-blue-600" />
+          <div className="bg-white dark:bg-[#13151a] rounded-xl p-5 max-w-sm w-full shadow-vercel-lg border border-neutral-200/80 dark:border-neutral-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                <Ruler className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span>تعریف سایز جدید</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setIsAddSizeModalOpen(false)}
-                className="text-neutral-400 hover:text-neutral-800"
+                className="text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1361,7 +1361,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
               <Button variant="outline" size="sm" onClick={() => setIsAddSizeModalOpen(false)}>
                 انصراف
               </Button>

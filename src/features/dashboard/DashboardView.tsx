@@ -167,12 +167,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     {
       key: 'created_at',
       header: t('common.date'),
-      render: (m) => <span className="text-slate-500 font-mono text-[11px]">{formatDate(m.created_at, isPersian)}</span>,
+      render: (m) => <span className="text-slate-500 dark:text-neutral-400 font-mono text-[11px]">{formatDate(m.created_at, isPersian)}</span>,
     },
     {
       key: 'sku',
       header: t('common.sku'),
-      render: (m) => <span className="font-bold text-slate-800 font-mono text-xs">{m.sku || 'TNK-SKU'}</span>,
+      render: (m) => <span className="font-bold text-slate-800 dark:text-neutral-200 font-mono text-xs">{m.sku || 'TNK-SKU'}</span>,
     },
     {
       key: 'type',
@@ -193,7 +193,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       key: 'quantity',
       header: 'تعداد',
       render: (m) => (
-        <span className="font-bold text-slate-900 font-mono text-xs">
+        <span className="font-bold text-slate-900 dark:text-neutral-100 font-mono text-xs">
           {toPersianDigits(m.quantity)} عدد
         </span>
       ),
@@ -201,14 +201,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     {
       key: 'reference_id',
       header: 'مرجع / شماره سند',
-      render: (m) => <span className="text-slate-500 font-mono text-xs">{m.reference_id || '-'}</span>,
+      render: (m) => <span className="text-slate-500 dark:text-neutral-400 font-mono text-xs">{m.reference_id || '-'}</span>,
     },
   ];
 
   return (
     <div className="space-y-6">
       {/* 1. Vercel Ambient Hero Banner */}
-      <div className="relative overflow-hidden bg-white border border-neutral-200/80 rounded-xl p-6 sm:p-8 shadow-vercel-sm bg-mesh-gradient">
+      <div className="relative overflow-hidden bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-800 rounded-xl p-6 sm:p-8 shadow-vercel-sm bg-mesh-gradient transition-colors">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 max-w-2xl">
             <div className="flex items-center gap-3">
@@ -223,14 +223,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               <span className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-neutral-900 text-white font-medium">
                 TANKHOR PLATFORM
               </span>
-              <span className="font-mono text-[11px] text-neutral-500">
+              <span className="font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
                 {activeOrganization?.name || 'سازمان پیش‌فرض'}
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight">
               پیشخوان گزارشات و مدیریت جامع تن‌خور
             </h1>
-            <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed">
+            <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
               نمای زنده از موجودی انبارها، وضعیت سفارشات، گردش کالا و تحلیل شاخص‌های عملکرد کسب‌وکار
             </p>
           </div>
@@ -259,14 +259,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
       {/* Quick Start / Demo Data Banner if Database is Empty */}
       {!isLoading && products.length === 0 && (
-        <div className="p-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 rounded-2xl border border-emerald-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fade-in">
+        <div className="p-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 dark:from-emerald-950/40 dark:via-teal-950/30 dark:to-blue-950/40 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fade-in transition-colors">
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-neutral-900">به نرم‌افزار تن‌خور خوش آمدید!</h3>
-              <p className="text-xs text-neutral-600 mt-1 leading-relaxed max-w-2xl">
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">به نرم‌افزار تن‌خور خوش آمدید!</h3>
+              <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1 leading-relaxed max-w-2xl">
                 پایگاه داده شما خالی است. می‌توانید با یک کلیک <strong>«اطلاعات نمونه بوتیک پوشاک»</strong> (شامل پالتو، هودی، جین، کفش، انبارها، جداول سایز و فاکتورها) را بارگذاری نموده یا فایل پشتیبان سیستم قبلی خود را بازیابی کنید.
               </p>
             </div>
@@ -377,7 +377,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   variant="secondary"
                   className="w-full justify-start text-xs font-medium"
                   onClick={() => onNavigate('orders/create')}
-                  icon={<Plus className="w-4 h-4 text-neutral-700" />}
+                  icon={<Plus className="w-4 h-4 text-neutral-700 dark:text-neutral-300" />}
                 >
                   {t('dashboard.newOrder')}
                 </Button>
@@ -387,7 +387,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   variant="secondary"
                   className="w-full justify-start text-xs font-medium"
                   onClick={() => onNavigate('products/all')}
-                  icon={<Shirt className="w-4 h-4 text-neutral-700" />}
+                  icon={<Shirt className="w-4 h-4 text-neutral-700 dark:text-neutral-300" />}
                 >
                   {t('dashboard.addProduct')}
                 </Button>
@@ -397,7 +397,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   variant="secondary"
                   className="w-full justify-start text-xs font-medium"
                   onClick={() => onNavigate('inventory/movements')}
-                  icon={<RefreshCw className="w-4 h-4 text-neutral-700" />}
+                  icon={<RefreshCw className="w-4 h-4 text-neutral-700 dark:text-neutral-300" />}
                 >
                   {t('dashboard.newMovement')}
                 </Button>
@@ -407,7 +407,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   variant="secondary"
                   className="w-full justify-start text-xs font-medium"
                   onClick={() => onNavigate('products/size-guides')}
-                  icon={<BarChart3 className="w-4 h-4 text-neutral-700" />}
+                  icon={<BarChart3 className="w-4 h-4 text-neutral-700 dark:text-neutral-300" />}
                 >
                   {t('dashboard.sizeGuideTemplate')}
                 </Button>
@@ -417,11 +417,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
           <Card title={t('dashboard.systemStatus')}>
             <div className="space-y-3 text-xs">
-              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-emerald-50/80 border border-emerald-200/80 text-emerald-900">
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/50 text-emerald-900 dark:text-emerald-200">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
                 <div>
                   <p className="font-bold">{t('dashboard.offlineReady')}</p>
-                  <p className="text-[11px] text-emerald-800/90 mt-0.5 leading-relaxed">
+                  <p className="text-[11px] text-emerald-800/90 dark:text-emerald-300/80 mt-0.5 leading-relaxed">
                     تمامی محاسبات آماری و گزارشات به‌صورت بلادرنگ (Real-time) از دیتابیس محلی استخراج و نمایش داده می‌شوند.
                   </p>
                 </div>

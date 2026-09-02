@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { I18nProvider } from './i18n';
+import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { OrganizationProvider, useOrganization } from './context/OrganizationContext';
 import { AppShell } from './components/layout/AppShell';
@@ -38,13 +39,13 @@ import { ShieldAlert, RefreshCw, Shirt, Home } from 'lucide-react';
 
 const AccessDeniedCard: React.FC<{ userRole: string; onReturn: () => void }> = ({ userRole, onReturn }) => (
   <div className="py-12 px-4 max-w-xl mx-auto text-center">
-    <Card className="p-8 border-amber-200 bg-amber-50/50">
-      <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4 border border-amber-300/80 shadow-xs">
+    <Card className="p-8 border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20">
+      <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex items-center justify-center mx-auto mb-4 border border-amber-300/80 dark:border-amber-800/80 shadow-xs">
         <ShieldAlert className="w-7 h-7" />
       </div>
-      <h3 className="text-base font-bold text-neutral-900">عدم دسترسی به این بخش</h3>
-      <p className="text-xs text-neutral-600 mt-2 leading-relaxed">
-        شما با نقش <strong className="text-amber-900 font-bold">{userRole}</strong> به این صفحه یا عملیات دسترسی ندارید.
+      <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">عدم دسترسی به این بخش</h3>
+      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-2 leading-relaxed">
+        شما با نقش <strong className="text-amber-900 dark:text-amber-300 font-bold">{userRole}</strong> به این صفحه یا عملیات دسترسی ندارید.
       </p>
       <div className="mt-6 flex justify-center">
         <Button variant="primary" onClick={onReturn} icon={<Home className="w-4 h-4" />}>
@@ -185,13 +186,13 @@ const MainAppContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex flex-col items-center justify-center p-6 text-center font-sans">
-        <div className="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center mb-4 shadow-md animate-bounce">
-          <Shirt className="w-6 h-6 text-white" />
+      <div className="min-h-screen bg-[#fafafa] dark:bg-[#0c0d10] flex flex-col items-center justify-center p-6 text-center font-sans">
+        <div className="w-12 h-12 rounded-2xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 flex items-center justify-center mb-4 shadow-md animate-bounce">
+          <Shirt className="w-6 h-6 text-white dark:text-neutral-900" />
         </div>
-        <p className="text-sm font-bold text-neutral-800">سامانه تن‌خور</p>
-        <p className="text-xs text-neutral-500 font-mono mt-1 flex items-center gap-1.5">
-          <RefreshCw className="w-3.5 h-3.5 animate-spin text-neutral-400" />
+        <p className="text-sm font-bold text-neutral-800 dark:text-neutral-200">سامانه تن‌خور</p>
+        <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono mt-1 flex items-center gap-1.5">
+          <RefreshCw className="w-3.5 h-3.5 animate-spin text-neutral-400 dark:text-neutral-500" />
           <span>در حال بررسی نشست کاربری...</span>
         </p>
       </div>
@@ -211,12 +212,14 @@ const MainAppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <I18nProvider>
-      <AuthProvider>
-        <MainAppContent />
-        <ConfirmModalHost />
-        <UpdateNotificationModal />
-      </AuthProvider>
-    </I18nProvider>
+    <ThemeProvider>
+      <I18nProvider>
+        <AuthProvider>
+          <MainAppContent />
+          <ConfirmModalHost />
+          <UpdateNotificationModal />
+        </AuthProvider>
+      </I18nProvider>
+    </ThemeProvider>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { storageManager, isTauriEnvironment } from '../../storage';
 import { StorageSyncManager } from '../../storage/syncManager';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -15,11 +16,12 @@ import { LocalBackupRestoreCard } from './LocalBackupRestoreCard';
 import { UpgradeToProModal } from '../../components/modals/UpgradeToProModal';
 import { checkDesktopUpdate } from '../../utils/updater';
 import { getCurrentAppVersion, APP_VERSION } from '../../utils/version';
-import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck, Building2, Edit3, Plus, ShieldAlert, Globe, Clock, CheckCircle2, Users, Sparkles, Lock, ArrowUpCircle } from 'lucide-react';
+import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck, Building2, Edit3, Plus, ShieldAlert, Globe, Clock, CheckCircle2, Users, Sparkles, Lock, ArrowUpCircle, Sun, Moon, Monitor, Palette } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
   const { t } = useTranslation();
   const { activeOrganization, isOwner, userRole, refreshOrganizations } = useOrganization();
+  const { theme, setTheme } = useTheme();
   const {
     user,
     isCloudAuthenticated,
@@ -286,6 +288,83 @@ export const SettingsView: React.FC = () => {
       {/* Organization Members & Roles Section */}
       <OrganizationMembersSection />
 
+      {/* Appearance & Theme Selection Card */}
+      <Card
+        title="پوسته و ظاهر برنامه (Appearance)"
+        subtitle="انتخاب حالت نمایش روشن، تیره یا هماهنگ با سیستم‌عامل با کنتراست استاندارد و بهینه"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Light Theme Option */}
+          <div
+            onClick={() => setTheme('light')}
+            className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center ${
+              theme === 'light'
+                ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-500 ring-2 ring-amber-500/20 shadow-md'
+                : 'bg-white dark:bg-[#14161c] border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+            }`}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3">
+              <Sun className="w-6 h-6" />
+            </div>
+            <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">پوسته روشن (Light)</h4>
+            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+              پس‌زمینه سفید با کنتراست بالا و مناسب فضاهای پرنور
+            </p>
+            {theme === 'light' && (
+              <Badge variant="warning" className="mt-3 text-[10px]">
+                فعال
+              </Badge>
+            )}
+          </div>
+
+          {/* Dark Theme Option */}
+          <div
+            onClick={() => setTheme('dark')}
+            className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center ${
+              theme === 'dark'
+                ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
+                : 'bg-white dark:bg-[#14161c] border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+            }`}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3">
+              <Moon className="w-6 h-6" />
+            </div>
+            <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">پوسته تیره (Dark)</h4>
+            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+              طراحی مهندسی‌شده با رنگ‌های آرامش‌بخش و بدون خستگی چشم
+            </p>
+            {theme === 'dark' && (
+              <Badge variant="info" className="mt-3 text-[10px]">
+                فعال
+              </Badge>
+            )}
+          </div>
+
+          {/* System Theme Option */}
+          <div
+            onClick={() => setTheme('system')}
+            className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center ${
+              theme === 'system'
+                ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-500 ring-2 ring-blue-500/20 shadow-md'
+                : 'bg-white dark:bg-[#14161c] border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+            }`}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
+              <Monitor className="w-6 h-6" />
+            </div>
+            <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">خودکار با سیستم (System)</h4>
+            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+              تغییر خودکار رنگ‌ها بر اساس تنظیمات ویندوز، مک یا موبایل
+            </p>
+            {theme === 'system' && (
+              <Badge variant="neutral" className="mt-3 text-[10px]">
+                فعال
+              </Badge>
+            )}
+          </div>
+        </div>
+      </Card>
+
       {/* Local Backup, Restore & Demo Data Management */}
       <LocalBackupRestoreCard />
 
@@ -293,14 +372,14 @@ export const SettingsView: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div
           onClick={() => handleModeChange('local_offline')}
-          className={`p-6 bg-white border rounded-2xl cursor-pointer transition-all ${
+          className={`p-6 bg-white dark:bg-[#13151a] border rounded-2xl cursor-pointer transition-all ${
             mode === 'local_offline'
               ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-md'
-              : 'border-neutral-200 hover:border-neutral-300'
+              : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
           }`}
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center">
               <Database className="w-5 h-5" />
             </div>
             <div className="flex items-center gap-1.5">
@@ -312,10 +391,10 @@ export const SettingsView: React.FC = () => {
               {mode === 'local_offline' && <Badge variant="success">فعال</Badge>}
             </div>
           </div>
-          <h3 className="text-base font-bold text-neutral-900">
+          <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
             حالت آفلاین محلی {isTauriEnvironment() ? '(پایگاه داده SQLite)' : '(حافظه مرورگر)'}
           </h3>
-          <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
             {isTauriEnvironment()
               ? 'داده‌ها در دیتابیس مستقل و فوق‌سریع SQLite (فایل tankhor.db در حافظه دسکتاپ) ذخیره می‌شوند. بدون محدودیت حجم و پایدار در برابر ریست ویندوز.'
               : 'داده‌ها روی حافظه محلی دستگاه ذخیره می‌شوند. کاملاً رایگان، بدون نیاز به اینترنت و بسیار سریع.'}
@@ -324,14 +403,14 @@ export const SettingsView: React.FC = () => {
 
         <div
           onClick={() => handleModeChange('cloud_synced')}
-          className={`p-6 bg-white border rounded-2xl cursor-pointer transition-all ${
+          className={`p-6 bg-white dark:bg-[#13151a] border rounded-2xl cursor-pointer transition-all ${
             mode === 'cloud_synced'
               ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md'
-              : 'border-neutral-200 hover:border-neutral-300'
+              : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
           }`}
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center">
               <Cloud className="w-5 h-5" />
             </div>
             <div className="flex items-center gap-1.5">
@@ -344,15 +423,15 @@ export const SettingsView: React.FC = () => {
               {mode === 'cloud_synced' && <Badge variant="info">فعال است</Badge>}
             </div>
           </div>
-          <h3 className="text-base font-bold text-neutral-900 flex items-center justify-between">
+          <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center justify-between">
             <span>همگام‌سازی ابری (نسخه پیشرفته)</span>
             {activeOrganization?.plan !== 'pro' && (
-              <span className="text-[11px] font-bold text-blue-600 hover:underline">
+              <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline">
                 ارتقا به Pro
               </span>
             )}
           </h3>
-          <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
             اتصال به سرور ابری جهت اشتراک‌گذاری هم‌زمان داده‌ها بین شعبه‌ها و دستگاه‌های مختلف.
           </p>
         </div>
@@ -361,14 +440,14 @@ export const SettingsView: React.FC = () => {
       {/* Desktop App Updater Card */}
       {isTauriEnvironment() && (
         <Card title="بروزرسانی نسخه دسکتاپ" subtitle="بررسی انتشار نسخه‌های جدید برنامه تن‌خور از طریق GitHub Releases">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50 border border-neutral-200/80">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/80 dark:border-neutral-700/70">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
                 <ArrowUpCircle className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-neutral-900">نسخه نصب‌شده دسکتاپ: v{desktopVersion}</p>
-                <p className="text-[11px] text-neutral-500 mt-0.5">ارتقای خودکار بدون از دست رفتن اطلاعات SQLite و تنظیمات سازمان</p>
+                <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">نسخه نصب‌شده دسکتاپ: v{desktopVersion}</p>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">ارتقای خودکار بدون از دست رفتن اطلاعات SQLite و تنظیمات سازمان</p>
               </div>
             </div>
             <Button
@@ -386,16 +465,16 @@ export const SettingsView: React.FC = () => {
           {updateStatusMsg && (
             <div className={`mt-3 p-3 rounded-xl border text-xs leading-relaxed flex items-center justify-between gap-2 ${
               updateStatusMsg.type === 'error'
-                ? 'bg-rose-50 border-rose-200 text-rose-800'
+                ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
                 : updateStatusMsg.type === 'success'
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                : 'bg-blue-50 border-blue-200 text-blue-800'
+                ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+                : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300'
             }`}>
               <span>{updateStatusMsg.text}</span>
               <button
                 type="button"
                 onClick={() => setUpdateStatusMsg(null)}
-                className="text-neutral-400 hover:text-neutral-600 font-bold px-1"
+                className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 font-bold px-1"
               >
                 ✕
               </button>
@@ -407,7 +486,7 @@ export const SettingsView: React.FC = () => {
       {/* Cloud Sync Manual Trigger Card */}
       <Card title="وضعیت همگام‌سازی ابری" subtitle="ارسال تغییرات محلی به پایگاه داده ابری تن‌خور">
         <div className="space-y-4 max-w-xl">
-          <p className="text-xs text-neutral-600 leading-relaxed">
+          <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
             در صورت ثبت اطلاعات جدید در حالت آفلاین، با فشردن دکمه زیر اطلاعات شما با پایگاه داده همگام می‌شود.
           </p>
 
@@ -423,7 +502,7 @@ export const SettingsView: React.FC = () => {
           </div>
 
           {syncStatusMsg && (
-            <p className="text-xs font-semibold text-blue-800 bg-blue-50 p-3 rounded-xl border border-blue-100">
+            <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/30 p-3 rounded-xl border border-blue-100 dark:border-blue-900/40">
               {syncStatusMsg}
             </p>
           )}

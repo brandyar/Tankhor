@@ -20,11 +20,11 @@ export const Button: React.FC<ButtonProps> = ({
   const baseStyles = 'inline-flex items-center justify-center font-medium transition-all focus:outline-none focus:ring-2 focus:ring-neutral-900/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98]';
 
   const variantStyles = {
-    primary: 'bg-[#171717] hover:bg-black text-white rounded-full shadow-vercel-sm focus:ring-neutral-900',
-    secondary: 'bg-white hover:bg-neutral-50 text-[#171717] border border-neutral-200/90 rounded-full shadow-vercel-sm focus:ring-neutral-400',
+    primary: 'bg-[#171717] hover:bg-black text-white dark:bg-neutral-100 dark:hover:bg-white dark:text-neutral-900 rounded-full shadow-vercel-sm focus:ring-neutral-900 dark:focus:ring-neutral-200',
+    secondary: 'bg-white hover:bg-neutral-50 text-[#171717] dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-neutral-100 border border-neutral-200/90 dark:border-neutral-700/80 rounded-full shadow-vercel-sm focus:ring-neutral-400',
     danger: 'bg-[#ee0000] hover:bg-[#c50000] text-white rounded-full shadow-vercel-sm focus:ring-red-500',
-    outline: 'border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 rounded-lg focus:ring-neutral-400',
-    ghost: 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100/80 rounded-lg focus:ring-neutral-300',
+    outline: 'border border-neutral-200 dark:border-neutral-700/90 bg-white dark:bg-neutral-800/80 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-lg focus:ring-neutral-400',
+    ghost: 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/80 dark:hover:bg-neutral-800 rounded-lg focus:ring-neutral-300',
   };
 
   const sizeStyles = {

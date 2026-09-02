@@ -18,14 +18,14 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="w-full space-y-1">
         {label && (
-          <label htmlFor={selectId} className="block text-xs font-medium text-neutral-700">
+          <label htmlFor={selectId} className="block text-xs font-medium text-neutral-700 dark:text-neutral-300">
             {label}
           </label>
         )}
         <select
           id={selectId}
           ref={ref}
-          className={`w-full bg-white border border-neutral-200/90 rounded-md text-neutral-900 text-sm px-3.5 py-2 transition-all focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 cursor-pointer ${
+          className={`w-full bg-white dark:bg-[#181a20] border border-neutral-200/90 dark:border-neutral-700/80 rounded-md text-neutral-900 dark:text-neutral-100 text-sm px-3.5 py-2 transition-all focus:outline-none focus:ring-2 focus:ring-neutral-900/10 dark:focus:ring-neutral-200/20 focus:border-neutral-900 dark:focus:border-neutral-400 cursor-pointer ${
             error ? 'border-[#ee0000]' : ''
           } ${className}`}
           {...props}

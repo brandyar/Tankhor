@@ -124,7 +124,7 @@ export const MovementsView: React.FC = () => {
       key: 'created_at',
       header: 'تاریخ و زمان',
       render: (m) => (
-        <span className="text-slate-600 font-medium text-xs">
+        <span className="text-slate-600 dark:text-neutral-300 font-medium text-xs">
           {formatDate(m.created_at, isPersian)}
         </span>
       ),
@@ -133,7 +133,7 @@ export const MovementsView: React.FC = () => {
       key: 'sku',
       header: 'شناسه کالا (SKU)',
       render: (m) => (
-        <span className="font-extrabold text-slate-900 font-mono text-xs">
+        <span className="font-extrabold text-slate-900 dark:text-neutral-100 font-mono text-xs">
           {m.sku || `VAR-#${m.variant_id}`}
         </span>
       ),
@@ -142,7 +142,7 @@ export const MovementsView: React.FC = () => {
       key: 'warehouse_id',
       header: 'انبار مربوطه',
       render: (m) => (
-        <span className="font-bold text-slate-800">{m.warehouse_name || 'انبار مرکزی'}</span>
+        <span className="font-bold text-slate-800 dark:text-neutral-100">{m.warehouse_name || 'انبار مرکزی'}</span>
       ),
     },
     {
@@ -154,7 +154,7 @@ export const MovementsView: React.FC = () => {
       key: 'reference_id',
       header: 'شماره سند / مرجع',
       render: (m) => (
-        <span className="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+        <span className="font-mono text-xs text-slate-500 dark:text-neutral-300 bg-slate-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md">
           {m.reference_id || '-'}
         </span>
       ),
@@ -163,7 +163,7 @@ export const MovementsView: React.FC = () => {
       key: 'note',
       header: 'شرح گردش',
       render: (m) => (
-        <span className="text-slate-600 text-xs truncate max-w-xs block">
+        <span className="text-slate-600 dark:text-neutral-300 text-xs truncate max-w-xs block">
           {m.note || '-'}
         </span>
       ),
@@ -192,7 +192,7 @@ export const MovementsView: React.FC = () => {
             <select
               value={selectedWarehouseFilter}
               onChange={(e) => setSelectedWarehouseFilter(e.target.value ? Number(e.target.value) : '')}
-              className="bg-white border border-slate-300 rounded-xl text-slate-800 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-100 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
               <option value="">همه انبارها</option>
               {warehouses.map((w, wIdx) => (
@@ -205,7 +205,7 @@ export const MovementsView: React.FC = () => {
             <select
               value={selectedTypeFilter}
               onChange={(e) => setSelectedTypeFilter(e.target.value as MovementType | '')}
-              className="bg-white border border-slate-300 rounded-xl text-slate-800 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-100 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
               <option value="">همه انواع گردش</option>
               <option value="purchase">ورود خرید</option>

@@ -198,23 +198,23 @@ export const OrganizationMembersSection: React.FC = () => {
 
           {/* Search bar */}
           <div className="relative max-w-md">
-            <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="جستجو بر اساس نام یا ایمیل عضو..."
-              className="w-full ps-9 pe-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+              className="w-full ps-9 pe-4 py-2 text-xs bg-slate-50 dark:bg-neutral-800/60 border border-slate-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-[#13151a] text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 transition-all"
             />
           </div>
 
           {/* Member List Cards / Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {filteredMembers.length === 0 ? (
-              <div className="col-span-full py-10 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
-                <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <p className="text-xs font-bold text-slate-600">عضوی با این مشخصات یافت نشد</p>
-                <p className="text-[11px] text-slate-400 mt-1">با کلیک روی «افزودن عضو جدید» کارمندان خود را اضافه کنید.</p>
+              <div className="col-span-full py-10 text-center border border-dashed border-slate-200 dark:border-neutral-800 rounded-2xl bg-slate-50/50 dark:bg-neutral-900/30">
+                <Users className="w-10 h-10 text-slate-300 dark:text-neutral-700 mx-auto mb-2" />
+                <p className="text-xs font-bold text-slate-600 dark:text-neutral-400">عضوی با این مشخصات یافت نشد</p>
+                <p className="text-[11px] text-slate-400 dark:text-neutral-500 mt-1">با کلیک روی «افزودن عضو جدید» کارمندان خود را اضافه کنید.</p>
               </div>
             ) : (
               filteredMembers.map((member) => {
@@ -222,24 +222,24 @@ export const OrganizationMembersSection: React.FC = () => {
                 return (
                   <div
                     key={member.id}
-                    className="p-4 rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 transition-all shadow-xs flex flex-col justify-between gap-3"
+                    className="p-4 rounded-2xl border border-slate-200/80 dark:border-neutral-800 bg-white dark:bg-[#14161d] hover:border-slate-300 dark:hover:border-neutral-700 transition-all shadow-xs flex flex-col justify-between gap-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                        <div className="w-11 h-11 rounded-2xl bg-slate-900 dark:bg-neutral-800 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
                           {member.first_name ? member.first_name[0] : 'U'}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <h4 className="text-xs font-bold text-slate-900">
+                            <h4 className="text-xs font-bold text-slate-900 dark:text-neutral-100">
                               {member.first_name || member.last_name
                                 ? `${member.first_name || ''} ${member.last_name || ''}`
                                 : 'کاربر بدون نام'}
                             </h4>
                             {getStatusBadge(member.status)}
                           </div>
-                          <p className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-1">
-                            <Mail className="w-3 h-3 text-slate-400" />
+                          <p className="text-[11px] text-slate-500 dark:text-neutral-400 font-mono mt-0.5 flex items-center gap-1">
+                            <Mail className="w-3 h-3 text-slate-400 dark:text-neutral-500" />
                             <span>{member.email || 'بدون ایمیل'}</span>
                           </p>
                         </div>
@@ -250,7 +250,7 @@ export const OrganizationMembersSection: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleOpenEditModal(member)}
-                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg transition-colors cursor-pointer"
                             title="ویرایش دسترسی"
                           >
                             <Edit3 className="w-4 h-4" />
@@ -259,7 +259,7 @@ export const OrganizationMembersSection: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => setDeleteConfirmId(member.id)}
-                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
                               title="حذف عضو"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -270,12 +270,12 @@ export const OrganizationMembersSection: React.FC = () => {
                     </div>
 
                     {/* Role & Permissions details */}
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                    <div className="pt-2 border-t border-slate-100 dark:border-neutral-800/80 flex items-center justify-between text-[11px]">
                       <div className="flex items-center gap-1.5">
                         {getRoleIcon(member.role)}
-                        <span className="font-bold text-slate-800">{roleDef.labelFa}</span>
+                        <span className="font-bold text-slate-800 dark:text-neutral-200">{roleDef.labelFa}</span>
                       </div>
-                      <span className="text-slate-400 text-[10px] font-mono">
+                      <span className="text-slate-400 dark:text-neutral-500 text-[10px] font-mono">
                         عضویت: {formatDate(member.date_joined || new Date().toISOString())}
                       </span>
                     </div>
@@ -295,7 +295,7 @@ export const OrganizationMembersSection: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-start">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-slate-700 font-bold">
+              <tr className="border-b border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-800/50 text-slate-700 dark:text-neutral-300 font-bold">
                 <th className="p-3 text-start">قابلیت / منو</th>
                 <th className="p-3 text-center">
                   <span className="inline-flex items-center gap-1.5 justify-center">
@@ -323,68 +323,68 @@ export const OrganizationMembersSection: React.FC = () => {
                 </th>
                 <th className="p-3 text-center">
                   <span className="inline-flex items-center gap-1.5 justify-center">
-                    <Eye className="w-3.5 h-3.5 text-slate-500" />
+                    <Eye className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
                     <span>مشاهده‌گر</span>
                   </span>
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-neutral-800/80 text-slate-700 dark:text-neutral-300">
               <tr>
                 <td className="p-3 font-medium">تنظیمات سازمان & برند</td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
               </tr>
               <tr>
                 <td className="p-3 font-medium">مدیر اعضا و دعوت کارمندان</td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
               </tr>
               <tr>
                 <td className="p-3 font-medium">تعریف و ویرایش محصولات</td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
               </tr>
               <tr>
                 <td className="p-3 font-medium">مدیریت انبار، قفسه‌ها و اصلاح موجودی</td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
               </tr>
               <tr>
                 <td className="p-3 font-medium">ثبت سفارشات فروش مشتریان</td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
               </tr>
               <tr>
                 <td className="p-3 font-medium">سفارشات خرید و مدیریت تامین‌کنندگان</td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
               </tr>
               <tr>
                 <td className="p-3 font-medium">مشاهده قیمت خرید و حاشیه سود مالی</td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
-                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
+                <td className="p-3 text-center"><X className="w-4 h-4 text-slate-300 dark:text-neutral-600 inline" /></td>
               </tr>
             </tbody>
           </table>

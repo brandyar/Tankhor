@@ -442,14 +442,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
               header: 'شماره سفارش',
               render: (ord) => (
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-mono font-bold text-xs shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-mono font-bold text-xs shrink-0">
                     <ShoppingCart className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm">
+                    <span className="font-mono font-bold text-slate-900 dark:text-neutral-100 text-xs sm:text-sm">
                       {ord.order_number}
                     </span>
-                    <div className="text-[10px] text-slate-400 font-mono">
+                    <div className="text-[10px] text-slate-400 dark:text-neutral-400 font-mono">
                       {formatDate(ord.date_created, isPersian)}
                     </div>
                   </div>
@@ -460,8 +460,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
               key: 'customer_name',
               header: 'نام مشتری',
               render: (ord) => (
-                <div className="flex items-center gap-1.5 font-bold text-slate-800 text-xs">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-neutral-100 text-xs">
+                  <User className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-400" />
                   {ord.customer_name}
                 </div>
               ),
@@ -470,7 +470,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
               key: 'total',
               header: 'مبلغ کل فاکتور',
               render: (ord) => (
-                <div className="font-bold font-mono text-slate-900 text-xs">
+                <div className="font-bold font-mono text-slate-900 dark:text-neutral-100 text-xs">
                   {formatCurrency(ord.total, 'TOMAN', isPersian)}
                 </div>
               ),

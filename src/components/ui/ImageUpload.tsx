@@ -105,10 +105,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
   return (
     <div className={`space-y-1.5 ${className}`}>
-      {label && <label className="block text-xs font-semibold text-slate-700">{label}</label>}
+      {label && <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">{label}</label>}
 
       {previewUrl ? (
-        <div className="relative group rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center p-2 min-h-36 max-h-48">
+        <div className="relative group rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden bg-neutral-50 dark:bg-neutral-900/80 flex items-center justify-center p-2 min-h-36 max-h-48">
           <img
             src={previewUrl}
             alt="Preview"
@@ -117,11 +117,11 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               (e.target as HTMLElement).style.display = 'none';
             }}
           />
-          <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center gap-3 backdrop-blur-xs">
+          <div className="absolute inset-0 bg-neutral-900/70 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center gap-3 backdrop-blur-xs">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="px-3 py-1.5 bg-white/90 text-slate-800 text-xs font-bold rounded-xl hover:bg-white transition-colors cursor-pointer shadow-xs"
+              className="px-3 py-1.5 bg-white text-neutral-800 text-xs font-bold rounded-xl hover:bg-neutral-100 transition-colors cursor-pointer shadow-xs"
             >
               تغییر تصویر
             </button>
@@ -144,24 +144,24 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           onClick={() => fileInputRef.current?.click()}
           className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center ${
             dragActive
-              ? 'border-indigo-600 bg-indigo-50/50 scale-[1.01]'
-              : 'border-slate-300 bg-slate-50/60 hover:bg-slate-100/80 hover:border-slate-400'
+              ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/30 scale-[1.01]'
+              : 'border-neutral-300 dark:border-neutral-700 bg-neutral-50/60 dark:bg-neutral-900/40 hover:bg-neutral-100/80 dark:hover:bg-neutral-800/60 hover:border-neutral-400'
           }`}
         >
           {isUploading ? (
-            <div className="flex flex-col items-center py-2 text-indigo-600">
+            <div className="flex flex-col items-center py-2 text-blue-600 dark:text-blue-400">
               <Loader2 className="w-6 h-6 animate-spin mb-2" />
               <span className="text-xs font-medium">در حال بارگذاری و پردازش تصویر...</span>
             </div>
           ) : (
             <>
-              <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2">
+              <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2">
                 <Upload className="w-5 h-5" />
               </div>
-              <p className="text-xs font-bold text-slate-700 mb-1">
+              <p className="text-xs font-bold text-neutral-700 dark:text-neutral-200 mb-1">
                 برای انتخاب تصویر کلیک کنید یا فایل را اینجا رها کنید
               </p>
-              <p className="text-[11px] text-slate-400">فرمت‌های مجاز: PNG, JPG, WEBP (حداکثر ۱۰ مگابایت)</p>
+              <p className="text-[11px] text-neutral-400 dark:text-neutral-500">فرمت‌های مجاز: PNG, JPG, WEBP (حداکثر ۱۰ مگابایت)</p>
             </>
           )}
         </div>

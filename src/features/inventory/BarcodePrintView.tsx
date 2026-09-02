@@ -383,9 +383,9 @@ export const BarcodePrintView: React.FC = () => {
             </div>
 
             {/* Variants Selection List Table */}
-            <div className="max-h-[520px] overflow-y-auto overflow-x-auto rounded-lg border border-neutral-200">
+            <div className="max-h-[520px] overflow-y-auto overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
               <table className="w-full text-right text-xs">
-                <thead className="bg-neutral-100 text-neutral-700 font-bold border-b border-neutral-200 sticky top-0 z-10">
+                <thead className="bg-neutral-100 dark:bg-[#181a20] text-neutral-700 dark:text-neutral-300 font-bold border-b border-neutral-200 dark:border-neutral-800 sticky top-0 z-10">
                   <tr>
                     <th className="px-3 py-2.5 w-10 text-center">انتخاب</th>
                     <th className="px-3 py-2.5">نام محصول و تنوع</th>
@@ -396,16 +396,16 @@ export const BarcodePrintView: React.FC = () => {
                     <th className="px-3 py-2.5 w-28 text-center">تعداد چاپ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-100 bg-white">
+                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60 bg-white dark:bg-[#13151a]">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-10 text-neutral-500">
+                      <td colSpan={7} className="text-center py-10 text-neutral-500 dark:text-neutral-400">
                         در حال بارگذاری لیست کالاها...
                       </td>
                     </tr>
                   ) : filteredVariants.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-10 text-neutral-500">
+                      <td colSpan={7} className="text-center py-10 text-neutral-500 dark:text-neutral-400">
                         هیچ تنوعی مطابق فیلتر یافت نشد.
                       </td>
                     </tr>
@@ -419,19 +419,19 @@ export const BarcodePrintView: React.FC = () => {
                       return (
                         <tr
                           key={`bar_var_${v.id}_${vIdx}`}
-                          className={`hover:bg-neutral-50 transition-colors ${isSelected ? 'bg-emerald-50/40' : ''}`}
+                          className={`hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors ${isSelected ? 'bg-emerald-50/40 dark:bg-emerald-950/20' : ''}`}
                         >
                           <td className="px-3 py-2.5 text-center">
                             <input
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => handleToggleSelect(v.id)}
-                              className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                              className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-700 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                             />
                           </td>
                           <td className="px-3 py-2.5">
-                            <p className="font-bold text-neutral-900 line-clamp-1">{v.product_title || 'محصول بدون عنوان'}</p>
-                            <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-neutral-500">
+                            <p className="font-bold text-neutral-900 dark:text-neutral-100 line-clamp-1">{v.product_title || 'محصول بدون عنوان'}</p>
+                            <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">
                               {color && (
                                 <span
                                   className="w-2.5 h-2.5 rounded-full border border-black/20"
@@ -443,12 +443,12 @@ export const BarcodePrintView: React.FC = () => {
                               <span className="font-bold">{v.size_name || size?.name || '-'}</span>
                             </div>
                           </td>
-                          <td className="px-3 py-2.5 font-mono text-[11px] text-neutral-700">
+                          <td className="px-3 py-2.5 font-mono text-[11px] text-neutral-700 dark:text-neutral-300">
                             {v.sku}
                           </td>
                           <td className="px-3 py-2.5 font-mono text-[11px]">
                             {v.barcode ? (
-                              <span className="text-neutral-800 bg-neutral-100 px-1.5 py-0.5 rounded">
+                              <span className="text-neutral-800 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">
                                 {toPersianDigits(v.barcode)}
                               </span>
                             ) : (
@@ -456,7 +456,7 @@ export const BarcodePrintView: React.FC = () => {
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => handleGenerateBarcodeForVariant(v)}
-                                className="text-[10px] h-6 px-1.5 text-amber-700 hover:bg-amber-50"
+                                className="text-[10px] h-6 px-1.5 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40"
                                 title="تولید بارکد جدید"
                               >
                                 <Sparkles className="w-3 h-3 me-1 text-amber-500" />
@@ -464,10 +464,10 @@ export const BarcodePrintView: React.FC = () => {
                               </Button>
                             )}
                           </td>
-                          <td className="px-3 py-2.5 font-mono text-neutral-600">
+                          <td className="px-3 py-2.5 font-mono text-neutral-600 dark:text-neutral-400">
                             {toPersianDigits(v.stock_quantity || 0)}
                           </td>
-                          <td className="px-3 py-2.5 font-mono font-bold text-neutral-900">
+                          <td className="px-3 py-2.5 font-mono font-bold text-neutral-900 dark:text-neutral-100">
                             {v.price ? formatCurrency(v.price, activeOrganization?.currency, isPersian) : '-'}
                           </td>
                           <td className="px-3 py-2.5 text-center">
@@ -475,7 +475,7 @@ export const BarcodePrintView: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => handleSetCopies(v.id, copies - 1)}
-                                className="w-6 h-6 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 flex items-center justify-center font-bold"
+                                className="w-6 h-6 rounded bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 flex items-center justify-center font-bold"
                               >
                                 -
                               </button>
@@ -484,12 +484,12 @@ export const BarcodePrintView: React.FC = () => {
                                 min="0"
                                 value={copies}
                                 onChange={(e) => handleSetCopies(v.id, parseInt(e.target.value) || 0)}
-                                className="w-12 h-6 text-center text-xs font-mono font-bold border border-neutral-300 rounded focus:ring-1 focus:ring-emerald-500"
+                                className="w-12 h-6 text-center text-xs font-mono font-bold bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded focus:ring-1 focus:ring-emerald-500"
                               />
                               <button
                                 type="button"
                                 onClick={() => handleSetCopies(v.id, copies + 1)}
-                                className="w-6 h-6 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 flex items-center justify-center font-bold"
+                                className="w-6 h-6 rounded bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 flex items-center justify-center font-bold"
                               >
                                 +
                               </button>

@@ -21,7 +21,7 @@ export const AppShell: React.FC<AppShellProps> = ({ currentRoute, onNavigate, ch
   };
 
   return (
-    <div className="flex min-h-screen bg-[#fafafa] text-[#171717] font-sans antialiased selection:bg-[#171717] selection:text-white">
+    <div className="flex min-h-screen bg-[#fafafa] dark:bg-[#0c0d10] text-[#171717] dark:text-[#f3f4f6] font-sans antialiased selection:bg-[#171717] dark:selection:bg-neutral-100 selection:text-white dark:selection:text-neutral-900">
       {/* Sidebar */}
       <Sidebar
         currentRoute={currentRoute}

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Vazirmatn", system-ui, -apple-system, sans-serif;
   --font-mono: "Vazirmatn", system-ui, -apple-system, sans-serif;
@@ -8,6 +10,19 @@
   --color-canvas: #ffffff;
   --color-hairline: #ebebeb;
   --color-hairline-strong: #a1a1a1;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #0b0c0e;
+  color: #f3f4f6;
 }
 
 *, ::before, ::after, :root, html, body, button, input, select, textarea, code, pre, .font-mono, .caption-mono {

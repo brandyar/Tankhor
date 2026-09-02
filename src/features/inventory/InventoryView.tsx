@@ -114,8 +114,8 @@ export const InventoryView: React.FC = () => {
 
         return (
           <div>
-            <p className="font-extrabold text-slate-900 font-mono text-xs">{sku}</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">
+            <p className="font-extrabold text-slate-900 dark:text-neutral-100 font-mono text-xs">{sku}</p>
+            <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
               {prodTitle} ({colorName} / {sizeName})
             </p>
           </div>
@@ -135,9 +135,9 @@ export const InventoryView: React.FC = () => {
 
         return (
           <div>
-            <p className="font-bold text-slate-800 text-xs">{whName}</p>
+            <p className="font-bold text-slate-800 dark:text-neutral-100 text-xs">{whName}</p>
             {locName && locName !== '-' && (
-              <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+              <p className="text-[10px] text-slate-400 dark:text-neutral-400 font-mono mt-0.5">
                 قفسه: {locName}
               </p>
             )}
@@ -149,7 +149,7 @@ export const InventoryView: React.FC = () => {
       key: 'quantity',
       header: 'موجودی کل کل',
       render: (item) => (
-        <span className="font-extrabold text-slate-900 text-sm">
+        <span className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">
           {toPersianDigits(item.quantity)} عدد
         </span>
       ),
@@ -218,51 +218,51 @@ export const InventoryView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="hover:shadow-vercel-md transition-shadow">
           <div className="flex items-center justify-between">
-            <p className="caption-mono">موجودی فیزیکی کل</p>
-            <Package className="w-4 h-4 text-neutral-500" />
+            <p className="caption-mono text-neutral-500 dark:text-neutral-400">موجودی فیزیکی کل</p>
+            <Package className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
-          <p className="text-2xl font-extrabold text-neutral-900 tracking-tight font-mono mt-2">
+          <p className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-2">
             {toPersianDigits(totalQuantity)} <span className="text-xs font-mono font-normal text-neutral-400">عدد</span>
           </p>
         </Card>
 
         <Card className="hover:shadow-vercel-md transition-shadow">
           <div className="flex items-center justify-between">
-            <p className="caption-mono">موجودی قابل فروش</p>
-            <Package className="w-4 h-4 text-neutral-500" />
+            <p className="caption-mono text-neutral-500 dark:text-neutral-400">موجودی قابل فروش</p>
+            <Package className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
-          <p className="text-2xl font-extrabold text-neutral-900 tracking-tight font-mono mt-2">
+          <p className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-2">
             {toPersianDigits(totalAvailable)} <span className="text-xs font-mono font-normal text-neutral-400">عدد</span>
           </p>
         </Card>
 
         <Card className="hover:shadow-vercel-md transition-shadow">
           <div className="flex items-center justify-between">
-            <p className="caption-mono">رزرو سفارشات</p>
-            <RefreshCw className="w-4 h-4 text-neutral-500" />
+            <p className="caption-mono text-neutral-500 dark:text-neutral-400">رزرو سفارشات</p>
+            <RefreshCw className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
-          <p className="text-2xl font-extrabold text-neutral-900 tracking-tight font-mono mt-2">
+          <p className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-2">
             {toPersianDigits(totalReserved)} <span className="text-xs font-mono font-normal text-neutral-400">عدد</span>
           </p>
         </Card>
 
         <Card className="hover:shadow-vercel-md transition-shadow">
           <div className="flex items-center justify-between">
-            <p className="caption-mono">ضایعات / مرجوعی</p>
-            <AlertTriangle className="w-4 h-4 text-neutral-500" />
+            <p className="caption-mono text-neutral-500 dark:text-neutral-400">ضایعات / مرجوعی</p>
+            <AlertTriangle className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
-          <p className="text-2xl font-extrabold text-neutral-900 tracking-tight font-mono mt-2">
+          <p className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-2">
             {toPersianDigits(totalDamaged)} <span className="text-xs font-mono font-normal text-neutral-400">عدد</span>
           </p>
         </Card>
 
-        <Card className="hover:shadow-vercel-md transition-shadow bg-amber-50/20 border-amber-200/80">
+        <Card className="hover:shadow-vercel-md transition-shadow bg-amber-50/20 dark:bg-amber-950/20 border-amber-200/80 dark:border-amber-800/50">
           <div className="flex items-center justify-between">
-            <p className="caption-mono text-amber-800">هشدار کسری موجودی</p>
-            <ShieldAlert className="w-4 h-4 text-amber-700" />
+            <p className="caption-mono text-amber-800 dark:text-amber-300">هشدار کسری موجودی</p>
+            <ShieldAlert className="w-4 h-4 text-amber-700 dark:text-amber-400" />
           </div>
-          <p className="text-2xl font-extrabold text-amber-900 tracking-tight font-mono mt-2">
-            {toPersianDigits(lowStockCount)} <span className="text-xs font-mono font-normal text-amber-700">کالا</span>
+          <p className="text-2xl font-extrabold text-amber-900 dark:text-amber-200 tracking-tight font-mono mt-2">
+            {toPersianDigits(lowStockCount)} <span className="text-xs font-mono font-normal text-amber-700 dark:text-amber-400">کالا</span>
           </p>
         </Card>
       </div>
@@ -282,7 +282,7 @@ export const InventoryView: React.FC = () => {
             <select
               value={selectedWarehouseFilter}
               onChange={(e) => setSelectedWarehouseFilter(e.target.value ? Number(e.target.value) : '')}
-              className="bg-white border border-slate-300 rounded-xl text-slate-800 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-100 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
               <option value="">همه انبارها</option>
               {warehouses.map((w, wIdx) => (
@@ -296,8 +296,8 @@ export const InventoryView: React.FC = () => {
               onClick={() => setLowStockOnly(!lowStockOnly)}
               className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                 lowStockOnly
-                  ? 'bg-amber-100 border-amber-300 text-amber-900'
-                  : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-amber-100 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200'
+                  : 'bg-slate-100 dark:bg-neutral-800 border-slate-200 dark:border-neutral-700 text-slate-600 dark:text-neutral-300 hover:bg-slate-200 dark:hover:bg-neutral-700'
               }`}
             >
               فقط کالاهای کم‌موجودی ({toPersianDigits(lowStockCount)})
