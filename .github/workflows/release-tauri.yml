@@ -103,7 +103,7 @@ jobs:
             return null;
           }
 
-          // Gather all available signatures
+          // 1. First gather all signatures
           const signatures = {};
           files.filter(f => f.endsWith(".sig")).forEach(sigFile => {
             const baseName = sigFile.slice(0, -4);
@@ -113,7 +113,7 @@ jobs:
             console.log(`Found signature for: ${baseName}`);
           });
 
-          // 1. Check if an existing latest.json or updater JSON was uploaded by tauri-action
+          // 2. Check if an existing latest.json or updater JSON was uploaded by tauri-action
           files.filter(f => f.endsWith(".json") && f !== "latest.json").forEach(jsonFile => {
             try {
               const data = JSON.parse(fs.readFileSync(jsonFile, "utf8"));
@@ -126,76 +126,71 @@ jobs:
             }
           });
 
-          // 2. Identify macOS Asset & Signature
-          let macAsset = null;
-          let macSig = null;
+          // 3. Identify macOS Updater Asset (.app.tar.gz or .tar.gz ONLY)
+          const macArchive = files.find(f => f.endsWith(".app.tar.gz") || (f.includes("universal") && f.endsWith(".tar.gz")) || f.endsWith(".tar.gz"));
+          if (macArchive) {
+            const macSig = signatures[macArchive] || signatures[macArchive + ".sig"];
+            if (macSig) {
+              const macUrl = `https://github.com/${repo}/releases/download/${tag}/${macArchive}`;
+              console.log(`Resolved valid macOS updater asset: ${macArchive}`);
 
-          // Priority for macOS updater: .app.tar.gz > .tar.gz > .dmg > .zip
-          const macFiles = files.filter(f => !f.endsWith(".sig") && !f.endsWith(".json") && !f.endsWith(".apk") && !f.endsWith(".exe") && !f.endsWith(".msi"));
-          macAsset = macFiles.find(f => f.endsWith(".app.tar.gz") || (f.includes("universal") && f.endsWith(".tar.gz")))
-            || macFiles.find(f => f.endsWith(".tar.gz"))
-            || macFiles.find(f => f.includes("universal") || f.endsWith(".dmg"))
-            || macFiles.find(f => f.includes("darwin") || f.includes("Tankhor_"));
+              const macTargets = [
+                "darwin-aarch64",
+                "darwin-aarch64-app",
+                "darwin-x86_64",
+                "darwin-x86_64-app",
+                "darwin-universal",
+                "darwin-universal-app",
+                "darwin-arm64",
+                "darwin-arm64-app"
+              ];
 
-          if (macAsset) {
-            macSig = signatures[macAsset] || signatures[macAsset + ".sig"] || Object.values(signatures)[0] || "";
-            const macUrl = `https://github.com/${repo}/releases/download/${tag}/${macAsset}`;
-            console.log(`Resolved macOS updater asset: ${macAsset} (sig length: ${macSig.length})`);
-
-            // Populate ALL potential macOS target aliases expected by Tauri v2
-            const macTargets = [
-              "darwin-aarch64",
-              "darwin-aarch64-app",
-              "darwin-x86_64",
-              "darwin-x86_64-app",
-              "darwin-universal",
-              "darwin-universal-app",
-              "darwin-arm64",
-              "darwin-arm64-app"
-            ];
-
-            macTargets.forEach(target => {
-              platforms[target] = { signature: macSig, url: macUrl };
-            });
+              macTargets.forEach(target => {
+                if (!platforms[target]) {
+                  platforms[target] = { signature: macSig, url: macUrl };
+                }
+              });
+            } else {
+              console.warn(`macOS archive ${macArchive} found but missing .sig signature!`);
+            }
           }
 
-          // 3. Identify Windows Asset & Signature
-          let winAsset = null;
-          let winSig = null;
+          // 4. Identify Windows Updater Asset (.nsis.zip or .msi.zip or .zip ONLY)
+          const winArchive = files.find(f => f.endsWith(".nsis.zip") || f.endsWith(".msi.zip") || (f.endsWith(".zip") && !f.includes("darwin")));
+          if (winArchive) {
+            const winSig = signatures[winArchive] || signatures[winArchive + ".sig"];
+            if (winSig) {
+              const winUrl = `https://github.com/${repo}/releases/download/${tag}/${winArchive}`;
+              console.log(`Resolved valid Windows updater asset: ${winArchive}`);
 
-          // Priority for Windows updater: .nsis.zip > x64-setup.exe > setup.exe > .msi.zip > .zip > .exe
-          const winFiles = files.filter(f => f.endsWith(".exe") || f.endsWith(".msi") || (f.endsWith(".zip") && !f.includes("darwin")));
-          winAsset = winFiles.find(f => f.endsWith(".nsis.zip") || f.includes("x64-setup.exe") || f.includes("setup.exe"))
-            || winFiles.find(f => f.endsWith(".msi.zip") || f.includes("x64_en-US.msi"))
-            || winFiles.find(f => f.endsWith(".zip"))
-            || winFiles.find(f => f.endsWith(".exe"));
+              const winTargets = [
+                "windows-x86_64",
+                "windows-x86_64-nsis",
+                "windows-x86_64-msi",
+                "windows-i686",
+                "windows-i686-nsis",
+                "windows-x86"
+              ];
 
-          if (winAsset) {
-            winSig = signatures[winAsset] || signatures[winAsset + ".sig"] || Object.values(signatures)[0] || "";
-            const winUrl = `https://github.com/${repo}/releases/download/${tag}/${winAsset}`;
-            console.log(`Resolved Windows updater asset: ${winAsset} (sig length: ${winSig.length})`);
-
-            const winTargets = [
-              "windows-x86_64",
-              "windows-x86_64-nsis",
-              "windows-x86_64-msi",
-              "windows-i686",
-              "windows-i686-nsis",
-              "windows-x86"
-            ];
-
-            winTargets.forEach(target => {
-              platforms[target] = { signature: winSig, url: winUrl };
-            });
+              winTargets.forEach(target => {
+                if (!platforms[target]) {
+                  platforms[target] = { signature: winSig, url: winUrl };
+                }
+              });
+            } else {
+              console.warn(`Windows archive ${winArchive} found but missing .sig signature!`);
+            }
           }
 
-          // 4. Identify Linux Asset & Signature if present
+          // 5. Identify Linux Asset & Signature if present
           const linuxAsset = files.find(f => f.endsWith(".AppImage.tar.gz") || f.endsWith(".appimage.tar.gz"));
           if (linuxAsset) {
-            const linuxSig = signatures[linuxAsset] || signatures[linuxAsset + ".sig"] || "";
-            const linuxUrl = `https://github.com/${repo}/releases/download/${tag}/${linuxAsset}`;
-            platforms["linux-x86_64"] = { signature: linuxSig, url: linuxUrl };
-            platforms["linux-x86_64-appimage"] = { signature: linuxSig, url: linuxUrl };
+            const linuxSig = signatures[linuxAsset] || signatures[linuxAsset + ".sig"];
+            if (linuxSig) {
+              const linuxUrl = `https://github.com/${repo}/releases/download/${tag}/${linuxAsset}`;
+              if (!platforms["linux-x86_64"]) platforms["linux-x86_64"] = { signature: linuxSig, url: linuxUrl };
+              if (!platforms["linux-x86_64-appimage"]) platforms["linux-x86_64-appimage"] = { signature: linuxSig, url: linuxUrl };
+            }
           }
 
           const manifest = {
