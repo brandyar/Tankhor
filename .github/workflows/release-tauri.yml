@@ -85,7 +85,7 @@ jobs:
           node -e '
           const fs = require("fs");
 
-          const tag = process.env.TAG_NAME || "v1.0.6";
+          const tag = process.env.TAG_NAME || "v1.0.7";
           const version = tag.replace(/^v/, "");
           const repo = process.env.REPO || "brandyar/Tankhor";
           const files = fs.readdirSync(".");
@@ -96,9 +96,16 @@ jobs:
 
           // Helper to read signature file content
           function getSignature(filename) {
-            const sigFile = filename + ".sig";
-            if (fs.existsSync(sigFile)) {
-              return fs.readFileSync(sigFile, "utf8").trim();
+            const candidates = [
+              filename + ".sig",
+              filename.replace(/\.zip$/, ".nsis.zip.sig"),
+              filename.replace(/\.exe$/, ".exe.sig"),
+              filename.replace(/\.tar\.gz$/, ".app.tar.gz.sig")
+            ];
+            for (const cand of candidates) {
+              if (fs.existsSync(cand)) {
+                return fs.readFileSync(cand, "utf8").trim();
+              }
             }
             return null;
           }
