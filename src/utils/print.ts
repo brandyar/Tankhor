@@ -6,13 +6,14 @@ export interface PrintOptions {
 /**
  * Universal, production-ready print helper.
  * Engineered specifically to work reliably across:
- * 1. Native macOS Tauri (WKWebView)
+ * 1. Native macOS Tauri (WebKit / WKWebView)
  * 2. Native Windows Tauri (WebView2)
  * 3. Standard Desktop & Mobile Web Browsers
  *
- * It mounts target markup into a dedicated top-level print portal (#tankhor-global-print-portal),
- * isolated by CSS @media print rules, then invokes window.print().
- * This guarantees the system print sheet opens without backdrop artifacts or iframe suppression.
+ * Implements a bulletproof multi-tier printing strategy:
+ * Tier 1: Dedicated isolated print iframe for WebKit/macOS
+ * Tier 2: Dedicated #tankhor-global-print-portal with @media print rules
+ * Tier 3: Direct window.print() fallback
  */
 export function printHtml(htmlContent: string, options?: PrintOptions): void {
   try {
@@ -21,7 +22,43 @@ export function printHtml(htmlContent: string, options?: PrintOptions): void {
       document.title = options.title;
     }
 
-    // 1. Locate or create the global print portal
+    const fullStyles = `
+      @page {
+        size: auto;
+        margin: 0mm;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        direction: rtl !important;
+        font-family: Vazirmatn, system-ui, -apple-system, sans-serif !important;
+      }
+      ${options?.extraStyles || ''}
+    `;
+
+    // 1. Try iframe method (most reliable for macOS WKWebView & Safari without interrupting main view)
+    let printIframe = document.getElementById('tankhor-print-iframe') as HTMLIFrameElement | null;
+    if (!printIframe) {
+      printIframe = document.createElement('iframe');
+      printIframe.id = 'tankhor-print-iframe';
+      printIframe.style.position = 'fixed';
+      printIframe.style.right = '0';
+      printIframe.style.bottom = '0';
+      printIframe.style.width = '0';
+      printIframe.style.height = '0';
+      printIframe.style.border = '0';
+      printIframe.style.visibility = 'hidden';
+      document.body.appendChild(printIframe);
+    }
+
+    // 2. Also populate the global portal on main document as Tier 2 fallback
     let portal = document.getElementById('tankhor-global-print-portal');
     if (!portal) {
       portal = document.createElement('div');
@@ -29,42 +66,66 @@ export function printHtml(htmlContent: string, options?: PrintOptions): void {
       document.body.appendChild(portal);
     }
 
-    // 2. Inject extra styles if requested
-    let extraStylesBlock = '';
-    if (options?.extraStyles) {
-      extraStylesBlock = `<style>${options.extraStyles}</style>`;
-    }
-
     portal.innerHTML = `
-      ${extraStylesBlock}
+      <style>${fullStyles}</style>
       <div class="tankhor-printable-content">
         ${htmlContent}
       </div>
     `;
 
-    // 3. Mark body as printing
+    // Try printing through the isolated iframe first
+    const iframeDoc = printIframe.contentDocument || printIframe.contentWindow?.document;
+    if (iframeDoc && printIframe.contentWindow) {
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html lang="fa" dir="rtl">
+          <head>
+            <meta charset="utf-8">
+            <title>${options?.title || 'چاپ تن‌خور'}</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+            <style>${fullStyles}</style>
+          </head>
+          <body>
+            ${htmlContent}
+          </body>
+        </html>
+      `);
+      iframeDoc.close();
+
+      const iframeWin = printIframe.contentWindow;
+      setTimeout(() => {
+        try {
+          iframeWin.focus();
+          iframeWin.print();
+        } catch (iframeErr) {
+          console.warn('[PrintHelper] Iframe print failed, falling back to window.print():', iframeErr);
+          // Fallback to window.print()
+          document.body.classList.add('tankhor-printing');
+          setTimeout(() => {
+            window.print();
+            setTimeout(() => {
+              document.body.classList.remove('tankhor-printing');
+              document.title = originalTitle;
+            }, 1000);
+          }, 100);
+        }
+      }, 250);
+      return;
+    }
+
+    // Direct window.print fallback
     document.body.classList.add('tankhor-printing');
-
-    const cleanup = () => {
-      document.body.classList.remove('tankhor-printing');
-      if (portal) {
-        portal.innerHTML = '';
-      }
-      document.title = originalTitle;
-      window.removeEventListener('afterprint', cleanup);
-    };
-
-    window.addEventListener('afterprint', cleanup);
-
-    // 4. Trigger print after layout calculation
     setTimeout(() => {
       try {
         window.print();
       } catch (err) {
         console.error('[PrintHelper] window.print() failed:', err);
       } finally {
-        // Fallback cleanup in case afterprint event is delayed or not supported
-        setTimeout(cleanup, 1500);
+        setTimeout(() => {
+          document.body.classList.remove('tankhor-printing');
+          document.title = originalTitle;
+        }, 1200);
       }
     }, 150);
   } catch (err) {
