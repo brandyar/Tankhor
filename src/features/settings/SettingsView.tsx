@@ -63,6 +63,11 @@ export const SettingsView: React.FC = () => {
             type: 'error',
             text: 'فایل متادیتای بروزرسانی (latest.json) روی سرور یافت نشد یا هنوز ریلیز در گیتهاب نهایی نشده است.',
           });
+        } else if (info.error.includes('fallback platforms') || info.error.includes('platforms')) {
+          setUpdateStatusMsg({
+            type: 'error',
+            text: 'کلید پلتفرم مکینتاش در فایل نسخه قبلی سرور ناقص بوده است. با انتشار ریلیز v1.0.4 و جدیدتر، ساختار پلتفرم‌های مک (Apple Silicon و Intel) به صورت خودکار پشتیبانی می‌شوند.',
+          });
         } else {
           setUpdateStatusMsg({
             type: 'error',

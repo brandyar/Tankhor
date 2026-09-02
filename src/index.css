@@ -79,3 +79,52 @@
   background: rgba(161, 161, 161, 0.45);
 }
 
+/* ========================================================= */
+/* Global Print Rules (Desktop Tauri, macOS WebKit & Web)    */
+/* ========================================================= */
+@media screen {
+  #tankhor-global-print-portal {
+    display: none !important;
+  }
+}
+
+@media print {
+  @page {
+    size: auto;
+    margin: 0mm;
+  }
+
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    direction: rtl !important;
+  }
+
+  /* When the print portal is active, hide the regular application UI */
+  body.tankhor-printing > *:not(#tankhor-global-print-portal) {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  #tankhor-global-print-portal {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #tankhor-global-print-portal * {
+    visibility: visible !important;
+  }
+}
+

@@ -18,28 +18,25 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { formatCurrency, toPersianDigits } from '../../utils/formatters';
 import { printElement } from '../../utils/print';
 import {
   BarChart3,
   TrendingUp,
   PackageX,
-  PieChart,
   DollarSign,
   Shirt,
   Palette,
   Tag,
-  Calendar,
-  Filter,
-  ArrowUpRight,
-  ArrowDownRight,
   Printer,
   Plus,
   Trash2,
   AlertTriangle,
-  Clock,
+  PackageCheck,
+  TrendingDown,
+  Layers,
   Sparkles,
-  ChevronDown,
 } from 'lucide-react';
 
 interface OperationalExpense {
@@ -51,8 +48,10 @@ interface OperationalExpense {
 }
 
 export const ReportsView: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { activeOrganization } = useOrganization();
+  const isPersian = locale === 'fa';
+
   const [activeTab, setActiveTab] = useState<'best_sellers' | 'dead_stock' | 'pnl'>('best_sellers');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -68,15 +67,13 @@ export const ReportsView: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
 
   // Filter states
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [deadStockDaysThreshold, setDeadStockDaysThreshold] = useState<number>(30);
 
   // P&L Custom Expenses state
   const [expenses, setExpenses] = useState<OperationalExpense[]>([
-    { id: '1', title: 'اجاره مغازه / انبار', amount: 15000000, category: 'rent', date: '1403/06/01' },
-    { id: '2', title: 'حقوق پرسنل و بسته‌بندی', amount: 12000000, category: 'salary', date: '1403/06/01' },
-    { id: '3', title: 'هزینه ارسال و پستی', amount: 3500000, category: 'packaging', date: '1403/06/01' },
+    { id: '1', title: 'اجاره فروشگاه و انبار مرکزی', amount: 15000000, category: 'rent', date: '1403/06/01' },
+    { id: '2', title: 'حقوق پرسنل، خیاطی و بسته‌بندی', amount: 12000000, category: 'salary', date: '1403/06/01' },
+    { id: '3', title: 'هزینه بسته‌بندی، کارتن و ارسال پستی', amount: 3500000, category: 'packaging', date: '1403/06/01' },
   ]);
   const [newExpenseTitle, setNewExpenseTitle] = useState('');
   const [newExpenseAmount, setNewExpenseAmount] = useState('');
@@ -269,8 +266,7 @@ export const ReportsView: React.FC = () => {
       if (stockCount > 0) {
         const salesInfo = variantSalesMap[v.id];
         const soldQty = salesInfo ? salesInfo.totalSold : 0;
-        
-        // Calculate days since last sale or creation
+
         const lastDateStr = salesInfo?.lastSaleDate || v.date_created || '2024-01-01';
         const daysDiff = Math.max(15, Math.floor((Date.now() - new Date(lastDateStr).getTime()) / (1000 * 3600 * 24)));
 
@@ -325,7 +321,7 @@ export const ReportsView: React.FC = () => {
       cogs += unitCost * qty;
     });
 
-    // 3. Purchase orders cost (procurement)
+    // 3. Purchase orders cost
     const supplierPurchasesTotal = purchaseOrders.reduce((sum, po) => sum + (po.total || 0), 0);
 
     // 4. Operational Expenses
@@ -374,36 +370,36 @@ export const ReportsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 text-white p-6 rounded-2xl shadow-md border border-neutral-700">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
-              <BarChart3 className="w-6 h-6" />
-            </span>
-            <h1 className="text-xl font-bold tracking-tight">گزارش‌ها و تحلیل‌های تخصصی پوشاک</h1>
-          </div>
-          <p className="text-xs text-neutral-300">
-            تحلیل جامع پرفروش‌ترین سایزها و رنگ‌ها، آنالیز سرمایه‌های راکد (Dead Stock) و محاسبه دقیق سود و زیان
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={handlePrintReport} icon={<Printer className="w-4 h-4" />}>
-            چاپ و خروجی گزارش
-          </Button>
-        </div>
+    <div className="space-y-6 pb-12 font-sans">
+      {/* Page Header */}
+      <div className="no-print">
+        <PageHeader
+          title="گزارش‌ها و تحلیل‌های تخصصی پوشاک"
+          subtitle="تحلیل جامع پرفروش‌ترین سایزها و رنگ‌ها، آنالیز سرمایه‌های راکد (Dead Stock) و محاسبه دقیق سود و زیان"
+          actions={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrintReport}
+                icon={<Printer className="w-4 h-4 text-neutral-600" />}
+              >
+                چاپ و خروجی گزارش
+              </Button>
+            </div>
+          }
+        />
       </div>
 
-      {/* Tabs Bar */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-2">
+      {/* Tabs Navigation */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-neutral-200/80 pb-3 no-print">
         <button
+          type="button"
           onClick={() => setActiveTab('best_sellers')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'best_sellers'
-              ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-xs'
-              : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+              ? 'bg-neutral-900 text-white shadow-xs'
+              : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
           }`}
         >
           <Shirt className="w-4 h-4" />
@@ -411,28 +407,30 @@ export const ReportsView: React.FC = () => {
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('dead_stock')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'dead_stock'
-              ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-xs'
-              : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+              ? 'bg-neutral-900 text-white shadow-xs'
+              : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
           }`}
         >
           <PackageX className="w-4 h-4" />
           <span>تحلیل مانده موجودی (Dead Stock)</span>
           {deadStockData.deadStockItems.length > 0 && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-500 text-white font-mono">
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-rose-600 text-white font-mono font-bold">
               {toPersianDigits(deadStockData.deadStockItems.length)}
             </span>
           )}
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('pnl')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'pnl'
-              ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-xs'
-              : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+              ? 'bg-neutral-900 text-white shadow-xs'
+              : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
           }`}
         >
           <DollarSign className="w-4 h-4" />
@@ -440,7 +438,7 @@ export const ReportsView: React.FC = () => {
         </button>
       </div>
 
-      {/* Main Print Container */}
+      {/* Main Report Content Container */}
       <div id="tankhor-report-container" className="space-y-6">
         {/* ========================================================================= */}
         {/* TAB 1: BEST SELLING SIZES & COLORS */}
@@ -448,100 +446,117 @@ export const ReportsView: React.FC = () => {
         {activeTab === 'best_sellers' && (
           <div className="space-y-6">
             {/* Overview Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="p-4 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-neutral-500">کل قطعات فروخته‌شده</span>
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <Shirt className="w-4 h-4" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+              <Card className="hover:border-neutral-300 transition-all shadow-xs group">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="caption-mono text-neutral-500">کل قطعات فروخته‌شده</p>
+                    <h3 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight mt-2 font-mono">
+                      {toPersianDigits(bestSellersData.totalSoldQty)}
+                      <span className="text-xs font-normal text-neutral-400 font-sans ms-1.5">عدد</span>
+                    </h3>
+                    <div className="mt-2.5 flex items-center gap-1 text-xs text-neutral-600">
+                      <PackageCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>کل پوشاک خارج‌شده از انبار</span>
+                    </div>
+                  </div>
+                  <div className="w-11 h-11 bg-neutral-100 text-neutral-900 rounded-xl flex items-center justify-center border border-neutral-200/80 group-hover:scale-105 transition-transform">
+                    <Shirt className="w-5 h-5" />
                   </div>
                 </div>
-                <p className="text-xl font-bold text-neutral-900 dark:text-white mt-2 font-mono">
-                  {toPersianDigits(bestSellersData.totalSoldQty)} <span className="text-xs font-normal text-neutral-500">عدد</span>
-                </p>
-                <p className="text-[11px] text-neutral-400 mt-1">تعداد کل پوشاک خارج‌شده از انبار</p>
               </Card>
 
-              <Card className="p-4 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-neutral-500">پرفروش‌ترین سایز</span>
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                    <Tag className="w-4 h-4" />
+              <Card className="hover:border-neutral-300 transition-all shadow-xs group">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="caption-mono text-neutral-500">پرفروش‌ترین سایز</p>
+                    <h3 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight mt-2 font-mono">
+                      {bestSellersData.sortedSizes[0]?.name || '---'}
+                    </h3>
+                    <div className="mt-2.5 flex items-center gap-1 text-xs text-amber-700 font-mono font-medium">
+                      <Tag className="w-3.5 h-3.5" />
+                      <span>{bestSellersData.sortedSizes[0] ? `${toPersianDigits(bestSellersData.sortedSizes[0].qty)} عدد فروش` : 'بدون سابقه فروش'}</span>
+                    </div>
+                  </div>
+                  <div className="w-11 h-11 bg-amber-50 text-amber-900 rounded-xl flex items-center justify-center border border-amber-200/80 group-hover:scale-105 transition-transform">
+                    <Tag className="w-5 h-5" />
                   </div>
                 </div>
-                <p className="text-xl font-bold text-neutral-900 dark:text-white mt-2">
-                  {bestSellersData.sortedSizes[0]?.name || '---'}
-                </p>
-                <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-mono">
-                  {bestSellersData.sortedSizes[0] ? `${toPersianDigits(bestSellersData.sortedSizes[0].qty)} عدد فروش` : 'بدون سابقه فروش'}
-                </p>
               </Card>
 
-              <Card className="p-4 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-neutral-500">محبوب‌ترین رنگ</span>
-                  <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
-                    <Palette className="w-4 h-4" />
+              <Card className="hover:border-neutral-300 transition-all shadow-xs group">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="caption-mono text-neutral-500">محبوب‌ترین رنگ</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      {bestSellersData.sortedColors[0]?.hex && (
+                        <span
+                          className="w-4 h-4 rounded-full border border-black/20 shrink-0"
+                          style={{ backgroundColor: bestSellersData.sortedColors[0].hex }}
+                        />
+                      )}
+                      <h3 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight">
+                        {bestSellersData.sortedColors[0]?.name || '---'}
+                      </h3>
+                    </div>
+                    <div className="mt-2.5 flex items-center gap-1 text-xs text-purple-700 font-mono font-medium">
+                      <Palette className="w-3.5 h-3.5" />
+                      <span>{bestSellersData.sortedColors[0] ? `${toPersianDigits(bestSellersData.sortedColors[0].qty)} عدد فروش` : 'بدون سابقه فروش'}</span>
+                    </div>
+                  </div>
+                  <div className="w-11 h-11 bg-purple-50 text-purple-900 rounded-xl flex items-center justify-center border border-purple-200/80 group-hover:scale-105 transition-transform">
+                    <Palette className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="flex items-center gap-2 mt-2">
-                  {bestSellersData.sortedColors[0]?.hex && (
-                    <span
-                      className="w-4 h-4 rounded-full border border-neutral-300 shrink-0"
-                      style={{ backgroundColor: bestSellersData.sortedColors[0].hex }}
-                    />
-                  )}
-                  <p className="text-xl font-bold text-neutral-900 dark:text-white">
-                    {bestSellersData.sortedColors[0]?.name || '---'}
-                  </p>
-                </div>
-                <p className="text-[11px] text-purple-600 dark:text-purple-400 mt-1 font-mono">
-                  {bestSellersData.sortedColors[0] ? `${toPersianDigits(bestSellersData.sortedColors[0].qty)} عدد فروش` : 'بدون سابقه فروش'}
-                </p>
               </Card>
 
-              <Card className="p-4 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-neutral-500">درآمد کل حاصل از کاتالوگ</span>
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <TrendingUp className="w-4 h-4" />
+              <Card className="hover:border-neutral-300 transition-all shadow-xs group">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="caption-mono text-neutral-500">گردش درآمد کاتالوگ</p>
+                    <h3 className="text-xl sm:text-2xl font-extrabold text-neutral-900 tracking-tight mt-2 font-mono truncate max-w-[200px]" title={formatCurrency(bestSellersData.totalSalesRev, activeOrganization?.currency, isPersian)}>
+                      {formatCurrency(bestSellersData.totalSalesRev, activeOrganization?.currency, isPersian)}
+                    </h3>
+                    <div className="mt-2.5 flex items-center gap-1 text-xs text-emerald-700 font-medium">
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      <span>بر اساس سفارشات تحویل‌شده</span>
+                    </div>
+                  </div>
+                  <div className="w-11 h-11 bg-emerald-50 text-emerald-900 rounded-xl flex items-center justify-center border border-emerald-200/80 group-hover:scale-105 transition-transform">
+                    <TrendingUp className="w-5 h-5" />
                   </div>
                 </div>
-                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-2 font-mono">
-                  {formatCurrency(bestSellersData.totalSalesRev, activeOrganization?.currency)}
-                </p>
-                <p className="text-[11px] text-neutral-400 mt-1">بر اساس سفارشات ثبت‌شده</p>
               </Card>
             </div>
 
             {/* Split Grid: Size Breakdown & Color Breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Sizes Breakdown */}
-              <Card className="p-5 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 space-y-4">
-                <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+              <Card className="p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
                   <div className="flex items-center gap-2">
-                    <Tag className="w-5 h-5 text-amber-500" />
-                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white">تفکیک فروش بر اساس سایزها</h3>
+                    <Tag className="w-4 h-4 text-amber-600" />
+                    <h3 className="text-sm font-bold text-neutral-900">تفکیک تقاضا بر اساس سایزها</h3>
                   </div>
-                  <Badge variant="neutral">رتبه‌بندی تقاضا</Badge>
+                  <Badge variant="neutral">رتبه‌بندی سایز</Badge>
                 </div>
 
                 {bestSellersData.sortedSizes.length === 0 ? (
                   <p className="text-xs text-neutral-400 text-center py-8">هنوز سفارشی با مشخصات سایز ثبت نشده است.</p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-3.5">
                     {bestSellersData.sortedSizes.map((sz, idx) => {
                       const sharePercent = bestSellersData.totalSoldQty > 0 ? Math.round((sz.qty / bestSellersData.totalSoldQty) * 100) : 0;
                       return (
-                        <div key={idx} className="space-y-1">
+                        <div key={idx} className="space-y-1.5">
                           <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-neutral-800 dark:text-neutral-200">{sz.name}</span>
+                            <span className="font-bold text-neutral-900">{sz.name}</span>
                             <div className="flex items-center gap-3 font-mono">
                               <span className="text-neutral-500">{toPersianDigits(sz.qty)} عدد</span>
-                              <span className="font-bold text-neutral-900 dark:text-white">٪{toPersianDigits(sharePercent)}</span>
+                              <span className="font-bold text-neutral-900">٪{toPersianDigits(sharePercent)}</span>
                             </div>
                           </div>
-                          <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-2.5 rounded-full overflow-hidden">
+                          <div className="w-full bg-neutral-100 h-2 rounded-full overflow-hidden">
                             <div
                               className="bg-amber-500 h-full rounded-full transition-all"
                               style={{ width: `${Math.max(4, sharePercent)}%` }}
@@ -555,39 +570,39 @@ export const ReportsView: React.FC = () => {
               </Card>
 
               {/* Colors Breakdown */}
-              <Card className="p-5 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 space-y-4">
-                <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+              <Card className="p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
                   <div className="flex items-center gap-2">
-                    <Palette className="w-5 h-5 text-purple-500" />
-                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white">تفکیک فروش بر اساس رنگ‌ها</h3>
+                    <Palette className="w-4 h-4 text-purple-600" />
+                    <h3 className="text-sm font-bold text-neutral-900">تفکیک فروش بر اساس رنگ‌ها</h3>
                   </div>
-                  <Badge variant="neutral">رتبه‌بندی محبوبیت</Badge>
+                  <Badge variant="neutral">محبوبیت رنگ</Badge>
                 </div>
 
                 {bestSellersData.sortedColors.length === 0 ? (
                   <p className="text-xs text-neutral-400 text-center py-8">هنوز سفارشی با مشخصات رنگ ثبت نشده است.</p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-3.5">
                     {bestSellersData.sortedColors.map((clr, idx) => {
                       const sharePercent = bestSellersData.totalSoldQty > 0 ? Math.round((clr.qty / bestSellersData.totalSoldQty) * 100) : 0;
                       return (
-                        <div key={idx} className="space-y-1">
+                        <div key={idx} className="space-y-1.5">
                           <div className="flex items-center justify-between text-xs">
                             <div className="flex items-center gap-2">
                               {clr.hex && (
                                 <span
-                                  className="w-3.5 h-3.5 rounded-full border border-neutral-300"
+                                  className="w-3 h-3 rounded-full border border-black/20 shrink-0"
                                   style={{ backgroundColor: clr.hex }}
                                 />
                               )}
-                              <span className="font-bold text-neutral-800 dark:text-neutral-200">{clr.name}</span>
+                              <span className="font-bold text-neutral-900">{clr.name}</span>
                             </div>
                             <div className="flex items-center gap-3 font-mono">
                               <span className="text-neutral-500">{toPersianDigits(clr.qty)} عدد</span>
-                              <span className="font-bold text-neutral-900 dark:text-white">٪{toPersianDigits(sharePercent)}</span>
+                              <span className="font-bold text-neutral-900">٪{toPersianDigits(sharePercent)}</span>
                             </div>
                           </div>
-                          <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-2.5 rounded-full overflow-hidden">
+                          <div className="w-full bg-neutral-100 h-2 rounded-full overflow-hidden">
                             <div
                               className="bg-purple-500 h-full rounded-full transition-all"
                               style={{ width: `${Math.max(4, sharePercent)}%` }}
@@ -602,36 +617,43 @@ export const ReportsView: React.FC = () => {
             </div>
 
             {/* Top Product Variants Ranking Table */}
-            <Card className="p-5 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 space-y-4">
-              <h3 className="text-sm font-bold text-neutral-900 dark:text-white">جدول پرفروش‌ترین تنوع‌های محصولی (SKU Best Sellers)</h3>
-              <div className="overflow-x-auto">
+            <Card className="p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900">جدول پرفروش‌ترین تنوع‌های محصولی (SKU Best Sellers)</h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">رتبه‌بندی بیشترین فروش عددی و ریالی در تنوع‌های پوشاک</p>
+                </div>
+                <Badge variant="neutral">Top 10 SKUs</Badge>
+              </div>
+
+              <div className="overflow-x-auto rounded-lg border border-neutral-200">
                 <table className="w-full text-right text-xs">
-                  <thead className="bg-neutral-50 dark:bg-neutral-800 text-neutral-500 font-medium">
+                  <thead className="bg-neutral-50 text-neutral-600 font-bold border-b border-neutral-200">
                     <tr>
                       <th className="p-3">کد کالا (SKU)</th>
                       <th className="p-3">نام محصول</th>
                       <th className="p-3">رنگ</th>
                       <th className="p-3">سایز</th>
-                      <th className="p-3">تعداد فروخته‌شده</th>
-                      <th className="p-3">مبلغ کل درآمد</th>
+                      <th className="p-3 text-center">تعداد فروخته‌شده</th>
+                      <th className="p-3 text-left">مبلغ کل درآمد</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                  <tbody className="divide-y divide-neutral-100 bg-white">
                     {bestSellersData.sortedVariants.slice(0, 10).map((varStat, idx) => (
-                      <tr key={idx} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50">
-                        <td className="p-3 font-mono font-bold text-neutral-900 dark:text-white">{varStat.sku}</td>
-                        <td className="p-3 font-medium">{varStat.title}</td>
-                        <td className="p-3">{varStat.color}</td>
-                        <td className="p-3">{varStat.size}</td>
-                        <td className="p-3 font-mono font-bold text-blue-600 dark:text-blue-400">{toPersianDigits(varStat.qty)}</td>
-                        <td className="p-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          {formatCurrency(varStat.revenue, activeOrganization?.currency)}
+                      <tr key={idx} className="hover:bg-neutral-50/70 transition-colors">
+                        <td className="p-3 font-mono font-bold text-neutral-900">{varStat.sku}</td>
+                        <td className="p-3 font-medium text-neutral-800">{varStat.title}</td>
+                        <td className="p-3 text-neutral-600">{varStat.color}</td>
+                        <td className="p-3 font-bold text-neutral-800">{varStat.size}</td>
+                        <td className="p-3 text-center font-mono font-bold text-neutral-900">{toPersianDigits(varStat.qty)}</td>
+                        <td className="p-3 text-left font-mono font-bold text-emerald-700">
+                          {formatCurrency(varStat.revenue, activeOrganization?.currency, isPersian)}
                         </td>
                       </tr>
                     ))}
                     {bestSellersData.sortedVariants.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="text-center py-6 text-neutral-400">اطلاعاتی یافت نشد.</td>
+                        <td colSpan={6} className="text-center py-8 text-neutral-400">سابقه‌ای ثبت نشده است.</td>
                       </tr>
                     )}
                   </tbody>
@@ -647,100 +669,132 @@ export const ReportsView: React.FC = () => {
         {activeTab === 'dead_stock' && (
           <div className="space-y-6">
             {/* Filter Bar */}
-            <Card className="p-4 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
+            <Card className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-neutral-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-200/70 shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-900 dark:text-white">تحلیل کالاهای راکد و کم‌گردش</h3>
-                  <p className="text-xs text-neutral-500">شناسایی سرمایه‌های بلوکه‌شده در انبار به منظور حراج و نقدسازی</p>
+                  <h3 className="text-sm font-bold text-neutral-900">تحلیل کالاهای راکد و کم‌گردش</h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">شناسایی سرمایه‌های بلوکه‌شده در انبار به منظور حراج و نقدسازی</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">آستانه عدم فروش:</span>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <span className="text-xs font-medium text-neutral-600 shrink-0">آستانه عدم گردش:</span>
                 <select
                   value={deadStockDaysThreshold}
                   onChange={(e) => setDeadStockDaysThreshold(Number(e.target.value))}
-                  className="px-3 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-bold"
+                  className="px-3 py-1.5 rounded-lg border border-neutral-200 bg-white text-xs font-bold text-neutral-900 focus:ring-1 focus:ring-neutral-900"
                 >
-                  <option value={15}>بیش از ۱۵ روز راکد</option>
-                  <option value={30}>بیش از ۳۰ روز راکد</option>
-                  <option value={60}>بیش از ۶۰ روز راکد</option>
-                  <option value={90}>بیش از ۹۰ روز راکد (بحرانی)</option>
+                  <option value={15}>بیش از ۱۵ روز بدون فروش</option>
+                  <option value={30}>بیش از ۳۰ روز بدون فروش</option>
+                  <option value={60}>بیش از ۶۰ روز بدون فروش</option>
+                  <option value={90}>بیش از ۹۰ روز (خواب سرمایه بحرانی)</option>
                 </select>
               </div>
             </Card>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card className="p-4 bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-900">
-                <span className="text-xs font-medium text-red-700 dark:text-red-400">سرمایه راکد کل در انبار</span>
-                <p className="text-xl font-bold text-red-700 dark:text-red-400 mt-2 font-mono">
-                  {formatCurrency(deadStockData.totalTiedCapital, activeOrganization?.currency)}
-                </p>
-                <p className="text-[11px] text-red-600/80 mt-1">محاسبه بر اساس قیمت خرید/خواب سرمایه</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+              <Card className="hover:border-rose-300 transition-all shadow-xs bg-gradient-to-br from-white to-rose-50/20">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="caption-mono text-rose-900">سرمایه راکد بلوکه‌شده</p>
+                    <h3 className="text-xl sm:text-2xl font-extrabold text-rose-950 tracking-tight mt-2 font-mono">
+                      {formatCurrency(deadStockData.totalTiedCapital, activeOrganization?.currency, isPersian)}
+                    </h3>
+                    <p className="text-[11px] text-rose-700/80 mt-1">محاسبه بر اساس بهای تمام‌شده خرید کالا</p>
+                  </div>
+                  <div className="w-11 h-11 bg-rose-50 text-rose-800 rounded-xl flex items-center justify-center border border-rose-200/80">
+                    <TrendingDown className="w-5 h-5" />
+                  </div>
+                </div>
               </Card>
 
-              <Card className="p-4 bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
-                <span className="text-xs font-medium text-amber-700 dark:text-amber-400">تعداد کل قطعات راکد</span>
-                <p className="text-xl font-bold text-amber-700 dark:text-amber-400 mt-2 font-mono">
-                  {toPersianDigits(deadStockData.totalDeadUnits)} <span className="text-xs font-normal">عدد کالا</span>
-                </p>
-                <p className="text-[11px] text-amber-600/80 mt-1">اشغال‌کننده فضای قفسه‌ها</p>
+              <Card className="hover:border-amber-300 transition-all shadow-xs bg-gradient-to-br from-white to-amber-50/20">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="caption-mono text-amber-900">تعداد کل قطعات راکد</p>
+                    <h3 className="text-2xl sm:text-3xl font-extrabold text-amber-950 tracking-tight mt-2 font-mono">
+                      {toPersianDigits(deadStockData.totalDeadUnits)}
+                      <span className="text-xs font-normal text-amber-800/80 font-sans ms-1.5">عدد</span>
+                    </h3>
+                    <p className="text-[11px] text-amber-700/80 mt-1">اشغال‌کننده فضای قفسه‌ها و انبار</p>
+                  </div>
+                  <div className="w-11 h-11 bg-amber-50 text-amber-800 rounded-xl flex items-center justify-center border border-amber-200/80">
+                    <PackageX className="w-5 h-5" />
+                  </div>
+                </div>
               </Card>
 
-              <Card className="p-4 bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
-                <span className="text-xs font-medium text-blue-700 dark:text-blue-400">تنوع‌های کالا بدون گردش</span>
-                <p className="text-xl font-bold text-blue-700 dark:text-blue-400 mt-2 font-mono">
-                  {toPersianDigits(deadStockData.deadStockItems.length)} <span className="text-xs font-normal">تنوع (SKU)</span>
-                </p>
-                <p className="text-[11px] text-blue-600/80 mt-1">نیازمند حراج یا تخفیف ویژه</p>
+              <Card className="hover:border-neutral-300 transition-all shadow-xs">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="caption-mono text-neutral-500">تنوع‌های کالا بدون گردش</p>
+                    <h3 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight mt-2 font-mono">
+                      {toPersianDigits(deadStockData.deadStockItems.length)}
+                      <span className="text-xs font-normal text-neutral-400 font-sans ms-1.5">تنوع (SKU)</span>
+                    </h3>
+                    <p className="text-[11px] text-neutral-500 mt-1">پیشنهاد تخفیف ویژه یا بسته‌های پیشنهادی</p>
+                  </div>
+                  <div className="w-11 h-11 bg-neutral-100 text-neutral-900 rounded-xl flex items-center justify-center border border-neutral-200/80">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                </div>
               </Card>
             </div>
 
             {/* Dead Stock Table */}
-            <Card className="p-5 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 space-y-4">
-              <h3 className="text-sm font-bold text-neutral-900 dark:text-white">فهرست کالاهای کم‌گردش (Dead Stock Items)</h3>
-              <div className="overflow-x-auto">
+            <Card className="p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900">فهرست کالاهای کم‌گردش و راکد (Dead Stock Items)</h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">اقلام بدون فروش بر اساس فیلتر زمانی انتخابی</p>
+                </div>
+                <Badge variant="neutral">{toPersianDigits(deadStockData.deadStockItems.length)} کالا</Badge>
+              </div>
+
+              <div className="overflow-x-auto rounded-lg border border-neutral-200">
                 <table className="w-full text-right text-xs">
-                  <thead className="bg-neutral-50 dark:bg-neutral-800 text-neutral-500 font-medium">
+                  <thead className="bg-neutral-50 text-neutral-600 font-bold border-b border-neutral-200">
                     <tr>
                       <th className="p-3">کد کالا (SKU)</th>
                       <th className="p-3">نام محصول</th>
                       <th className="p-3">رنگ / سایز</th>
-                      <th className="p-3">موجودی راکد</th>
-                      <th className="p-3">قیمت خرید (تامین)</th>
-                      <th className="p-3">سرمایه بلوکه‌شده</th>
-                      <th className="p-3">مدت راکد بودن</th>
-                      <th className="p-3">وضعیت هشدار</th>
+                      <th className="p-3 text-center">موجودی راکد</th>
+                      <th className="p-3 text-left">قیمت تامین</th>
+                      <th className="p-3 text-left">سرمایه بلوکه‌شده</th>
+                      <th className="p-3 text-center">مدت راکد</th>
+                      <th className="p-3 text-center">وضعیت</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                  <tbody className="divide-y divide-neutral-100 bg-white">
                     {deadStockData.deadStockItems.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50">
-                        <td className="p-3 font-mono font-bold text-neutral-900 dark:text-white">{item.variant.sku}</td>
-                        <td className="p-3 font-medium">{item.productTitle}</td>
-                        <td className="p-3">{item.colorName} / {item.sizeName}</td>
-                        <td className="p-3 font-mono font-bold text-amber-600">{toPersianDigits(item.stockQty)} عدد</td>
-                        <td className="p-3 font-mono">{formatCurrency(item.unitCost, activeOrganization?.currency)}</td>
-                        <td className="p-3 font-mono font-bold text-red-600 dark:text-red-400">
-                          {formatCurrency(item.totalTiedCapital, activeOrganization?.currency)}
+                      <tr key={idx} className="hover:bg-neutral-50/70 transition-colors">
+                        <td className="p-3 font-mono font-bold text-neutral-900">{item.variant.sku}</td>
+                        <td className="p-3 font-medium text-neutral-800">{item.productTitle}</td>
+                        <td className="p-3 text-neutral-600">{item.colorName} / {item.sizeName}</td>
+                        <td className="p-3 text-center font-mono font-bold text-amber-700">{toPersianDigits(item.stockQty)} عدد</td>
+                        <td className="p-3 text-left font-mono text-neutral-700">{formatCurrency(item.unitCost, activeOrganization?.currency, isPersian)}</td>
+                        <td className="p-3 text-left font-mono font-bold text-rose-700">
+                          {formatCurrency(item.totalTiedCapital, activeOrganization?.currency, isPersian)}
                         </td>
-                        <td className="p-3 font-mono">{toPersianDigits(item.daysInactive)} روز</td>
-                        <td className="p-3">
+                        <td className="p-3 text-center font-mono text-neutral-800">{toPersianDigits(item.daysInactive)} روز</td>
+                        <td className="p-3 text-center">
                           {item.daysInactive >= 90 ? (
-                            <Badge variant="danger">بحرانی (&gt;۹۰ روز)</Badge>
+                            <Badge variant="error">بحرانی (&gt;۹۰ روز)</Badge>
                           ) : item.daysInactive >= 60 ? (
-                            <Badge variant="warning">متوسط (۶۰-۹۰ روز)</Badge>
+                            <Badge variant="warning">هشدار (۶۰-۹۰ روز)</Badge>
                           ) : (
-                            <Badge variant="info">نیازمند توجه</Badge>
+                            <Badge variant="neutral">نیازمند توجه</Badge>
                           )}
                         </td>
                       </tr>
                     ))}
                     {deadStockData.deadStockItems.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="text-center py-6 text-neutral-400">کالای راکد با آستانه زمانی انتخاب شده یافت نشد.</td>
+                        <td colSpan={8} className="text-center py-8 text-neutral-400">کالای راکد با آستانه زمانی انتخاب شده یافت نشد.</td>
                       </tr>
                     )}
                   </tbody>
@@ -756,39 +810,67 @@ export const ReportsView: React.FC = () => {
         {activeTab === 'pnl' && (
           <div className="space-y-6">
             {/* P&L Financial Highlights */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="p-4 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
-                <span className="text-xs font-medium text-neutral-500">درآمد کل حاصل از فروش</span>
-                <p className="text-xl font-bold text-neutral-900 dark:text-white mt-2 font-mono">
-                  {formatCurrency(pnlData.grossRevenue, activeOrganization?.currency)}
-                </p>
-                <p className="text-[11px] text-neutral-400 mt-1">جمع فاکتورهای فروش</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+              <Card className="hover:border-neutral-300 transition-all shadow-xs">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="caption-mono text-neutral-500">درآمد کل فروش (Revenue)</p>
+                    <h3 className="text-xl sm:text-2xl font-extrabold text-neutral-900 tracking-tight mt-2 font-mono">
+                      {formatCurrency(pnlData.grossRevenue, activeOrganization?.currency, isPersian)}
+                    </h3>
+                    <p className="text-[11px] text-neutral-500 mt-1">جمع کل فاکتورهای فروش</p>
+                  </div>
+                  <div className="w-11 h-11 bg-neutral-100 text-neutral-900 rounded-xl flex items-center justify-center border border-neutral-200/80">
+                    <DollarSign className="w-5 h-5" />
+                  </div>
+                </div>
               </Card>
 
-              <Card className="p-4 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
-                <span className="text-xs font-medium text-neutral-500">بهای تمام‌شده کالا (COGS)</span>
-                <p className="text-xl font-bold text-neutral-900 dark:text-white mt-2 font-mono">
-                  {formatCurrency(pnlData.cogs, activeOrganization?.currency)}
-                </p>
-                <p className="text-[11px] text-neutral-400 mt-1">قیمت خرید کالاها از تامین‌کننده</p>
+              <Card className="hover:border-neutral-300 transition-all shadow-xs">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="caption-mono text-neutral-500">بهای تمام‌شده (COGS)</p>
+                    <h3 className="text-xl sm:text-2xl font-extrabold text-neutral-900 tracking-tight mt-2 font-mono">
+                      {formatCurrency(pnlData.cogs, activeOrganization?.currency, isPersian)}
+                    </h3>
+                    <p className="text-[11px] text-neutral-500 mt-1">هزینه خرید کالا از تامین‌کننده</p>
+                  </div>
+                  <div className="w-11 h-11 bg-neutral-100 text-neutral-900 rounded-xl flex items-center justify-center border border-neutral-200/80">
+                    <Shirt className="w-5 h-5" />
+                  </div>
+                </div>
               </Card>
 
-              <Card className="p-4 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
-                <span className="text-xs font-medium text-neutral-500">سود ناخالص (Gross Profit)</span>
-                <p className={`text-xl font-bold mt-2 font-mono ${pnlData.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {formatCurrency(pnlData.grossProfit, activeOrganization?.currency)}
-                </p>
-                <p className="text-[11px] text-neutral-400 mt-1">درآمد کسر شده از COGS</p>
+              <Card className="hover:border-neutral-300 transition-all shadow-xs">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="caption-mono text-neutral-500">سود ناخالص (Gross Profit)</p>
+                    <h3 className={`text-xl sm:text-2xl font-extrabold tracking-tight mt-2 font-mono ${pnlData.grossProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                      {formatCurrency(pnlData.grossProfit, activeOrganization?.currency, isPersian)}
+                    </h3>
+                    <p className="text-[11px] text-neutral-500 mt-1">درآمد کسر شده از بهای تمام‌شده</p>
+                  </div>
+                  <div className="w-11 h-11 bg-emerald-50 text-emerald-800 rounded-xl flex items-center justify-center border border-emerald-200/80">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                </div>
               </Card>
 
-              <Card className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900">
-                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">سود خالص (Net Profit)</span>
-                <p className={`text-2xl font-bold mt-2 font-mono ${pnlData.netProfit >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600'}`}>
-                  {formatCurrency(pnlData.netProfit, activeOrganization?.currency)}
-                </p>
-                <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-emerald-600">
-                  <span>هامش سود خالص:</span>
-                  <span className="font-mono">٪{toPersianDigits(Math.round(pnlData.profitMargin))}</span>
+              <Card className="hover:border-emerald-300 transition-all shadow-xs bg-gradient-to-br from-white to-emerald-50/30 border-emerald-200/80">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="caption-mono text-emerald-900">سود خالص نهایی (Net Profit)</p>
+                    <h3 className={`text-2xl sm:text-3xl font-extrabold tracking-tight mt-2 font-mono ${pnlData.netProfit >= 0 ? 'text-emerald-800' : 'text-rose-700'}`}>
+                      {formatCurrency(pnlData.netProfit, activeOrganization?.currency, isPersian)}
+                    </h3>
+                    <div className="mt-2.5 flex items-center gap-1.5 text-xs text-emerald-800 font-bold">
+                      <span>حاشیه سود خالص:</span>
+                      <span className="font-mono">٪{toPersianDigits(Math.round(pnlData.profitMargin))}</span>
+                    </div>
+                  </div>
+                  <div className="w-11 h-11 bg-emerald-100 text-emerald-900 rounded-xl flex items-center justify-center border border-emerald-300/80">
+                    <DollarSign className="w-5 h-5" />
+                  </div>
                 </div>
               </Card>
             </div>
@@ -796,11 +878,15 @@ export const ReportsView: React.FC = () => {
             {/* Operational Expenses Manager */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Form to add Expense */}
-              <Card className="p-5 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 space-y-4">
-                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">افزودن هزینه جاری جدید</h3>
-                <form onSubmit={handleAddExpense} className="space-y-3">
+              <Card className="p-5 space-y-4">
+                <div className="border-b border-neutral-100 pb-3">
+                  <h3 className="text-sm font-bold text-neutral-900">افزودن هزینه جاری جدید</h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">ثبت مخارج عملیاتی جهت کسر از سود ناخالص</p>
+                </div>
+
+                <form onSubmit={handleAddExpense} className="space-y-3.5">
                   <div>
-                    <label className="text-xs font-medium text-neutral-700 dark:text-neutral-300">عنوان هزینه</label>
+                    <label className="text-xs font-bold text-neutral-700 mb-1 block">عنوان هزینه</label>
                     <Input
                       placeholder="مثلاً اجاره انبار، قبوض، بسته بندی..."
                       value={newExpenseTitle}
@@ -809,7 +895,7 @@ export const ReportsView: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-neutral-700 dark:text-neutral-300">مبلغ (تومان)</label>
+                    <label className="text-xs font-bold text-neutral-700 mb-1 block">مبلغ (تومان)</label>
                     <Input
                       type="number"
                       placeholder="مبلغ به تومان..."
@@ -819,62 +905,67 @@ export const ReportsView: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-neutral-700 dark:text-neutral-300">دسته‌بندی</label>
+                    <label className="text-xs font-bold text-neutral-700 mb-1 block">دسته‌بندی هزینه</label>
                     <select
                       value={newExpenseCategory}
                       onChange={(e) => setNewExpenseCategory(e.target.value as any)}
-                      className="w-full px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-medium"
+                      className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-white text-xs font-medium text-neutral-900 focus:ring-1 focus:ring-neutral-900"
                     >
                       <option value="rent">اجاره و رهن</option>
                       <option value="salary">حقوق و دستمزد</option>
-                      <option value="utilities">قبوض و آب و برق</option>
+                      <option value="utilities">قبوض و انشعابات</option>
                       <option value="packaging">بسته‌بندی و ارسال</option>
                       <option value="marketing">تبلیغات و بازاریابی</option>
-                      <option value="other">سایر هزینه‌ها</option>
+                      <option value="other">سایر هزینه‌های متفرقه</option>
                     </select>
                   </div>
 
-                  <Button type="submit" variant="primary" className="w-full" icon={<Plus className="w-4 h-4" />}>
+                  <Button type="submit" variant="primary" className="w-full mt-2" icon={<Plus className="w-4 h-4" />}>
                     ثبت هزینه در صورت سود و زیان
                   </Button>
                 </form>
               </Card>
 
               {/* List of Custom Expenses */}
-              <Card className="lg:col-span-2 p-5 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 space-y-4">
-                <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
-                  <h3 className="text-sm font-bold text-neutral-900 dark:text-white">فهرست هزینه‌های جاری عملیاتی (Operational Expenses)</h3>
-                  <span className="text-xs font-mono font-bold text-red-600">
-                    جمع کل: {formatCurrency(pnlData.operationalExpensesTotal, activeOrganization?.currency)}
+              <Card className="lg:col-span-2 p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-900">فهرست هزینه‌های جاری عملیاتی (Operational Expenses)</h3>
+                    <p className="text-xs text-neutral-500 mt-0.5">مخارج ثبت‌شده ماه جاری</p>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-rose-700">
+                    مجموع هزینه‌ها: {formatCurrency(pnlData.operationalExpensesTotal, activeOrganization?.currency, isPersian)}
                   </span>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-lg border border-neutral-200">
                   <table className="w-full text-right text-xs">
-                    <thead className="bg-neutral-50 dark:bg-neutral-800 text-neutral-500 font-medium">
+                    <thead className="bg-neutral-50 text-neutral-600 font-bold border-b border-neutral-200">
                       <tr>
                         <th className="p-3">عنوان هزینه</th>
                         <th className="p-3">دسته‌بندی</th>
                         <th className="p-3">تاریخ</th>
-                        <th className="p-3">مبلغ</th>
-                        <th className="p-3">عملیات</th>
+                        <th className="p-3 text-left">مبلغ</th>
+                        <th className="p-3 text-center w-12">عملیات</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                    <tbody className="divide-y divide-neutral-100 bg-white">
                       {expenses.map((exp) => (
-                        <tr key={exp.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50">
-                          <td className="p-3 font-medium">{exp.title}</td>
+                        <tr key={exp.id} className="hover:bg-neutral-50/70 transition-colors">
+                          <td className="p-3 font-medium text-neutral-900">{exp.title}</td>
                           <td className="p-3">
                             <Badge variant="neutral">{exp.category}</Badge>
                           </td>
-                          <td className="p-3 font-mono">{toPersianDigits(exp.date)}</td>
-                          <td className="p-3 font-mono font-bold text-red-600">
-                            {formatCurrency(exp.amount, activeOrganization?.currency)}
+                          <td className="p-3 font-mono text-neutral-600">{toPersianDigits(exp.date)}</td>
+                          <td className="p-3 text-left font-mono font-bold text-rose-700">
+                            {formatCurrency(exp.amount, activeOrganization?.currency, isPersian)}
                           </td>
-                          <td className="p-3">
+                          <td className="p-3 text-center">
                             <button
+                              type="button"
                               onClick={() => handleDeleteExpense(exp.id)}
-                              className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+                              className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                              title="حذف هزینه"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -883,7 +974,7 @@ export const ReportsView: React.FC = () => {
                       ))}
                       {expenses.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="text-center py-6 text-neutral-400">هزینه‌ای ثبت نشده است.</td>
+                          <td colSpan={5} className="text-center py-8 text-neutral-400">هیچ هزینه‌ای ثبت نشده است.</td>
                         </tr>
                       )}
                     </tbody>
