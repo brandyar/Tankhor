@@ -30,7 +30,7 @@
 4. **Desktop (Tauri) & Web Hybrid Support (BFF Pattern)**:
    - The frontend remains platform-agnostic and runs seamlessly in both browser and native desktop (Tauri/Electron) environments.
    - All authentication, registration, user management, and tenant scoping requests from both Web and Desktop clients pass through the secure Backend-For-Frontend (BFF) API Gateway (`/server/auth.ts`, `/server/proxy.ts`), keeping Admin tokens secure and enforcing tenant isolation.
-   - Directus API URL resolution (`/src/api/directus.ts`) detects Tauri vs browser environments dynamically, routing requests to the BFF Gateway (`https://app.tankhor.com/api` or `/api`) without exposing admin credentials.
+   - Directus API URL resolution (`/src/api/directus.ts`) detects Tauri vs browser environments dynamically, routing requests to the BFF Gateway (`https://my.tankhor.com/api` or `/api`) without exposing admin credentials.
 
 5. **Internationalization & Localization (i18n)**:
    - First production UI language is **Persian (`fa`)** with **RTL** orientation and `Vazirmatn` font.

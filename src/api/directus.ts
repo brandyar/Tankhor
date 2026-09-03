@@ -27,7 +27,7 @@ class DirectusClient {
         this.baseUrl = customApiUrl.replace(/\/+$/, '');
       } else if (isTauri) {
         // Desktop BFF Gateway: Route auth, registration, and cloud proxy requests through the secure BFF Gateway
-        const desktopGateway = metaEnv?.VITE_GATEWAY_URL || metaEnv?.VITE_API_URL || 'https://app.tankhor.com/api';
+        const desktopGateway = metaEnv?.VITE_GATEWAY_URL || metaEnv?.VITE_API_URL || 'https://my.tankhor.com/api';
         this.baseUrl = desktopGateway.replace(/\/+$/, '');
       } else {
         // In browser / web preview / production Cloud Run, all requests go through the same-origin Express BFF proxy at /api
