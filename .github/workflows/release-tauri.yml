@@ -162,30 +162,52 @@ jobs:
             }
           }
 
-          // 4. Identify Windows Updater Asset (.nsis.zip or .msi.zip or .zip ONLY)
-          const winArchive = files.find(f => f.endsWith(".nsis.zip") || f.endsWith(".msi.zip") || (f.endsWith(".zip") && !f.includes("darwin")));
-          if (winArchive) {
-            const winSig = signatures[winArchive] || signatures[winArchive + ".sig"];
-            if (winSig) {
-              const winUrl = `https://github.com/${repo}/releases/download/${tag}/${winArchive}`;
-              console.log(`Resolved valid Windows updater asset: ${winArchive}`);
+          // 4. Identify Windows Updater Assets (.nsis.zip vs .msi.zip)
+          const winNsisArchive = files.find(f => f.endsWith(".nsis.zip") || f.includes("-setup.nsis.zip") || f.includes(".nsis.zip"));
+          const winMsiArchive = files.find(f => f.endsWith(".msi.zip") || f.includes(".msi.zip"));
+          const winGenericZip = files.find(f => f.endsWith(".zip") && !f.includes("darwin") && !f.endsWith(".nsis.zip") && !f.endsWith(".msi.zip"));
 
-              const winTargets = [
+          // A) NSIS Installer targets (Default Windows .exe setup installer)
+          const nsisArchive = winNsisArchive || winGenericZip;
+          if (nsisArchive) {
+            const nsisSig = signatures[nsisArchive] || signatures[nsisArchive + ".sig"];
+            if (nsisSig) {
+              const nsisUrl = `https://github.com/${repo}/releases/download/${tag}/${nsisArchive}`;
+              console.log(`Resolved NSIS Windows updater asset: ${nsisArchive}`);
+
+              const nsisTargets = [
                 "windows-x86_64",
                 "windows-x86_64-nsis",
-                "windows-x86_64-msi",
                 "windows-i686",
                 "windows-i686-nsis",
                 "windows-x86"
               ];
 
-              winTargets.forEach(target => {
-                if (!platforms[target]) {
-                  platforms[target] = { signature: winSig, url: winUrl };
-                }
+              nsisTargets.forEach(target => {
+                platforms[target] = { signature: nsisSig, url: nsisUrl };
               });
             } else {
-              console.warn(`Windows archive ${winArchive} found but missing .sig signature!`);
+              console.warn(`NSIS Windows archive ${nsisArchive} found but missing .sig signature!`);
+            }
+          }
+
+          // B) MSI Installer targets
+          if (winMsiArchive) {
+            const msiSig = signatures[winMsiArchive] || signatures[winMsiArchive + ".sig"];
+            if (msiSig) {
+              const msiUrl = `https://github.com/${repo}/releases/download/${tag}/${winMsiArchive}`;
+              console.log(`Resolved MSI Windows updater asset: ${winMsiArchive}`);
+
+              const msiTargets = [
+                "windows-x86_64-msi",
+                "windows-i686-msi"
+              ];
+
+              msiTargets.forEach(target => {
+                platforms[target] = { signature: msiSig, url: msiUrl };
+              });
+            } else {
+              console.warn(`MSI Windows archive ${winMsiArchive} found but missing .sig signature!`);
             }
           }
 
