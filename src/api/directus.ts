@@ -394,25 +394,114 @@ class DirectusClient {
     } catch (err: any) {
       try {
         const DIRECTUS_TENANT_ROLE_ID = 'dbc2022f-0dea-4ef4-bb00-00a577e3208d';
-        const newUser = await this.request('/users', {
-          method: 'POST',
-          body: JSON.stringify({
-            email: cleanEmail,
-            password: data.password,
-            first_name: data.first_name || '',
-            last_name: data.last_name || '',
-            status: 'active',
-            role: DIRECTUS_TENANT_ROLE_ID,
-          }),
-        });
+        let newUser: any = null;
+        try {
+          newUser = await this.request('/users', {
+            method: 'POST',
+            body: JSON.stringify({
+              email: cleanEmail,
+              password: data.password,
+              first_name: data.first_name || '',
+              last_name: data.last_name || '',
+              status: 'active',
+              role: DIRECTUS_TENANT_ROLE_ID,
+            }),
+          });
+        } catch (uErr: any) {
+          // If user creation failed because email exists, try searching for existing user
+          const existing = await this.request(`/users?filter[email][_eq]=${encodeURIComponent(cleanEmail)}`).catch(() => null);
+          if (existing && Array.isArray(existing) && existing.length > 0) {
+            newUser = existing[0];
+          } else {
+            throw uErr;
+          }
+        }
 
         const loginRes = await this.login(cleanEmail, data.password);
+        const userId = newUser?.id || loginRes?.user?.id;
+
+        // 1. Create Organization in Directus
+        const orgName = data.org_name || (data.first_name ? `فروشگاه ${data.first_name} ${data.last_name || ''}`.trim() : 'فروشگاه من');
+        const orgSlug = data.org_slug || `org-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`;
+        
+        let createdOrg: any = null;
+        try {
+          createdOrg = await this.request('/items/organizations', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: orgName,
+              slug: orgSlug,
+              currency: data.currency || 'TOMAN',
+              timezone: 'Asia/Tehran',
+              plan: 'free',
+              status: 'active',
+            }),
+          });
+        } catch (orgErr: any) {
+          console.warn('[directusClient] Directus fallback organization creation notice:', orgErr?.message);
+        }
+
+        // 2. Create organization_users entry in Directus
+        if (createdOrg && createdOrg.id && userId) {
+          try {
+            await this.request('/items/organization_users', {
+              method: 'POST',
+              body: JSON.stringify({
+                organization_id: createdOrg.id,
+                user_id: userId,
+                role: 'owner',
+                status: 'active',
+                date_joined: new Date().toISOString(),
+              }),
+            });
+          } catch (ouErr: any) {
+            console.warn('[directusClient] Directus fallback organization_users creation notice:', ouErr?.message);
+          }
+
+          // 3. Create initial category & warehouse in Directus
+          try {
+            await this.request('/items/categories', {
+              method: 'POST',
+              body: JSON.stringify({
+                organization_id: createdOrg.id,
+                name: data.initial_category_name || 'پوشاک عمومی',
+                slug: `cat-${Date.now().toString(36)}`,
+                status: 'active',
+              }),
+            }).catch(() => {});
+
+            await this.request('/items/warehouses', {
+              method: 'POST',
+              body: JSON.stringify({
+                organization_id: createdOrg.id,
+                name: data.initial_warehouse_name || 'انبار مرکزی',
+                code: 'WH-MAIN',
+                is_default: true,
+                status: 'active',
+              }),
+            }).catch(() => {});
+          } catch {}
+        }
+
+        const activeOrg = createdOrg || loginRes.activeOrganization;
+        const orgsList = createdOrg ? [createdOrg, ...(loginRes.organizations || [])] : (loginRes.organizations || []);
+
+        if (activeOrg?.id && typeof window !== 'undefined') {
+          localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+        }
+
         return {
           success: true,
-          user: newUser || loginRes.user,
+          user: {
+            ...(newUser || loginRes.user),
+            email: cleanEmail,
+            activeOrganization: activeOrg,
+            active_organization: activeOrg,
+            organizations: orgsList,
+          },
           token: loginRes.access_token,
-          activeOrganization: loginRes.activeOrganization,
-          organization: loginRes.activeOrganization,
+          activeOrganization: activeOrg,
+          organization: activeOrg,
         };
       } catch (directusErr: any) {
         throw new Error(directusErr.message || err.message || 'خطا در ثبت نام در سرور آنلاین');

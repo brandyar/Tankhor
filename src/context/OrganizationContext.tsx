@@ -131,6 +131,12 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         list = await adapter.getOrganizations();
       }
 
+      // Ensure all organization objects strictly possess the plan field
+      list = list.map((o) => ({
+        ...o,
+        plan: o.plan || 'free',
+      }));
+
       // Filter out placeholder dummy "سازمان اصلی" if real organizations exist
       if (list.length > 1) {
         const nonPlaceholder = list.filter((o) => o.slug !== 'main-org' && o.name !== 'سازمان اصلی');

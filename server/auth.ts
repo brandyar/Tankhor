@@ -125,44 +125,7 @@ export async function getUserOrganizations(userId: string, targetActiveOrgId?: n
       }
     }
 
-    // 4. If user has NO verified organizations at all, create a dedicated new private organization
-    if (uniqueOrgs.length === 0) {
-      try {
-        const user = await DirectusAdminClient.request(`/users/${userId}`).catch(() => null);
-        const orgName = user?.first_name ? `فروشگاه ${user.first_name}` : 'فروشگاه من';
-        const createdOrg = await DirectusAdminClient.createItem('organizations', {
-          name: orgName,
-          slug: `org-${Date.now().toString(36)}`,
-          currency: 'TOMAN',
-          timezone: 'Asia/Tehran',
-          plan: 'free',
-          status: 'active',
-        });
-
-        await DirectusAdminClient.createItem('organization_users', {
-          organization_id: createdOrg.id,
-          user_id: userId,
-          role: 'owner',
-          status: 'active',
-        });
-
-        try {
-          await DirectusAdminClient.createItem('warehouses', {
-            organization_id: createdOrg.id,
-            name: 'انبار مرکزی',
-            code: 'WH-MAIN',
-            status: 'active',
-          });
-        } catch {}
-
-        createdOrg.user_role = 'owner';
-        uniqueOrgs.push(createdOrg);
-      } catch (createErr: any) {
-        console.error('[getUserOrganizations] Auto-provision org error:', createErr.message);
-      }
-    }
-
-    // 5. Select active organization strictly among verified memberships
+    // 4. Return list of verified user organizations (no silent auto-provisioning on query)
     let activeOrg: any = null;
     if (targetActiveOrgId) {
       activeOrg = uniqueOrgs.find((o) => Number(o.id) === Number(targetActiveOrgId)) || null;
@@ -217,33 +180,52 @@ authRouter.post('/register', async (req: Request, res: Response) => {
       limit: 1,
     }).catch(() => []);
 
+    let userId: string;
+    let userEmail = email.toLowerCase().trim();
+    let userFirstName = first_name || '';
+    let userLastName = last_name || '';
+
     if (existingUsers && existingUsers.length > 0) {
-      return res.status(400).json({ error: 'این ایمیل قبلاً در سیستم ثبت شده است. لطفاً وارد شوید.' });
+      const existingUser = existingUsers[0];
+      const orgsData = await getUserOrganizations(existingUser.id, undefined, userEmail);
+      if (orgsData.organizations.length > 0) {
+        return res.status(400).json({ error: 'این ایمیل قبلاً در سیستم ثبت شده و دارای فروشگاه است. لطفاً وارد شوید.' });
+      }
+      userId = existingUser.id;
+      userFirstName = existingUser.first_name || userFirstName;
+      userLastName = existingUser.last_name || userLastName;
+      // Update password if provided
+      if (password) {
+        await DirectusAdminClient.request(`/users/${userId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ password: password }),
+        }).catch(() => {});
+      }
+    } else {
+      // 2. Create User in Directus via Admin Client with tenant role
+      const DIRECTUS_TENANT_ROLE_ID = 'dbc2022f-0dea-4ef4-bb00-00a577e3208d';
+      const userPayload: any = {
+        email: userEmail,
+        password: password,
+        first_name: userFirstName,
+        last_name: userLastName,
+        status: 'active',
+        role: DIRECTUS_TENANT_ROLE_ID,
+      };
+
+      let newUser: any;
+      try {
+        newUser = await DirectusAdminClient.request('/users', {
+          method: 'POST',
+          body: JSON.stringify(userPayload),
+        });
+      } catch (err: any) {
+        console.error('[Auth Service] User creation error:', err);
+        return res.status(500).json({ error: `خطا در ایجاد حساب کاربری: ${err.message}` });
+      }
+
+      userId = newUser.id;
     }
-
-    // 2. Create User in Directus via Admin Client with tenant role
-    const DIRECTUS_TENANT_ROLE_ID = 'dbc2022f-0dea-4ef4-bb00-00a577e3208d';
-    const userPayload: any = {
-      email: email.toLowerCase().trim(),
-      password: password,
-      first_name: first_name || '',
-      last_name: last_name || '',
-      status: 'active',
-      role: DIRECTUS_TENANT_ROLE_ID,
-    };
-
-    let newUser: any;
-    try {
-      newUser = await DirectusAdminClient.request('/users', {
-        method: 'POST',
-        body: JSON.stringify(userPayload),
-      });
-    } catch (err: any) {
-      console.error('[Auth Service] User creation error:', err);
-      return res.status(500).json({ error: `خطا در ایجاد حساب کاربری: ${err.message}` });
-    }
-
-    const userId = newUser.id;
 
     // 3. Create the Organization specified by the user
     const generatedSlug = (org_slug && org_slug.trim())
@@ -303,7 +285,7 @@ authRouter.post('/register', async (req: Request, res: Response) => {
     // 6. Generate Auth JWT token
     const token = generateToken({
       userId: userId,
-      email: userPayload.email,
+      email: userEmail,
       organizationId: newOrg.id,
       role: 'owner',
     });
@@ -313,9 +295,9 @@ authRouter.post('/register', async (req: Request, res: Response) => {
       token,
       user: {
         id: userId,
-        email: userPayload.email,
-        first_name: userPayload.first_name,
-        last_name: userPayload.last_name,
+        email: userEmail,
+        first_name: userFirstName,
+        last_name: userLastName,
         role: 'owner',
       },
       organization: newOrg,
@@ -402,27 +384,9 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     let userRole = activeOrg?.user_role || 'viewer';
 
     if (!activeOrg || orgsData.organizations.length === 0) {
-      // Auto-create a default organization if none exists
-      const orgName = userRecord.first_name ? `فروشگاه ${userRecord.first_name}` : 'فروشگاه من';
-      const createdOrg = await DirectusAdminClient.createItem('organizations', {
-        name: orgName,
-        slug: `org-${Date.now().toString(36)}`,
-        currency: 'TOMAN',
-        timezone: 'Asia/Tehran',
-        plan: 'free',
-        status: 'active',
+      return res.status(403).json({
+        error: 'برای این حساب کاربری هیچ فروشگاه یا سازمانی ثبت نشده است. لطفاً ابتدا از بخش ثبت‌نام، فروشگاه خود را ایجاد کنید.',
       });
-
-      await DirectusAdminClient.createItem('organization_users', {
-        organization_id: createdOrg.id,
-        user_id: userId,
-        role: 'owner',
-        status: 'active',
-      });
-
-      activeOrg = createdOrg;
-      userRole = 'owner';
-      orgsData.organizations = [createdOrg];
     }
 
     // 4. Generate user JWT

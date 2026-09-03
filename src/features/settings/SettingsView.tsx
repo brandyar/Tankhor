@@ -94,13 +94,24 @@ export const SettingsView: React.FC = () => {
   const [isCreateOrgOpen, setIsCreateOrgOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
+  useEffect(() => {
+    const handleModeListener = () => {
+      setMode(storageManager.getMode());
+    };
+    window.addEventListener('tankhor_storage_mode_changed', handleModeListener);
+    return () => {
+      window.removeEventListener('tankhor_storage_mode_changed', handleModeListener);
+    };
+  }, []);
+
   const handleModeChange = (newMode: 'local_offline' | 'cloud_synced') => {
     if (newMode === 'cloud_synced') {
       if (!isCloudAuthenticated) {
         openLoginModal();
         return;
       }
-      if (activeOrganization?.plan !== 'pro') {
+      const currentPlan = activeOrganization?.plan || 'free';
+      if (currentPlan !== 'pro') {
         setIsUpgradeModalOpen(true);
         return;
       }

@@ -47,8 +47,17 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
         setIsThemeMenuOpen(false);
       }
     };
+
+    const handleModeChange = () => {
+      setModeState(storageManager.getMode());
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('tankhor_storage_mode_changed', handleModeChange);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('tankhor_storage_mode_changed', handleModeChange);
+    };
   }, []);
 
   const toggleStorageMode = () => {
@@ -57,7 +66,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
         openLoginModal();
         return;
       }
-      if (activeOrganization?.plan !== 'pro') {
+      const currentPlan = activeOrganization?.plan || 'free';
+      if (currentPlan !== 'pro') {
         setIsUpgradeModalOpen(true);
         return;
       }
