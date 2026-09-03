@@ -10,6 +10,7 @@ import {
   EyeOff,
   AlertCircle,
   User as UserIcon,
+  Phone,
   Building2,
   Boxes,
   Warehouse,
@@ -35,6 +36,7 @@ export const LoginModal: React.FC = () => {
   // Step 1: User Account Credentials
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [userPhone, setUserPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -45,6 +47,7 @@ export const LoginModal: React.FC = () => {
   const passwordRef = useRef<HTMLInputElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
 
   // Step 2: Organization & Initial Tenant Seed
   const [orgName, setOrgName] = useState('');
@@ -71,6 +74,10 @@ export const LoginModal: React.FC = () => {
     return (lastName || lastNameRef.current?.value || '').trim();
   };
 
+  const getEffectivePhone = (): string => {
+    return (userPhone || phoneRef.current?.value || '').trim();
+  };
+
   const handleNextStep = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setFormValidationError(null);
@@ -79,9 +86,10 @@ export const LoginModal: React.FC = () => {
     const effPass = getEffectivePassword();
     const effFirst = getEffectiveFirstName();
     const effLast = getEffectiveLastName();
+    const effPhone = getEffectivePhone();
 
-    if (!effFirst || !effLast || !effEmail || !effPass) {
-      setFormValidationError('لطفاً تمامی فیلدهای الزامی مشخصات فردی را تکمیل کنید.');
+    if (!effFirst || !effLast || !effPhone || !effEmail || !effPass) {
+      setFormValidationError('لطفاً تمامی فیلدهای الزامی مشخصات فردی و شماره تماس را تکمیل کنید.');
       return;
     }
     if (effPass.length < 6) {
@@ -120,6 +128,7 @@ export const LoginModal: React.FC = () => {
     const effPass = getEffectivePassword();
     const effFirst = getEffectiveFirstName();
     const effLast = getEffectiveLastName();
+    const effPhone = getEffectivePhone();
 
     if (!effEmail || !effPass) {
       setFormValidationError('ایمیل یا رمز عبور نامعتبر است. لطفاً به مرحله اول برگردید.');
@@ -135,6 +144,7 @@ export const LoginModal: React.FC = () => {
     await register({
       firstName: effFirst,
       lastName: effLast,
+      userPhone: effPhone,
       email: effEmail,
       pass: effPass,
       orgName: orgName.trim(),
@@ -362,22 +372,43 @@ export const LoginModal: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">
-                  پست الکترونیک (ایمیل) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
-                    <Mail className="w-3.5 h-3.5" />
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">
+                    شماره موبایل <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
+                      <Phone className="w-3.5 h-3.5" />
+                    </div>
+                    <input
+                      type="tel"
+                      ref={phoneRef}
+                      value={userPhone}
+                      onChange={(e) => setUserPhone(e.target.value)}
+                      placeholder="۰9۱۲3456789"
+                      className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                    />
                   </div>
-                  <input
-                    type="email"
-                    ref={emailRef}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="آدرس ایمیل..."
-                    className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">
+                    پست الکترونیک (ایمیل) <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 start-0 ps-2.5 flex items-center pointer-events-none text-neutral-400">
+                      <Mail className="w-3.5 h-3.5" />
+                    </div>
+                    <input
+                      type="email"
+                      ref={emailRef}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="آدرس ایمیل..."
+                      className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -468,7 +499,7 @@ export const LoginModal: React.FC = () => {
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-xs font-bold text-neutral-700 mb-1">
-                    شناسه انگلیسی (Slug)
+                    نام انگلیسی سازمان (جهت شناسه/Slug)
                   </label>
                   <input
                     type="text"

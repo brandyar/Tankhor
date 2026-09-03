@@ -14,6 +14,7 @@ export interface User {
   first_name?: string;
   last_name?: string;
   email: string;
+  user_phone?: string;
   avatar?: string;
   title?: string;
   description?: string;
@@ -24,6 +25,8 @@ export interface User {
 export interface RegisterParams {
   firstName?: string;
   lastName?: string;
+  userPhone?: string;
+  user_phone?: string;
   email: string;
   pass?: string;
   password?: string;
@@ -307,6 +310,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const password = (finalParams.pass || finalParams.password || '').trim();
       const firstName = (finalParams.firstName || '').trim();
       const lastName = (finalParams.lastName || '').trim();
+      const userPhone = (finalParams.userPhone || finalParams.user_phone || '').trim();
       const orgName = (finalParams.orgName || '').trim() || (firstName ? `فروشگاه ${firstName} ${lastName}`.trim() : 'فروشگاه من');
 
       if (!email || !password) {
@@ -318,6 +322,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const regRes = await directusClient.register({
         first_name: firstName,
         last_name: lastName,
+        user_phone: userPhone,
         email: email,
         password: password,
         org_name: orgName,

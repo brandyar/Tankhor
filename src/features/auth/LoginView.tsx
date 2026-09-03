@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
-import { Lock, Mail, ShieldCheck, Eye, EyeOff, AlertCircle, Shirt, User as UserIcon } from 'lucide-react';
+import { Lock, Mail, ShieldCheck, Eye, EyeOff, AlertCircle, Shirt, User as UserIcon, Phone, Building2 } from 'lucide-react';
 
 interface LoginViewProps {
   onSuccess?: () => void;
@@ -21,7 +21,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [userPhone, setUserPhone] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [orgSlug, setOrgSlug] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -36,7 +38,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     const cleanPass = password;
     const cleanFirst = firstName.trim();
     const cleanLast = lastName.trim();
+    const cleanPhone = userPhone.trim();
     const cleanOrg = orgName.trim() || `فروشگاه ${cleanFirst} ${cleanLast}`.trim() || 'فروشگاه من';
+    const cleanSlug = orgSlug.trim();
 
     if (activeTab === 'login') {
       if (!cleanEmail || !cleanPass) return;
@@ -45,8 +49,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
         onSuccess();
       }
     } else {
-      if (!cleanFirst || !cleanLast || !cleanEmail || !cleanPass) {
-        setFormValidationError('لطفاً تمامی فیلدهای الزامی را تکمیل کنید.');
+      if (!cleanFirst || !cleanLast || !cleanPhone || !cleanEmail || !cleanPass) {
+        setFormValidationError('لطفاً تمامی فیلدهای الزامی (نام، شماره موبایل، ایمیل و کلمه عبور) را تکمیل کنید.');
         return;
       }
       if (cleanPass.length < 6) {
@@ -60,9 +64,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       const ok = await register({
         firstName: cleanFirst,
         lastName: cleanLast,
+        userPhone: cleanPhone,
         email: cleanEmail,
         pass: cleanPass,
         orgName: cleanOrg,
+        orgSlug: cleanSlug || undefined,
       });
       if (ok && onSuccess) {
         onSuccess();
@@ -201,15 +207,54 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
 
                     <div>
                       <label className="block text-xs font-bold text-neutral-700 mb-1">
-                        نام فروشگاه یا برند (سازمان)
+                        شماره موبایل <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="text"
-                        value={orgName}
-                        onChange={(e) => setOrgName(e.target.value)}
-                        placeholder="مثال: بوتیک شیک‌پوشان (اختیاری)"
-                        className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                      />
+                      <div className="relative">
+                        <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-neutral-400">
+                          <Phone className="w-4 h-4" />
+                        </div>
+                        <input
+                          type="tel"
+                          required
+                          value={userPhone}
+                          onChange={(e) => setUserPhone(e.target.value)}
+                          placeholder="۰9۱۲3456789"
+                          className="w-full ps-9 pe-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-neutral-700 mb-1">
+                          نام فروشگاه یا برند (سازمان)
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-neutral-400">
+                            <Building2 className="w-4 h-4" />
+                          </div>
+                          <input
+                            type="text"
+                            value={orgName}
+                            onChange={(e) => setOrgName(e.target.value)}
+                            placeholder="مثال: بوتیک شیک‌پوشان"
+                            className="w-full ps-9 pe-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-neutral-700 mb-1">
+                          نام انگلیسی سازمان (Slug)
+                        </label>
+                        <input
+                          type="text"
+                          value={orgSlug}
+                          onChange={(e) => setOrgSlug(e.target.value)}
+                          placeholder="مثال: tanpoosh-boutique"
+                          className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                        />
+                      </div>
                     </div>
                   </>
                 )}

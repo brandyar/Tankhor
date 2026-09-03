@@ -39,24 +39,27 @@ class StorageManagerSingleton {
 
   public setMode(mode: StorageMode) {
     if (mode === 'cloud_synced') {
-      // Validate that active organization is on 'pro' plan before allowing cloud sync
+      let isPro = false;
       try {
         const cachedRaw = typeof window !== 'undefined' ? localStorage.getItem('tankhor_cached_user_profile') : null;
         if (cachedRaw) {
           const cached = JSON.parse(cachedRaw);
           const activeOrg = cached.activeOrganization || cached.active_organization;
-          const plan = activeOrg?.plan || 'free';
-          if (plan !== 'pro') {
-            console.warn('[StorageManager] Cloud sync denied: organization plan is not pro.', plan);
-            localStorage.setItem('tankhor_storage_mode', 'local_offline');
-            this.activeAdapter = this.isTauri ? this.sqliteAdapter : this.localAdapter;
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('tankhor_storage_mode_changed', { detail: 'local_offline' }));
-            }
-            return;
+          if (activeOrg && activeOrg.plan === 'pro') {
+            isPro = true;
           }
         }
       } catch {}
+
+      if (!isPro) {
+        console.warn('[StorageManager] Cloud sync denied: organization plan is not pro.');
+        localStorage.setItem('tankhor_storage_mode', 'local_offline');
+        this.activeAdapter = this.isTauri ? this.sqliteAdapter : this.localAdapter;
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('tankhor_storage_mode_changed', { detail: 'local_offline' }));
+        }
+        return;
+      }
     }
 
     localStorage.setItem('tankhor_storage_mode', mode);

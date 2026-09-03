@@ -275,6 +275,10 @@ class DirectusClient {
       meData = await this.request('/users/me');
     }
 
+    if (meData && meData.data) {
+      meData = meData.data;
+    }
+
     if (meData && (meData.id || meData.email)) {
       if (!Array.isArray(meData.organizations) || meData.organizations.length === 0) {
         const orgs = await this.resolveUserOrganizations(meData).catch(() => []);
@@ -377,6 +381,7 @@ class DirectusClient {
     password: string;
     first_name?: string;
     last_name?: string;
+    user_phone?: string;
     org_name?: string;
     org_slug?: string;
     currency?: string;
@@ -396,22 +401,25 @@ class DirectusClient {
         const DIRECTUS_TENANT_ROLE_ID = 'dbc2022f-0dea-4ef4-bb00-00a577e3208d';
         let newUser: any = null;
         try {
-          newUser = await this.request('/users', {
+          const userRaw = await this.request('/users', {
             method: 'POST',
             body: JSON.stringify({
               email: cleanEmail,
               password: data.password,
               first_name: data.first_name || '',
               last_name: data.last_name || '',
+              user_phone: data.user_phone || '',
               status: 'active',
               role: DIRECTUS_TENANT_ROLE_ID,
             }),
           });
+          newUser = userRaw?.data || userRaw;
         } catch (uErr: any) {
           // If user creation failed because email exists, try searching for existing user
           const existing = await this.request(`/users?filter[email][_eq]=${encodeURIComponent(cleanEmail)}`).catch(() => null);
-          if (existing && Array.isArray(existing) && existing.length > 0) {
-            newUser = existing[0];
+          const existingList = Array.isArray(existing) ? existing : (Array.isArray(existing?.data) ? existing.data : []);
+          if (existingList.length > 0) {
+            newUser = existingList[0];
           } else {
             throw uErr;
           }
@@ -426,7 +434,7 @@ class DirectusClient {
         
         let createdOrg: any = null;
         try {
-          createdOrg = await this.request('/items/organizations', {
+          const orgRaw = await this.request('/items/organizations', {
             method: 'POST',
             body: JSON.stringify({
               name: orgName,
@@ -437,23 +445,27 @@ class DirectusClient {
               status: 'active',
             }),
           });
+          createdOrg = orgRaw?.data || orgRaw;
         } catch (orgErr: any) {
           console.warn('[directusClient] Directus fallback organization creation notice:', orgErr?.message);
         }
 
+        const orgId = createdOrg?.id;
+
         // 2. Create organization_users entry in Directus
-        if (createdOrg && createdOrg.id && userId) {
+        if (orgId && userId) {
           try {
             await this.request('/items/organization_users', {
               method: 'POST',
               body: JSON.stringify({
-                organization_id: createdOrg.id,
+                organization_id: orgId,
                 user_id: userId,
                 role: 'owner',
                 status: 'active',
                 date_joined: new Date().toISOString(),
               }),
             });
+            console.log(`[directusClient] Linked organization_users: org ${orgId} -> user ${userId}`);
           } catch (ouErr: any) {
             console.warn('[directusClient] Directus fallback organization_users creation notice:', ouErr?.message);
           }
@@ -463,7 +475,7 @@ class DirectusClient {
             await this.request('/items/categories', {
               method: 'POST',
               body: JSON.stringify({
-                organization_id: createdOrg.id,
+                organization_id: orgId,
                 name: data.initial_category_name || 'پوشاک عمومی',
                 slug: `cat-${Date.now().toString(36)}`,
                 status: 'active',
@@ -473,7 +485,7 @@ class DirectusClient {
             await this.request('/items/warehouses', {
               method: 'POST',
               body: JSON.stringify({
-                organization_id: createdOrg.id,
+                organization_id: orgId,
                 name: data.initial_warehouse_name || 'انبار مرکزی',
                 code: 'WH-MAIN',
                 is_default: true,
@@ -483,25 +495,33 @@ class DirectusClient {
           } catch {}
         }
 
-        const activeOrg = createdOrg || loginRes.activeOrganization;
-        const orgsList = createdOrg ? [createdOrg, ...(loginRes.organizations || [])] : (loginRes.organizations || []);
+        const activeOrg = createdOrg ? { ...createdOrg, id: orgId, user_role: 'owner', plan: createdOrg.plan || 'free' } : loginRes.activeOrganization;
+        const orgsList = activeOrg ? [activeOrg] : (loginRes.organizations || []);
 
         if (activeOrg?.id && typeof window !== 'undefined') {
           localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
         }
 
+        const finalUser = {
+          ...(newUser || loginRes.user || {}),
+          id: userId,
+          email: cleanEmail,
+          activeOrganization: activeOrg,
+          active_organization: activeOrg,
+          organizations: orgsList,
+        };
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(finalUser));
+        }
+
         return {
           success: true,
-          user: {
-            ...(newUser || loginRes.user),
-            email: cleanEmail,
-            activeOrganization: activeOrg,
-            active_organization: activeOrg,
-            organizations: orgsList,
-          },
+          user: finalUser,
           token: loginRes.access_token,
           activeOrganization: activeOrg,
           organization: activeOrg,
+          organizations: orgsList,
         };
       } catch (directusErr: any) {
         throw new Error(directusErr.message || err.message || 'خطا در ثبت نام در سرور آنلاین');
@@ -598,26 +618,31 @@ class DirectusClient {
       if (query.fields) params.append('fields', Array.isArray(query.fields) ? query.fields.join(',') : query.fields);
       queryString = `?${params.toString()}`;
     }
-    const result = await this.request<T[]>(`/items/${collection}${queryString}`);
-    return Array.isArray(result) ? result : [];
+    const result = await this.request<any>(`/items/${collection}${queryString}`);
+    if (Array.isArray(result)) return result;
+    if (Array.isArray(result?.data)) return result.data;
+    return [];
   }
 
   public async getItemById<T>(collection: string, id: number | string): Promise<T> {
-    return this.request<T>(`/items/${collection}/${id}`);
+    const res = await this.request<any>(`/items/${collection}/${id}`);
+    return res?.data || res;
   }
 
   public async createItem<T>(collection: string, item: Partial<T>): Promise<T> {
-    return this.request<T>(`/items/${collection}`, {
+    const res = await this.request<any>(`/items/${collection}`, {
       method: 'POST',
       body: JSON.stringify(item),
     });
+    return res?.data || res;
   }
 
   public async updateItem<T>(collection: string, id: number | string, item: Partial<T>): Promise<T> {
-    return this.request<T>(`/items/${collection}/${id}`, {
+    const res = await this.request<any>(`/items/${collection}/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(item),
     });
+    return res?.data || res;
   }
 
   public async deleteItem(collection: string, id: number | string): Promise<boolean> {

@@ -163,6 +163,7 @@ authRouter.post('/register', async (req: Request, res: Response) => {
     const password = (body.password || body.pass || body.Password || '').toString();
     const first_name = (body.first_name || body.firstName || '').toString().trim();
     const last_name = (body.last_name || body.lastName || '').toString().trim();
+    const user_phone = (body.user_phone || body.userPhone || body.phone || '').toString().trim();
     const org_name = (body.org_name || body.orgName || '').toString().trim();
     const org_slug = (body.org_slug || body.orgSlug || '').toString().trim();
     const currency = (body.currency || 'TOMAN').toString().trim();
@@ -194,11 +195,14 @@ authRouter.post('/register', async (req: Request, res: Response) => {
       userId = existingUser.id;
       userFirstName = existingUser.first_name || userFirstName;
       userLastName = existingUser.last_name || userLastName;
-      // Update password if provided
-      if (password) {
+      // Update password & phone if provided
+      const userUpdatePayload: any = {};
+      if (password) userUpdatePayload.password = password;
+      if (user_phone) userUpdatePayload.user_phone = user_phone;
+      if (Object.keys(userUpdatePayload).length > 0) {
         await DirectusAdminClient.request(`/users/${userId}`, {
           method: 'PATCH',
-          body: JSON.stringify({ password: password }),
+          body: JSON.stringify(userUpdatePayload),
         }).catch(() => {});
       }
     } else {
@@ -209,6 +213,7 @@ authRouter.post('/register', async (req: Request, res: Response) => {
         password: password,
         first_name: userFirstName,
         last_name: userLastName,
+        user_phone: user_phone,
         status: 'active',
         role: DIRECTUS_TENANT_ROLE_ID,
       };
@@ -298,6 +303,7 @@ authRouter.post('/register', async (req: Request, res: Response) => {
         email: userEmail,
         first_name: userFirstName,
         last_name: userLastName,
+        user_phone: user_phone,
         role: 'owner',
       },
       organization: newOrg,

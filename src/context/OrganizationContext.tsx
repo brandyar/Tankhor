@@ -126,6 +126,14 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         list = (user as any).organizations;
       } else if (user && ((user as any).activeOrganization || (user as any).active_organization)) {
         list = [(user as any).activeOrganization || (user as any).active_organization];
+      } else if (isCloudAuthenticated || user?.id) {
+        // Query directusClient strictly for the current authenticated user's organization memberships
+        const userOrgs = await directusClient.getOrganizations().catch(() => []);
+        if (userOrgs.length > 0) {
+          list = userOrgs;
+        } else {
+          list = [];
+        }
       } else {
         const adapter = storageManager.getAdapter();
         list = await adapter.getOrganizations();
