@@ -60,11 +60,10 @@ export class SqliteStorageAdapter implements IStorageProvider {
     this.initDatabase();
 
     if (typeof window !== 'undefined') {
-      window.addEventListener('tankhor_data_restored', () => {
+      window.addEventListener('tankhor_data_restored', async (e: any) => {
         this.loadLocalStorageFallback();
-        if (this.db) {
-          this.autoMigrateLocalStorageToSqlite(this.db);
-        }
+        const isClear = e?.detail?.type === 'cleared';
+        await this.syncAllFromLocalStorage(isClear);
       });
     }
   }
@@ -111,6 +110,50 @@ export class SqliteStorageAdapter implements IStorageProvider {
     })();
 
     return this.dbInitPromise;
+  }
+
+  /**
+   * Synchronizes all local data from localStorage directly into SQLite.
+   * Ensures demo data seeding, backups, and restores are fully reflected in SQLite on Desktop.
+   */
+  public async syncAllFromLocalStorage(clearFirst = false): Promise<void> {
+    const db = await this.initDatabase();
+    if (!db || typeof window === 'undefined') {
+      this.loadLocalStorageFallback();
+      return;
+    }
+
+    try {
+      for (const col of SQLITE_COLLECTIONS) {
+        if (clearFirst) {
+          try {
+            await db.execute(`DELETE FROM ${col}`);
+          } catch {}
+        }
+        const raw = localStorage.getItem(`tankhor_db_${col}`);
+        if (raw) {
+          try {
+            const items: any[] = JSON.parse(raw);
+            if (Array.isArray(items)) {
+              for (const item of items) {
+                if (item && item.id) {
+                  const orgId = typeof item.organization_id === 'number' ? item.organization_id : (item.organization_id?.id || 1);
+                  await db.execute(
+                    `INSERT OR REPLACE INTO ${col} (id, organization_id, data, date_updated) VALUES ($1, $2, $3, datetime('now'))`,
+                    [item.id, orgId, JSON.stringify(item)]
+                  );
+                }
+              }
+              this.fallbackMemoryStore.set(col, items);
+            }
+          } catch {}
+        } else if (clearFirst) {
+          this.fallbackMemoryStore.set(col, []);
+        }
+      }
+    } catch (err) {
+      console.warn('[SqliteStorageAdapter] syncAllFromLocalStorage error:', err);
+    }
   }
 
   private loadLocalStorageFallback() {

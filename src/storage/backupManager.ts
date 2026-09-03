@@ -5,6 +5,7 @@
  */
 
 import { formatDate, toPersianDigits } from '../utils/formatters';
+import { isTauriEnvironment } from './sqliteAdapter';
 
 export const BACKUP_COLLECTIONS = [
   'organizations',
@@ -387,11 +388,11 @@ export class BackupManager {
   /**
    * Restores data from a backup object with tenant isolation
    */
-  public static restoreBackup(
+  public static async restoreBackup(
     backupData: Record<string, any[]>,
     mode: 'replace' | 'merge' = 'replace',
     targetOrgId?: number
-  ): { success: boolean; restoredCount: number; error?: string } {
+  ): Promise<{ success: boolean; restoredCount: number; error?: string }> {
     try {
       let totalRestored = 0;
       const activeOrgId = targetOrgId || Number(localStorage.getItem('tankhor_active_org_id') || 1);
@@ -451,6 +452,33 @@ export class BackupManager {
         const orgToSelect = restoredOrgs.find((o) => Number(o.id) === activeOrgId) || restoredOrgs[0];
         if (orgToSelect?.id) {
           localStorage.setItem('tankhor_active_org_id', String(orgToSelect.id));
+        }
+      }
+
+      // If in desktop Tauri environment, write directly to SQLite
+      if (isTauriEnvironment()) {
+        try {
+          const Database = (await import('@tauri-apps/plugin-sql')).default;
+          const db = await Database.load('sqlite:tankhor.db');
+          for (const col of BACKUP_COLLECTIONS) {
+            if (mode === 'replace') {
+              try {
+                await db.execute(`DELETE FROM ${col} WHERE organization_id = $1`, [activeOrgId]);
+              } catch {}
+            }
+            const currentItems = this.getRawCollection(col);
+            for (const item of currentItems) {
+              if (item && item.id) {
+                const orgId = typeof item.organization_id === 'number' ? item.organization_id : (item.organization_id?.id || activeOrgId);
+                await db.execute(
+                  `INSERT OR REPLACE INTO ${col} (id, organization_id, data, date_updated) VALUES ($1, $2, $3, datetime('now'))`,
+                  [item.id, orgId, JSON.stringify(item)]
+                );
+              }
+            }
+          }
+        } catch (dbErr) {
+          console.warn('[BackupManager] SQLite sync warning during restore:', dbErr);
         }
       }
 
@@ -515,7 +543,7 @@ export class BackupManager {
   /**
    * Seeds rich, realistic demo data tailored for fashion/apparel boutiques
    */
-  public static seedFashionDemoData(activeOrgId: number = 1): { success: boolean; message: string } {
+  public static async seedFashionDemoData(activeOrgId: number = 1): Promise<{ success: boolean; message: string }> {
     try {
       const orgs = this.getRawCollection('organizations');
       let targetOrg = orgs.find((o) => Number(o.id) === Number(activeOrgId));
@@ -785,6 +813,47 @@ export class BackupManager {
       ];
       this.setRawCollection('size_guide_values', values);
 
+      // If in desktop Tauri environment, write directly to SQLite
+      if (isTauriEnvironment()) {
+        try {
+          const Database = (await import('@tauri-apps/plugin-sql')).default;
+          const db = await Database.load('sqlite:tankhor.db');
+          const allSeeded: [string, any[]][] = [
+            ['organizations', [targetOrg]],
+            ['categories', categories],
+            ['brands', brands],
+            ['seasons', seasons],
+            ['collections', collections],
+            ['colors', colors],
+            ['size_groups', sizeGroups],
+            ['sizes', sizes],
+            ['warehouses', warehouses],
+            ['warehouse_locations', locations],
+            ['products', products],
+            ['product_variants', variants],
+            ['inventory_items', inventory],
+            ['customers', customers],
+            ['orders', orders],
+            ['order_items', orderItems],
+            ['size_guide_templates', sizeGuides],
+            ['size_guide_measurements', measurements],
+            ['size_guide_values', values],
+          ];
+
+          for (const [col, items] of allSeeded) {
+            for (const item of items) {
+              const orgId = typeof item.organization_id === 'number' ? item.organization_id : (item.organization_id?.id || activeOrgId);
+              await db.execute(
+                `INSERT OR REPLACE INTO ${col} (id, organization_id, data, date_updated) VALUES ($1, $2, $3, datetime('now'))`,
+                [item.id, orgId, JSON.stringify(item)]
+              );
+            }
+          }
+        } catch (dbErr) {
+          console.warn('[BackupManager] SQLite sync warning during demo seed:', dbErr);
+        }
+      }
+
       // Trigger data restored event
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('tankhor_data_restored', {
@@ -801,7 +870,7 @@ export class BackupManager {
   /**
    * Resets local collections for a specific organization
    */
-  public static clearLocalData(preserveOrganization: boolean = true, targetOrgId?: number): { success: boolean; message: string } {
+  public static async clearLocalData(preserveOrganization: boolean = true, targetOrgId?: number): Promise<{ success: boolean; message: string }> {
     try {
       const activeOrgId = targetOrgId || Number(localStorage.getItem('tankhor_active_org_id') || 1);
       const orgs = this.getRawCollection('organizations');
@@ -831,6 +900,24 @@ export class BackupManager {
       if (preserveOrganization && activeOrg) {
         const remainingOrgs = orgs.filter((o) => Number(o.id) !== activeOrgId);
         this.setRawCollection('organizations', [...remainingOrgs, activeOrg]);
+      }
+
+      // If in desktop Tauri environment, delete from SQLite
+      if (isTauriEnvironment()) {
+        try {
+          const Database = (await import('@tauri-apps/plugin-sql')).default;
+          const db = await Database.load('sqlite:tankhor.db');
+          for (const col of BACKUP_COLLECTIONS) {
+            if (preserveOrganization && (col === 'organizations' || col === 'organization_users')) {
+              continue;
+            }
+            try {
+              await db.execute(`DELETE FROM ${col} WHERE organization_id = $1`, [activeOrgId]);
+            } catch {}
+          }
+        } catch (dbErr) {
+          console.warn('[BackupManager] SQLite clear warning:', dbErr);
+        }
       }
 
       if (typeof window !== 'undefined') {

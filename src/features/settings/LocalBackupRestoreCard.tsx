@@ -136,15 +136,15 @@ export const LocalBackupRestoreCard: React.FC = () => {
   };
 
   // Confirm and Execute Restore
-  const handleExecuteRestore = () => {
+  const handleExecuteRestore = async () => {
     if (!inspectedData || !inspectedData.data) return;
     setIsRestoring(true);
     try {
-      const res = BackupManager.restoreBackup(inspectedData.data, restoreMode, activeOrganization?.id);
+      const res = await BackupManager.restoreBackup(inspectedData.data, restoreMode, activeOrganization?.id);
       if (res.success) {
         setInspectionModalOpen(false);
         setInspectedData(null);
-        refreshOrganizations();
+        await refreshOrganizations();
         setFeedback({
           type: 'success',
           message: `اطلاعات با موفقیت بازیابی شد (${toPersianDigits(res.restoredCount)} رکورد بازگردانی شد).`,
@@ -166,12 +166,12 @@ export const LocalBackupRestoreCard: React.FC = () => {
   };
 
   // Handle Seed Demo Data
-  const handleSeedDemo = () => {
+  const handleSeedDemo = async () => {
     setIsSeedingDemo(true);
     try {
-      const res = BackupManager.seedFashionDemoData(activeOrganization?.id || 1);
+      const res = await BackupManager.seedFashionDemoData(activeOrganization?.id || 1);
       if (res.success) {
-        refreshOrganizations();
+        await refreshOrganizations();
         setFeedback({
           type: 'success',
           message: res.message,
@@ -193,12 +193,12 @@ export const LocalBackupRestoreCard: React.FC = () => {
   };
 
   // Handle Clear Local Data
-  const handleClearData = () => {
+  const handleClearData = async () => {
     try {
-      const res = BackupManager.clearLocalData(true, activeOrganization?.id);
+      const res = await BackupManager.clearLocalData(true, activeOrganization?.id);
       if (res.success) {
         setClearConfirmModalOpen(false);
-        refreshOrganizations();
+        await refreshOrganizations();
         setFeedback({
           type: 'success',
           message: res.message,

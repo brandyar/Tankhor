@@ -30,7 +30,7 @@ interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const { t, locale } = useTranslation();
-  const { activeOrganization, permissions } = useOrganization();
+  const { activeOrganization, permissions, refreshOrganizations } = useOrganization();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
@@ -39,6 +39,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSeedingDemo, setIsSeedingDemo] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
 
   const isPersian = locale === 'fa';
@@ -275,10 +276,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             <Button
               variant="primary"
               size="sm"
-              onClick={() => {
-                const res = BackupManager.seedFashionDemoData(activeOrganization?.id || 1);
-                if (res.success) {
-                  loadDashboardData();
+              isLoading={isSeedingDemo}
+              onClick={async () => {
+                setIsSeedingDemo(true);
+                try {
+                  const targetOrgId = activeOrganization?.id ? Number(activeOrganization.id) : 1;
+                  const res = await BackupManager.seedFashionDemoData(targetOrgId);
+                  if (res.success) {
+                    await refreshOrganizations();
+                    await loadDashboardData();
+                  }
+                } catch (err) {
+                  console.error('Error seeding demo data:', err);
+                } finally {
+                  setIsSeedingDemo(false);
                 }
               }}
               icon={<Sparkles className="w-4 h-4" />}
