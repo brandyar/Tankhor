@@ -26,8 +26,9 @@ class DirectusClient {
       if (customApiUrl) {
         this.baseUrl = customApiUrl.replace(/\/+$/, '');
       } else if (isTauri) {
-        const rawServer = metaEnv?.VITE_DIRECTUS_URL || metaEnv?.VITE_API_URL || 'https://api.tankhor.com';
-        this.baseUrl = rawServer.replace(/\/+$/, '');
+        // Desktop BFF Gateway: Route auth, registration, and cloud proxy requests through the secure BFF Gateway
+        const desktopGateway = metaEnv?.VITE_GATEWAY_URL || metaEnv?.VITE_API_URL || 'https://app.tankhor.com/api';
+        this.baseUrl = desktopGateway.replace(/\/+$/, '');
       } else {
         // In browser / web preview / production Cloud Run, all requests go through the same-origin Express BFF proxy at /api
         this.baseUrl = '/api';
@@ -110,7 +111,7 @@ class DirectusClient {
   }
 
   public getBaseUrl(): string {
-    return this.baseUrl || 'https://api.tankhor.com';
+    return this.baseUrl || '/api';
   }
 
   private isAuthPublicEndpoint(endpoint: string): boolean {

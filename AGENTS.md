@@ -27,9 +27,10 @@
    - Backend API Proxy (`/server/proxy.ts`) strictly validates and enforces tenant ownership (`TENANT_SCOPED_COLLECTIONS`), preventing data leakage across organizations.
    - Directus handles user authentication (`directus_users`). Membership and access permissions are managed via `organization_users` with defined roles (`owner`, `manager`, `warehouse`, `sales`, `viewer`).
 
-4. **Desktop (Tauri) & Web Hybrid Support**:
+4. **Desktop (Tauri) & Web Hybrid Support (BFF Pattern)**:
    - The frontend remains platform-agnostic and runs seamlessly in both browser and native desktop (Tauri/Electron) environments.
-   - Directus API URL resolution (`/src/api/directus.ts`) detects Tauri vs browser environments dynamically, routing requests directly or via local backend proxies without hardcoded localhost assumptions.
+   - All authentication, registration, user management, and tenant scoping requests from both Web and Desktop clients pass through the secure Backend-For-Frontend (BFF) API Gateway (`/server/auth.ts`, `/server/proxy.ts`), keeping Admin tokens secure and enforcing tenant isolation.
+   - Directus API URL resolution (`/src/api/directus.ts`) detects Tauri vs browser environments dynamically, routing requests to the BFF Gateway (`https://app.tankhor.com/api` or `/api`) without exposing admin credentials.
 
 5. **Internationalization & Localization (i18n)**:
    - First production UI language is **Persian (`fa`)** with **RTL** orientation and `Vazirmatn` font.
@@ -53,7 +54,8 @@
 
 8. **Automated Desktop Releases & Self-Updater**:
    - Automated multi-platform releases built via GitHub Actions (`/.github/workflows/release-tauri.yml`).
-   - Desktop auto-update system powered by Tauri Updater (`tauri-plugin-updater`) and GitHub Releases.
+   - Windows desktop builds use NSIS target (`bundle.targets: ["nsis", "app", "dmg"]`) with `windows.installMode: "passive"` for seamless in-place updates.
+   - Desktop auto-update system powered by Tauri Updater (`tauri-plugin-updater`) and GitHub Releases with dedicated `latest.json` manifest.
    - Background check via `checkDesktopUpdate()` (`/src/utils/updater.ts`) on startup or manual trigger in Settings.
    - Universal RTL update notification modal (`UpdateNotificationModal.tsx`) showing release notes, real-time download progress, and zero-downtime relaunch via `@tauri-apps/plugin-process`.
    - Preservation of local SQLite database (`tankhor.db`) across desktop application updates.
