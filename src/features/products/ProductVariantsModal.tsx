@@ -161,6 +161,7 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
             <table className="w-full text-right text-xs">
               <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
                 <tr>
+                  <th className="px-2 py-2.5 text-center">تصویر</th>
                   <th className="px-3 py-2.5">رنگ</th>
                   <th className="px-3 py-2.5">سایز</th>
                   <th className="px-3 py-2.5">کد SKU</th>
@@ -186,6 +187,13 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
 
                   return (
                     <tr key={`pvm_var_${v.id || 'temp'}_${index}`} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-2 py-2 text-center">
+                        <ProductImage
+                          src={v.image || product.main_image}
+                          alt={v.sku}
+                          containerClassName="w-8 h-8 rounded-lg overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200 mx-auto"
+                        />
+                      </td>
                       <td className="px-3 py-2.5 font-medium text-slate-900">
                         <div className="flex items-center gap-1.5">
                           <span

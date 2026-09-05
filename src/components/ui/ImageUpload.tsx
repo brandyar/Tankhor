@@ -10,6 +10,7 @@ interface ImageUploadProps {
   helperText?: string;
   className?: string;
   productId?: number;
+  mode?: 'full' | 'compact' | 'mini';
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -19,6 +20,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   helperText,
   className = '',
   productId,
+  mode = 'full',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -105,6 +107,74 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  if (mode === 'compact' || mode === 'mini') {
+    return (
+      <div className={`relative inline-flex items-center shrink-0 ${className}`}>
+        {resolvedDisplayUrl ? (
+          <div className="relative group w-9 h-9 rounded-lg border border-neutral-300 dark:border-neutral-700 overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shadow-2xs">
+            <img
+              src={resolvedDisplayUrl}
+              alt="Variant Preview"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = 'none';
+              }}
+            />
+            {isUploading ? (
+              <div className="absolute inset-0 bg-neutral-900/60 flex items-center justify-center text-white">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              </div>
+            ) : (
+              <div className="absolute inset-0 bg-neutral-900/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-1 bg-white/90 text-neutral-800 rounded hover:bg-white transition-colors"
+                  title="تغییر تصویر"
+                >
+                  <Upload className="w-2.5 h-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onChange('');
+                    setResolvedDisplayUrl('');
+                  }}
+                  className="p-1 bg-rose-600 text-white rounded hover:bg-rose-700 transition-colors"
+                  title="حذف تصویر"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-9 h-9 rounded-lg border border-dashed border-neutral-300 dark:border-neutral-700 hover:border-indigo-500 dark:hover:border-indigo-400 bg-neutral-50 dark:bg-neutral-900/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center justify-center transition-colors cursor-pointer"
+            title="افزودن تصویر به این تنوع"
+          >
+            {isUploading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+            ) : (
+              <Upload className="w-3.5 h-3.5" />
+            )}
+          </button>
+        )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={`space-y-1.5 ${className}`}>

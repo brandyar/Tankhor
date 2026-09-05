@@ -499,7 +499,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
         collection_id: collectionId && !isNaN(Number(collectionId)) && Number(collectionId) > 0 ? Number(collectionId) : undefined,
         season_id: seasonId && !isNaN(Number(seasonId)) && Number(seasonId) > 0 ? Number(seasonId) : undefined,
         size_guide_template_id: sizeGuideTemplateId && !isNaN(Number(sizeGuideTemplateId)) && Number(sizeGuideTemplateId) > 0 ? Number(sizeGuideTemplateId) : undefined,
-        main_image: mainImage && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(mainImage.trim()) ? mainImage.trim() : undefined,
+        main_image: mainImage ? mainImage.trim() : undefined,
         tags: tags ? tags.trim() : undefined,
         sort: sort !== '' ? Number(sort) : 0,
         description: description ? description.trim() : undefined,
@@ -534,7 +534,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
             price: v.price !== undefined && v.price !== '' ? Number(v.price) : 0,
             cost: v.cost !== undefined && v.cost !== '' ? Number(v.cost) : 0,
             stock_quantity: v.stock_quantity !== undefined && v.stock_quantity !== '' ? Number(v.stock_quantity) : 0,
-            image: v.image && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.image.trim()) ? v.image.trim() : undefined,
+            image: v.image ? v.image.trim() : undefined,
             status: v.status || 'published',
             sort: v.sort !== undefined ? Number(v.sort) : 0,
           },
@@ -1080,6 +1080,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                 <thead className="bg-slate-100 dark:bg-[#181a20] text-slate-700 dark:text-neutral-300 font-bold border-b border-slate-200 dark:border-neutral-800">
                   <tr>
                     <th className="py-3 px-3">#</th>
+                    <th className="py-3 px-2 text-center">تصویر</th>
                     <th className="py-3 px-3">رنگ</th>
                     <th className="py-3 px-3">سایز</th>
                     <th className="py-3 px-3 min-w-[130px]">کد شناسه (SKU)</th>
@@ -1096,6 +1097,16 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                     <tr key={`pe_vrow_${v.id || v._tempId || 'idx'}_${index}`} className="hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
                       <td className="py-2.5 px-3 font-bold text-slate-400">
                         {toPersianDigits(index + 1)}
+                      </td>
+
+                      {/* Variant Image */}
+                      <td className="py-2.5 px-2 text-center">
+                        <ImageUpload
+                          mode="compact"
+                          value={v.image || ''}
+                          onChange={(newImg) => handleUpdateVariantRow(index, 'image', newImg)}
+                          productId={productId ? Number(productId) : undefined}
+                        />
                       </td>
 
                       {/* Color Select */}

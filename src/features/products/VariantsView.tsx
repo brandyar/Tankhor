@@ -11,6 +11,8 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
+import { ProductImage } from '../../components/ui/ProductImage';
+import { ImageUpload } from '../../components/ui/ImageUpload';
 import { formatCurrency, toPersianDigits } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
 import { Search, Shirt, Barcode as BarcodeIcon, Tag, Trash2, Edit, Save, Plus } from 'lucide-react';
@@ -35,6 +37,7 @@ export const VariantsView: React.FC = () => {
   const [editStock, setEditStock] = useState<number | ''>('');
   const [editColorId, setEditColorId] = useState<number | ''>('');
   const [editSizeId, setEditSizeId] = useState<number | ''>('');
+  const [editImage, setEditImage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const isPersian = locale === 'fa';
@@ -82,6 +85,7 @@ export const VariantsView: React.FC = () => {
     setEditPrice(v.price !== undefined ? v.price : '');
     setEditCost(v.cost !== undefined ? v.cost : ((v as any).cost_price !== undefined ? (v as any).cost_price : ''));
     setEditStock(v.stock_quantity !== undefined ? v.stock_quantity : '');
+    setEditImage(v.image || '');
     const cId = typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id || '';
     const sId = typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id || '';
     setEditColorId(cId);
@@ -106,6 +110,7 @@ export const VariantsView: React.FC = () => {
         stock_quantity: editStock !== '' ? Number(editStock) : 0,
         color_id: editColorId ? Number(editColorId) : undefined,
         size_id: editSizeId ? Number(editSizeId) : undefined,
+        image: editImage ? editImage.trim() : undefined,
       });
 
       setIsEditModalOpen(false);
@@ -128,11 +133,23 @@ export const VariantsView: React.FC = () => {
 
   const columns: Column<ProductVariant>[] = [
     {
+      key: 'image',
+      header: 'تصویر',
+      className: 'w-14 text-center',
+      render: (v) => (
+        <ProductImage
+          src={v.image}
+          alt={v.sku}
+          containerClassName="w-10 h-10 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto border border-neutral-200 dark:border-neutral-700"
+        />
+      ),
+    },
+    {
       key: 'sku',
       header: 'شناسه اختصاصی کالا (SKU)',
       render: (v) => (
         <div>
-          <p className="font-extrabold text-neutral-900 font-mono text-xs tracking-wider">{v.sku}</p>
+          <p className="font-extrabold text-neutral-900 dark:text-neutral-100 font-mono text-xs tracking-wider">{v.sku}</p>
           <p className="text-[11px] text-neutral-500 mt-0.5">{v.product_title}</p>
         </div>
       ),
@@ -257,7 +274,7 @@ export const VariantsView: React.FC = () => {
         <form onSubmit={handleSaveVariant} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">شناسه کالا (SKU)</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">شناسه کالا (SKU)</label>
               <Input
                 value={editSku}
                 onChange={(e) => setEditSku(e.target.value)}
@@ -266,13 +283,23 @@ export const VariantsView: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">بارکد</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">بارکد</label>
               <Input
                 value={editBarcode}
                 onChange={(e) => setEditBarcode(e.target.value)}
                 placeholder="کد میله‌ای یا EAN..."
               />
             </div>
+          </div>
+
+          <div>
+            <ImageUpload
+              label="تصویر اختصاصی این تنوع"
+              value={editImage}
+              onChange={setEditImage}
+              productId={editingVariant?.product_id ? Number(editingVariant.product_id) : undefined}
+              helperText="در صورت عدم انتخاب تصویر، تصویر اصلی محصول نمایش داده می‌شود."
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

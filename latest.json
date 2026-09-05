@@ -1,0 +1,27 @@
+{
+  "version": "1.0.16",
+  "notes": "بروزرسانی نسخه 1.0.16 تن‌خور (رفع مشکل ذخیره‌سازی تصاویر، افزودن تصویر به تنوع‌های محصول و بهبود پایداری بروزرسانی خودکار ویندوز)",
+  "pub_date": "2026-09-05T00:00:00.000Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.16/Tankhor_1.0.16_x64-setup.nsis.zip"
+    },
+    "windows-x86_64-nsis": {
+      "signature": "",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.16/Tankhor_1.0.16_x64-setup.nsis.zip"
+    },
+    "darwin-universal": {
+      "signature": "",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.16/Tankhor_1.0.16_universal.app.tar.gz"
+    },
+    "darwin-aarch64": {
+      "signature": "",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.16/Tankhor_1.0.16_universal.app.tar.gz"
+    },
+    "darwin-x86_64": {
+      "signature": "",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.16/Tankhor_1.0.16_universal.app.tar.gz"
+    }
+  }
+}
