@@ -241,7 +241,19 @@ jobs:
 
           if [ -f "../latest.json" ]; then
             gh release upload "$TAG_NAME" ../latest.json --repo "$REPO" --clobber
-            echo "latest.json uploaded successfully!"
+            echo "latest.json uploaded successfully to GitHub Release!"
+
+            # Keep repo root latest.json strictly synchronized with current release signatures
+            cp ../latest.json ./latest.json
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git add latest.json
+            git commit -m "chore(updater): synchronize latest.json release signatures for $TAG_NAME [skip ci]" || true
+            git push origin HEAD:main || true
+
+            # Invalidate jsDelivr CDN cache so fallback endpoints get immediate updates
+            curl -s "https://purge.jsdelivr.net/gh/${REPO}@main/latest.json" || true
+            echo "jsDelivr CDN cache purged for latest.json"
           else
             echo "latest.json creation skipped or failed"
           fi
