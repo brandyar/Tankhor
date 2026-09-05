@@ -162,13 +162,14 @@ jobs:
             }
           }
 
-          // 4. Identify Windows Updater Assets (.nsis.zip vs .msi.zip)
-          const winNsisArchive = files.find(f => f.endsWith(".nsis.zip") || f.includes("-setup.nsis.zip") || (f.endsWith(".zip") && f.toLowerCase().includes("nsis")));
+          // 4. Identify Windows Updater Assets (.nsis.zip vs -setup.exe vs .msi.zip)
+          const winNsisZip = files.find(f => f.endsWith(".nsis.zip") || f.includes("-setup.nsis.zip") || (f.endsWith(".zip") && f.toLowerCase().includes("nsis")));
+          const winNsisExe = files.find(f => (f.endsWith("-setup.exe") || (f.endsWith(".exe") && !f.endsWith(".sig"))) && !f.includes("darwin"));
           const winMsiArchive = files.find(f => f.endsWith(".msi.zip") || (f.endsWith(".zip") && f.toLowerCase().includes("msi")));
           const winGenericZip = files.find(f => f.endsWith(".zip") && !f.includes("darwin") && !f.endsWith(".nsis.zip") && !f.endsWith(".msi.zip"));
 
-          // A) NSIS Installer targets (Default Windows .exe setup installer)
-          const nsisArchive = winNsisArchive || (winGenericZip && !winMsiArchive ? winGenericZip : null);
+          // A) NSIS Installer targets (Prefer .nsis.zip if present, otherwise direct .exe installer)
+          const nsisArchive = winNsisZip || winNsisExe || (winGenericZip && !winMsiArchive ? winGenericZip : null);
           if (nsisArchive) {
             const nsisSig = signatures[nsisArchive] || signatures[nsisArchive + ".sig"] || getSignature(nsisArchive);
             if (nsisSig) {
