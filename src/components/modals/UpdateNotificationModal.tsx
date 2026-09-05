@@ -110,9 +110,22 @@ export const UpdateNotificationModal: React.FC = () => {
 
         {/* Error Alert */}
         {installError && (
-          <div className="mt-4 flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs dark:bg-red-950/40 dark:border-red-900 dark:text-red-400">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>خطا در نصب بروزرسانی: {installError}</span>
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs dark:bg-red-950/40 dark:border-red-900 dark:text-red-400 space-y-2">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>خطا در نصب بروزرسانی: {installError}</span>
+            </div>
+            <div className="pt-1 flex items-center justify-end">
+              <a
+                href="https://github.com/brandyar/Tankhor/releases/latest"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors shadow-xs"
+              >
+                <Download className="w-3.5 h-3.5" />
+                دانلود مستقیم فایل نصبی جدید از گیت‌هاب
+              </a>
+            </div>
           </div>
         )}
 

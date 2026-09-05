@@ -91,12 +91,19 @@ export const SizeGuidesView: React.FC = () => {
         adapter.getSizeGuideTemplates({ organization_id: orgId }),
         adapter.getSizes({ organization_id: orgId }),
       ]);
-      setTemplates(tplList);
-      setSizes(sizeList);
+      const safeTpls = (Array.isArray(tplList) ? tplList : []).map((t) => ({
+        ...t,
+        name: t.name || (t as any).title || 'قالب بدون عنوان',
+        type: (t.type || (t as any).template_type || 'apparel') as SizeGuideType,
+        unit: (t.unit || 'cm') as SizeUnit,
+      }));
+      const safeSizes = Array.isArray(sizeList) ? sizeList : [];
+      setTemplates(safeTpls);
+      setSizes(safeSizes);
 
       // Default select first template if none selected or invalid
-      if (tplList.length > 0 && (!selectedTemplate || !tplList.some((t) => t.id === selectedTemplate.id))) {
-        handleSelectTemplate(tplList[0]);
+      if (safeTpls.length > 0 && (!selectedTemplate || !safeTpls.some((t) => t.id === selectedTemplate.id))) {
+        handleSelectTemplate(safeTpls[0]);
       }
     } catch (err) {
       console.error('[SizeGuidesView] Error loading data:', err);
@@ -110,6 +117,7 @@ export const SizeGuidesView: React.FC = () => {
   }, [activeOrganization]);
 
   const handleSelectTemplate = async (tpl: SizeGuideTemplate) => {
+    if (!tpl) return;
     setSelectedTemplate(tpl);
     try {
       const adapter = storageManager.getAdapter();
@@ -117,15 +125,19 @@ export const SizeGuidesView: React.FC = () => {
         adapter.getSizeGuideMeasurements(tpl.id),
         adapter.getSizeGuideValues(tpl.id),
       ]);
-      setMeasurements(measList);
-      setGuideValues(valList);
+      const safeMeas = Array.isArray(measList) ? measList : [];
+      const safeVals = Array.isArray(valList) ? valList : [];
+      setMeasurements(safeMeas);
+      setGuideValues(safeVals);
 
       // Build matrix dictionary
       const matrixMap: Record<string, { value: string; id?: number }> = {};
-      valList.forEach((v) => {
+      safeVals.forEach((v) => {
+        if (!v) return;
         const key = `${v.size_id}_${v.measurement_id}`;
+        const val = v.value !== undefined && v.value !== null ? v.value : ((v as any).value_exact ?? '');
         matrixMap[key] = {
-          value: v.value !== undefined && v.value !== null ? String(v.value) : '',
+          value: String(val),
           id: v.id,
         };
       });
@@ -139,9 +151,9 @@ export const SizeGuidesView: React.FC = () => {
   const handleOpenTemplateModal = (tpl?: SizeGuideTemplate) => {
     if (tpl) {
       setEditingTemplate(tpl);
-      setTplName(tpl.name);
-      setTplType(tpl.type || 'apparel');
-      setTplUnit(tpl.unit || 'cm');
+      setTplName(tpl.name || (tpl as any).title || '');
+      setTplType((tpl.type || (tpl as any).template_type || 'apparel') as SizeGuideType);
+      setTplUnit((tpl.unit || 'cm') as SizeUnit);
       setTplDesc(tpl.description || '');
       setTplStatus(tpl.status === 'inactive' ? 'inactive' : 'active');
     } else {
@@ -356,8 +368,9 @@ export const SizeGuidesView: React.FC = () => {
   };
 
   // Type Translations & Badges
-  const getTypeBadge = (type: SizeGuideType) => {
-    switch (type) {
+  const getTypeBadge = (type?: string) => {
+    const safeType = (type || 'apparel').toLowerCase();
+    switch (safeType) {
       case 'apparel':
         return <Badge variant="primary">پوشاک</Badge>;
       case 'footwear':
@@ -371,11 +384,14 @@ export const SizeGuidesView: React.FC = () => {
     }
   };
 
-  const filteredTemplates = templates.filter((t) => {
-    const matchesSearch =
-      t.name.toLowerCase().includes(search.toLowerCase()) ||
-      (t.description && t.description.toLowerCase().includes(search.toLowerCase()));
-    const matchesType = selectedTypeFilter === 'all' || t.type === selectedTypeFilter;
+  const filteredTemplates = (templates || []).filter((t) => {
+    if (!t) return false;
+    const nameStr = String(t.name || (t as any).title || '').toLowerCase();
+    const descStr = String(t.description || '').toLowerCase();
+    const query = (search || '').toLowerCase();
+    const matchesSearch = !query || nameStr.includes(query) || descStr.includes(query);
+    const tType = t.type || (t as any).template_type || 'apparel';
+    const matchesType = selectedTypeFilter === 'all' || tType === selectedTypeFilter;
     return matchesSearch && matchesType;
   });
 
@@ -452,7 +468,7 @@ export const SizeGuidesView: React.FC = () => {
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-bold text-slate-900 text-xs sm:text-sm truncate">
-                          {tpl.name}
+                          {tpl.name || (tpl as any).title || 'قالب بدون عنوان'}
                         </span>
                         <div className="flex items-center gap-1 shrink-0">
                           <button
@@ -481,9 +497,9 @@ export const SizeGuidesView: React.FC = () => {
                       </div>
 
                       <div className="flex items-center justify-between gap-2 mt-2">
-                        {getTypeBadge(tpl.type)}
+                        {getTypeBadge(tpl.type || (tpl as any).template_type)}
                         <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                          واحد: {tpl.unit}
+                          واحد: {tpl.unit || 'cm'}
                         </span>
                       </div>
                     </div>
@@ -508,9 +524,9 @@ export const SizeGuidesView: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
                   <div>
                     <div className="flex items-center gap-3">
-                      <h2 className="text-lg font-bold text-slate-900">{selectedTemplate.name}</h2>
-                      {getTypeBadge(selectedTemplate.type)}
-                      <Badge variant="neutral">واحد {selectedTemplate.unit}</Badge>
+                      <h2 className="text-lg font-bold text-slate-900">{selectedTemplate.name || (selectedTemplate as any).title || 'قالب راهنمای سایز'}</h2>
+                      {getTypeBadge(selectedTemplate.type || (selectedTemplate as any).template_type)}
+                      <Badge variant="neutral">واحد {selectedTemplate.unit || 'cm'}</Badge>
                     </div>
                     {selectedTemplate.description && (
                       <p className="text-xs text-slate-500 mt-1">{selectedTemplate.description}</p>

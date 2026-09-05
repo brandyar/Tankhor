@@ -792,24 +792,28 @@ export class BackupManager {
 
       // 11. Size Guide Templates & Measurements
       const sizeGuides = [
-        { id: 7001, organization_id: activeOrgId, title: 'راهنمای سایز پالتو و بارانی زنانه', template_type: 'apparel', category_id: 101, unit: 'cm', status: 'published' },
-        { id: 7002, organization_id: activeOrgId, title: 'جدول ابعاد هودی و دورس اورسایز', template_type: 'apparel', category_id: 102, unit: 'cm', status: 'published' },
+        { id: 7001, organization_id: activeOrgId, name: 'راهنمای سایز پالتو و بارانی زنانه', title: 'راهنمای سایز پالتو و بارانی زنانه', type: 'apparel', template_type: 'apparel', category_id: 101, unit: 'cm', status: 'active', description: 'مناسب انواع پالتو و بارانی زمستانه' },
+        { id: 7002, organization_id: activeOrgId, name: 'جدول ابعاد هودی و دورس اورسایز', title: 'جدول ابعاد هودی و دورس اورسایز', type: 'apparel', template_type: 'apparel', category_id: 102, unit: 'cm', status: 'active', description: 'قالب آزاد و راحت مخصوص هودی و دورس' },
       ];
       this.setRawCollection('size_guide_templates', sizeGuides);
 
       const measurements = [
-        { id: 8001, template_id: 7001, name: 'دور سینه', code: 'chest', description: 'اندازه‌گیری از برجسته‌ترین قسمت سینه', sort_order: 1 },
-        { id: 8002, template_id: 7001, name: 'عرض شانه', code: 'shoulder', description: 'از نوک استخوان شانه چپ تا راست', sort_order: 2 },
-        { id: 8003, template_id: 7001, name: 'قد آستین', code: 'sleeve', description: 'از سرشانه تا روی مچ دست', sort_order: 3 },
-        { id: 8004, template_id: 7001, name: 'قد کل لباس', code: 'length', description: 'از کنار گردن تا لبه پایین پالتو', sort_order: 4 },
+        { id: 8001, template_id: 7001, name: 'دور سینه', code: 'chest', unit: 'cm', type: 'circumference', status: 'active', sort: 1, description: 'اندازه‌گیری از برجسته‌ترین قسمت سینه' },
+        { id: 8002, template_id: 7001, name: 'عرض شانه', code: 'shoulder', unit: 'cm', type: 'width', status: 'active', sort: 2, description: 'از نوک استخوان شانه چپ تا راست' },
+        { id: 8003, template_id: 7001, name: 'قد آستین', code: 'sleeve', unit: 'cm', type: 'length', status: 'active', sort: 3, description: 'از سرشانه تا روی مچ دست' },
+        { id: 8004, template_id: 7001, name: 'قد کل لباس', code: 'length', unit: 'cm', type: 'length', status: 'active', sort: 4, description: 'از کنار گردن تا لبه پایین پالتو' },
       ];
       this.setRawCollection('size_guide_measurements', measurements);
 
       const values = [
-        { id: 9001, measurement_id: 8001, size_id: 702, value_min: 92, value_max: 96, value_exact: 94 },
-        { id: 9002, measurement_id: 8001, size_id: 703, value_min: 97, value_max: 102, value_exact: 100 },
-        { id: 9003, measurement_id: 8002, size_id: 702, value_min: 39, value_max: 41, value_exact: 40 },
-        { id: 9004, measurement_id: 8002, size_id: 703, value_min: 42, value_max: 44, value_exact: 43 },
+        { id: 9001, template_id: 7001, measurement_id: 8001, size_id: 702, value: 94, value_exact: 94 },
+        { id: 9002, template_id: 7001, measurement_id: 8001, size_id: 703, value: 100, value_exact: 100 },
+        { id: 9003, template_id: 7001, measurement_id: 8002, size_id: 702, value: 40, value_exact: 40 },
+        { id: 9004, template_id: 7001, measurement_id: 8002, size_id: 703, value: 43, value_exact: 43 },
+        { id: 9005, template_id: 7001, measurement_id: 8003, size_id: 702, value: 60, value_exact: 60 },
+        { id: 9006, template_id: 7001, measurement_id: 8003, size_id: 703, value: 62, value_exact: 62 },
+        { id: 9007, template_id: 7001, measurement_id: 8004, size_id: 702, value: 110, value_exact: 110 },
+        { id: 9008, template_id: 7001, measurement_id: 8004, size_id: 703, value: 112, value_exact: 112 },
       ];
       this.setRawCollection('size_guide_values', values);
 
