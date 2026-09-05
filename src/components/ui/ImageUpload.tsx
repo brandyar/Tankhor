@@ -1,7 +1,7 @@
-import React, { useRef, useState } from 'react';
-import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { directusClient } from '../../api/directus';
-import { storageManager } from '../../storage';
+import React, { useRef, useState, useEffect } from 'react';
+import { Upload, X, Loader2, Sparkles, HardDrive, CheckCircle2 } from 'lucide-react';
+import { mediaManager } from '../../utils/mediaManager';
+import { isTauriEnvironment } from '../../storage';
 
 interface ImageUploadProps {
   label?: string;
@@ -9,6 +9,7 @@ interface ImageUploadProps {
   onChange: (urlOrId: string) => void;
   helperText?: string;
   className?: string;
+  productId?: number;
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -17,16 +18,36 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   onChange,
   helperText,
   className = '',
+  productId,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resolvedDisplayUrl, setResolvedDisplayUrl] = useState<string>('');
+  const [compressionInfo, setCompressionInfo] = useState<{ origSize: number; compSize: number } | null>(null);
 
-  const getPreviewUrl = (val?: string) => {
-    if (!val) return '';
-    return directusClient.getAssetUrl(val);
-  };
+  useEffect(() => {
+    let isMounted = true;
+    if (value) {
+      // First try sync cache
+      const syncUrl = mediaManager.getDisplayUrlSync(value);
+      if (syncUrl) setResolvedDisplayUrl(syncUrl);
+
+      // Resolve async (for Tauri FS local blobs or cloud URLs)
+      mediaManager.getDisplayUrl(value).then((url) => {
+        if (isMounted && url) {
+          setResolvedDisplayUrl(url);
+        }
+      });
+    } else {
+      setResolvedDisplayUrl('');
+      setCompressionInfo(null);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [value]);
 
   const handleFileChange = async (file: File) => {
     if (!file) return;
@@ -36,8 +57,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setError('حجم فایل تصویر نباید بیش از ۱۰ مگابایت باشد.');
+    if (file.size > 20 * 1024 * 1024) {
+      setError('حجم فایل تصویر نباید بیش از ۲۰ مگابایت باشد.');
       return;
     }
 
@@ -45,40 +66,18 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     setIsUploading(true);
 
     try {
-      const adapter = storageManager.getAdapter();
-
-      if (adapter.mode === 'cloud_synced') {
-        // Try Directus upload
-        const result = await directusClient.uploadFile(file);
-        if (result && result.id) {
-          onChange(result.id);
-          setIsUploading(false);
-          return;
-        }
-      }
-
-      // Fallback or Local Offline mode: Convert to Base64 Data URL
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64 = e.target?.result as string;
-        onChange(base64);
-        setIsUploading(false);
-      };
-      reader.onerror = () => {
-        setError('خطا در خواندن فایل تصویر.');
-        setIsUploading(false);
-      };
-      reader.readAsDataURL(file);
+      const res = await mediaManager.saveImage(file, { productId });
+      setResolvedDisplayUrl(res.displayUrl);
+      setCompressionInfo({
+        origSize: res.compressed.originalSize,
+        compSize: res.compressed.compressedSize,
+      });
+      onChange(res.mediaId);
     } catch (err: any) {
-      console.warn('[ImageUpload] Cloud upload fallback to base64:', err);
-      // Fallback to base64 reader if cloud upload fails
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64 = e.target?.result as string;
-        onChange(base64);
-        setIsUploading(false);
-      };
-      reader.readAsDataURL(file);
+      console.error('[ImageUpload] Error saving/compressing image:', err);
+      setError(`خطا در پردازش تصویر: ${err?.message || err}`);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -101,23 +100,45 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     }
   };
 
-  const previewUrl = getPreviewUrl(value);
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   return (
     <div className={`space-y-1.5 ${className}`}>
-      {label && <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">{label}</label>}
+      {label && (
+        <div className="flex items-center justify-between">
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">{label}</label>
+          {isTauriEnvironment() && (
+            <span className="text-[10px] text-neutral-400 flex items-center gap-1 font-mono">
+              <HardDrive className="w-3 h-3 text-emerald-500" />
+              AppData/media
+            </span>
+          )}
+        </div>
+      )}
 
-      {previewUrl ? (
-        <div className="relative group rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden bg-neutral-50 dark:bg-neutral-900/80 flex items-center justify-center p-2 min-h-36 max-h-48">
+      {resolvedDisplayUrl ? (
+        <div className="relative group rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden bg-neutral-50 dark:bg-neutral-900/80 flex flex-col items-center justify-center p-3 min-h-36 max-h-52">
           <img
-            src={previewUrl}
+            src={resolvedDisplayUrl}
             alt="Preview"
-            className="max-h-40 w-auto object-contain rounded-xl"
+            className="max-h-36 w-auto object-contain rounded-xl shadow-xs"
             onError={(e) => {
               (e.target as HTMLElement).style.display = 'none';
             }}
           />
-          <div className="absolute inset-0 bg-neutral-900/70 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center gap-3 backdrop-blur-xs">
+
+          {compressionInfo && (
+            <div className="mt-2 text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-mono">
+              <Sparkles className="w-3 h-3" />
+              فشرده‌سازی خودکار: {formatFileSize(compressionInfo.origSize)} ⟵ {formatFileSize(compressionInfo.compSize)}
+            </div>
+          )}
+
+          <div className="absolute inset-0 bg-neutral-900/75 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center gap-3 backdrop-blur-xs">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -127,8 +148,12 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => onChange('')}
-              className="p-1.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors cursor-pointer shadow-xs"
+              onClick={() => {
+                onChange('');
+                setResolvedDisplayUrl('');
+                setCompressionInfo(null);
+              }}
+              className="p-1.5 bg-rose-600 text-white rounded-xl hover:bg-rose-700 transition-colors cursor-pointer shadow-xs"
               title="حذف تصویر"
             >
               <X className="w-4 h-4" />
@@ -151,7 +176,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           {isUploading ? (
             <div className="flex flex-col items-center py-2 text-blue-600 dark:text-blue-400">
               <Loader2 className="w-6 h-6 animate-spin mb-2" />
-              <span className="text-xs font-medium">در حال بارگذاری و پردازش تصویر...</span>
+              <span className="text-xs font-medium">در حال بهینه‌سازی و ذخیره‌سازی محلی...</span>
             </div>
           ) : (
             <>
@@ -161,7 +186,9 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               <p className="text-xs font-bold text-neutral-700 dark:text-neutral-200 mb-1">
                 برای انتخاب تصویر کلیک کنید یا فایل را اینجا رها کنید
               </p>
-              <p className="text-[11px] text-neutral-400 dark:text-neutral-500">فرمت‌های مجاز: PNG, JPG, WEBP (حداکثر ۱۰ مگابایت)</p>
+              <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
+                فشرده‌سازی خودکار و تبدیل هوشمند به فرمت پرسرعت WebP
+              </p>
             </>
           )}
         </div>
@@ -175,8 +202,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
       />
 
-      {error && <p className="text-[11px] font-medium text-red-600 mt-1">{error}</p>}
-      {helperText && !error && <p className="text-[11px] text-slate-500">{helperText}</p>}
+      {error && <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400 mt-1">{error}</p>}
+      {helperText && !error && <p className="text-[11px] text-neutral-500">{helperText}</p>}
     </div>
   );
 };

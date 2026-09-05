@@ -12,6 +12,7 @@ import { Product, Category, Collection, Season, SizeGuideTemplate, Color, Size, 
 import { toPersianDigits, formatDate, normalizeId } from '../../utils/formatters';
 import { ProductEditView } from './ProductEditView';
 import { ProductVariantsModal } from './ProductVariantsModal';
+import { ProductImage } from '../../components/ui/ProductImage';
 import { directusClient } from '../../api/directus';
 import { confirmAction } from '../../utils/confirm';
 import { Plus, Search, Trash2, Edit, Layers, Filter, X, RefreshCw } from 'lucide-react';
@@ -184,17 +185,12 @@ export const ProductsView: React.FC = () => {
       header: 'نام محصول / کالا',
       render: (p) => (
         <div className="flex items-center gap-3">
-          {p.main_image ? (
-            <img
-              src={directusClient.getAssetUrl(p.main_image)}
-              alt={p.title}
-              className="w-9 h-9 object-cover rounded-md border border-neutral-200 shrink-0"
-            />
-          ) : (
-            <div className="w-9 h-9 bg-neutral-900 text-white rounded-md flex items-center justify-center font-bold text-xs shrink-0">
-              {p.title[0]}
-            </div>
-          )}
+          <ProductImage
+            src={p.main_image}
+            alt={p.title}
+            fallbackText={p.title}
+            containerClassName="w-10 h-10 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shrink-0 border border-neutral-200 dark:border-neutral-700 shadow-2xs"
+          />
           <div>
             <p
               className="font-bold text-neutral-900 text-sm hover:text-blue-600 cursor-pointer transition-colors"

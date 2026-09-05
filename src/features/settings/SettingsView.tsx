@@ -129,7 +129,11 @@ export const SettingsView: React.FC = () => {
     setSyncStatusMsg(null);
     try {
       const res = await StorageSyncManager.syncLocalToCloud(storageManager.getCloudAdapter());
-      setSyncStatusMsg(`همگام‌سازی انجام شد: ${res.success} موفق، ${res.failed} ناموفق.`);
+      let msg = `همگام‌سازی انجام شد: ${res.success} رکورد داده موفق، ${res.failed} ناموفق.`;
+      if (res.mediaSynced > 0 || res.mediaFailed > 0) {
+        msg += ` (${res.mediaSynced} تصویر به فضای ابری منتقل شد)`;
+      }
+      setSyncStatusMsg(msg);
       await refreshOrganizations();
     } catch (err: any) {
       setSyncStatusMsg(`خطا در همگام‌سازی: ${err.message}`);

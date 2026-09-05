@@ -108,11 +108,17 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
         adapter.getWarehouses({ organization_id: orgId }),
       ]);
 
+      const normalizedSgList = (Array.isArray(sgList) ? sgList : []).map((sg: any) => ({
+        ...sg,
+        id: normalizeId(sg.id) || sg.id,
+        name: sg.name || sg.title || sg.template_name || `راهنمای سایز #${sg.id}`,
+      }));
+
       setBrands(bList);
       setCategories(cList);
       setCollections(colList);
       setSeasons(seaList);
-      setSizeGuides(sgList);
+      setSizeGuides(normalizedSgList);
       setColors(colorList);
       setSizes(sizeList);
       setWarehouses(whList);
@@ -130,7 +136,12 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
           setCategoryId(prod.category_id || '');
           setCollectionId(prod.collection_id || '');
           setSeasonId(prod.season_id || '');
-          setSizeGuideTemplateId(prod.size_guide_template_id || '');
+          const sgId = typeof prod.size_guide_template_id === 'number' 
+            ? prod.size_guide_template_id 
+            : (typeof prod.size_guide_template_id === 'object' && prod.size_guide_template_id !== null)
+            ? (prod.size_guide_template_id as any).id || ''
+            : normalizeId(prod.size_guide_template_id) || '';
+          setSizeGuideTemplateId(sgId);
           setMainImage(prod.main_image || '');
           setTags(prod.tags || '');
           setSort(prod.sort !== undefined ? prod.sort : 0);
@@ -686,7 +697,10 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                   onChange={(e) => setSizeGuideTemplateId(e.target.value ? Number(e.target.value) : '')}
                   options={[
                     { value: '', label: 'بدون جدول سایز' },
-                    ...sizeGuides.map((sg) => ({ value: sg.id, label: sg.name })),
+                    ...sizeGuides.map((sg: any) => ({
+                      value: sg.id,
+                      label: sg.name || sg.title || sg.template_name || `قالب شماره ${sg.id}`,
+                    })),
                   ]}
                 />
                 <Select
@@ -732,10 +746,11 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
             {/* Main Product Image Upload */}
             <div className="space-y-3 bg-slate-50 dark:bg-[#181a20] p-4 rounded-2xl border border-slate-200 dark:border-neutral-800 transition-colors">
               <ImageUpload
-                label="تصویر اصلی کاتالوگ *"
+                label="تصویر اصلی کاتالوگ"
                 value={mainImage}
                 onChange={setMainImage}
-                helperText="آپلود مستقیم در سرور ابری دایرکتوس"
+                helperText="فشرده‌سازی خودکار و ذخیره‌سازی محلی سریع با همگام‌سازی ابری"
+                productId={productId ? Number(productId) : undefined}
               />
             </div>
           </div>

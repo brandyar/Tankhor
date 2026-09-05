@@ -6,6 +6,7 @@ import { Product, ProductVariant, Color, Size, InventoryItem } from '../../types
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { ProductImage } from '../../components/ui/ProductImage';
 import { formatCurrency, toPersianDigits, normalizeId } from '../../utils/formatters';
 import { directusClient } from '../../api/directus';
 import { Shirt, Layers, Edit, CheckCircle, AlertCircle, Barcode, Tag } from 'lucide-react';
@@ -85,21 +86,16 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
     >
       <div className="space-y-5">
         {/* Header Summary */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-neutral-800/50 border border-slate-200 dark:border-neutral-700 rounded-xl">
           <div className="flex items-center gap-3">
-            {product.main_image ? (
-              <img
-                src={directusClient.getAssetUrl(product.main_image)}
-                alt={product.title}
-                className="w-12 h-12 object-cover rounded-lg border border-slate-200 shrink-0"
-              />
-            ) : (
-              <div className="w-12 h-12 bg-neutral-900 text-white rounded-lg flex items-center justify-center font-bold text-sm shrink-0">
-                {product.title[0]}
-              </div>
-            )}
+            <ProductImage
+              src={product.main_image}
+              alt={product.title}
+              fallbackText={product.title}
+              containerClassName="w-12 h-12 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shrink-0 border border-neutral-200 dark:border-neutral-700 shadow-2xs"
+            />
             <div>
-              <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+              <h4 className="font-bold text-slate-900 dark:text-neutral-100 text-sm flex items-center gap-2">
                 <span>{product.title}</span>
                 <Badge variant={product.status === 'published' ? 'success' : 'warning'}>
                   {product.status === 'published' ? 'منتشر شده' : 'پیش‌نویس'}
