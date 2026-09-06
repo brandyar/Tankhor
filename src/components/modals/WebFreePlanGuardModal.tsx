@@ -5,6 +5,8 @@ import { storageManager } from '../../storage';
 import { directusClient } from '../../api/directus';
 import { useProjectSettings } from '../../hooks/useProjectSettings';
 import { Button } from '../ui/Button';
+import { UpgradeToProModal } from './UpgradeToProModal';
+import { PaymentResultModal } from './PaymentResultModal';
 import {
   Download,
   Sparkles,
@@ -22,6 +24,7 @@ import {
   ArrowDownToLine,
   RefreshCw,
   Lock,
+  CreditCard,
 } from 'lucide-react';
 
 export const WebFreePlanGuardModal: React.FC = () => {
@@ -34,6 +37,7 @@ export const WebFreePlanGuardModal: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [showOrgSelector, setShowOrgSelector] = useState(false);
   const [downloadNote, setDownloadNote] = useState<string | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   const handleCheckPlanOnline = async () => {
     if (!activeOrganization) return;
@@ -267,17 +271,27 @@ export const WebFreePlanGuardModal: React.FC = () => {
                 </p>
               </div>
 
-              {/* Real Online Verification Action */}
-              <div className="pt-2 border-t border-blue-100">
+              {/* Upgrade Actions */}
+              <div className="pt-2 border-t border-blue-100 space-y-2">
                 <Button
                   type="button"
                   variant="primary"
+                  onClick={() => setIsUpgradeModalOpen(true)}
+                  icon={<CreditCard className="w-4 h-4" />}
+                  className="w-full justify-center text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md py-2.5 cursor-pointer"
+                >
+                  ارتقا به پلن Pro و پرداخت آنلاین
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={handleCheckPlanOnline}
                   isLoading={isChecking}
-                  icon={<RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />}
-                  className="w-full justify-center text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md py-2.5 cursor-pointer"
+                  icon={<RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin' : ''}`} />}
+                  className="w-full justify-center text-xs font-medium py-2 bg-white hover:bg-neutral-50 text-neutral-700 border-neutral-200 cursor-pointer"
                 >
-                  بررسی وضعیت اشتراک از سرور
+                  بررسی مجدد وضعیت اشتراک
                 </Button>
               </div>
             </div>
@@ -334,6 +348,15 @@ export const WebFreePlanGuardModal: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <UpgradeToProModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+      />
+
+      <PaymentResultModal
+        onRetryPayment={() => setIsUpgradeModalOpen(true)}
+      />
     </div>
   );
 };

@@ -607,6 +607,69 @@ class DirectusClient {
     return res;
   }
 
+  public async getSubscriptionPlans(): Promise<any> {
+    return await this.request('/payment/plans', { skipAuth: true });
+  }
+
+  public async requestPayment(data: {
+    organizationId: number;
+    durationMonths: number;
+    simulate?: boolean;
+    mobile?: string;
+  }): Promise<{
+    success: boolean;
+    trackId?: number;
+    orderId?: string;
+    amountTomans?: number;
+    amountRials?: number;
+    paymentUrl: string;
+    isSimulated?: boolean;
+    canSimulate?: boolean;
+    error?: string;
+  }> {
+    return await this.request('/payment/request', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  public async testActivateSubscription(data: {
+    organizationId: number;
+    durationMonths: number;
+  }): Promise<any> {
+    const res = await this.request('/payment/test-activate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    if (res && res.activeOrganization) {
+      if (typeof window !== 'undefined') {
+        const cachedRaw = localStorage.getItem('tankhor_cached_user_profile');
+        if (cachedRaw) {
+          try {
+            const cached = JSON.parse(cachedRaw);
+            cached.activeOrganization = res.activeOrganization;
+            cached.active_organization = res.activeOrganization;
+            if (Array.isArray(res.organizations) && res.organizations.length > 0) {
+              cached.organizations = res.organizations;
+            }
+            localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(cached));
+          } catch {}
+        }
+      }
+    }
+    return res;
+  }
+
+  public async getSubscriptions(organizationId?: number): Promise<{
+    subscriptions: any[];
+    activeSubscription: any;
+    isPro: boolean;
+    remainingDays: number;
+  }> {
+    const qs = organizationId ? `?organization_id=${organizationId}` : '';
+    return await this.request(`/payment/subscriptions${qs}`);
+  }
+
   // Generic collection helpers
   public async getItems<T>(collection: string, query?: Record<string, any>): Promise<T[]> {
     let queryString = '';

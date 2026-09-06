@@ -124,16 +124,16 @@ export const BrandsView: React.FC = () => {
             <img
               src={directusClient.getAssetUrl(brand.logo)}
               alt={brand.name}
-              className="w-10 h-10 rounded-xl object-contain border border-slate-200 bg-white p-1"
+              className="w-10 h-10 rounded-xl object-contain border border-slate-200 dark:border-neutral-700 bg-white dark:bg-[#181a20] p-1"
             />
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
               <Award className="w-5 h-5" />
             </div>
           )}
           <div>
-            <p className="font-extrabold text-slate-900 text-sm">{brand.name}</p>
-            {brand.code && <p className="text-xs text-slate-400 font-mono">کد: {brand.code}</p>}
+            <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{brand.name}</p>
+            {brand.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">کد: {brand.code}</p>}
           </div>
         </div>
       ),
@@ -142,7 +142,7 @@ export const BrandsView: React.FC = () => {
       key: 'description',
       header: 'توضیحات برند',
       render: (brand) => (
-        <span className="text-xs text-slate-600 line-clamp-1 max-w-xs">{brand.description || '-'}</span>
+        <span className="text-xs text-slate-600 dark:text-neutral-300 line-clamp-1 max-w-xs">{brand.description || '-'}</span>
       ),
     },
     {
@@ -191,12 +191,12 @@ export const BrandsView: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleOpenModal(brand)}
-                icon={<Edit className="w-4 h-4 text-slate-600" />}
+                icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
               />
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
                 onClick={() => handleDelete(brand.id)}
                 icon={<Trash2 className="w-4 h-4" />}
               />
@@ -256,12 +256,12 @@ export const BrandsView: React.FC = () => {
           />
 
           <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-700">توضیحات و اصالت برند</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">توضیحات و اصالت برند</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full bg-white border border-slate-300 rounded-xl text-slate-900 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="کشور سازنده، تاریخچه یا توضیحات برند..."
             />
           </div>

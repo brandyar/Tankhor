@@ -139,12 +139,12 @@ export const LocationsView: React.FC = () => {
       header: 'نام جایگاه / قفسه',
       render: (loc) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 font-bold text-xs">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 font-bold text-xs">
             <Layers className="w-4 h-4" />
           </div>
           <div>
-            <p className="font-bold text-slate-900 text-sm">{loc.name}</p>
-            <p className="text-[11px] font-mono text-slate-400 mt-0.5">{loc.code || '-'}</p>
+            <p className="font-bold text-slate-900 dark:text-neutral-100 text-sm">{loc.name}</p>
+            <p className="text-[11px] font-mono text-slate-400 dark:text-neutral-500 mt-0.5">{loc.code || '-'}</p>
           </div>
         </div>
       ),
@@ -160,15 +160,15 @@ export const LocationsView: React.FC = () => {
       render: (loc) => {
         const wId = typeof loc.warehouse_id === 'number' ? loc.warehouse_id : loc.warehouse_id.id;
         const wh = warehouses.find((w) => w.id === wId);
-        return <span className="font-medium text-slate-700">{wh?.name || '-'}</span>;
+        return <span className="font-medium text-slate-700 dark:text-neutral-200">{wh?.name || '-'}</span>;
       },
     },
     {
       key: 'barcode',
       header: 'بارکد قفسه',
       render: (loc) => (
-        <span className="inline-flex items-center gap-1 font-mono text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded-md">
-          <BarcodeIcon className="w-3 h-3 text-slate-400" />
+        <span className="inline-flex items-center gap-1 font-mono text-xs text-slate-600 dark:text-neutral-300 bg-slate-100 dark:bg-neutral-800 px-2 py-1 rounded-md">
+          <BarcodeIcon className="w-3 h-3 text-slate-400 dark:text-neutral-500" />
           {toPersianDigits(loc.barcode || '-')}
         </span>
       ),
@@ -202,7 +202,7 @@ export const LocationsView: React.FC = () => {
             <select
               value={selectedWarehouseFilter}
               onChange={(e) => setSelectedWarehouseFilter(e.target.value ? Number(e.target.value) : '')}
-              className="w-full bg-white border border-slate-300 rounded-xl text-slate-800 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-200 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
               <option value="">همه انبارها</option>
               {warehouses.map((w, wIdx) => (

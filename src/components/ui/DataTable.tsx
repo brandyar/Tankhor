@@ -44,14 +44,14 @@ export function DataTable<T>({
   return (
     <div className="w-full overflow-x-auto rounded-xl border border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-[#13151a] shadow-vercel-sm">
       <table className="w-full text-start text-xs text-neutral-800 dark:text-neutral-200">
-        <thead className="bg-[#fafafa] dark:bg-[#181a20] border-b border-neutral-200/80 dark:border-neutral-800/80 text-neutral-500 dark:text-neutral-400 font-mono text-[11px] uppercase tracking-wider">
+        <thead className="bg-[#fafafa] dark:bg-[#181a20] border-b border-neutral-200/80 dark:border-neutral-800/80 text-neutral-700 dark:text-neutral-100 font-bold text-xs tracking-wider">
           <tr>
             {columns.map((col, colIdx) => (
-              <th key={col.key || `col_hdr_${colIdx}`} className={`px-4 py-3 text-start font-semibold ${col.className || ''}`}>
+              <th key={col.key || `col_hdr_${colIdx}`} className={`px-4 py-3 text-start font-bold ${col.className || ''}`}>
                 {col.header}
               </th>
             ))}
-            {actions && <th className="px-4 py-3 text-end font-semibold">عملیات</th>}
+            {actions && <th className="px-4 py-3 text-end font-bold">عملیات</th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">

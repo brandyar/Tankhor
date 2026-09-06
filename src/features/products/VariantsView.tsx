@@ -150,7 +150,7 @@ export const VariantsView: React.FC = () => {
       render: (v) => (
         <div>
           <p className="font-extrabold text-neutral-900 dark:text-neutral-100 font-mono text-xs tracking-wider">{v.sku}</p>
-          <p className="text-[11px] text-neutral-500 mt-0.5">{v.product_title}</p>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">{v.product_title}</p>
         </div>
       ),
     },
@@ -164,12 +164,12 @@ export const VariantsView: React.FC = () => {
           <div className="flex items-center gap-2">
             {color && (
               <span
-                className="w-3.5 h-3.5 rounded-full border border-neutral-300 shadow-2xs"
+                className="w-3.5 h-3.5 rounded-full border border-neutral-300 dark:border-neutral-600 shadow-2xs"
                 style={{ backgroundColor: color.hex || '#000000' }}
                 title={color.name}
               />
             )}
-            <span className="font-semibold text-neutral-900 text-xs">
+            <span className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs">
               {v.color_name || color?.name || '-'} / {v.size_name || size?.name || '-'}
             </span>
           </div>
@@ -180,8 +180,8 @@ export const VariantsView: React.FC = () => {
       key: 'barcode',
       header: 'بارکد کالا',
       render: (v) => (
-        <span className="inline-flex items-center gap-1 font-mono text-xs text-neutral-600 bg-neutral-100/80 border border-neutral-200/80 px-2 py-0.5 rounded-md">
-          <BarcodeIcon className="w-3 h-3 text-neutral-400" />
+        <span className="inline-flex items-center gap-1 font-mono text-xs text-neutral-600 dark:text-neutral-300 bg-neutral-100/80 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 px-2 py-0.5 rounded-md">
+          <BarcodeIcon className="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
           {toPersianDigits(v.barcode || '-')}
         </span>
       ),
@@ -190,7 +190,7 @@ export const VariantsView: React.FC = () => {
       key: 'price',
       header: 'قیمت فروش',
       render: (v) => (
-        <span className="font-extrabold text-slate-900">
+        <span className="font-extrabold text-slate-900 dark:text-neutral-100">
           {formatCurrency(v.price, activeOrganization?.currency, isPersian)}
         </span>
       ),
@@ -199,7 +199,7 @@ export const VariantsView: React.FC = () => {
       key: 'cost',
       header: 'بهای تمام شده',
       render: (v) => (
-        <span className="text-slate-500 font-medium">
+        <span className="text-slate-500 dark:text-neutral-400 font-medium">
           {formatCurrency(v.cost !== undefined ? v.cost : (v as any).cost_price, activeOrganization?.currency, isPersian)}
         </span>
       ),
@@ -304,7 +304,7 @@ export const VariantsView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">رنگ</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">رنگ</label>
               <Select
                 value={editColorId}
                 onChange={(e) => setEditColorId(e.target.value ? Number(e.target.value) : '')}
@@ -315,7 +315,7 @@ export const VariantsView: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">سایز</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">سایز</label>
               <Select
                 value={editSizeId}
                 onChange={(e) => setEditSizeId(e.target.value ? Number(e.target.value) : '')}
@@ -329,7 +329,7 @@ export const VariantsView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">قیمت فروش (تومان)</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">قیمت فروش (تومان)</label>
               <Input
                 type="number"
                 value={editPrice}
@@ -338,7 +338,7 @@ export const VariantsView: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">بهای تمام شده (تومان)</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">بهای تمام شده (تومان)</label>
               <Input
                 type="number"
                 value={editCost}
@@ -347,7 +347,7 @@ export const VariantsView: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-1">موجودی انبار (عدد)</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">موجودی انبار (عدد)</label>
               <Input
                 type="number"
                 value={editStock}
@@ -357,7 +357,7 @@ export const VariantsView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-neutral-100">
+          <div className="flex justify-end gap-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
             <Button type="button" variant="outline" size="sm" onClick={() => setIsEditModalOpen(false)}>
               انصراف
             </Button>

@@ -73,23 +73,23 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     >
       <div
         id="create-org-modal-card"
-        className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-neutral-200/90 overflow-hidden flex flex-col animate-scale-up"
+        className="w-full max-w-md bg-white dark:bg-[#13151a] rounded-2xl shadow-2xl border border-neutral-200/90 dark:border-neutral-800 overflow-hidden flex flex-col animate-scale-up"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-[#181a20]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-neutral-900 text-white flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-neutral-900 dark:bg-blue-600 text-white flex items-center justify-center">
               <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-neutral-900">ایجاد سازمان / فروشگاه جدید</h2>
-              <p className="text-[11px] text-neutral-500">تعریف یک فضای کاری مستقل برای مدیریت محصولات و انبار</p>
+              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">ایجاد سازمان / فروشگاه جدید</h2>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">تعریف یک فضای کاری مستقل برای مدیریت محصولات و انبار</p>
             </div>
           </div>
           <button
             onClick={onClose}
             disabled={isSubmitting}
-            className="p-1 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-100 transition-colors"
+            className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -98,7 +98,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         {/* Modal Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl">
+            <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/60 text-red-700 dark:text-red-300 text-xs rounded-xl">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -106,7 +106,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
 
           {/* Org Name */}
           <div>
-            <label className="block text-xs font-bold text-neutral-700 mb-1.5">
+            <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
               نام سازمان یا فروشگاه <span className="text-red-500">*</span>
             </label>
             <input
@@ -120,14 +120,14 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                 }
               }}
               placeholder="مثال: شعبه مرکزی تن‌خور، پوشاک آسمان..."
-              className="w-full px-3.5 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-400 focus:border-transparent transition-all"
             />
           </div>
 
           {/* Slug */}
           <div>
-            <label className="block text-xs font-bold text-neutral-700 mb-1.5">
-              شناسه یکتا (Slug) <span className="text-neutral-400 font-normal">(اختیاری)</span>
+            <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
+              شناسه یکتا (Slug) <span className="text-neutral-400 dark:text-neutral-500 font-normal">(اختیاری)</span>
             </label>
             <input
               type="text"
@@ -135,9 +135,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
               onChange={(e) => setSlug(e.target.value)}
               placeholder="مثال: boutique-shikpooshan"
               dir="ltr"
-              className="w-full px-3.5 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900 font-mono placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all text-start"
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 font-mono placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-400 focus:border-transparent transition-all text-start"
             />
-            <p className="text-[10px] text-neutral-400 mt-1">
+            <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">
               در صورت خالی بودن، شناسه یکتا به صورت خودکار ایجاد می‌گردد.
             </p>
           </div>
@@ -145,37 +145,37 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
           {/* Currency & Timezone Grid */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-1.5">واحد پول اصلی</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">واحد پول اصلی</label>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full px-3 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent cursor-pointer"
+                className="w-full px-3 py-2.5 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-400 focus:border-transparent cursor-pointer"
               >
-                <option value="TOMAN">تومان (TOMAN)</option>
-                <option value="IRR">ریال (IRR)</option>
-                <option value="USD">دلار (USD)</option>
-                <option value="EUR">یورو (EUR)</option>
-                <option value="AED">درهم (AED)</option>
+                <option value="TOMAN" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">تومان (TOMAN)</option>
+                <option value="IRR" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">ریال (IRR)</option>
+                <option value="USD" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">دلار (USD)</option>
+                <option value="EUR" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">یورو (EUR)</option>
+                <option value="AED" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">درهم (AED)</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-1.5">منطقه زمانی</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">منطقه زمانی</label>
               <select
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
-                className="w-full px-3 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent cursor-pointer font-mono text-[11px]"
+                className="w-full px-3 py-2.5 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-400 focus:border-transparent cursor-pointer font-mono text-[11px]"
               >
-                <option value="Asia/Tehran">Asia/Tehran (تهران)</option>
-                <option value="UTC">UTC (جهانی)</option>
-                <option value="Asia/Dubai">Asia/Dubai (دبی)</option>
-                <option value="Europe/Istanbul">Europe/Istanbul (استانبول)</option>
+                <option value="Asia/Tehran" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Asia/Tehran (تهران)</option>
+                <option value="UTC" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">UTC (جهانی)</option>
+                <option value="Asia/Dubai" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Asia/Dubai (دبی)</option>
+                <option value="Europe/Istanbul" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Europe/Istanbul (استانبول)</option>
               </select>
             </div>
           </div>
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-neutral-100">
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-neutral-100 dark:border-neutral-800">
             <Button
               type="button"
               variant="outline"

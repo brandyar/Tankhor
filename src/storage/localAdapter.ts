@@ -5,7 +5,7 @@ import {
   Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
   InventoryMovement, Customer, Order, OrderItem, Supplier, PurchaseOrder,
   PurchaseOrderItem, StockTransfer, StockTransferItem, SizeGuideTemplate,
-  SizeGuideMeasurement, SizeGuideValue
+  SizeGuideMeasurement, SizeGuideValue, Subscription
 } from '../types';
 
 export class LocalOfflineAdapter implements IStorageProvider {
@@ -1632,5 +1632,53 @@ export class LocalOfflineAdapter implements IStorageProvider {
     const updated = list.filter((v) => v.id !== id);
     this.setItem('size_guide_values', updated);
     return true;
+  }
+
+  // Subscriptions
+  async getSubscriptions(params?: QueryParams): Promise<Subscription[]> {
+    const list = this.getItem<Subscription>('subscriptions', []);
+    const orgId = this.getActiveOrgId(params);
+    let filtered = list;
+    if (orgId) {
+      filtered = filtered.filter((s) => normalizeId(s.organization_id) === orgId);
+    }
+    return filtered.sort((a, b) => new Date(b.date_created || b.start_date || 0).getTime() - new Date(a.date_created || a.start_date || 0).getTime());
+  }
+
+  async getActiveSubscription(organizationId: number): Promise<Subscription | null> {
+    const list = await this.getSubscriptions({ organization_id: organizationId });
+    const now = new Date();
+    for (const sub of list) {
+      if (sub.end_date && new Date(sub.end_date) > now) {
+        return sub;
+      }
+    }
+    return null;
+  }
+
+  async saveSubscription(sub: Partial<Subscription>): Promise<Subscription> {
+    const list = this.getItem<Subscription>('subscriptions', []);
+    const orgId = this.getActiveOrgId({ organization_id: normalizeId(sub.organization_id) });
+    if (sub.id) {
+      const idx = list.findIndex((s) => s.id === sub.id);
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], ...sub, date_updated: new Date().toISOString() };
+        this.setItem('subscriptions', list);
+        return list[idx];
+      }
+    }
+    const newSub: Subscription = {
+      id: this.generateUniqueId(list),
+      organization_id: orgId || 1,
+      start_date: sub.start_date || new Date().toISOString(),
+      end_date: sub.end_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      transaction_amount: sub.transaction_amount || '۴۹۰,۰۰۰ تومان',
+      Transaction_id: sub.Transaction_id || String(Date.now()),
+      date_created: new Date().toISOString(),
+      ...sub,
+    };
+    list.unshift(newSub);
+    this.setItem('subscriptions', list);
+    return newSub;
   }
 }

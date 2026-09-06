@@ -235,21 +235,21 @@ export const LocalBackupRestoreCard: React.FC = () => {
         <div
           className={`flex items-start gap-3 p-4 rounded-xl border text-xs font-medium animate-fade-in ${
             feedback.type === 'success'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200'
               : feedback.type === 'error'
-              ? 'bg-red-50 border-red-200 text-red-900'
-              : 'bg-blue-50 border-blue-200 text-blue-900'
+              ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/60 text-red-900 dark:text-red-200'
+              : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/60 text-blue-900 dark:text-blue-200'
           }`}
         >
-          {feedback.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />}
-          {feedback.type === 'error' && <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />}
-          {feedback.type === 'info' && <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />}
+          {feedback.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />}
+          {feedback.type === 'error' && <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />}
+          {feedback.type === 'info' && <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />}
           <div className="flex-1">
             <p>{feedback.message}</p>
           </div>
           <button
             onClick={() => setFeedback(null)}
-            className="text-neutral-400 hover:text-neutral-600 text-xs px-1"
+            className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 text-xs px-1 cursor-pointer"
           >
             ×
           </button>
@@ -375,21 +375,21 @@ export const LocalBackupRestoreCard: React.FC = () => {
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       onClick={() => handleExportCsv('products', 'محصولات')}
-                      className="px-2 py-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 font-medium text-neutral-700 dark:text-neutral-300 transition-colors flex items-center gap-1"
+                      className="px-2 py-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 font-medium text-neutral-700 dark:text-neutral-200 transition-colors flex items-center gap-1"
                     >
                       <FileSpreadsheet className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                       محصولات
                     </button>
                     <button
                       onClick={() => handleExportCsv('orders', 'فاکتورها')}
-                      className="px-2 py-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 font-medium text-neutral-700 dark:text-neutral-300 transition-colors flex items-center gap-1"
+                      className="px-2 py-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 font-medium text-neutral-700 dark:text-neutral-200 transition-colors flex items-center gap-1"
                     >
                       <FileSpreadsheet className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                       فاکتورها
                     </button>
                     <button
                       onClick={() => handleExportCsv('inventory_items', 'موجودی انبار')}
-                      className="px-2 py-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 font-medium text-neutral-700 dark:text-neutral-300 transition-colors flex items-center gap-1"
+                      className="px-2 py-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 font-medium text-neutral-700 dark:text-neutral-200 transition-colors flex items-center gap-1"
                     >
                       <FileSpreadsheet className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                       موجودی
@@ -411,7 +411,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
                     <p className="text-[11px] text-neutral-500 dark:text-neutral-400">بارگذاری فایل پشتیبان قبلی روی این سیستم یا مرورگر</p>
                   </div>
                 </div>
-                <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed mt-2">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed mt-2">
                   اگر ویندوز سیستم خود را تعویض کرده‌اید، کش مرورگر پاک شده یا می‌خواهید اطلاعات خود را از سیستم دیگری منتقل کنید، فایل پشتیبان (JSON) را بارگذاری نمایید.
                 </p>
               </div>
@@ -448,7 +448,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
                 onClick={handleSeedDemo}
                 isLoading={isSeedingDemo}
                 icon={<Sparkles className="w-3.5 h-3.5 text-amber-500" />}
-                className="text-xs font-medium hover:bg-amber-50 dark:hover:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-300"
+                className="text-xs font-medium hover:bg-amber-50 dark:hover:bg-amber-950/30 border-amber-300 dark:border-amber-800/80 text-amber-800 dark:text-amber-300"
               >
                 بارگذاری نمونه اطلاعات پوشاک
               </Button>
@@ -458,7 +458,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
                 size="sm"
                 onClick={() => setClearConfirmModalOpen(true)}
                 icon={<Trash2 className="w-3.5 h-3.5 text-red-500" />}
-                className="text-xs font-medium hover:bg-red-50 dark:hover:bg-red-950/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400"
+                className="text-xs font-medium hover:bg-red-50 dark:hover:bg-red-950/30 border-red-300 dark:border-red-800/80 text-red-700 dark:text-red-400"
               >
                 پاکسازی داده‌های محلی
               </Button>
@@ -478,11 +478,11 @@ export const LocalBackupRestoreCard: React.FC = () => {
         maxWidth="xl"
       >
         <div className="p-5 space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-blue-900 text-xs">
-            <FileJson className="w-6 h-6 text-blue-600 shrink-0" />
+          <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 rounded-xl text-blue-900 dark:text-blue-200 text-xs">
+            <FileJson className="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
             <div>
               <p className="font-bold">فایل پشتیبان تن‌خور با موفقیت خوانده و اعتبارسنجی شد.</p>
-              <p className="text-neutral-600 text-[11px] mt-0.5">
+              <p className="text-neutral-600 dark:text-neutral-300 text-[11px] mt-0.5">
                 تاریخ ایجاد فایل: {inspectedData?.metadata?.exported_at_jalali || '-'}
                 {inspectedData?.metadata?.organization?.name && ` | سازمان: ${inspectedData.metadata.organization.name}`}
               </p>
@@ -490,63 +490,63 @@ export const LocalBackupRestoreCard: React.FC = () => {
           </div>
 
           <div>
-            <h5 className="text-xs font-bold text-neutral-800 mb-2">محتوای موجود در این فایل پشتیبان:</h5>
+            <h5 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-2">محتوای موجود در این فایل پشتیبان:</h5>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
-              <div className="p-2.5 bg-neutral-50 rounded-lg border border-neutral-200/80 flex justify-between items-center">
-                <span className="text-neutral-500">کالاها:</span>
-                <span className="font-bold font-mono text-neutral-900">
+              <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] rounded-lg border border-neutral-200/80 dark:border-neutral-800 flex justify-between items-center">
+                <span className="text-neutral-600 dark:text-neutral-300">کالاها:</span>
+                <span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">
                   {toPersianDigits(inspectedData?.collections?.products || 0)}
                 </span>
               </div>
-              <div className="p-2.5 bg-neutral-50 rounded-lg border border-neutral-200/80 flex justify-between items-center">
-                <span className="text-neutral-500">تنوع کالاها:</span>
-                <span className="font-bold font-mono text-neutral-900">
+              <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] rounded-lg border border-neutral-200/80 dark:border-neutral-800 flex justify-between items-center">
+                <span className="text-neutral-600 dark:text-neutral-300">تنوع کالاها:</span>
+                <span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">
                   {toPersianDigits(inspectedData?.collections?.product_variants || 0)}
                 </span>
               </div>
-              <div className="p-2.5 bg-neutral-50 rounded-lg border border-neutral-200/80 flex justify-between items-center">
-                <span className="text-neutral-500">فاکتورها:</span>
-                <span className="font-bold font-mono text-neutral-900">
+              <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] rounded-lg border border-neutral-200/80 dark:border-neutral-800 flex justify-between items-center">
+                <span className="text-neutral-600 dark:text-neutral-300">فاکتورها:</span>
+                <span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">
                   {toPersianDigits(inspectedData?.collections?.orders || 0)}
                 </span>
               </div>
-              <div className="p-2.5 bg-neutral-50 rounded-lg border border-neutral-200/80 flex justify-between items-center">
-                <span className="text-neutral-500">انبارها:</span>
-                <span className="font-bold font-mono text-neutral-900">
+              <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] rounded-lg border border-neutral-200/80 dark:border-neutral-800 flex justify-between items-center">
+                <span className="text-neutral-600 dark:text-neutral-300">انبارها:</span>
+                <span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">
                   {toPersianDigits(inspectedData?.collections?.warehouses || 0)}
                 </span>
               </div>
-              <div className="p-2.5 bg-neutral-50 rounded-lg border border-neutral-200/80 flex justify-between items-center">
-                <span className="text-neutral-500">موجودی اقلام:</span>
-                <span className="font-bold font-mono text-neutral-900">
+              <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] rounded-lg border border-neutral-200/80 dark:border-neutral-800 flex justify-between items-center">
+                <span className="text-neutral-600 dark:text-neutral-300">موجودی اقلام:</span>
+                <span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">
                   {toPersianDigits(inspectedData?.collections?.inventory_items || 0)}
                 </span>
               </div>
-              <div className="p-2.5 bg-neutral-50 rounded-lg border border-neutral-200/80 flex justify-between items-center">
-                <span className="text-neutral-500">راهنماهای سایز:</span>
-                <span className="font-bold font-mono text-neutral-900">
+              <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] rounded-lg border border-neutral-200/80 dark:border-neutral-800 flex justify-between items-center">
+                <span className="text-neutral-600 dark:text-neutral-300">راهنماهای سایز:</span>
+                <span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">
                   {toPersianDigits(inspectedData?.collections?.size_guide_templates || 0)}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="space-y-2 pt-2 border-t border-neutral-100">
-            <label className="text-xs font-bold text-neutral-800 block">روش بازیابی را انتخاب کنید:</label>
+          <div className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+            <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 block">روش بازیابی را انتخاب کنید:</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div
                 onClick={() => setRestoreMode('replace')}
                 className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                   restoreMode === 'replace'
-                    ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-600'
-                    : 'border-neutral-200 bg-white hover:border-neutral-300'
+                    ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/30 ring-1 ring-blue-600'
+                    : 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#181a20] hover:border-neutral-300 dark:hover:border-neutral-700'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-neutral-900">جایگزینی کامل (Replace)</span>
-                  {restoreMode === 'replace' && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
+                  <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">جایگزینی کامل (Replace)</span>
+                  {restoreMode === 'replace' && <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
                 </div>
-                <p className="text-[11px] text-neutral-500 leading-relaxed">
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
                   داده‌های محلی فعلی پاک شده و محتوای فایل جایگزین آنها می‌شود (توصیه شده برای تعویض سیستم).
                 </p>
               </div>
@@ -555,22 +555,22 @@ export const LocalBackupRestoreCard: React.FC = () => {
                 onClick={() => setRestoreMode('merge')}
                 className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                   restoreMode === 'merge'
-                    ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-600'
-                    : 'border-neutral-200 bg-white hover:border-neutral-300'
+                    ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/30 ring-1 ring-blue-600'
+                    : 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#181a20] hover:border-neutral-300 dark:hover:border-neutral-700'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-neutral-900">ادغام اطلاعات (Merge)</span>
-                  {restoreMode === 'merge' && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
+                  <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">ادغام اطلاعات (Merge)</span>
+                  {restoreMode === 'merge' && <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
                 </div>
-                <p className="text-[11px] text-neutral-500 leading-relaxed">
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
                   رکوردهای جدید اضافه شده و رکوردهای موجود با شناسه یکسان به‌روزرسانی می‌گردند.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
             <Button
               variant="outline"
               size="sm"
@@ -603,17 +603,17 @@ export const LocalBackupRestoreCard: React.FC = () => {
         maxWidth="md"
       >
         <div className="p-5 space-y-4">
-          <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-100 rounded-xl text-red-900 text-xs">
-            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 rounded-xl text-red-900 dark:text-red-200 text-xs">
+            <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
             <div>
               <p className="font-bold">هشدار: این عمل تمام اطلاعات محلی شما را حذف می‌کند!</p>
-              <p className="text-neutral-600 text-[11px] mt-1 leading-relaxed">
+              <p className="text-neutral-700 dark:text-neutral-300 text-[11px] mt-1 leading-relaxed">
                 تمام کالاها، تنوع‌ها، فاکتورها، انبارها و جداول سایز ثبت‌شده در این مرورگر پاک خواهند شد. قبل از این کار حتماً یک نسخه پشتیبان دانلود نمایید.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-100">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
             <Button
               variant="outline"
               size="sm"

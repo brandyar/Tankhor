@@ -67,6 +67,8 @@ proxyRouter.get('/project-settings', async (req, res) => {
       adnroid_setup: androidUrl,
       android_setup: androidUrl,
       zarinpal_merchant: settingsData?.zarinpal_merchant || null,
+      zipal_merchant: settingsData?.zipal_merchant || settingsData?.zibal_merchant || null,
+      enamad: settingsData?.enamad || null,
       raw: settingsData || null,
     });
   } catch (err: any) {
@@ -77,6 +79,8 @@ proxyRouter.get('/project-settings', async (req, res) => {
       adnroid_setup: null,
       android_setup: null,
       zarinpal_merchant: null,
+      zipal_merchant: null,
+      enamad: null,
       raw: null,
     });
   }
@@ -176,6 +180,7 @@ const TENANT_SCOPED_COLLECTIONS = new Set([
   'size_guide_measurements',
   'size_guide_values',
   'organization_users',
+  'subscriptions',
 ]);
 
 // Generic List items with injected Tenant Scope
@@ -199,9 +204,9 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
       return res.status(403).json({ error: 'دسترسی غیرمجاز: سازمان فعال یافت نشد.' });
     }
 
-    // Check Plan Gate for Web Clients
+    // Check Plan Gate for Web Clients (exempt subscriptions and project_settings)
     const isDesktop = req.headers['x-tankhor-platform'] === 'desktop';
-    if (!isDesktop && TENANT_SCOPED_COLLECTIONS.has(collection)) {
+    if (!isDesktop && TENANT_SCOPED_COLLECTIONS.has(collection) && collection !== 'subscriptions') {
       const { activeOrganization } = await getUserOrganizations(userId, organizationId);
       if (activeOrganization && activeOrganization.plan === 'free') {
         return res.status(403).json({

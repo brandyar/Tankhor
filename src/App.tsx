@@ -33,6 +33,7 @@ import { isTauriEnvironment } from './storage';
 import { WebFreePlanGuardModal } from './components/modals/WebFreePlanGuardModal';
 import { ConfirmModalHost } from './components/ui/ConfirmModal';
 import { UpdateNotificationModal } from './components/modals/UpdateNotificationModal';
+import { PaymentResultModal } from './components/modals/PaymentResultModal';
 import { Card } from './components/ui/Card';
 import { Button } from './components/ui/Button';
 import { ShieldAlert, RefreshCw, Shirt, Home } from 'lucide-react';
@@ -206,6 +207,7 @@ const MainAppContent: React.FC = () => {
   return (
     <OrganizationProvider>
       <AuthenticatedApp />
+      <PaymentResultModal />
     </OrganizationProvider>
   );
 };

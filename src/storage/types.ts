@@ -3,7 +3,8 @@ import {
   SizeGroup, Size, Product, ProductVariant, Warehouse, WarehouseLocation,
   InventoryItem, InventoryMovement, Customer, Order, OrderItem,
   Supplier, PurchaseOrder, PurchaseOrderItem, StockTransfer, StockTransferItem,
-  SizeGuideTemplate, SizeGuideMeasurement, SizeGuideValue
+  SizeGuideTemplate, SizeGuideMeasurement, SizeGuideValue,
+  Subscription
 } from '../types';
 
 export type StorageMode = 'local_offline' | 'cloud_synced';
@@ -137,4 +138,9 @@ export interface IStorageProvider {
   getSizeGuideValues(templateId: number): Promise<SizeGuideValue[]>;
   saveSizeGuideValue(val: Partial<SizeGuideValue>): Promise<SizeGuideValue>;
   deleteSizeGuideValue(id: number): Promise<boolean>;
+
+  // Subscriptions
+  getSubscriptions?(params?: QueryParams): Promise<Subscription[]>;
+  getActiveSubscription?(organizationId: number): Promise<Subscription | null>;
+  saveSubscription?(sub: Partial<Subscription>): Promise<Subscription>;
 }

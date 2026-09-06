@@ -216,7 +216,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               <img
                 src="/logo-dark.png"
                 alt="تن‌خور"
-                className="h-7 w-auto object-contain shrink-0"
+                className="h-7 w-auto object-contain shrink-0 dark:hidden"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+              <img
+                src="/logo-light.png"
+                alt="تن‌خور"
+                className="h-7 w-auto object-contain shrink-0 hidden dark:block"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                 }}

@@ -113,11 +113,11 @@ export const SizeGroupsView: React.FC = () => {
       header: 'نام گروه سایز',
       render: (group) => (
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
             <Layers className="w-5 h-5" />
           </div>
           <div>
-            <p className="font-extrabold text-slate-900 text-sm">{group.name}</p>
+            <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{group.name}</p>
           </div>
         </div>
       ),
@@ -126,7 +126,7 @@ export const SizeGroupsView: React.FC = () => {
       key: 'category',
       header: 'دسته‌بندی مرتبط',
       render: (group) => (
-        <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
+        <span className="text-xs font-bold text-slate-700 dark:text-neutral-300 bg-slate-100 dark:bg-neutral-800 px-2.5 py-1 rounded-lg">
           {categoryLabels[group.category] || group.category}
         </span>
       ),
@@ -177,12 +177,12 @@ export const SizeGroupsView: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleOpenModal(group)}
-                icon={<Edit className="w-4 h-4 text-slate-600" />}
+                icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
               />
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
                 onClick={() => handleDelete(group.id)}
                 icon={<Trash2 className="w-4 h-4" />}
               />

@@ -1141,7 +1141,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
       >
         <form onSubmit={handleCreateCustomer} className="space-y-4 pt-2">
           <div>
-            <label className="block text-xs font-bold text-[#171717] mb-1">
+            <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200 mb-1">
               نام و نام خانوادگی مشتری <span className="text-red-500">*</span>
             </label>
             <Input
@@ -1153,7 +1153,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#171717] mb-1">
+            <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200 mb-1">
               شماره همراه / تلفن
             </label>
             <Input
@@ -1163,7 +1163,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-[#ebebeb]">
+          <div className="flex justify-end gap-2 pt-3 border-t border-[#ebebeb] dark:border-neutral-800">
             <Button variant="outline" type="button" onClick={() => setIsAddCustomerModalOpen(false)}>
               انصراف
             </Button>
@@ -1184,27 +1184,27 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
           maxWidth="max-w-lg"
         >
           <div className="space-y-4 text-xs font-sans pt-1">
-            <div className="p-4 bg-emerald-50 border border-emerald-200/80 rounded-xl text-emerald-900 flex items-center justify-between gap-3">
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl text-emerald-900 dark:text-emerald-200 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
                 <div>
                   <p className="font-bold text-sm">فروش با موفقیت در سیستم ثبت گردید</p>
-                  <p className="text-[11px] text-emerald-800 mt-0.5">موجودی انبار به‌صورت خودکار بروزرسانی شد.</p>
+                  <p className="text-[11px] text-emerald-800 dark:text-emerald-300 mt-0.5">موجودی انبار به‌صورت خودکار بروزرسانی شد.</p>
                 </div>
               </div>
             </div>
 
             {/* Receipt Format Switcher */}
             <div className="space-y-2">
-              <label className="block font-bold text-[#171717]">انتخاب قالب چاپ فاکتور:</label>
+              <label className="block font-bold text-[#171717] dark:text-neutral-200">انتخاب قالب چاپ فاکتور:</label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setReceiptType('standard')}
                   className={`p-3 rounded-xl border text-start transition-all ${
                     receiptType === 'standard'
-                      ? 'bg-[#171717] text-white border-[#171717] shadow-xs'
-                      : 'bg-[#fafafa] text-[#4d4d4d] border-[#ebebeb] hover:border-[#a1a1a1]'
+                      ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
+                      : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
                   }`}
                 >
                   <FileText className="w-5 h-5 mb-1 text-indigo-400" />
@@ -1217,8 +1217,8 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   onClick={() => setReceiptType('thermal')}
                   className={`p-3 rounded-xl border text-start transition-all ${
                     receiptType === 'thermal'
-                      ? 'bg-[#171717] text-white border-[#171717] shadow-xs'
-                      : 'bg-[#fafafa] text-[#4d4d4d] border-[#ebebeb] hover:border-[#a1a1a1]'
+                      ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
+                      : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
                   }`}
                 >
                   <Receipt className="w-5 h-5 mb-1 text-emerald-400" />
@@ -1229,23 +1229,23 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             </div>
 
             {/* Financial Overview */}
-            <div className="p-3 bg-[#fafafa] border border-[#ebebeb] rounded-xl space-y-1.5 font-mono text-xs">
+            <div className="p-3 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-800 rounded-xl space-y-1.5 font-mono text-xs">
               <div className="flex justify-between">
-                <span className="text-[#888888]">شماره سفارش:</span>
-                <span className="font-bold text-[#171717]">{lastSavedOrder.order.order_number}</span>
+                <span className="text-[#888888] dark:text-neutral-400">شماره سفارش:</span>
+                <span className="font-bold text-[#171717] dark:text-neutral-100">{lastSavedOrder.order.order_number}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#888888]">مشتری:</span>
-                <span className="text-[#171717]">{lastSavedOrder.customerName}</span>
+                <span className="text-[#888888] dark:text-neutral-400">مشتری:</span>
+                <span className="text-[#171717] dark:text-neutral-100">{lastSavedOrder.customerName}</span>
               </div>
-              <div className="flex justify-between font-bold pt-1 border-t border-[#ebebeb]">
-                <span className="text-[#171717]">مبلغ فاکتور:</span>
-                <span className="text-emerald-700">{formatCurrency(lastSavedOrder.order.total, 'TOMAN', isPersian)}</span>
+              <div className="flex justify-between font-bold pt-1 border-t border-[#ebebeb] dark:border-neutral-800">
+                <span className="text-[#171717] dark:text-neutral-100">مبلغ فاکتور:</span>
+                <span className="text-emerald-700 dark:text-emerald-400">{formatCurrency(lastSavedOrder.order.total, 'TOMAN', isPersian)}</span>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-[#ebebeb]">
+            <div className="flex items-center justify-between pt-3 border-t border-[#ebebeb] dark:border-neutral-800">
               <Button variant="outline" onClick={() => setIsReceiptModalOpen(false)}>
                 بستن و ثبت سفارش بعدی
               </Button>

@@ -134,12 +134,12 @@ export const SizesView: React.FC = () => {
       header: 'عنوان سایز',
       render: (size) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs">
-            <Tag className="w-4 h-4 text-indigo-600" />
+          <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-neutral-300 flex items-center justify-center font-bold text-xs">
+            <Tag className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
           </div>
           <div>
-            <p className="font-extrabold text-slate-900 text-sm">{size.name}</p>
-            {size.code && <p className="text-xs text-slate-400 font-mono">کد: {size.code}</p>}
+            <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{size.name}</p>
+            {size.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">کد: {size.code}</p>}
           </div>
         </div>
       ),
@@ -151,7 +151,7 @@ export const SizesView: React.FC = () => {
         const sgId = typeof size.size_group_id === 'number' ? size.size_group_id : size.size_group_id?.id;
         const group = sizeGroups.find((g) => g.id === sgId);
         return (
-          <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">
+          <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-2.5 py-1 rounded-lg border border-indigo-100 dark:border-indigo-900/50">
             {group?.name || '-'}
           </span>
         );
@@ -161,7 +161,7 @@ export const SizesView: React.FC = () => {
       key: 'sort',
       header: 'ترتیب نمایش',
       render: (size) => (
-        <span className="font-mono text-xs font-bold text-slate-600">
+        <span className="font-mono text-xs font-bold text-slate-600 dark:text-neutral-300">
           {toPersianDigits(size.sort || 0)}
         </span>
       ),
@@ -223,12 +223,12 @@ export const SizesView: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleOpenModal(size)}
-                icon={<Edit className="w-4 h-4 text-slate-600" />}
+                icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
               />
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
                 onClick={() => handleDelete(size.id)}
                 icon={<Trash2 className="w-4 h-4" />}
               />

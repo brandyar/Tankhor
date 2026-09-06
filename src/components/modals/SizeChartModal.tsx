@@ -88,7 +88,7 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
     >
       <div
         id="size-chart-printable-card"
-        className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col animate-scale-up print:shadow-none print:border-none print:rounded-none"
+        className="w-full max-w-2xl bg-white dark:bg-[#13151a] rounded-3xl shadow-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden flex flex-col animate-scale-up print:shadow-none print:border-none print:rounded-none"
       >
         {/* Header Ribbon */}
         <div className="relative bg-gradient-to-r from-neutral-900 via-neutral-800 to-indigo-950 text-white p-6 print:bg-none print:text-black print:p-2">
@@ -121,10 +121,10 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
         {/* Content Body */}
         <div className="p-6 space-y-5 print:p-2">
           {/* Visual Matrix Table */}
-          <div className="overflow-x-auto custom-scrollbar border border-neutral-200 rounded-2xl print:border-neutral-400">
+          <div className="overflow-x-auto custom-scrollbar border border-neutral-200 dark:border-neutral-800 rounded-2xl print:border-neutral-400">
             <table className="w-full text-right text-xs">
               <thead>
-                <tr className="bg-neutral-100 border-b border-neutral-200 text-neutral-800 font-bold">
+                <tr className="bg-neutral-100 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 font-bold">
                   <th className="p-3.5 text-center font-bold">سایز</th>
                   {measurements.map((m) => (
                     <th key={m.id} className="p-3.5 text-center font-bold">
@@ -136,24 +136,24 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100 bg-white">
+              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800 bg-white dark:bg-[#181a20]">
                 {displaySizes.map((sz) => (
-                  <tr key={sz.id} className="hover:bg-neutral-50/80 transition-colors">
-                    <td className="p-3 text-center font-bold text-neutral-900 bg-neutral-50/50">
-                      <span className="px-2.5 py-1 bg-neutral-900 text-white rounded-lg font-mono text-xs font-black shadow-2xs">
+                  <tr key={sz.id} className="hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40 transition-colors">
+                    <td className="p-3 text-center font-bold text-neutral-900 dark:text-neutral-100 bg-neutral-50/50 dark:bg-neutral-900/50">
+                      <span className="px-2.5 py-1 bg-neutral-900 dark:bg-neutral-800 text-white rounded-lg font-mono text-xs font-black shadow-2xs">
                         {sz.name}
                       </span>
                     </td>
                     {measurements.map((m) => {
                       const val = matrixMap[`${sz.id}_${m.id}`];
                       return (
-                        <td key={m.id} className="p-3 text-center font-mono text-xs font-bold text-neutral-800">
+                        <td key={m.id} className="p-3 text-center font-mono text-xs font-bold text-neutral-800 dark:text-neutral-200">
                           {val ? (
-                            <span className="bg-indigo-50/70 text-indigo-950 px-2 py-0.5 rounded border border-indigo-100/80">
+                            <span className="bg-indigo-50/70 dark:bg-indigo-950/60 text-indigo-950 dark:text-indigo-200 px-2 py-0.5 rounded border border-indigo-100/80 dark:border-indigo-800/60">
                               {val}
                             </span>
                           ) : (
-                            <span className="text-neutral-300">-</span>
+                            <span className="text-neutral-300 dark:text-neutral-600">-</span>
                           )}
                         </td>
                       );
@@ -166,7 +166,7 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
 
           {/* Description and Fitment Advice */}
           {template.description && (
-            <div className="p-4 bg-amber-50/60 border border-amber-200/80 rounded-2xl text-xs text-amber-900 flex items-start gap-2.5">
+            <div className="p-4 bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 rounded-2xl text-xs text-amber-900 dark:text-amber-300 flex items-start gap-2.5">
               <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <div>
                 <strong className="block mb-0.5 font-bold">راهنما و نکات اندازه‌گیری:</strong>
@@ -176,7 +176,7 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
           )}
 
           {/* Actions Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-neutral-100 print:hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800 print:hidden">
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"

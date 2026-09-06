@@ -20,7 +20,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
-import { formatDate, formatCurrency } from '../../utils/formatters';
+import { formatDate, formatCurrency, toPersianDigits } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
 import { printElement } from '../../utils/print';
 import {
@@ -520,21 +520,21 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
         >
           <div className="space-y-4 text-xs font-sans pt-1">
             {/* Header Meta Info */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-slate-50 dark:bg-[#181a20] rounded-xl border border-slate-200 dark:border-neutral-800">
               <div>
-                <span className="text-slate-500 text-[10px] block">خریدار / مشتری:</span>
-                <span className="font-bold text-slate-900">{selectedOrder.customer_name}</span>
+                <span className="text-slate-500 dark:text-neutral-400 text-[10px] block">خریدار / مشتری:</span>
+                <span className="font-bold text-slate-900 dark:text-neutral-100">{selectedOrder.customer_name}</span>
               </div>
               <div>
-                <span className="text-slate-500 text-[10px] block">انبار تحویل:</span>
-                <span className="font-bold text-slate-900">{selectedOrder.warehouse_name || 'انبار اصلی'}</span>
+                <span className="text-slate-500 dark:text-neutral-400 text-[10px] block">انبار تحویل:</span>
+                <span className="font-bold text-slate-900 dark:text-neutral-100">{selectedOrder.warehouse_name || 'انبار اصلی'}</span>
               </div>
               <div>
-                <span className="text-slate-500 text-[10px] block">تاریخ ثبت:</span>
-                <span className="font-mono text-slate-800">{formatDate(selectedOrder.date_created, isPersian)}</span>
+                <span className="text-slate-500 dark:text-neutral-400 text-[10px] block">تاریخ ثبت:</span>
+                <span className="font-mono text-slate-800 dark:text-neutral-200">{formatDate(selectedOrder.date_created, isPersian)}</span>
               </div>
               <div>
-                <span className="text-slate-500 text-[10px] block">وضعیت سفارش:</span>
+                <span className="text-slate-500 dark:text-neutral-400 text-[10px] block">وضعیت سفارش:</span>
                 <div className="mt-0.5">{getOrderStatusBadge(selectedOrder.status)}</div>
               </div>
             </div>
@@ -542,23 +542,23 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
             {/* List of Products / Order Items Table */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
-                  <Package className="w-4 h-4 text-indigo-600" />
+                <h3 className="font-bold text-slate-900 dark:text-neutral-100 flex items-center gap-1.5 text-xs">
+                  <Package className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                   لیست محصولات و اقلام فاکتور ({selectedOrderItems.length} قلم):
                 </h3>
               </div>
 
               {isLoadingItems ? (
-                <div className="p-8 text-center text-slate-500 text-xs">در حال دریافت لیست اقلام فاکتور...</div>
+                <div className="p-8 text-center text-slate-500 dark:text-neutral-400 text-xs">در حال دریافت لیست اقلام فاکتور...</div>
               ) : selectedOrderItems.length === 0 ? (
-                <div className="p-6 text-center text-slate-500 text-xs bg-slate-50 rounded-xl border border-slate-200">
+                <div className="p-6 text-center text-slate-500 dark:text-neutral-400 text-xs bg-slate-50 dark:bg-[#181a20] rounded-xl border border-slate-200 dark:border-neutral-800">
                   اقلام کالای این فاکتور ثبت نشده یا دریافت نگردید.
                 </div>
               ) : (
-                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                <div className="border border-slate-200 dark:border-neutral-800 rounded-xl overflow-hidden shadow-2xs">
                   <table className="w-full text-right border-collapse">
                     <thead>
-                      <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 text-[11px]">
+                      <tr className="bg-slate-100 dark:bg-[#181a20] text-slate-700 dark:text-neutral-300 font-bold border-b border-slate-200 dark:border-neutral-800 text-[11px]">
                         <th className="p-2 text-center w-10">#</th>
                         <th className="p-2">عنوان محصول و مشخصات</th>
                         <th className="p-2 text-center">تعداد</th>
@@ -567,26 +567,26 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
                         <th className="p-2 text-left">جمع کل</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200">
+                    <tbody className="divide-y divide-slate-200 dark:divide-neutral-800 bg-white dark:bg-[#13151a]">
                       {selectedOrderItems.map((item, idx) => (
-                        <tr key={`ord_item_${item.id || 'temp'}_${idx}`} className="hover:bg-slate-50 transition-colors">
-                          <td className="p-2 text-center text-slate-400 font-mono text-[11px]">{idx + 1}</td>
+                        <tr key={`ord_item_${item.id || 'temp'}_${idx}`} className="hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
+                          <td className="p-2 text-center text-slate-400 dark:text-neutral-500 font-mono text-[11px]">{idx + 1}</td>
                           <td className="p-2">
-                            <span className="font-bold text-slate-900 block leading-tight">{item.productTitle}</span>
-                            <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                            <span className="font-bold text-slate-900 dark:text-neutral-100 block leading-tight">{item.productTitle}</span>
+                            <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono mt-0.5">
                               SKU: {item.sku}
                               {item.sizeName ? ` | سایز: ${item.sizeName}` : ''}
                               {item.colorName ? ` | رنگ: ${item.colorName}` : ''}
                             </div>
                           </td>
-                          <td className="p-2 text-center font-bold font-mono text-slate-900">{item.quantity}</td>
-                          <td className="p-2 text-left font-mono text-slate-800">
+                          <td className="p-2 text-center font-bold font-mono text-slate-900 dark:text-neutral-100">{item.quantity}</td>
+                          <td className="p-2 text-left font-mono text-slate-800 dark:text-neutral-200">
                             {formatCurrency(item.unitPrice, 'TOMAN', isPersian)}
                           </td>
-                          <td className="p-2 text-left font-mono text-red-600">
+                          <td className="p-2 text-left font-mono text-red-600 dark:text-red-400">
                             {item.discount > 0 ? `- ${formatCurrency(item.discount * item.quantity, 'TOMAN', isPersian)}` : '۰'}
                           </td>
-                          <td className="p-2 text-left font-bold font-mono text-slate-900">
+                          <td className="p-2 text-left font-bold font-mono text-slate-900 dark:text-neutral-100">
                             {formatCurrency(item.total, 'TOMAN', isPersian)}
                           </td>
                         </tr>
@@ -622,16 +622,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
             </div>
 
             {/* Print Settings & Format Selector */}
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-              <label className="block font-bold text-slate-900">قالب چاپ فاکتور:</label>
+            <div className="p-3 bg-slate-50 dark:bg-[#181a20] border border-slate-200 dark:border-neutral-800 rounded-xl space-y-2">
+              <label className="block font-bold text-slate-900 dark:text-neutral-100">قالب چاپ فاکتور:</label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setReceiptType('standard')}
                   className={`p-2.5 rounded-lg border text-start transition-all flex items-center gap-2 ${
                     receiptType === 'standard'
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
-                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                      ? 'bg-slate-900 dark:bg-neutral-100 text-white dark:text-neutral-900 border-slate-900 dark:border-neutral-100 shadow-2xs'
+                      : 'bg-white dark:bg-[#13151a] text-slate-700 dark:text-neutral-300 border-slate-200 dark:border-neutral-800 hover:border-slate-300 dark:hover:border-neutral-700'
                   }`}
                 >
                   <FileText className="w-4 h-4 text-indigo-400 shrink-0" />
@@ -646,8 +646,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
                   onClick={() => setReceiptType('thermal')}
                   className={`p-2.5 rounded-lg border text-start transition-all flex items-center gap-2 ${
                     receiptType === 'thermal'
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
-                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                      ? 'bg-slate-900 dark:bg-neutral-100 text-white dark:text-neutral-900 border-slate-900 dark:border-neutral-100 shadow-2xs'
+                      : 'bg-white dark:bg-[#13151a] text-slate-700 dark:text-neutral-300 border-slate-200 dark:border-neutral-800 hover:border-slate-300 dark:hover:border-neutral-700'
                   }`}
                 >
                   <Receipt className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -673,6 +673,169 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
                 چاپ فاکتور سفارش
               </Button>
             </div>
+          </div>
+
+          {/* Printable Invoice Container (used by printElement / window.print) */}
+          <div id="printable-order-invoice" className="hidden print:block print:fixed print:inset-0 print:bg-white print:p-6 print:text-black font-sans z-[9999]">
+            {receiptType === 'thermal' ? (
+              /* 80mm POS Thermal Receipt */
+              <div className="w-[80mm] mx-auto text-xs space-y-3 font-mono leading-tight">
+                <div className="text-center border-b border-black pb-2">
+                  <h2 className="text-sm font-bold">{activeOrganization?.name || 'پلتفرم مدیریت پوشاک تن‌خور'}</h2>
+                  <p className="text-[10px]">رسید فروش صندوق POS</p>
+                  <p className="text-[10px] mt-1">شماره فاکتور: {selectedOrder.order_number}</p>
+                  <p className="text-[10px]">{formatDate(selectedOrder.date_created, isPersian)}</p>
+                </div>
+
+                <div className="text-[11px] space-y-0.5">
+                  <p>مشتری: {selectedOrder.customer_name || 'مشتری عمومی'}</p>
+                  <p>انبار خروج: {selectedOrder.warehouse_name || 'انبار اصلی'}</p>
+                </div>
+
+                <table className="w-full text-right border-y border-black py-1">
+                  <thead>
+                    <tr className="border-b border-black font-bold">
+                      <th className="py-1">شرح کالا</th>
+                      <th className="py-1 text-center">تعداد</th>
+                      <th className="py-1 text-left">مبلغ کل</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedOrderItems.map((it, idx) => (
+                      <tr key={idx} className="border-b border-gray-200">
+                        <td className="py-1">
+                          <div>{it.productTitle}</div>
+                          <div className="text-[9px] text-gray-600">
+                            {it.sizeName && `سایز: ${it.sizeName} `}
+                            {it.colorName && `رنگ: ${it.colorName}`}
+                          </div>
+                        </td>
+                        <td className="py-1 text-center">{toPersianDigits(it.quantity)}</td>
+                        <td className="py-1 text-left">{formatCurrency(it.total, 'TOMAN', isPersian)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div className="space-y-1 text-left text-xs pt-1">
+                  <div className="flex justify-between">
+                    <span>جمع اقلام:</span>
+                    <span>{formatCurrency(selectedOrder.subtotal, 'TOMAN', isPersian)}</span>
+                  </div>
+                  {selectedOrder.discount > 0 && (
+                    <div className="flex justify-between">
+                      <span>تخفیف:</span>
+                      <span>- {formatCurrency(selectedOrder.discount, 'TOMAN', isPersian)}</span>
+                    </div>
+                  )}
+                  {selectedOrder.tax > 0 && (
+                    <div className="flex justify-between">
+                      <span>مالیات:</span>
+                      <span>+ {formatCurrency(selectedOrder.tax, 'TOMAN', isPersian)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-sm pt-1 border-t border-black">
+                    <span>قابل پرداخت:</span>
+                    <span>{formatCurrency(selectedOrder.total, 'TOMAN', isPersian)}</span>
+                  </div>
+                </div>
+
+                <div className="text-center text-[9px] pt-4 border-t border-black">
+                  با تشکر از خرید شما · تن‌خور TANKHOR
+                </div>
+              </div>
+            ) : (
+              /* Standard A4 / A5 Official Sales Invoice */
+              <div className="max-w-2xl mx-auto space-y-4 text-xs font-sans">
+                <div className="flex justify-between items-center border-b-2 border-black pb-3">
+                  <div>
+                    <h1 className="text-xl font-black">فاکتور رسمی فروش کالا</h1>
+                    <p className="text-gray-600 text-xs mt-1">{activeOrganization?.name || 'پوشاک، کفش و اکسسوری تن‌خور (TANKHOR)'}</p>
+                  </div>
+                  <div className="text-left font-mono text-xs space-y-1">
+                    <p><strong>شماره فاکتور:</strong> {selectedOrder.order_number}</p>
+                    <p><strong>تاریخ:</strong> {formatDate(selectedOrder.date_created, isPersian)}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 border border-gray-300 rounded-lg">
+                  <div>
+                    <p className="font-bold text-gray-700">خریدار:</p>
+                    <p className="text-sm font-bold text-black">{selectedOrder.customer_name || 'مشتری عمومی'}</p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-700">انبار خروج کالا:</p>
+                    <p className="text-sm text-black">{selectedOrder.warehouse_name || 'انبار اصلی'}</p>
+                  </div>
+                </div>
+
+                <table className="w-full text-right border-collapse border border-gray-300">
+                  <thead>
+                    <tr className="bg-gray-100 border-b border-gray-300 font-bold">
+                      <th className="p-2 border-r border-gray-300">ردیف</th>
+                      <th className="p-2 border-r border-gray-300">نام کالا و مشخصات فنی</th>
+                      <th className="p-2 border-r border-gray-300 text-center">تعداد</th>
+                      <th className="p-2 border-r border-gray-300 text-left">قیمت واحد (تومان)</th>
+                      <th className="p-2 text-left">جمع کل (تومان)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedOrderItems.map((it, idx) => (
+                      <tr key={idx} className="border-b border-gray-200">
+                        <td className="p-2 border-r border-gray-300 text-center">{toPersianDigits(idx + 1)}</td>
+                        <td className="p-2 border-r border-gray-300">
+                          <span className="font-bold">{it.productTitle}</span>
+                          <div className="text-[10px] text-gray-500 font-mono">
+                            SKU: {it.sku} | {it.sizeName ? `سایز: ${it.sizeName}` : ''} {it.colorName ? `| رنگ: ${it.colorName}` : ''}
+                          </div>
+                        </td>
+                        <td className="p-2 border-r border-gray-300 text-center font-bold font-mono">{toPersianDigits(it.quantity)}</td>
+                        <td className="p-2 border-r border-gray-300 text-left font-mono">{formatCurrency(it.unitPrice, 'TOMAN', isPersian)}</td>
+                        <td className="p-2 text-left font-bold font-mono">{formatCurrency(it.total, 'TOMAN', isPersian)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div className="flex justify-between items-start pt-2">
+                  <div className="w-1/2 p-2 border border-gray-200 rounded text-[11px] text-gray-600 space-y-1">
+                    <p className="font-bold text-gray-800">توضیحات فاکتور:</p>
+                    <p>{selectedOrder.notes || 'سفارش ثبت شده در سیستم تن‌خور.'}</p>
+                  </div>
+                  <div className="w-1/2 border border-gray-300 rounded p-2 text-xs space-y-1">
+                    <div className="flex justify-between">
+                      <span>جمع اقلام:</span>
+                      <span>{formatCurrency(selectedOrder.subtotal, 'TOMAN', isPersian)}</span>
+                    </div>
+                    {selectedOrder.discount > 0 && (
+                      <div className="flex justify-between text-red-600">
+                        <span>تخفیف:</span>
+                        <span>- {formatCurrency(selectedOrder.discount, 'TOMAN', isPersian)}</span>
+                      </div>
+                    )}
+                    {selectedOrder.tax > 0 && (
+                      <div className="flex justify-between">
+                        <span>مالیات:</span>
+                        <span>+ {formatCurrency(selectedOrder.tax, 'TOMAN', isPersian)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold text-sm pt-2 border-t border-black">
+                      <span>مبلغ کل قابل پرداخت:</span>
+                      <span className="text-black">{formatCurrency(selectedOrder.total, 'TOMAN', isPersian)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-end pt-8 text-[11px] text-gray-500">
+                  <div className="text-center w-36 border-t border-gray-400 pt-1">
+                    امضاء و مهر فروشنده
+                  </div>
+                  <div className="text-center w-36 border-t border-gray-400 pt-1">
+                    امضاء و تحویل گیرنده
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </Modal>
       )}

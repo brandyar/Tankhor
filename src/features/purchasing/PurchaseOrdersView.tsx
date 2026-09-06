@@ -304,14 +304,14 @@ export const PurchaseOrdersView: React.FC = () => {
               header: 'شماره سفارش خرید',
               render: (po) => (
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-mono font-bold text-xs shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-mono font-bold text-xs shrink-0">
                     <Truck className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm">
+                    <span className="font-mono font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
                       {po.purchase_number}
                     </span>
-                    <div className="text-[10px] text-slate-400 font-mono">
+                    <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
                       {formatDate(po.date_created, isPersian)}
                     </div>
                   </div>
@@ -322,14 +322,14 @@ export const PurchaseOrdersView: React.FC = () => {
               key: 'supplier_id',
               header: 'تامین‌کننده',
               render: (po) => (
-                <span className="font-bold text-slate-800 text-xs">{po.supplier_name}</span>
+                <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">{po.supplier_name}</span>
               ),
             },
             {
               key: 'total',
               header: 'مبلغ کل فاکتور خرید',
               render: (po) => (
-                <span className="font-bold font-mono text-slate-900 text-xs">
+                <span className="font-bold font-mono text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm">
                   {formatCurrency(po.total, 'TOMAN', isPersian)}
                 </span>
               ),
@@ -368,7 +368,7 @@ export const PurchaseOrdersView: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-rose-600 hover:bg-rose-50"
+                className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                 onClick={() => handleDeletePO(po)}
                 icon={<Trash2 className="w-3.5 h-3.5" />}
               >
@@ -426,12 +426,12 @@ export const PurchaseOrdersView: React.FC = () => {
             />
           </div>
 
-          <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
-            <h4 className="text-xs font-bold text-slate-800">انتخاب کالا و اضافه کردن به فاکتور خرید</h4>
+          <div className="p-4 bg-slate-50 dark:bg-[#181a20] border border-slate-200/80 dark:border-neutral-800 rounded-xl space-y-3">
+            <h4 className="text-xs font-bold text-slate-900 dark:text-neutral-100">انتخاب کالا و اضافه کردن به فاکتور خرید</h4>
             
             <div className="flex flex-col sm:flex-row items-end gap-2">
               <div className="flex-1 w-full">
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">انتخاب کالا / تنوع (SKU) *</label>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 mb-1">انتخاب کالا / تنوع (SKU) *</label>
                 <select
                   value={selectedVariantId}
                   onChange={(e) => {
@@ -445,11 +445,11 @@ export const PurchaseOrdersView: React.FC = () => {
                       setItemCost(0);
                     }
                   }}
-                  className="w-full p-2.5 text-xs border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                  className="w-full p-2.5 text-xs border border-slate-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-[#13151a] text-slate-900 dark:text-neutral-100 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                 >
-                  <option value={0}>-- انتخاب کالا --</option>
+                  <option value={0} className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">-- انتخاب کالا --</option>
                   {variants.map((v, vIdx) => (
-                    <option key={`po_var_opt_${v.id}_${vIdx}`} value={v.id}>
+                    <option key={`po_var_opt_${v.id}_${vIdx}`} value={v.id} className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">
                       {getVariantLabel(v)}
                     </option>
                   ))}
@@ -488,31 +488,31 @@ export const PurchaseOrdersView: React.FC = () => {
 
             {/* List of Added Order Items */}
             {items.length === 0 ? (
-              <div className="text-center py-6 border border-dashed border-slate-200 rounded-lg bg-white text-slate-400 text-xs">
+              <div className="text-center py-6 border border-dashed border-slate-200 dark:border-neutral-800 rounded-lg bg-white dark:bg-[#13151a] text-slate-500 dark:text-neutral-400 text-xs">
                 هیچ کالایی به سفارش خرید اضافه نشده است. کالا و تعداد را از کادر بالا انتخاب کنید.
               </div>
             ) : (
               <div className="space-y-2 pt-1">
-                <div className="divide-y divide-slate-100 bg-white border border-slate-200 rounded-lg overflow-hidden">
+                <div className="divide-y divide-slate-100 dark:divide-neutral-800 bg-white dark:bg-[#13151a] border border-slate-200 dark:border-neutral-800 rounded-lg overflow-hidden">
                   {items.map((item, idx) => {
                     const v = variants.find((varObj) => varObj.id === item.variant_id);
                     const label = v ? getVariantLabel(v) : `کالا #${item.variant_id}`;
                     return (
-                      <div key={`po_item_row_${item.variant_id}_${idx}`} className="p-2.5 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors">
+                      <div key={`po_item_row_${item.variant_id}_${idx}`} className="p-2.5 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
                         <div className="flex-1 min-w-0 pr-2">
-                          <span className="font-bold text-slate-800 block truncate">{label}</span>
-                          <span className="text-slate-500 text-[11px] font-mono">
+                          <span className="font-bold text-slate-900 dark:text-white block truncate">{label}</span>
+                          <span className="text-slate-500 dark:text-neutral-400 text-[11px] font-mono">
                             {toPersianDigits(item.quantity)} عدد × {formatCurrency(item.unit_cost, 'TOMAN', isPersian)}
                           </span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="font-bold text-slate-900 font-mono">
+                          <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">
                             {formatCurrency(item.quantity * item.unit_cost, 'TOMAN', isPersian)}
                           </span>
                           <button
                             type="button"
                             onClick={() => setItems(items.filter((_, itemIdx) => itemIdx !== idx))}
-                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                            className="p-1 text-slate-400 dark:text-neutral-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
                             title="حذف آیتم"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -523,9 +523,9 @@ export const PurchaseOrdersView: React.FC = () => {
                   })}
                 </div>
 
-                <div className="flex justify-between items-center p-3 bg-indigo-50/80 rounded-xl border border-indigo-100 text-xs font-bold text-indigo-950">
+                <div className="flex justify-between items-center p-3 bg-indigo-50/80 dark:bg-indigo-950/60 rounded-xl border border-indigo-100 dark:border-indigo-900/60 text-xs font-bold text-indigo-950 dark:text-indigo-200">
                   <span>جمع کل فاکتور سفارش خرید:</span>
-                  <span className="font-mono text-sm text-indigo-700">
+                  <span className="font-mono text-sm text-indigo-700 dark:text-indigo-300">
                     {formatCurrency(items.reduce((sum, i) => sum + i.quantity * i.unit_cost, 0), 'TOMAN', isPersian)}
                   </span>
                 </div>
@@ -534,13 +534,13 @@ export const PurchaseOrdersView: React.FC = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-700">یادداشت‌ها و توضیحات سفارش (اختیاری)</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">یادداشت‌ها و توضیحات سفارش (اختیاری)</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
               placeholder="توضیحات نحوه تسویه، زمان تحویل یا شرایط حمل..."
-              className="w-full bg-white border border-slate-300 rounded-xl text-slate-900 text-xs p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-xs p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
         </div>
@@ -554,18 +554,18 @@ export const PurchaseOrdersView: React.FC = () => {
           title={`جزییات فاکتور خرید ${selectedPO.purchase_number}`}
         >
           <div className="space-y-4 text-xs">
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div className="p-3 bg-slate-50 dark:bg-[#181a20] border border-slate-200 dark:border-neutral-800 rounded-xl space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-500">تامین‌کننده:</span>
-                <span className="font-bold text-slate-900">{selectedPO.supplier_name}</span>
+                <span className="text-slate-600 dark:text-neutral-400">تامین‌کننده:</span>
+                <span className="font-bold text-slate-900 dark:text-white">{selectedPO.supplier_name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">وضعیت:</span>
+                <span className="text-slate-600 dark:text-neutral-400">وضعیت:</span>
                 <div>{getPOStatusBadge(selectedPO.status)}</div>
               </div>
-              <div className="flex justify-between font-bold text-slate-900 pt-2 border-t border-slate-200">
+              <div className="flex justify-between font-bold text-slate-900 dark:text-neutral-100 pt-2 border-t border-slate-200 dark:border-neutral-800">
                 <span>مبلغ کل:</span>
-                <span className="font-mono text-indigo-600">
+                <span className="font-mono text-emerald-700 dark:text-emerald-400">
                   {formatCurrency(selectedPO.total, 'TOMAN', isPersian)}
                 </span>
               </div>

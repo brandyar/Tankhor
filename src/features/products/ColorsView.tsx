@@ -116,12 +116,12 @@ export const ColorsView: React.FC = () => {
       render: (color) => (
         <div className="flex items-center gap-3">
           <span
-            className="w-7 h-7 rounded-full border-2 border-slate-200 shadow-xs inline-block shrink-0"
+            className="w-7 h-7 rounded-full border-2 border-slate-200 dark:border-neutral-700 shadow-xs inline-block shrink-0"
             style={{ backgroundColor: color.hex || '#000000' }}
           />
           <div>
-            <p className="font-extrabold text-slate-900 text-sm">{color.name}</p>
-            {color.code && <p className="text-xs text-slate-400 font-mono">کد: {color.code}</p>}
+            <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{color.name}</p>
+            {color.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">کد: {color.code}</p>}
           </div>
         </div>
       ),
@@ -130,7 +130,7 @@ export const ColorsView: React.FC = () => {
       key: 'hex',
       header: 'کد هگز (HEX)',
       render: (color) => (
-        <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-md border border-slate-200">
+        <span className="font-mono text-xs font-bold text-slate-700 dark:text-neutral-300 bg-slate-100 dark:bg-neutral-800 px-2 py-1 rounded-md border border-slate-200 dark:border-neutral-700">
           {color.hex || '-'}
         </span>
       ),
@@ -181,12 +181,12 @@ export const ColorsView: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleOpenModal(color)}
-                icon={<Edit className="w-4 h-4 text-slate-600" />}
+                icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
               />
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
                 onClick={() => handleDelete(color.id)}
                 icon={<Trash2 className="w-4 h-4" />}
               />
@@ -239,13 +239,13 @@ export const ColorsView: React.FC = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-700">انتخاب کد رنگ دقیق (HEX Color)</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">انتخاب کد رنگ دقیق (HEX Color)</label>
             <div className="flex items-center gap-3">
               <input
                 type="color"
                 value={hex}
                 onChange={(e) => setHex(e.target.value)}
-                className="w-12 h-10 rounded-xl cursor-pointer border border-slate-300 p-1 bg-white"
+                className="w-12 h-10 rounded-xl cursor-pointer border border-slate-300 dark:border-neutral-700 p-1 bg-white dark:bg-[#181a20]"
               />
               <Input
                 value={hex}

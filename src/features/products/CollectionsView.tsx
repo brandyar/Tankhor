@@ -129,16 +129,16 @@ export const CollectionsView: React.FC = () => {
             <img
               src={directusClient.getAssetUrl(col.image)}
               alt={col.name}
-              className="w-10 h-10 rounded-xl object-cover border border-slate-200"
+              className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-neutral-700"
             />
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
               <Layers className="w-5 h-5" />
             </div>
           )}
           <div>
-            <p className="font-extrabold text-slate-900 text-sm">{col.name}</p>
-            <p className="text-xs text-slate-400 font-mono">{col.slug}</p>
+            <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{col.name}</p>
+            <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">{col.slug}</p>
           </div>
         </div>
       ),
@@ -147,7 +147,7 @@ export const CollectionsView: React.FC = () => {
       key: 'description',
       header: 'توضیحات',
       render: (col) => (
-        <span className="text-xs text-slate-600 line-clamp-1 max-w-xs">{col.description || '-'}</span>
+        <span className="text-xs text-slate-600 dark:text-neutral-300 line-clamp-1 max-w-xs">{col.description || '-'}</span>
       ),
     },
     {
@@ -196,12 +196,12 @@ export const CollectionsView: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleOpenModal(col)}
-                icon={<Edit className="w-4 h-4 text-slate-600" />}
+                icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
               />
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
                 onClick={() => handleDelete(col.id)}
                 icon={<Trash2 className="w-4 h-4" />}
               />
@@ -268,12 +268,12 @@ export const CollectionsView: React.FC = () => {
           />
 
           <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-700">توضیحات</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">توضیحات</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full bg-white border border-slate-300 rounded-xl text-slate-900 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="توضیحات درباره مفهوم و سبک کالکشن..."
             />
           </div>

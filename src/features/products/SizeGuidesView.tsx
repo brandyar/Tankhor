@@ -415,12 +415,12 @@ export const SizeGuidesView: React.FC = () => {
         {/* Templates Sidebar / List */}
         <div className="lg:col-span-4 space-y-4">
           <Card className="p-4 space-y-3">
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                <Ruler className="w-4 h-4 text-indigo-600" />
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-neutral-800">
+              <h3 className="font-bold text-slate-900 dark:text-neutral-100 text-sm flex items-center gap-2">
+                <Ruler className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 لیست قالب‌های راهنمای سایز
               </h3>
-              <span className="text-xs text-slate-500 font-mono font-medium">
+              <span className="text-xs text-slate-500 dark:text-neutral-400 font-mono font-medium">
                 {filteredTemplates.length} قالب
               </span>
             </div>
@@ -450,9 +450,9 @@ export const SizeGuidesView: React.FC = () => {
             {/* Template Items */}
             <div className="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar pt-1">
               {isLoading ? (
-                <div className="p-6 text-center text-slate-400 text-xs">در حال دریافت قالب‌ها...</div>
+                <div className="p-6 text-center text-slate-400 dark:text-neutral-500 text-xs">در حال دریافت قالب‌ها...</div>
               ) : filteredTemplates.length === 0 ? (
-                <div className="p-6 text-center text-slate-400 text-xs">هیچ قالبی یافت نشد.</div>
+                <div className="p-6 text-center text-slate-400 dark:text-neutral-500 text-xs">هیچ قالبی یافت نشد.</div>
               ) : (
                 filteredTemplates.map((tpl, tplIdx) => {
                   const isSelected = selectedTemplate?.id === tpl.id;
@@ -462,12 +462,12 @@ export const SizeGuidesView: React.FC = () => {
                       onClick={() => handleSelectTemplate(tpl)}
                       className={`p-3 rounded-xl border text-right cursor-pointer transition-all duration-150 ${
                         isSelected
-                          ? 'bg-indigo-50/80 border-indigo-200 shadow-2xs'
-                          : 'bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50/60'
+                          ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 shadow-2xs'
+                          : 'bg-white dark:bg-[#181a20] border-slate-100 dark:border-neutral-800 hover:border-slate-200 dark:hover:border-neutral-700 hover:bg-slate-50/60 dark:hover:bg-neutral-800/40'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold text-slate-900 text-xs sm:text-sm truncate">
+                        <span className="font-bold text-slate-900 dark:text-neutral-100 text-xs sm:text-sm truncate">
                           {tpl.name || (tpl as any).title || 'قالب بدون عنوان'}
                         </span>
                         <div className="flex items-center gap-1 shrink-0">
@@ -477,7 +477,7 @@ export const SizeGuidesView: React.FC = () => {
                               e.stopPropagation();
                               handleOpenTemplateModal(tpl);
                             }}
-                            className="p-1 hover:bg-slate-200/60 rounded text-slate-500 hover:text-slate-800"
+                            className="p-1 hover:bg-slate-200/60 dark:hover:bg-neutral-700/60 rounded text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200"
                             title="ویرایش قالب"
                           >
                             <Edit className="w-3.5 h-3.5" />
@@ -488,7 +488,7 @@ export const SizeGuidesView: React.FC = () => {
                               e.stopPropagation();
                               handleDeleteTemplate(tpl.id);
                             }}
-                            className="p-1 hover:bg-red-50 rounded text-slate-400 hover:text-red-600"
+                            className="p-1 hover:bg-red-50 dark:hover:bg-red-950/40 rounded text-slate-400 hover:text-red-600 dark:hover:text-red-400"
                             title="حذف قالب"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -498,7 +498,7 @@ export const SizeGuidesView: React.FC = () => {
 
                       <div className="flex items-center justify-between gap-2 mt-2">
                         {getTypeBadge(tpl.type || (tpl as any).template_type)}
-                        <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                        <span className="text-[11px] font-mono text-slate-500 dark:text-neutral-400 bg-slate-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">
                           واحد: {tpl.unit || 'cm'}
                         </span>
                       </div>
@@ -513,23 +513,23 @@ export const SizeGuidesView: React.FC = () => {
         {/* Matrix & Measurements Content Area */}
         <div className="lg:col-span-8 space-y-6">
           {!selectedTemplate ? (
-            <Card className="p-12 text-center text-slate-400">
-              <Ruler className="w-12 h-12 mx-auto mb-3 text-slate-300 stroke-[1.5]" />
+            <Card className="p-12 text-center text-slate-400 dark:text-neutral-500">
+              <Ruler className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-neutral-600 stroke-[1.5]" />
               <p className="font-medium text-sm">لطفا یک قالب راهنمای سایز را برای نمایش و ویرایش ماتریس انتخاب کنید.</p>
             </Card>
           ) : (
             <>
               {/* Template Header Card */}
               <Card className="p-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-neutral-800 pb-4">
                   <div>
                     <div className="flex items-center gap-3">
-                      <h2 className="text-lg font-bold text-slate-900">{selectedTemplate.name || (selectedTemplate as any).title || 'قالب راهنمای سایز'}</h2>
+                      <h2 className="text-lg font-bold text-slate-900 dark:text-neutral-100">{selectedTemplate.name || (selectedTemplate as any).title || 'قالب راهنمای سایز'}</h2>
                       {getTypeBadge(selectedTemplate.type || (selectedTemplate as any).template_type)}
                       <Badge variant="neutral">واحد {selectedTemplate.unit || 'cm'}</Badge>
                     </div>
                     {selectedTemplate.description && (
-                      <p className="text-xs text-slate-500 mt-1">{selectedTemplate.description}</p>
+                      <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">{selectedTemplate.description}</p>
                     )}
                   </div>
 
@@ -563,7 +563,7 @@ export const SizeGuidesView: React.FC = () => {
                 </div>
 
                 {saveSuccessMsg && (
-                  <div className="mt-3 p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs flex items-center gap-2 animate-fade-in">
+                  <div className="mt-3 p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-lg text-xs flex items-center gap-2 animate-fade-in">
                     <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                     ماتریس مقادیر راهنمای سایز با موفقیت ذخیره شد.
                   </div>
@@ -573,14 +573,14 @@ export const SizeGuidesView: React.FC = () => {
               {/* Defined Measurements List */}
               <Card className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono flex items-center gap-1.5">
-                    <Sliders className="w-3.5 h-3.5 text-indigo-600" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-neutral-400 font-mono flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                     پارامترهای اندازه‌گیری تعریف شده ({measurements.length})
                   </h4>
                 </div>
 
                 {measurements.length === 0 ? (
-                  <div className="p-4 bg-amber-50/60 border border-amber-200/60 rounded-xl text-amber-800 text-xs flex items-center justify-between gap-2">
+                  <div className="p-4 bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/60 rounded-xl text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between gap-2">
                     <span>هیچ پارامتر اندازه‌ای (مانند دور سینه، قد، طول کفی و...) تعریف نشده است.</span>
                     <Button size="sm" variant="outline" onClick={() => handleOpenMeasModal()}>
                       تعریف اولین پارامتر
@@ -591,25 +591,25 @@ export const SizeGuidesView: React.FC = () => {
                     {measurements.map((m, mIdx) => (
                       <div
                         key={m.id ? `meas_badge_${m.id}_${mIdx}` : `meas_badge_idx_${mIdx}`}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200/80 text-slate-800 text-xs"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-neutral-800 border border-slate-200/80 dark:border-neutral-700 text-slate-800 dark:text-neutral-200 text-xs"
                       >
                         <span className="font-bold">{m.name}</span>
-                        {m.code && <span className="font-mono text-[10px] text-slate-500">({m.code})</span>}
-                        <span className="font-mono text-[10px] bg-white px-1.5 py-0.5 rounded border text-slate-600">
+                        {m.code && <span className="font-mono text-[10px] text-slate-500 dark:text-neutral-400">({m.code})</span>}
+                        <span className="font-mono text-[10px] bg-white dark:bg-neutral-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-neutral-700 text-slate-600 dark:text-neutral-300">
                           {m.unit}
                         </span>
-                        <div className="flex items-center gap-0.5 mr-1 pr-1 border-r border-slate-300">
+                        <div className="flex items-center gap-0.5 mr-1 pr-1 border-r border-slate-300 dark:border-neutral-700">
                           <button
                             type="button"
                             onClick={() => handleOpenMeasModal(m)}
-                            className="p-0.5 text-slate-400 hover:text-slate-700"
+                            className="p-0.5 text-slate-400 dark:text-neutral-400 hover:text-slate-700 dark:hover:text-neutral-200"
                           >
                             <Edit className="w-3 h-3" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteMeasurement(m.id)}
-                            className="p-0.5 text-slate-400 hover:text-red-600"
+                            className="p-0.5 text-slate-400 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
@@ -623,44 +623,44 @@ export const SizeGuidesView: React.FC = () => {
               {/* Interactive Matrix Grid */}
               <Card className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono flex items-center gap-1.5">
-                    <Table className="w-3.5 h-3.5 text-indigo-600" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-neutral-400 font-mono flex items-center gap-1.5">
+                    <Table className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                     ماتریس هوشمند اندازه‌ها (جدول راهنما)
                   </h4>
-                  <span className="text-[11px] text-slate-400">
+                  <span className="text-[11px] text-slate-400 dark:text-neutral-500">
                     مقادیر به سانتی‌متر / اینچ طبق واحد قالب
                   </span>
                 </div>
 
                 {measurements.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-xs">
+                  <div className="p-8 text-center text-slate-400 dark:text-neutral-500 text-xs">
                     ابتدا پارامترهای اندازه را تعریف کنید تا جدول ماتریس تشکیل شود.
                   </div>
                 ) : sizes.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-xs">
+                  <div className="p-8 text-center text-slate-400 dark:text-neutral-500 text-xs">
                     هیچ سایزی در سیستم یافت نشد. لطفا ابتدا در بخش «سایزها» سایزهای استاندارد را ایجاد کنید.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto custom-scrollbar border border-slate-200 rounded-xl">
+                  <div className="overflow-x-auto custom-scrollbar border border-slate-200 dark:border-neutral-800 rounded-xl">
                     <table className="w-full text-right text-xs">
                       <thead>
-                        <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-bold">
-                          <th className="p-3 w-32 sticky right-0 bg-slate-100 z-10">نام سایز</th>
+                        <tr className="bg-slate-100/80 dark:bg-neutral-800/80 border-b border-slate-200 dark:border-neutral-800 text-slate-700 dark:text-neutral-300 font-bold">
+                          <th className="p-3 w-32 sticky right-0 bg-slate-100 dark:bg-neutral-800 z-10">نام سایز</th>
                           {measurements.map((m, mIdx) => (
                             <th key={m.id ? `th_m_${m.id}_${mIdx}` : `th_m_idx_${mIdx}`} className="p-3 text-center min-w-[110px]">
                               <div>{m.name}</div>
-                              <div className="text-[10px] text-slate-400 font-normal font-mono">
+                              <div className="text-[10px] text-slate-400 dark:text-neutral-500 font-normal font-mono">
                                 ({m.unit})
                               </div>
                             </th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
+                      <tbody className="divide-y divide-slate-100 dark:divide-neutral-800 bg-white dark:bg-[#13151a]">
                         {sizes.map((sz, szIdx) => (
-                          <tr key={sz.id ? `tr_sz_${sz.id}_${szIdx}` : `tr_sz_idx_${szIdx}`} className="hover:bg-slate-50/60 transition-colors">
-                            <td className="p-3 font-bold text-slate-900 sticky right-0 bg-white shadow-xs z-10">
-                              <span className="px-2 py-1 bg-slate-100 rounded-md font-mono text-xs text-slate-800">
+                          <tr key={sz.id ? `tr_sz_${sz.id}_${szIdx}` : `tr_sz_idx_${szIdx}`} className="hover:bg-slate-50/60 dark:hover:bg-neutral-800/50 transition-colors">
+                            <td className="p-3 font-bold text-slate-900 dark:text-neutral-100 sticky right-0 bg-white dark:bg-[#13151a] shadow-xs z-10">
+                              <span className="px-2 py-1 bg-slate-100 dark:bg-neutral-800 rounded-md font-mono text-xs text-slate-800 dark:text-neutral-200">
                                 {sz.name}
                               </span>
                             </td>
@@ -675,7 +675,7 @@ export const SizeGuidesView: React.FC = () => {
                                     placeholder="0"
                                     value={cellValue}
                                     onChange={(e) => handleMatrixCellChange(sz.id, m.id, e.target.value)}
-                                    className="w-20 px-2 py-1 text-center font-mono text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                    className="w-20 px-2 py-1 text-center font-mono text-xs border border-slate-200 dark:border-neutral-700 bg-white dark:bg-[#181a20] text-slate-900 dark:text-neutral-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                                   />
                                 </td>
                               );
@@ -734,13 +734,13 @@ export const SizeGuidesView: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">توضیحات / راهنمای اندازه‌گیری</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">توضیحات / راهنمای اندازه‌گیری</label>
             <textarea
               rows={3}
               placeholder="توضیحاتی درباره نحوه‌ی اندازه‌گیری پارامترها..."
               value={tplDesc}
               onChange={(e) => setTplDesc(e.target.value)}
-              className="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-[#181a20] text-slate-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
             />
           </div>
 
@@ -754,7 +754,7 @@ export const SizeGuidesView: React.FC = () => {
             ]}
           />
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-neutral-800">
             <Button variant="outline" type="button" onClick={() => setIsTemplateModalOpen(false)}>
               انصراف
             </Button>
@@ -818,7 +818,7 @@ export const SizeGuidesView: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-neutral-800">
             <Button variant="outline" type="button" onClick={() => setIsMeasModalOpen(false)}>
               انصراف
             </Button>

@@ -34,6 +34,7 @@ export const BACKUP_COLLECTIONS = [
   'size_guide_templates',
   'size_guide_measurements',
   'size_guide_values',
+  'subscriptions',
 ] as const;
 
 export type BackupCollectionKey = typeof BACKUP_COLLECTIONS[number];

@@ -405,5 +405,22 @@ export interface ProjectSettings {
   macos_setup?: string | null;
   adnroid_setup?: string | null;
   android_setup?: string | null;
+  zarinpal_merchant?: string | null;
+  zipal_merchant?: string | null;
+  enamad?: string | null;
   date_updated?: string | null;
 }
+
+export interface Subscription {
+  id: number;
+  organization_id: number | Organization;
+  start_date: string;
+  end_date: string;
+  transaction_amount: string;
+  Transaction_id: string;
+  user_created?: string;
+  date_created?: string;
+  user_updated?: string;
+  date_updated?: string;
+}
+

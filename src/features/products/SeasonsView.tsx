@@ -119,12 +119,12 @@ export const SeasonsView: React.FC = () => {
       header: 'نام فصل (Season)',
       render: (season) => (
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+          <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
             <Sun className="w-5 h-5" />
           </div>
           <div>
-            <p className="font-extrabold text-slate-900 text-sm">{season.name}</p>
-            {season.code && <p className="text-xs text-slate-400 font-mono">کد: {season.code}</p>}
+            <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{season.name}</p>
+            {season.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">کد: {season.code}</p>}
           </div>
         </div>
       ),
@@ -133,10 +133,10 @@ export const SeasonsView: React.FC = () => {
       key: 'start_date',
       header: 'بازه زمانی فصل',
       render: (season) => (
-        <div className="flex items-center gap-1.5 text-xs text-slate-600 font-mono">
-          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+        <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-neutral-300 font-mono">
+          <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-500" />
           <span>{toPersianDigits(season.start_date || 'تعریف‌نشده')}</span>
-          <span className="text-slate-300">تا</span>
+          <span className="text-slate-300 dark:text-neutral-600">تا</span>
           <span>{toPersianDigits(season.end_date || 'تعریف‌نشده')}</span>
         </div>
       ),
@@ -187,12 +187,12 @@ export const SeasonsView: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleOpenModal(season)}
-                icon={<Edit className="w-4 h-4 text-slate-600" />}
+                icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
               />
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
                 onClick={() => handleDelete(season.id)}
                 icon={<Trash2 className="w-4 h-4" />}
               />

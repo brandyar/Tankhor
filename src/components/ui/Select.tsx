@@ -31,7 +31,11 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           {...props}
         >
           {options.map((opt, idx) => (
-            <option key={`${opt.value}_${idx}`} value={opt.value}>
+            <option
+              key={`${opt.value}_${idx}`}
+              value={opt.value}
+              className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100"
+            >
               {opt.label}
             </option>
           ))}

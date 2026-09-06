@@ -176,8 +176,8 @@ export const CategoriesView: React.FC = () => {
         <div
           className={`group flex items-center justify-between p-3 rounded-2xl border transition-all duration-150 ${
             depth === 0
-              ? 'bg-slate-50/80 border-slate-200/80 hover:border-slate-300'
-              : 'bg-white border-slate-100 hover:border-slate-200 hover:shadow-2xs'
+              ? 'bg-slate-50/80 dark:bg-[#181a20] border-slate-200/80 dark:border-neutral-800 hover:border-slate-300 dark:hover:border-neutral-700'
+              : 'bg-white dark:bg-[#13151a] border-slate-100 dark:border-neutral-800 hover:border-slate-200 dark:hover:border-neutral-700 hover:shadow-2xs'
           }`}
           style={{ marginRight: `${depth * 1.75}rem` }}
         >
@@ -186,10 +186,10 @@ export const CategoriesView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => toggleExpand(node.id)}
-                className="p-1 hover:bg-slate-200/60 rounded-lg text-slate-500 cursor-pointer"
+                className="p-1 hover:bg-slate-200/60 dark:hover:bg-neutral-800 rounded-lg text-slate-500 dark:text-neutral-400 cursor-pointer"
               >
                 {isExpanded ? (
-                  <ChevronDown className="w-4 h-4 text-indigo-600" />
+                  <ChevronDown className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 ) : (
                   <ChevronRight className="w-4 h-4" />
                 )}
@@ -202,14 +202,14 @@ export const CategoriesView: React.FC = () => {
               <img
                 src={directusClient.getAssetUrl(node.image)}
                 alt={node.name}
-                className="w-8 h-8 rounded-xl object-cover border border-slate-200"
+                className="w-8 h-8 rounded-xl object-cover border border-slate-200 dark:border-neutral-700"
               />
             ) : (
               <div
                 className={`w-8 h-8 rounded-xl flex items-center justify-center ${
                   depth === 0
-                    ? 'bg-indigo-100 text-indigo-600'
-                    : 'bg-slate-100 text-slate-500'
+                    ? 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
+                    : 'bg-slate-100 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400'
                 }`}
               >
                 {isExpanded && hasChildren ? (
@@ -222,11 +222,11 @@ export const CategoriesView: React.FC = () => {
 
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-900 text-sm">{node.name}</span>
-                <span className="text-[11px] font-mono text-slate-400">({node.slug})</span>
+                <span className="font-bold text-slate-900 dark:text-neutral-100 text-sm">{node.name}</span>
+                <span className="text-[11px] font-mono text-slate-400 dark:text-neutral-500">({node.slug})</span>
               </div>
               {node.description && (
-                <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{node.description}</p>
+                <p className="text-xs text-slate-500 dark:text-neutral-400 line-clamp-1 mt-0.5">{node.description}</p>
               )}
             </div>
           </div>
@@ -241,12 +241,12 @@ export const CategoriesView: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleOpenModal(node)}
-                icon={<Edit className="w-3.5 h-3.5 text-slate-600" />}
+                icon={<Edit className="w-3.5 h-3.5 text-slate-600 dark:text-neutral-300" />}
               />
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
                 onClick={() => handleDelete(node.id)}
                 icon={<Trash2 className="w-3.5 h-3.5" />}
               />
@@ -255,7 +255,7 @@ export const CategoriesView: React.FC = () => {
         </div>
 
         {hasChildren && isExpanded && (
-          <div className="space-y-1 relative pr-3 border-r-2 border-indigo-100 mr-4">
+          <div className="space-y-1 relative pr-3 border-r-2 border-indigo-100 dark:border-indigo-900/50 mr-4">
             {children.map((child, cIdx) => renderTreeNode(child, depth + 1, cIdx))}
           </div>
         )}
@@ -301,17 +301,17 @@ export const CategoriesView: React.FC = () => {
         </div>
 
         {isLoading ? (
-          <div className="py-12 text-center text-slate-400 text-sm">در حال دریافت لیست دسته‌بندی‌ها...</div>
+          <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">در حال دریافت لیست دسته‌بندی‌ها...</div>
         ) : filteredCategories ? (
           <div className="space-y-2">
             {filteredCategories.length === 0 ? (
-              <p className="py-8 text-center text-slate-400 text-sm">هیچ دسته‌بندی با این مشخصات یافت نشد.</p>
+              <p className="py-8 text-center text-slate-400 dark:text-neutral-500 text-sm">هیچ دسته‌بندی با این مشخصات یافت نشد.</p>
             ) : (
               filteredCategories.map((c, cIdx) => renderTreeNode(c, 0, cIdx))
             )}
           </div>
         ) : rootNodes.length === 0 ? (
-          <div className="py-12 text-center text-slate-400 text-sm">
+          <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
             هیچ دسته‌بندی تاکنون ثبت نشده است. از دکمه «افزودن دسته‌بندی جدید» استفاده کنید.
           </div>
         ) : (
@@ -391,12 +391,12 @@ export const CategoriesView: React.FC = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-700">توضیحات</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">توضیحات</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full bg-white border border-slate-300 rounded-xl text-slate-900 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="توضیحات تکمیلی دسته‌بندی..."
             />
           </div>

@@ -6,7 +6,7 @@ import {
   Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
   InventoryMovement, Customer, Order, OrderItem, Supplier, PurchaseOrder,
   PurchaseOrderItem, StockTransfer, StockTransferItem, SizeGuideTemplate,
-  SizeGuideMeasurement, SizeGuideValue
+  SizeGuideMeasurement, SizeGuideValue, Subscription
 } from '../types';
 
 export function isTauriEnvironment(): boolean {
@@ -46,6 +46,7 @@ export const SQLITE_COLLECTIONS = [
   'size_guide_templates',
   'size_guide_measurements',
   'size_guide_values',
+  'subscriptions',
 ] as const;
 
 export class SqliteStorageAdapter implements IStorageProvider {
@@ -1314,5 +1315,41 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
   async deleteSizeGuideValue(id: number): Promise<boolean> {
     return this.deleteItem('size_guide_values', id);
+  }
+
+  // Subscriptions
+  async getSubscriptions(params?: QueryParams): Promise<Subscription[]> {
+    const orgId = this.getActiveOrgId(params);
+    const list = await this.getItems<Subscription>('subscriptions', orgId);
+    return list.sort((a, b) => new Date(b.date_created || b.start_date || 0).getTime() - new Date(a.date_created || a.start_date || 0).getTime());
+  }
+
+  async getActiveSubscription(organizationId: number): Promise<Subscription | null> {
+    const list = await this.getSubscriptions({ organization_id: organizationId });
+    const now = new Date();
+    for (const sub of list) {
+      if (sub.end_date && new Date(sub.end_date) > now) {
+        return sub;
+      }
+    }
+    return null;
+  }
+
+  async saveSubscription(sub: Partial<Subscription>): Promise<Subscription> {
+    const list = await this.getItems<Subscription>('subscriptions');
+    const validId = typeof sub.id === 'number' && sub.id > 0 ? sub.id : this.generateUniqueId(list);
+    const orgId = this.getActiveOrgId({ organization_id: normalizeId(sub.organization_id) });
+    const saved: Subscription = {
+      organization_id: orgId || 1,
+      start_date: sub.start_date || new Date().toISOString(),
+      end_date: sub.end_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      transaction_amount: sub.transaction_amount || '۴۹۰,۰۰۰ تومان',
+      Transaction_id: sub.Transaction_id || String(Date.now()),
+      date_created: sub.date_created || new Date().toISOString(),
+      ...sub,
+      id: validId,
+    };
+    await this.saveItem('subscriptions', saved);
+    return saved;
   }
 }

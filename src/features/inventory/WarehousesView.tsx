@@ -142,12 +142,12 @@ export const WarehousesView: React.FC = () => {
       header: 'نام انبار / فروشگاه',
       render: (w) => (
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
-            {w.type === 'store' ? <Store className="w-4 h-4 text-emerald-600" /> : <WarehouseIcon className="w-4 h-4 text-indigo-600" />}
+          <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-neutral-800 flex items-center justify-center text-slate-700 dark:text-neutral-300 shrink-0">
+            {w.type === 'store' ? <Store className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <WarehouseIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
           </div>
           <div>
-            <p className="font-bold text-slate-900 text-sm">{w.name}</p>
-            <p className="text-[11px] font-mono text-slate-400 mt-0.5">{w.code || '-'}</p>
+            <p className="font-bold text-slate-900 dark:text-neutral-100 text-sm">{w.name}</p>
+            <p className="text-[11px] font-mono text-slate-400 dark:text-neutral-500 mt-0.5">{w.code || '-'}</p>
           </div>
         </div>
       ),
@@ -161,8 +161,8 @@ export const WarehousesView: React.FC = () => {
       key: 'phone',
       header: 'شماره تماس',
       render: (w) => (
-        <div className="flex items-center gap-1.5 text-slate-600 text-xs font-mono">
-          <Phone className="w-3.5 h-3.5 text-slate-400" />
+        <div className="flex items-center gap-1.5 text-slate-600 dark:text-neutral-300 text-xs font-mono">
+          <Phone className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-500" />
           <span>{toPersianDigits(w.phone || '-')}</span>
         </div>
       ),
@@ -171,8 +171,8 @@ export const WarehousesView: React.FC = () => {
       key: 'address',
       header: 'نشانی انبار',
       render: (w) => (
-        <div className="flex items-center gap-1.5 text-slate-600 text-xs truncate max-w-xs">
-          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+        <div className="flex items-center gap-1.5 text-slate-600 dark:text-neutral-300 text-xs truncate max-w-xs">
+          <MapPin className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-500 shrink-0" />
           <span className="truncate">{w.address || '-'}</span>
         </div>
       ),
@@ -305,12 +305,12 @@ export const WarehousesView: React.FC = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-700">آدرس کامل و لوکیشن انبار</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">آدرس کامل و لوکیشن انبار</label>
             <textarea
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               rows={3}
-              className="w-full bg-white border border-slate-300 rounded-xl text-slate-900 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="شهر، خیابان، پلاک، واحد..."
             />
           </div>

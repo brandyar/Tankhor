@@ -8,7 +8,7 @@ import {
   Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
   InventoryMovement, Customer, Order, OrderItem, Supplier, PurchaseOrder,
   PurchaseOrderItem, StockTransfer, StockTransferItem, SizeGuideTemplate,
-  SizeGuideMeasurement, SizeGuideValue
+  SizeGuideMeasurement, SizeGuideValue, Subscription
 } from '../types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1339,5 +1339,43 @@ export class CloudDirectusAdapter implements IStorageProvider {
   async deleteSizeGuideValue(id: number): Promise<boolean> {
     await directusClient.deleteItem('size_guide_values', id);
     return true;
+  }
+
+  // Subscriptions
+  async getSubscriptions(params?: QueryParams): Promise<Subscription[]> {
+    try {
+      const filter: any = {};
+      if (params?.organization_id) {
+        filter.organization_id = { _eq: params.organization_id };
+      }
+      return await directusClient.getItems<Subscription>('subscriptions', {
+        filter,
+        sort: '-date_created',
+      });
+    } catch {
+      return this.localAdapter.getSubscriptions(params);
+    }
+  }
+
+  async getActiveSubscription(organizationId: number): Promise<Subscription | null> {
+    try {
+      const resp = await directusClient.getSubscriptions(organizationId);
+      return resp.activeSubscription || null;
+    } catch {
+      return this.localAdapter.getActiveSubscription(organizationId);
+    }
+  }
+
+  async saveSubscription(sub: Partial<Subscription>): Promise<Subscription> {
+    try {
+      if (sub.id) {
+        return await directusClient.updateItem<Subscription>('subscriptions', sub.id, sub);
+      }
+      return await directusClient.createItem<Subscription>('subscriptions', sub);
+    } catch {
+      const saved = await this.localAdapter.saveSubscription(sub);
+      StorageSyncManager.enqueue({ action: sub.id ? 'UPDATE' : 'CREATE', collection: 'subscriptions', payload: saved });
+      return saved;
+    }
   }
 }

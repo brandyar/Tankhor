@@ -162,23 +162,23 @@ export const SettingsView: React.FC = () => {
 
       {/* Cloud Account Status Banner */}
       <Card title="وضعیت حساب و احراز هویت" subtitle="مشخصات کاربر فعال و سطح دسترسی سیستم">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50 border border-neutral-200/80">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-[#181a20] border border-neutral-200/80 dark:border-neutral-800">
           <div className="flex items-center gap-3.5">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg text-white shadow-xs ${isCloudAuthenticated ? 'bg-blue-600' : 'bg-neutral-800'}`}>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg text-white shadow-xs ${isCloudAuthenticated ? 'bg-blue-600' : 'bg-neutral-800 dark:bg-neutral-700'}`}>
               {user?.first_name ? user.first_name[0] : 'T'}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-neutral-900">
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
                   {user?.first_name} {user?.last_name}
                 </h3>
                 <Badge variant={isCloudAuthenticated ? 'info' : 'neutral'}>
                   {isCloudAuthenticated ? 'حساب ابری متصل' : 'آفلاین محلی'}
                 </Badge>
               </div>
-              <p className="text-xs text-neutral-500 font-mono mt-0.5">{user?.email}</p>
-              <p className="text-[11px] text-neutral-600 mt-1">
-                نقش سیستم: <strong className="text-neutral-900">{getUserRoleName()}</strong>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono mt-0.5">{user?.email}</p>
+              <p className="text-[11px] text-neutral-600 dark:text-neutral-400 mt-1">
+                نقش سیستم: <strong className="text-neutral-900 dark:text-neutral-100">{getUserRoleName()}</strong>
               </p>
             </div>
           </div>
@@ -198,7 +198,7 @@ export const SettingsView: React.FC = () => {
                 variant="outline"
                 onClick={() => logout()}
                 icon={<LogOut className="w-4 h-4 text-red-500" />}
-                className="text-xs font-bold text-red-600 hover:bg-red-50 border-red-200"
+                className="text-xs font-bold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 border-red-200 dark:border-red-900/60"
               >
                 خروج از حساب کاربری
               </Button>
@@ -240,47 +240,47 @@ export const SettingsView: React.FC = () => {
       >
         <div className="space-y-4">
           {!isOwner && (
-            <div className="flex items-center gap-2.5 p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl">
-              <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600" />
+            <div className="flex items-center gap-2.5 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs rounded-xl">
+              <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
               <span>
                 شما به عنوان <strong>{userRole}</strong> در این سازمان عضو هستید. ویرایش اطلاعات سازمان فقط برای <strong>مالک (Owner)</strong> مجاز است.
               </span>
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-neutral-50/70 border border-neutral-200/80">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-neutral-50/70 dark:bg-[#181a20] border border-neutral-200/80 dark:border-neutral-800">
             <div className="space-y-1">
-              <span className="text-[11px] text-neutral-500 font-medium">نام سازمان / برند</span>
-              <p className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
-                <Building2 className="w-4 h-4 text-neutral-500 shrink-0" />
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">نام سازمان / برند</span>
+              <p className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-neutral-500 dark:text-neutral-400 shrink-0" />
                 <span>{activeOrganization?.name || 'سازمان اصلی'}</span>
               </p>
             </div>
 
             <div className="space-y-1">
-              <span className="text-[11px] text-neutral-500 font-medium">شناسه یکتا (Slug)</span>
-              <p className="text-xs font-mono font-bold text-neutral-700 dir-ltr text-start">
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">شناسه یکتا (Slug)</span>
+              <p className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200 dir-ltr text-start">
                 {activeOrganization?.slug || '-'}
               </p>
             </div>
 
             <div className="space-y-1">
-              <span className="text-[11px] text-neutral-500 font-medium">واحد پول پیش‌فرض</span>
-              <p className="text-xs font-bold text-neutral-800">
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">واحد پول پیش‌فرض</span>
+              <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
                 {activeOrganization?.currency === 'TOMAN' ? 'تومان (TOMAN)' : (activeOrganization?.currency || 'TOMAN')}
               </p>
             </div>
 
             <div className="space-y-1">
-              <span className="text-[11px] text-neutral-500 font-medium">منطقه زمانی</span>
-              <p className="text-xs font-mono text-neutral-700 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-neutral-400" />
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">منطقه زمانی</span>
+              <p className="text-xs font-mono text-neutral-800 dark:text-neutral-200 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
                 <span>{activeOrganization?.timezone || 'Asia/Tehran'}</span>
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-500 pt-2 border-t border-neutral-100">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-500 dark:text-neutral-400 pt-2 border-t border-neutral-100 dark:border-neutral-800">
             <div className="flex items-center gap-2">
               <span>وضعیت سازمان:</span>
               <Badge variant={activeOrganization?.status === 'active' ? 'success' : 'neutral'}>
@@ -389,7 +389,7 @@ export const SettingsView: React.FC = () => {
           onClick={() => handleModeChange('local_offline')}
           className={`p-6 bg-white dark:bg-[#13151a] border rounded-2xl cursor-pointer transition-all ${
             mode === 'local_offline'
-              ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-md'
+              ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-md'
               : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
           }`}
         >
@@ -420,7 +420,7 @@ export const SettingsView: React.FC = () => {
           onClick={() => handleModeChange('cloud_synced')}
           className={`p-6 bg-white dark:bg-[#13151a] border rounded-2xl cursor-pointer transition-all ${
             mode === 'cloud_synced'
-              ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md'
+              ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20 dark:bg-blue-950/10 shadow-md'
               : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
           }`}
         >
@@ -501,7 +501,7 @@ export const SettingsView: React.FC = () => {
       {/* Cloud Sync Manual Trigger Card */}
       <Card title="وضعیت همگام‌سازی ابری" subtitle="ارسال تغییرات محلی به پایگاه داده ابری تن‌خور">
         <div className="space-y-4 max-w-xl">
-          <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
+          <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
             در صورت ثبت اطلاعات جدید در حالت آفلاین، با فشردن دکمه زیر اطلاعات شما با پایگاه داده همگام می‌شود.
           </p>
 

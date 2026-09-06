@@ -156,14 +156,14 @@ export const SuppliersView: React.FC = () => {
               header: 'نام شرکت / تامین‌کننده',
               render: (s) => (
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xs shrink-0">
                     <Truck className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-bold text-slate-900 text-xs sm:text-sm">{s.name}</span>
+                    <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">{s.name}</span>
                     {s.contact_name && (
-                      <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
-                        <UserCheck className="w-3 h-3" /> مسئول: {s.contact_name}
+                      <div className="text-[10px] text-slate-500 dark:text-neutral-300 flex items-center gap-1 mt-0.5">
+                        <UserCheck className="w-3 h-3 text-indigo-500 dark:text-indigo-400" /> مسئول: {s.contact_name}
                       </div>
                     )}
                   </div>
@@ -174,8 +174,8 @@ export const SuppliersView: React.FC = () => {
               key: 'phone',
               header: 'شماره تماس',
               render: (s) => (
-                <div className="flex items-center gap-1.5 font-mono text-xs text-slate-700">
-                  <Phone className="w-3.5 h-3.5 text-slate-400" />
+                <div className="flex items-center gap-1.5 font-mono text-xs font-semibold text-slate-900 dark:text-white">
+                  <Phone className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   {s.phone || '-'}
                 </div>
               ),
@@ -184,16 +184,16 @@ export const SuppliersView: React.FC = () => {
               key: 'email',
               header: 'ایمیل / آدرس',
               render: (s) => (
-                <div className="text-xs text-slate-600 truncate max-w-xs">
+                <div className="text-xs text-slate-700 dark:text-neutral-200 truncate max-w-xs">
                   {s.email && (
-                    <div className="flex items-center gap-1 font-mono text-[11px]">
-                      <Mail className="w-3 h-3 text-slate-400" />
+                    <div className="flex items-center gap-1 font-mono text-[11px] text-slate-800 dark:text-neutral-200">
+                      <Mail className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
                       {s.email}
                     </div>
                   )}
                   {s.address && (
-                    <div className="flex items-center gap-1 text-[11px] text-slate-500 truncate">
-                      <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                    <div className="flex items-center gap-1 text-[11px] text-slate-600 dark:text-neutral-300 truncate">
+                      <MapPin className="w-3 h-3 text-slate-400 dark:text-neutral-400 shrink-0" />
                       {s.address}
                     </div>
                   )}
@@ -205,7 +205,7 @@ export const SuppliersView: React.FC = () => {
               key: 'date_created',
               header: 'تاریخ ثبت',
               render: (s) => (
-                <span className="font-mono text-xs text-slate-500">
+                <span className="font-mono text-xs text-slate-600 dark:text-neutral-300">
                   {formatDate(s.date_created, isPersian)}
                 </span>
               ),
@@ -224,7 +224,7 @@ export const SuppliersView: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-rose-600 hover:bg-rose-50"
+                className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                 onClick={() => handleDeleteSupplier(s)}
                 icon={<Trash2 className="w-3.5 h-3.5" />}
               >
@@ -273,17 +273,17 @@ export const SuppliersView: React.FC = () => {
           />
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">آدرس کارخانه / دفتر</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">آدرس کارخانه / دفتر</label>
             <textarea
               rows={2}
               placeholder="استان، شهر، شهرک صنعتی..."
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-[#181a20] text-slate-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:ring-2 focus:ring-indigo-500 outline-none"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-neutral-800">
             <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>
               انصراف
             </Button>
