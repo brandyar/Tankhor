@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/vazirmatn.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
@@ -71,10 +79,10 @@ html.dark body {
 
 /* Caption Mono helper */
 .caption-mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Vazirmatn', sans-serif !important;
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   color: #888888;
 }
 
