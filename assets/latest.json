@@ -1,59 +1,59 @@
 {
-  "version": "1.0.17",
-  "notes": "بروزرسانی نسخه 1.0.17 نرم‌افزار تن‌خور (پشتیبانی کامل ویندوز، مک و اندروید)",
-  "pub_date": "2026-09-06T09:15:04.998Z",
+  "version": "1.0.18",
+  "notes": "بروزرسانی نسخه 1.0.18 نرم‌افزار تن‌خور (پشتیبانی کامل ویندوز، مک و اندروید)",
+  "pub_date": "2026-09-08T10:27:16.209Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3FGS1pPQUpRMFRkSWNqUnNSRFoyS0VYWGs0cVdab3hSWkx1RkFBV0M1Zk1BTVFnOVBaaFVxUUZyQzRoWDdXcFN1QjZzTlJvV0NYbjFEL2htem54RXdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4Njg2MDQxCWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck9RUEppWEVUM0tXZUMvSmZQZHVmZ0R2Y3ZVUDZCSlh5ekN1OWVFK2IyZ2JXUENnOURFYlFNMm85VzdSaXFmSGtEc0FRT0YzTzk2OGdHNXF4UmMwQkJRPT0K",
-      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.17/Tankhor_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3F3SDMxWThXUVZiSWs1V1N6dmU1VEl0U2Vkcm10R0wrdUdYTHhwbmVGZ0ttTktmUk9RVC9yM1hZQmZ6NGFkYUg3MFZqZEUvQUlQQ0ZQWkxWVGRYaXdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4ODYzMjE3CWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck40Q0ltK2ZGUGRqemgwckRoUFZqS3lNVzhnQ2E1Z3dBMFdMeFdFYnJVeWtpQUlCYS9mSjg3dEZ4TVhBYTB2cHJjVlZkUlhJRWJWM0FMSlYwK1lKOURnPT0K",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.18/Tankhor_universal.app.tar.gz"
     },
     "darwin-aarch64-app": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3FGS1pPQUpRMFRkSWNqUnNSRFoyS0VYWGs0cVdab3hSWkx1RkFBV0M1Zk1BTVFnOVBaaFVxUUZyQzRoWDdXcFN1QjZzTlJvV0NYbjFEL2htem54RXdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4Njg2MDQxCWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck9RUEppWEVUM0tXZUMvSmZQZHVmZ0R2Y3ZVUDZCSlh5ekN1OWVFK2IyZ2JXUENnOURFYlFNMm85VzdSaXFmSGtEc0FRT0YzTzk2OGdHNXF4UmMwQkJRPT0K",
-      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.17/Tankhor_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3F3SDMxWThXUVZiSWs1V1N6dmU1VEl0U2Vkcm10R0wrdUdYTHhwbmVGZ0ttTktmUk9RVC9yM1hZQmZ6NGFkYUg3MFZqZEUvQUlQQ0ZQWkxWVGRYaXdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4ODYzMjE3CWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck40Q0ltK2ZGUGRqemgwckRoUFZqS3lNVzhnQ2E1Z3dBMFdMeFdFYnJVeWtpQUlCYS9mSjg3dEZ4TVhBYTB2cHJjVlZkUlhJRWJWM0FMSlYwK1lKOURnPT0K",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.18/Tankhor_universal.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3FGS1pPQUpRMFRkSWNqUnNSRFoyS0VYWGs0cVdab3hSWkx1RkFBV0M1Zk1BTVFnOVBaaFVxUUZyQzRoWDdXcFN1QjZzTlJvV0NYbjFEL2htem54RXdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4Njg2MDQxCWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck9RUEppWEVUM0tXZUMvSmZQZHVmZ0R2Y3ZVUDZCSlh5ekN1OWVFK2IyZ2JXUENnOURFYlFNMm85VzdSaXFmSGtEc0FRT0YzTzk2OGdHNXF4UmMwQkJRPT0K",
-      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.17/Tankhor_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3F3SDMxWThXUVZiSWs1V1N6dmU1VEl0U2Vkcm10R0wrdUdYTHhwbmVGZ0ttTktmUk9RVC9yM1hZQmZ6NGFkYUg3MFZqZEUvQUlQQ0ZQWkxWVGRYaXdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4ODYzMjE3CWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck40Q0ltK2ZGUGRqemgwckRoUFZqS3lNVzhnQ2E1Z3dBMFdMeFdFYnJVeWtpQUlCYS9mSjg3dEZ4TVhBYTB2cHJjVlZkUlhJRWJWM0FMSlYwK1lKOURnPT0K",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.18/Tankhor_universal.app.tar.gz"
     },
     "darwin-x86_64-app": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3FGS1pPQUpRMFRkSWNqUnNSRFoyS0VYWGs0cVdab3hSWkx1RkFBV0M1Zk1BTVFnOVBaaFVxUUZyQzRoWDdXcFN1QjZzTlJvV0NYbjFEL2htem54RXdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4Njg2MDQxCWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck9RUEppWEVUM0tXZUMvSmZQZHVmZ0R2Y3ZVUDZCSlh5ekN1OWVFK2IyZ2JXUENnOURFYlFNMm85VzdSaXFmSGtEc0FRT0YzTzk2OGdHNXF4UmMwQkJRPT0K",
-      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.17/Tankhor_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3F3SDMxWThXUVZiSWs1V1N6dmU1VEl0U2Vkcm10R0wrdUdYTHhwbmVGZ0ttTktmUk9RVC9yM1hZQmZ6NGFkYUg3MFZqZEUvQUlQQ0ZQWkxWVGRYaXdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4ODYzMjE3CWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck40Q0ltK2ZGUGRqemgwckRoUFZqS3lNVzhnQ2E1Z3dBMFdMeFdFYnJVeWtpQUlCYS9mSjg3dEZ4TVhBYTB2cHJjVlZkUlhJRWJWM0FMSlYwK1lKOURnPT0K",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.18/Tankhor_universal.app.tar.gz"
     },
     "darwin-universal": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3FGS1pPQUpRMFRkSWNqUnNSRFoyS0VYWGs0cVdab3hSWkx1RkFBV0M1Zk1BTVFnOVBaaFVxUUZyQzRoWDdXcFN1QjZzTlJvV0NYbjFEL2htem54RXdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4Njg2MDQxCWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck9RUEppWEVUM0tXZUMvSmZQZHVmZ0R2Y3ZVUDZCSlh5ekN1OWVFK2IyZ2JXUENnOURFYlFNMm85VzdSaXFmSGtEc0FRT0YzTzk2OGdHNXF4UmMwQkJRPT0K",
-      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.17/Tankhor_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3F3SDMxWThXUVZiSWs1V1N6dmU1VEl0U2Vkcm10R0wrdUdYTHhwbmVGZ0ttTktmUk9RVC9yM1hZQmZ6NGFkYUg3MFZqZEUvQUlQQ0ZQWkxWVGRYaXdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4ODYzMjE3CWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck40Q0ltK2ZGUGRqemgwckRoUFZqS3lNVzhnQ2E1Z3dBMFdMeFdFYnJVeWtpQUlCYS9mSjg3dEZ4TVhBYTB2cHJjVlZkUlhJRWJWM0FMSlYwK1lKOURnPT0K",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.18/Tankhor_universal.app.tar.gz"
     },
     "darwin-universal-app": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3FGS1pPQUpRMFRkSWNqUnNSRFoyS0VYWGs0cVdab3hSWkx1RkFBV0M1Zk1BTVFnOVBaaFVxUUZyQzRoWDdXcFN1QjZzTlJvV0NYbjFEL2htem54RXdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4Njg2MDQxCWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck9RUEppWEVUM0tXZUMvSmZQZHVmZ0R2Y3ZVUDZCSlh5ekN1OWVFK2IyZ2JXUENnOURFYlFNMm85VzdSaXFmSGtEc0FRT0YzTzk2OGdHNXF4UmMwQkJRPT0K",
-      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.17/Tankhor_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3F3SDMxWThXUVZiSWs1V1N6dmU1VEl0U2Vkcm10R0wrdUdYTHhwbmVGZ0ttTktmUk9RVC9yM1hZQmZ6NGFkYUg3MFZqZEUvQUlQQ0ZQWkxWVGRYaXdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4ODYzMjE3CWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck40Q0ltK2ZGUGRqemgwckRoUFZqS3lNVzhnQ2E1Z3dBMFdMeFdFYnJVeWtpQUlCYS9mSjg3dEZ4TVhBYTB2cHJjVlZkUlhJRWJWM0FMSlYwK1lKOURnPT0K",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.18/Tankhor_universal.app.tar.gz"
     },
     "darwin-arm64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3FGS1pPQUpRMFRkSWNqUnNSRFoyS0VYWGs0cVdab3hSWkx1RkFBV0M1Zk1BTVFnOVBaaFVxUUZyQzRoWDdXcFN1QjZzTlJvV0NYbjFEL2htem54RXdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4Njg2MDQxCWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck9RUEppWEVUM0tXZUMvSmZQZHVmZ0R2Y3ZVUDZCSlh5ekN1OWVFK2IyZ2JXUENnOURFYlFNMm85VzdSaXFmSGtEc0FRT0YzTzk2OGdHNXF4UmMwQkJRPT0K",
-      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.17/Tankhor_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3F3SDMxWThXUVZiSWs1V1N6dmU1VEl0U2Vkcm10R0wrdUdYTHhwbmVGZ0ttTktmUk9RVC9yM1hZQmZ6NGFkYUg3MFZqZEUvQUlQQ0ZQWkxWVGRYaXdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4ODYzMjE3CWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck40Q0ltK2ZGUGRqemgwckRoUFZqS3lNVzhnQ2E1Z3dBMFdMeFdFYnJVeWtpQUlCYS9mSjg3dEZ4TVhBYTB2cHJjVlZkUlhJRWJWM0FMSlYwK1lKOURnPT0K",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.18/Tankhor_universal.app.tar.gz"
     },
     "darwin-arm64-app": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3FGS1pPQUpRMFRkSWNqUnNSRFoyS0VYWGs0cVdab3hSWkx1RkFBV0M1Zk1BTVFnOVBaaFVxUUZyQzRoWDdXcFN1QjZzTlJvV0NYbjFEL2htem54RXdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4Njg2MDQxCWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck9RUEppWEVUM0tXZUMvSmZQZHVmZ0R2Y3ZVUDZCSlh5ekN1OWVFK2IyZ2JXUENnOURFYlFNMm85VzdSaXFmSGtEc0FRT0YzTzk2OGdHNXF4UmMwQkJRPT0K",
-      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.17/Tankhor_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM3F3SDMxWThXUVZiSWs1V1N6dmU1VEl0U2Vkcm10R0wrdUdYTHhwbmVGZ0ttTktmUk9RVC9yM1hZQmZ6NGFkYUg3MFZqZEUvQUlQQ0ZQWkxWVGRYaXdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4ODYzMjE3CWZpbGU6VGFua2hvci5hcHAudGFyLmd6Ck40Q0ltK2ZGUGRqemgwckRoUFZqS3lNVzhnQ2E1Z3dBMFdMeFdFYnJVeWtpQUlCYS9mSjg3dEZ4TVhBYTB2cHJjVlZkUlhJRWJWM0FMSlYwK1lKOURnPT0K",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.18/Tankhor_universal.app.tar.gz"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM284clJpVno5MW1jVHdNaHNLT2ZheE9Oa2lxWWt3VXUyMG90Z2V2V1hPSjd5T1hnRFB5K1krSDdSOHpEenVZQkN6aHVxcG9pWnFIZ3lpYnRVVnhQV2dvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4Njg2MDg4CWZpbGU6VGFua2hvcl8xLjAuMTdfeDY0LXNldHVwLmV4ZQozaE9hU1l6SG51L29Kb0FGV3NCWGlFSkFUMXcraTgwK0Q5SkQ3b3ZYL09hTXNIQ3RxeWxpZUEyNUdmYkNRTWg2djNDMW1QQWZreWlPdnRDUHRSQ1hCZz09Cg==",
-      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.17/Tankhor_1.0.17_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM2t0MFQxTlQ5WGR4dThSS0xQMHUwTHY0UDc1eXl0bjF5QVJybTRGZHlzdVE2QlVyQWFyYzJBdGFZcEZ3VnhKSUFTbVAzN1FGM2pwdFdQTjB2d3JZRGdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4ODYzMTc3CWZpbGU6VGFua2hvcl8xLjAuMThfeDY0LXNldHVwLmV4ZQpBWEhZM1BmR29SUkZqT21UVTArTE95akNTK2NJcS9HcnZBbWJ3aktqZ29KU3JzRk1XY3RYYUd4TWN6QUQzdTd6TytCdE5QcHhzbVE0QlpzVHNxOEZDUT09Cg==",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.18/Tankhor_1.0.18_x64-setup.exe"
     },
     "windows-x86_64-nsis": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM284clJpVno5MW1jVHdNaHNLT2ZheE9Oa2lxWWt3VXUyMG90Z2V2V1hPSjd5T1hnRFB5K1krSDdSOHpEenVZQkN6aHVxcG9pWnFIZ3lpYnRVVnhQV2dvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4Njg2MDg4CWZpbGU6VGFua2hvcl8xLjAuMTdfeDY0LXNldHVwLmV4ZQozaE9hU1l6SG51L29Kb0FGV3NCWGlFSkFUMXcraTgwK0Q5SkQ3b3ZYL09hTXNIQ3RxeWxpZUEyNUdmYkNRTWg2djNDMW1QQWZreWlPdnRDUHRSQ1hCZz09Cg==",
-      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.17/Tankhor_1.0.17_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM2t0MFQxTlQ5WGR4dThSS0xQMHUwTHY0UDc1eXl0bjF5QVJybTRGZHlzdVE2QlVyQWFyYzJBdGFZcEZ3VnhKSUFTbVAzN1FGM2pwdFdQTjB2d3JZRGdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4ODYzMTc3CWZpbGU6VGFua2hvcl8xLjAuMThfeDY0LXNldHVwLmV4ZQpBWEhZM1BmR29SUkZqT21UVTArTE95akNTK2NJcS9HcnZBbWJ3aktqZ29KU3JzRk1XY3RYYUd4TWN6QUQzdTd6TytCdE5QcHhzbVE0QlpzVHNxOEZDUT09Cg==",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.18/Tankhor_1.0.18_x64-setup.exe"
     },
     "windows-i686": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM284clJpVno5MW1jVHdNaHNLT2ZheE9Oa2lxWWt3VXUyMG90Z2V2V1hPSjd5T1hnRFB5K1krSDdSOHpEenVZQkN6aHVxcG9pWnFIZ3lpYnRVVnhQV2dvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4Njg2MDg4CWZpbGU6VGFua2hvcl8xLjAuMTdfeDY0LXNldHVwLmV4ZQozaE9hU1l6SG51L29Kb0FGV3NCWGlFSkFUMXcraTgwK0Q5SkQ3b3ZYL09hTXNIQ3RxeWxpZUEyNUdmYkNRTWg2djNDMW1QQWZreWlPdnRDUHRSQ1hCZz09Cg==",
-      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.17/Tankhor_1.0.17_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM2t0MFQxTlQ5WGR4dThSS0xQMHUwTHY0UDc1eXl0bjF5QVJybTRGZHlzdVE2QlVyQWFyYzJBdGFZcEZ3VnhKSUFTbVAzN1FGM2pwdFdQTjB2d3JZRGdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4ODYzMTc3CWZpbGU6VGFua2hvcl8xLjAuMThfeDY0LXNldHVwLmV4ZQpBWEhZM1BmR29SUkZqT21UVTArTE95akNTK2NJcS9HcnZBbWJ3aktqZ29KU3JzRk1XY3RYYUd4TWN6QUQzdTd6TytCdE5QcHhzbVE0QlpzVHNxOEZDUT09Cg==",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.18/Tankhor_1.0.18_x64-setup.exe"
     },
     "windows-i686-nsis": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM284clJpVno5MW1jVHdNaHNLT2ZheE9Oa2lxWWt3VXUyMG90Z2V2V1hPSjd5T1hnRFB5K1krSDdSOHpEenVZQkN6aHVxcG9pWnFIZ3lpYnRVVnhQV2dvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4Njg2MDg4CWZpbGU6VGFua2hvcl8xLjAuMTdfeDY0LXNldHVwLmV4ZQozaE9hU1l6SG51L29Kb0FGV3NCWGlFSkFUMXcraTgwK0Q5SkQ3b3ZYL09hTXNIQ3RxeWxpZUEyNUdmYkNRTWg2djNDMW1QQWZreWlPdnRDUHRSQ1hCZz09Cg==",
-      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.17/Tankhor_1.0.17_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM2t0MFQxTlQ5WGR4dThSS0xQMHUwTHY0UDc1eXl0bjF5QVJybTRGZHlzdVE2QlVyQWFyYzJBdGFZcEZ3VnhKSUFTbVAzN1FGM2pwdFdQTjB2d3JZRGdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4ODYzMTc3CWZpbGU6VGFua2hvcl8xLjAuMThfeDY0LXNldHVwLmV4ZQpBWEhZM1BmR29SUkZqT21UVTArTE95akNTK2NJcS9HcnZBbWJ3aktqZ29KU3JzRk1XY3RYYUd4TWN6QUQzdTd6TytCdE5QcHhzbVE0QlpzVHNxOEZDUT09Cg==",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.18/Tankhor_1.0.18_x64-setup.exe"
     },
     "windows-x86": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM284clJpVno5MW1jVHdNaHNLT2ZheE9Oa2lxWWt3VXUyMG90Z2V2V1hPSjd5T1hnRFB5K1krSDdSOHpEenVZQkN6aHVxcG9pWnFIZ3lpYnRVVnhQV2dvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4Njg2MDg4CWZpbGU6VGFua2hvcl8xLjAuMTdfeDY0LXNldHVwLmV4ZQozaE9hU1l6SG51L29Kb0FGV3NCWGlFSkFUMXcraTgwK0Q5SkQ3b3ZYL09hTXNIQ3RxeWxpZUEyNUdmYkNRTWg2djNDMW1QQWZreWlPdnRDUHRSQ1hCZz09Cg==",
-      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.17/Tankhor_1.0.17_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSam1laGZVZDFmM2t0MFQxTlQ5WGR4dThSS0xQMHUwTHY0UDc1eXl0bjF5QVJybTRGZHlzdVE2QlVyQWFyYzJBdGFZcEZ3VnhKSUFTbVAzN1FGM2pwdFdQTjB2d3JZRGdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4ODYzMTc3CWZpbGU6VGFua2hvcl8xLjAuMThfeDY0LXNldHVwLmV4ZQpBWEhZM1BmR29SUkZqT21UVTArTE95akNTK2NJcS9HcnZBbWJ3aktqZ29KU3JzRk1XY3RYYUd4TWN6QUQzdTd6TytCdE5QcHhzbVE0QlpzVHNxOEZDUT09Cg==",
+      "url": "https://github.com/brandyar/Tankhor/releases/download/v1.0.18/Tankhor_1.0.18_x64-setup.exe"
     }
   }
 }
