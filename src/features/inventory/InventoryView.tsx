@@ -103,12 +103,12 @@ export const InventoryView: React.FC = () => {
   const columns: Column<InventoryItem>[] = [
     {
       key: 'variant_id',
-      header: 'شناسه و عنوان کالا (SKU)',
+      header: t('inventory.skuAndTitle'),
       render: (item) => {
         const vId = typeof item.variant_id === 'number' ? item.variant_id : (item.variant_id as any)?.id;
         const v = variants.find((varObj) => varObj.id === vId);
         const sku = item.sku || v?.sku || (vId ? `VAR-#${vId}` : '-');
-        const prodTitle = item.product_title || v?.product_title || 'محصول';
+        const prodTitle = item.product_title || v?.product_title || t('products.product');
         const colorName = item.color_name || v?.color_name || '-';
         const sizeName = item.size_name || v?.size_name || '-';
 
@@ -124,13 +124,13 @@ export const InventoryView: React.FC = () => {
     },
     {
       key: 'warehouse_id',
-      header: 'انبار و جایگاه',
+      header: t('inventory.warehouseAndLocation'),
       render: (item) => {
         const wId = typeof item.warehouse_id === 'number' ? item.warehouse_id : (item.warehouse_id as any)?.id;
         const locId = typeof item.location_id === 'number' ? item.location_id : (item.location_id as any)?.id;
         const wh = warehouses.find((w) => w.id === wId);
         const loc = locations.find((l) => l.id === locId);
-        const whName = item.warehouse_name || wh?.name || 'انبار مرکزی';
+        const whName = item.warehouse_name || wh?.name || t('inventory.allWarehouses');
         const locName = item.location_name || loc?.name;
 
         return (
@@ -138,7 +138,7 @@ export const InventoryView: React.FC = () => {
             <p className="font-bold text-slate-800 dark:text-neutral-100 text-xs">{whName}</p>
             {locName && locName !== '-' && (
               <p className="text-[10px] text-slate-400 dark:text-neutral-400 font-mono mt-0.5">
-                قفسه: {locName}
+                {t('inventory.location')}: {locName}
               </p>
             )}
           </div>
@@ -147,54 +147,54 @@ export const InventoryView: React.FC = () => {
     },
     {
       key: 'quantity',
-      header: 'موجودی کل کل',
+      header: t('inventory.quantityOnHand'),
       render: (item) => (
         <span className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">
-          {toPersianDigits(item.quantity)} عدد
+          {isPersian ? toPersianDigits(item.quantity) : item.quantity}
         </span>
       ),
     },
     {
       key: 'available_quantity',
-      header: 'موجودی قابل فروش',
+      header: t('inventory.quantityAvailable'),
       render: (item) => (
-        <span className="font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg text-xs">
-          {toPersianDigits(item.available_quantity ?? item.quantity)} عدد
+        <span className="font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg text-xs">
+          {isPersian ? toPersianDigits(item.available_quantity ?? item.quantity) : (item.available_quantity ?? item.quantity)}
         </span>
       ),
     },
     {
       key: 'reserved_quantity',
-      header: 'رزرو در سفارشات',
+      header: t('inventory.quantityReserved'),
       render: (item) => (
-        <span className="text-slate-500 font-medium text-xs">
-          {toPersianDigits(item.reserved_quantity || 0)} عدد
+        <span className="text-slate-500 dark:text-neutral-400 font-medium text-xs">
+          {isPersian ? toPersianDigits(item.reserved_quantity || 0) : (item.reserved_quantity || 0)}
         </span>
       ),
     },
     {
       key: 'damaged_quantity',
-      header: 'ضایعات / آسیب‌دیده',
+      header: t('inventory.reasonDamage'),
       render: (item) => (
-        <span className={`text-xs font-bold ${item.damaged_quantity > 0 ? 'text-red-600 bg-red-50 px-2 py-0.5 rounded' : 'text-slate-400'}`}>
-          {toPersianDigits(item.damaged_quantity || 0)} عدد
+        <span className={`text-xs font-bold ${item.damaged_quantity > 0 ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 px-2 py-0.5 rounded' : 'text-slate-400 dark:text-neutral-500'}`}>
+          {isPersian ? toPersianDigits(item.damaged_quantity || 0) : (item.damaged_quantity || 0)}
         </span>
       ),
     },
     {
       key: 'status_alert',
-      header: 'وضعیت هشدار',
+      header: t('inventory.stockStatus'),
       render: (item) => {
         const isLow = item.quantity <= (item.reorder_point || 5);
         const isCritical = item.quantity <= (item.safety_stock || 2);
 
         if (isCritical) {
-          return <Badge variant="danger">بحرانی / ذخیره اطمینان</Badge>;
+          return <Badge variant="danger">{t('inventory.statusOutOfStock')}</Badge>;
         }
         if (isLow) {
-          return <Badge variant="warning">نیازمند نقطه سفارش</Badge>;
+          return <Badge variant="warning">{t('inventory.statusLowStock')}</Badge>;
         }
-        return <Badge variant="success">کافی</Badge>;
+        return <Badge variant="success">{t('inventory.statusInStock')}</Badge>;
       },
     },
   ];
@@ -202,14 +202,14 @@ export const InventoryView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('navigation.inventory')}
-        subtitle="مدیریت موجودی فیزیکی انبارها، موجودی قابل فروش، رزرو سفارشات و نقطه سفارش مجدد"
+        title={t('inventory.title')}
+        subtitle={t('inventory.subtitle')}
         action={
           <Button
             onClick={() => setIsAdjustmentModalOpen(true)}
             icon={<RefreshCw className="w-4 h-4" />}
           >
-            ثبت ورود/خروج و اصلاح موجودی
+            {t('inventory.stockAdjustment')}
           </Button>
         }
       />
@@ -218,51 +218,51 @@ export const InventoryView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="hover:shadow-vercel-md transition-shadow">
           <div className="flex items-center justify-between">
-            <p className="caption-mono text-neutral-500 dark:text-neutral-400">موجودی فیزیکی کل</p>
+            <p className="caption-mono text-neutral-500 dark:text-neutral-400">{t('inventory.quantityOnHand')}</p>
             <Package className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
           <p className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-2">
-            {toPersianDigits(totalQuantity)} <span className="text-xs font-mono font-normal text-neutral-400">عدد</span>
+            {isPersian ? toPersianDigits(totalQuantity) : totalQuantity}
           </p>
         </Card>
 
         <Card className="hover:shadow-vercel-md transition-shadow">
           <div className="flex items-center justify-between">
-            <p className="caption-mono text-neutral-500 dark:text-neutral-400">موجودی قابل فروش</p>
+            <p className="caption-mono text-neutral-500 dark:text-neutral-400">{t('inventory.quantityAvailable')}</p>
             <Package className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
           <p className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-2">
-            {toPersianDigits(totalAvailable)} <span className="text-xs font-mono font-normal text-neutral-400">عدد</span>
+            {isPersian ? toPersianDigits(totalAvailable) : totalAvailable}
           </p>
         </Card>
 
         <Card className="hover:shadow-vercel-md transition-shadow">
           <div className="flex items-center justify-between">
-            <p className="caption-mono text-neutral-500 dark:text-neutral-400">رزرو سفارشات</p>
+            <p className="caption-mono text-neutral-500 dark:text-neutral-400">{t('inventory.quantityReserved')}</p>
             <RefreshCw className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
           <p className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-2">
-            {toPersianDigits(totalReserved)} <span className="text-xs font-mono font-normal text-neutral-400">عدد</span>
+            {isPersian ? toPersianDigits(totalReserved) : totalReserved}
           </p>
         </Card>
 
         <Card className="hover:shadow-vercel-md transition-shadow">
           <div className="flex items-center justify-between">
-            <p className="caption-mono text-neutral-500 dark:text-neutral-400">ضایعات / مرجوعی</p>
+            <p className="caption-mono text-neutral-500 dark:text-neutral-400">{t('inventory.reasonDamage')}</p>
             <AlertTriangle className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
           <p className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-2">
-            {toPersianDigits(totalDamaged)} <span className="text-xs font-mono font-normal text-neutral-400">عدد</span>
+            {isPersian ? toPersianDigits(totalDamaged) : totalDamaged}
           </p>
         </Card>
 
         <Card className="hover:shadow-vercel-md transition-shadow bg-amber-50/20 dark:bg-amber-950/20 border-amber-200/80 dark:border-amber-800/50">
           <div className="flex items-center justify-between">
-            <p className="caption-mono text-amber-800 dark:text-amber-300">هشدار کسری موجودی</p>
+            <p className="caption-mono text-amber-800 dark:text-amber-300">{t('inventory.statusLowStock')}</p>
             <ShieldAlert className="w-4 h-4 text-amber-700 dark:text-amber-400" />
           </div>
           <p className="text-2xl font-extrabold text-amber-900 dark:text-amber-200 tracking-tight font-mono mt-2">
-            {toPersianDigits(lowStockCount)} <span className="text-xs font-mono font-normal text-amber-700 dark:text-amber-400">کالا</span>
+            {isPersian ? toPersianDigits(lowStockCount) : lowStockCount}
           </p>
         </Card>
       </div>
@@ -271,7 +271,7 @@ export const InventoryView: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="جستجو با SKU، نام کالا یا بارکد..."
+              placeholder={t('common.search')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search className="w-4 h-4" />}
@@ -284,7 +284,7 @@ export const InventoryView: React.FC = () => {
               onChange={(e) => setSelectedWarehouseFilter(e.target.value ? Number(e.target.value) : '')}
               className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-100 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
-              <option value="">همه انبارها</option>
+              <option value="">{t('inventory.allWarehouses')}</option>
               {warehouses.map((w, wIdx) => (
                 <option key={`inv_wh_${w.id}_${wIdx}`} value={w.id}>
                   {w.name}
@@ -300,7 +300,7 @@ export const InventoryView: React.FC = () => {
                   : 'bg-slate-100 dark:bg-neutral-800 border-slate-200 dark:border-neutral-700 text-slate-600 dark:text-neutral-300 hover:bg-slate-200 dark:hover:bg-neutral-700'
               }`}
             >
-              فقط کالاهای کم‌موجودی ({toPersianDigits(lowStockCount)})
+              {t('inventory.statusLowStock')} ({isPersian ? toPersianDigits(lowStockCount) : lowStockCount})
             </button>
           </div>
         </div>

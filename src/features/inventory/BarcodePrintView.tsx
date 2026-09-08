@@ -64,14 +64,14 @@ export const BarcodePrintView: React.FC = () => {
   // Label Design Config
   const [template, setTemplate] = useState<LabelTemplate>('thermal_50x30');
   const [showStoreName, setShowStoreName] = useState(true);
-  const [customStoreName, setCustomStoreName] = useState(activeOrganization?.name || 'تن‌خور (TANKHOR)');
+  const [customStoreName, setCustomStoreName] = useState(activeOrganization?.name || 'TANKHOR');
   const [showProductTitle, setShowProductTitle] = useState(true);
   const [showColorSize, setShowColorSize] = useState(true);
   const [showSku, setShowSku] = useState(true);
   const [showBarcodeLines, setShowBarcodeLines] = useState(true);
   const [showBarcodeText, setShowBarcodeText] = useState(true);
   const [showPrice, setShowPrice] = useState(true);
-  const [customFooterNote, setCustomFooterNote] = useState('تعویض کالا تا ۴۸ ساعت با ارائه فاکتور');
+  const [customFooterNote, setCustomFooterNote] = useState('');
   const [showFooterNote, setShowFooterNote] = useState(false);
 
   const printSectionRef = useRef<HTMLDivElement>(null);
@@ -217,7 +217,7 @@ export const BarcodePrintView: React.FC = () => {
     const selectedVariantList = variants.filter((v) => selectedItems[v.id]);
     const missing = selectedVariantList.filter((v) => !v.barcode);
     if (missing.length === 0) {
-      alert('همه تنوع‌های انتخاب شده دارای بارکد هستند.');
+      alert(t('inventory.allVariantsHaveBarcode'));
       return;
     }
 
@@ -231,7 +231,7 @@ export const BarcodePrintView: React.FC = () => {
         });
       }
       await loadData();
-      alert(`بارکد جدید برای ${missing.length} تنوع کالا با موفقیت تولید شد.`);
+      alert(`${t('inventory.batchBarcodeSuccess')} ${missing.length}`);
     } catch (err) {
       console.error('Error batch generating barcodes:', err);
     }
@@ -266,10 +266,10 @@ export const BarcodePrintView: React.FC = () => {
 
   const handlePrint = () => {
     if (totalPrintLabels === 0) {
-      alert('لطفاً حداقل یک کالا را برای چاپ انتخاب کنید.');
+      alert(t('inventory.selectAtLeastOneItemToPrint'));
       return;
     }
-    printElement('tankhor-print-container', { title: 'چاپ_لیبل_کالا' });
+    printElement('tankhor-print-container', { title: 'print_labels' });
   };
 
   // Sample variant for preview
@@ -289,8 +289,8 @@ export const BarcodePrintView: React.FC = () => {
       {/* Top Header */}
       <div className="no-print">
         <PageHeader
-          title="تولید و چاپ بارکد و لیبل کالا"
-          subtitle="طراحی، تولید بارکد اختصاصی استاندارد، و چاپ حرارتی و برچسبی برای تمام تنوع‌ها"
+          title={t('inventory.barcodePrintTitle')}
+          subtitle={t('inventory.barcodePrintSubtitle')}
           actions={
             <div className="flex items-center gap-2">
               <Button
@@ -299,7 +299,7 @@ export const BarcodePrintView: React.FC = () => {
                 onClick={handleGenerateAllMissingBarcodes}
                 icon={<Sparkles className="w-4 h-4 text-amber-600" />}
               >
-                تولید بارکد برای بدون‌بارکدها
+                {t('inventory.generateBarcodesForMissing')}
               </Button>
               <Button
                 variant="primary"
@@ -309,7 +309,7 @@ export const BarcodePrintView: React.FC = () => {
                 icon={<Printer className="w-4 h-4" />}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
               >
-                چاپ {toPersianDigits(totalPrintLabels)} عدد لیبل
+                {t('inventory.printLabelsBtn')} ({isPersian ? toPersianDigits(totalPrintLabels) : totalPrintLabels})
               </Button>
             </div>
           }
@@ -325,7 +325,7 @@ export const BarcodePrintView: React.FC = () => {
             <div className="space-y-3 mb-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <Input
-                  placeholder="جستجو بر اساس نام، SKU یا بارکد..."
+                  placeholder={t('inventory.searchBarcodePlaceholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   icon={<Search className="w-4 h-4" />}
@@ -335,7 +335,7 @@ export const BarcodePrintView: React.FC = () => {
                   value={selectedProductId}
                   onChange={(e) => setSelectedProductId(e.target.value ? Number(e.target.value) : '')}
                   options={[
-                    { value: '', label: 'همه محصولات' },
+                    { value: '', label: t('inventory.allProducts') },
                     ...products.map((p) => ({ value: p.id, label: p.title })),
                   ]}
                 />
@@ -343,7 +343,7 @@ export const BarcodePrintView: React.FC = () => {
                   value={selectedBrandId}
                   onChange={(e) => setSelectedBrandId(e.target.value ? Number(e.target.value) : '')}
                   options={[
-                    { value: '', label: 'همه برندها' },
+                    { value: '', label: t('inventory.allBrands') },
                     ...brands.map((b) => ({ value: b.id, label: b.name })),
                   ]}
                 />
@@ -351,7 +351,7 @@ export const BarcodePrintView: React.FC = () => {
                   value={selectedCategoryId}
                   onChange={(e) => setSelectedCategoryId(e.target.value ? Number(e.target.value) : '')}
                   options={[
-                    { value: '', label: 'همه دسته‌بندی‌ها' },
+                    { value: '', label: t('inventory.allCategories') },
                     ...categories.map((c) => ({ value: c.id, label: c.name })),
                   ]}
                 />
@@ -362,22 +362,22 @@ export const BarcodePrintView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Button size="sm" variant="outline" onClick={handleSelectAllFiltered}>
                     <CheckSquare className="w-3.5 h-3.5 me-1 text-neutral-600" />
-                    انتخاب همه ({toPersianDigits(filteredVariants.length)})
+                    {t('inventory.selectAllBtn')} ({isPersian ? toPersianDigits(filteredVariants.length) : filteredVariants.length})
                   </Button>
                   <Button size="sm" variant="outline" onClick={handleMatchStockCopies}>
                     <Copy className="w-3.5 h-3.5 me-1 text-neutral-600" />
-                    تعداد مطابق با موجودی انبار
+                    {t('inventory.matchStockCountBtn')}
                   </Button>
                   {totalSelectedVariants > 0 && (
                     <Button size="sm" variant="ghost" onClick={handleDeselectAll} className="text-red-600 hover:bg-red-50">
-                      لغو انتخاب
+                      {t('inventory.deselectAllBtn')}
                     </Button>
                   )}
                 </div>
 
                 <div className="text-neutral-500 font-mono font-medium">
-                  انتخاب شده: <span className="font-bold text-neutral-900">{toPersianDigits(totalSelectedVariants)}</span> تنوع |
-                  کل برچسب‌ها: <span className="font-bold text-emerald-700">{toPersianDigits(totalPrintLabels)}</span> عدد
+                  {t('inventory.selectedVariantsCount')}: <span className="font-bold text-neutral-900">{isPersian ? toPersianDigits(totalSelectedVariants) : totalSelectedVariants}</span> |{' '}
+                  {t('inventory.totalLabelsCount')}: <span className="font-bold text-emerald-700">{isPersian ? toPersianDigits(totalPrintLabels) : totalPrintLabels}</span>
                 </div>
               </div>
             </div>
@@ -387,26 +387,26 @@ export const BarcodePrintView: React.FC = () => {
               <table className="w-full text-right text-xs">
                 <thead className="bg-neutral-100 dark:bg-[#181a20] text-neutral-700 dark:text-neutral-300 font-bold border-b border-neutral-200 dark:border-neutral-800 sticky top-0 z-10">
                   <tr>
-                    <th className="px-3 py-2.5 w-10 text-center">انتخاب</th>
-                    <th className="px-3 py-2.5">نام محصول و تنوع</th>
-                    <th className="px-3 py-2.5">شناسه SKU</th>
-                    <th className="px-3 py-2.5">بارکد</th>
-                    <th className="px-3 py-2.5">موجودی</th>
-                    <th className="px-3 py-2.5">قیمت</th>
-                    <th className="px-3 py-2.5 w-28 text-center">تعداد چاپ</th>
+                    <th className="px-3 py-2.5 w-10 text-center">{t('inventory.selectCol')}</th>
+                    <th className="px-3 py-2.5">{t('inventory.productNameAndVariantCol')}</th>
+                    <th className="px-3 py-2.5">{t('inventory.skuCol')}</th>
+                    <th className="px-3 py-2.5">{t('inventory.barcodeCol')}</th>
+                    <th className="px-3 py-2.5">{t('inventory.stockCol')}</th>
+                    <th className="px-3 py-2.5">{t('inventory.priceCol')}</th>
+                    <th className="px-3 py-2.5 w-28 text-center">{t('inventory.printCopiesCol')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60 bg-white dark:bg-[#13151a]">
                   {isLoading ? (
                     <tr>
                       <td colSpan={7} className="text-center py-10 text-neutral-500 dark:text-neutral-400">
-                        در حال بارگذاری لیست کالاها...
+                        {t('common.loading')}
                       </td>
                     </tr>
                   ) : filteredVariants.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="text-center py-10 text-neutral-500 dark:text-neutral-400">
-                        هیچ تنوعی مطابق فیلتر یافت نشد.
+                        {t('inventory.noVariantsMatchingFilter')}
                       </td>
                     </tr>
                   ) : (
@@ -430,7 +430,7 @@ export const BarcodePrintView: React.FC = () => {
                             />
                           </td>
                           <td className="px-3 py-2.5">
-                            <p className="font-bold text-neutral-900 dark:text-neutral-100 line-clamp-1">{v.product_title || 'محصول بدون عنوان'}</p>
+                            <p className="font-bold text-neutral-900 dark:text-neutral-100 line-clamp-1">{v.product_title || '-'}</p>
                             <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">
                               {color && (
                                 <span
@@ -449,7 +449,7 @@ export const BarcodePrintView: React.FC = () => {
                           <td className="px-3 py-2.5 font-mono text-[11px]">
                             {v.barcode ? (
                               <span className="text-neutral-800 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">
-                                {toPersianDigits(v.barcode)}
+                                {isPersian ? toPersianDigits(v.barcode) : v.barcode}
                               </span>
                             ) : (
                               <Button
@@ -457,15 +457,15 @@ export const BarcodePrintView: React.FC = () => {
                                 variant="ghost"
                                 onClick={() => handleGenerateBarcodeForVariant(v)}
                                 className="text-[10px] h-6 px-1.5 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40"
-                                title="تولید بارکد جدید"
+                                title={t('inventory.generateBarcodeBtn')}
                               >
                                 <Sparkles className="w-3 h-3 me-1 text-amber-500" />
-                                ساخت بارکد
+                                {t('inventory.generateBarcodeBtn')}
                               </Button>
                             )}
                           </td>
                           <td className="px-3 py-2.5 font-mono text-neutral-600 dark:text-neutral-400">
-                            {toPersianDigits(v.stock_quantity || 0)}
+                            {isPersian ? toPersianDigits(v.stock_quantity || 0) : (v.stock_quantity || 0)}
                           </td>
                           <td className="px-3 py-2.5 font-mono font-bold text-neutral-900 dark:text-neutral-100">
                             {v.price ? formatCurrency(v.price, activeOrganization?.currency, isPersian) : '-'}
@@ -510,22 +510,22 @@ export const BarcodePrintView: React.FC = () => {
           <Card>
             <h3 className="font-bold text-sm text-neutral-900 flex items-center gap-2 mb-3">
               <Sliders className="w-4 h-4 text-emerald-600" />
-              <span>تنظیمات قالب و نمایش لیبل</span>
+              <span>{t('inventory.labelSettingsTitle')}</span>
             </h3>
 
             <div className="space-y-3 text-xs">
               {/* Template selection */}
               <div>
-                <label className="block font-semibold text-neutral-700 mb-1">قالب ابعاد برچسب / کاغذ چاپ</label>
+                <label className="block font-semibold text-neutral-700 mb-1">{t('inventory.labelTemplateFormat')}</label>
                 <Select
                   value={template}
                   onChange={(e) => setTemplate(e.target.value as LabelTemplate)}
                   options={[
-                    { value: 'thermal_50x30', label: '🏷️ لیبل حرارتی استاندارد (50mm × 30mm)' },
-                    { value: 'thermal_40x25', label: '🏷️ لیبل حرارتی کوچک (40mm × 25mm)' },
-                    { value: 'hangtag_60x40', label: '🏷️ اتیکت آویز و کارت لباس (60mm × 40mm)' },
-                    { value: 'a4_sheet_24', label: '📄 برگه A4 برچسبی ۲۴ تایی (۳ در ۸)' },
-                    { value: 'a4_sheet_40', label: '📄 برگه A4 برچسبی ۴۰ تایی (۴ در ۱۰)' },
+                    { value: 'thermal_50x30', label: '🏷️ ' + t('inventory.templateThermal50x30') },
+                    { value: 'thermal_40x25', label: '🏷️ ' + t('inventory.templateThermal40x25') },
+                    { value: 'hangtag_60x40', label: '🏷️ ' + t('inventory.templateHangtag60x40') },
+                    { value: 'a4_sheet_24', label: '📄 ' + t('inventory.templateA4Sheet24') },
+                    { value: 'a4_sheet_40', label: '📄 ' + t('inventory.templateA4Sheet40') },
                   ]}
                 />
               </div>
@@ -539,7 +539,7 @@ export const BarcodePrintView: React.FC = () => {
                     onChange={(e) => setShowStoreName(e.target.checked)}
                     className="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span>نام فروشگاه / برند</span>
+                  <span>{t('inventory.showStoreName')}</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -549,7 +549,7 @@ export const BarcodePrintView: React.FC = () => {
                     onChange={(e) => setShowProductTitle(e.target.checked)}
                     className="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span>عنوان کالا</span>
+                  <span>{t('inventory.showProductTitle')}</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -559,7 +559,7 @@ export const BarcodePrintView: React.FC = () => {
                     onChange={(e) => setShowColorSize(e.target.checked)}
                     className="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span>رنگ و سایز</span>
+                  <span>{t('inventory.showColorSize')}</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -569,7 +569,7 @@ export const BarcodePrintView: React.FC = () => {
                     onChange={(e) => setShowSku(e.target.checked)}
                     className="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span>کد SKU کالا</span>
+                  <span>{t('inventory.showSku')}</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -579,7 +579,7 @@ export const BarcodePrintView: React.FC = () => {
                     onChange={(e) => setShowBarcodeLines(e.target.checked)}
                     className="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span>میله‌های بارکد</span>
+                  <span>{t('inventory.showBarcodeLines')}</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -589,7 +589,7 @@ export const BarcodePrintView: React.FC = () => {
                     onChange={(e) => setShowBarcodeText(e.target.checked)}
                     className="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span>ارقام بارکد</span>
+                  <span>{t('inventory.showBarcodeDigits')}</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer col-span-2">
@@ -599,7 +599,7 @@ export const BarcodePrintView: React.FC = () => {
                     onChange={(e) => setShowPrice(e.target.checked)}
                     className="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span className="font-bold text-neutral-900">قیمت فروش (تومان)</span>
+                  <span className="font-bold text-neutral-900">{t('inventory.showPrice')}</span>
                 </label>
               </div>
 
@@ -607,11 +607,11 @@ export const BarcodePrintView: React.FC = () => {
               <div className="space-y-2 pt-2 border-t border-neutral-100">
                 {showStoreName && (
                   <div>
-                    <label className="block text-[11px] text-neutral-600 mb-0.5">متن نام فروشگاه روی لیبل</label>
+                    <label className="block text-[11px] text-neutral-600 mb-0.5">{t('inventory.storeNameOnLabel')}</label>
                     <Input
                       value={customStoreName}
                       onChange={(e) => setCustomStoreName(e.target.value)}
-                      placeholder="نام فروشگاه..."
+                      placeholder={t('inventory.storeNamePlaceholder')}
                     />
                   </div>
                 )}
@@ -624,9 +624,9 @@ export const BarcodePrintView: React.FC = () => {
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-sm text-neutral-900 flex items-center gap-2">
                 <Eye className="w-4 h-4 text-emerald-600" />
-                <span>پیش‌نمایش زنده لیبل</span>
+                <span>{t('inventory.livePreviewTitle')}</span>
               </h3>
-              <Badge variant="neutral">مقیاس واقعی 1:1</Badge>
+              <Badge variant="neutral">{t('inventory.scale1to1')}</Badge>
             </div>
 
             <div className="bg-neutral-100/70 p-6 rounded-xl border border-dashed border-neutral-300 flex items-center justify-center min-h-[220px]">
@@ -648,15 +648,15 @@ export const BarcodePrintView: React.FC = () => {
                   {/* Product Title */}
                   {showProductTitle && (
                     <div className="text-center font-bold text-[10px] line-clamp-1 mb-0.5">
-                      {samplePrintItem.variant.product_title || 'نام محصول نمونه'}
+                      {samplePrintItem.variant.product_title || t('inventory.sampleProduct')}
                     </div>
                   )}
 
                   {/* Color & Size */}
                   {showColorSize && (
                     <div className="flex items-center justify-between text-[9px] font-semibold bg-neutral-100 px-1 py-0.5 rounded my-1">
-                      <span>رنگ: {samplePrintItem.variant.color_name || samplePrintItem.color?.name || '-'}</span>
-                      <span className="font-bold font-mono">سایز: {samplePrintItem.variant.size_name || samplePrintItem.size?.name || '-'}</span>
+                      <span>{t('inventory.colorLabel')}: {samplePrintItem.variant.color_name || samplePrintItem.color?.name || '-'}</span>
+                      <span className="font-bold font-mono">{t('inventory.sizeLabel')}: {samplePrintItem.variant.size_name || samplePrintItem.size?.name || '-'}</span>
                     </div>
                   )}
 
@@ -683,27 +683,27 @@ export const BarcodePrintView: React.FC = () => {
                   {/* Barcode digits */}
                   {showBarcodeText && (
                     <div className="text-center font-mono text-[9px] font-bold tracking-widest leading-none">
-                      {samplePrintItem.variant.barcode ? toPersianDigits(samplePrintItem.variant.barcode) : samplePrintItem.variant.sku}
+                      {samplePrintItem.variant.barcode ? (isPersian ? toPersianDigits(samplePrintItem.variant.barcode) : samplePrintItem.variant.barcode) : samplePrintItem.variant.sku}
                     </div>
                   )}
 
                   {/* Price */}
                   {showPrice && (
                     <div className="text-center mt-1.5 pt-1 border-t border-black/10 font-bold text-[11px]">
-                      قیمت: <span className="font-mono text-[12px]">{samplePrintItem.variant.price ? formatCurrency(samplePrintItem.variant.price, 'TOMAN', isPersian) : '۰ تومان'}</span>
+                      {t('inventory.priceLabel')}: <span className="font-mono text-[12px]">{samplePrintItem.variant.price ? formatCurrency(samplePrintItem.variant.price, activeOrganization?.currency, isPersian) : '-'}</span>
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="text-center text-neutral-400 text-xs">
-                  کالایی برای پیش‌نمایش یافت نشد
+                  {t('inventory.noItemsFound')}
                 </div>
               )}
             </div>
 
             <div className="mt-4 pt-3 border-t border-neutral-100 flex items-center justify-between">
               <span className="text-xs text-neutral-500">
-                آماده برای چاپ: <strong className="text-neutral-900">{toPersianDigits(totalPrintLabels)}</strong> لیبل
+                {t('inventory.readyToPrint')}: <strong className="text-neutral-900">{isPersian ? toPersianDigits(totalPrintLabels) : totalPrintLabels}</strong> {t('inventory.totalLabelsCount')}
               </span>
               <Button
                 variant="primary"
@@ -713,7 +713,7 @@ export const BarcodePrintView: React.FC = () => {
                 icon={<Printer className="w-4 h-4" />}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
               >
-                ارسال به پرینتر
+                {t('inventory.sendToPrinterBtn')}
               </Button>
             </div>
           </Card>
@@ -830,8 +830,8 @@ export const BarcodePrintView: React.FC = () => {
 
                 {showColorSize && (
                   <div style={{ fontSize: '7pt', display: 'flex', justifyContent: 'space-between', margin: '1px 0', borderTop: '0.5px solid #eee', borderBottom: '0.5px solid #eee', padding: '1px 0' }}>
-                    <span>رنگ: {item.variant.color_name || item.color?.name || '-'}</span>
-                    <span style={{ fontWeight: 'bold' }}>سایز: {item.variant.size_name || item.size?.name || '-'}</span>
+                    <span>{t('inventory.colorLabel')}: {item.variant.color_name || item.color?.name || '-'}</span>
+                    <span style={{ fontWeight: 'bold' }}>{t('inventory.sizeLabel')}: {item.variant.size_name || item.size?.name || '-'}</span>
                   </div>
                 )}
 
@@ -855,13 +855,13 @@ export const BarcodePrintView: React.FC = () => {
 
                 {showBarcodeText && (
                   <div style={{ fontSize: '7pt', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '1px' }}>
-                    {barcodeVal ? toPersianDigits(barcodeVal) : item.variant.sku}
+                    {barcodeVal ? (isPersian ? toPersianDigits(barcodeVal) : barcodeVal) : item.variant.sku}
                   </div>
                 )}
 
                 {showPrice && item.variant.price !== undefined && (
                   <div style={{ fontSize: '8pt', fontWeight: 'bold', marginTop: '2px', borderTop: '0.5px solid #ccc', paddingTop: '1px' }}>
-                    قیمت: {formatCurrency(item.variant.price, 'TOMAN', isPersian)}
+                    {t('inventory.priceLabel')}: {formatCurrency(item.variant.price, activeOrganization?.currency, isPersian)}
                   </div>
                 )}
               </div>

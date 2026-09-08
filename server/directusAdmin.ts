@@ -5,26 +5,86 @@ function sanitizeDirectusUrl(rawUrl?: string): string {
   if (!rawUrl || typeof rawUrl !== 'string') {
     return 'https://api.tankhor.com';
   }
-  const trimmed = rawUrl.trim();
+  let trimmed = rawUrl.trim().replace(/^["']|["']$/g, '').trim();
+  if (!trimmed) {
+    return 'https://api.tankhor.com';
+  }
+  // If it is just a token (e.g. 32-char alphanumeric with no dots/slashes), it's not a URL
+  if (!trimmed.includes('.') && !trimmed.includes('/') && !trimmed.includes(':') && !trimmed.startsWith('localhost')) {
+    return 'https://api.tankhor.com';
+  }
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
     return trimmed.replace(/\/+$/, '');
   }
-  return 'https://api.tankhor.com';
+  if (trimmed.startsWith('localhost') || trimmed.startsWith('127.0.0.1')) {
+    return `http://${trimmed}`.replace(/\/+$/, '');
+  }
+  return `https://${trimmed}`.replace(/\/+$/, '');
 }
 
 export class DirectusAdminClient {
   public static getBaseUrl(): string {
-    const candidate = process.env.DIRECTUS_URL || process.env.VITE_DIRECTUS_URL;
+    const candidate =
+      process.env.DIRECTUS_URL ||
+      process.env.VITE_DIRECTUS_URL ||
+      process.env.DIRECTUS_API_URL ||
+      process.env.API_URL;
     return sanitizeDirectusUrl(candidate);
   }
 
   public static getAdminToken(): string {
-    // If DIRECTUS_URL looks like a raw token instead of a URL, use it as fallback token
-    const directusUrlEnv = (process.env.DIRECTUS_URL || '').trim();
-    if (directusUrlEnv && !directusUrlEnv.startsWith('http://') && !directusUrlEnv.startsWith('https://')) {
+    const rawCandidates = [
+      process.env.DIRECTUS_ADMIN_TOKEN,
+      process.env.DIRECTUS_TOKEN,
+      process.env.ADMIN_TOKEN,
+      process.env.VITE_DIRECTUS_ADMIN_TOKEN,
+      process.env.VITE_DIRECTUS_TOKEN,
+    ];
+
+    for (const raw of rawCandidates) {
+      if (raw && typeof raw === 'string') {
+        const cleaned = raw.trim().replace(/^["']|["']$/g, '').trim();
+        if (cleaned) {
+          return cleaned;
+        }
+      }
+    }
+
+    // Check if DIRECTUS_URL was mistakenly set to a raw token (alphanumeric string >= 20 chars without dots or slashes)
+    const directusUrlEnv = (process.env.DIRECTUS_URL || '').trim().replace(/^["']|["']$/g, '').trim();
+    if (
+      directusUrlEnv &&
+      !directusUrlEnv.startsWith('http://') &&
+      !directusUrlEnv.startsWith('https://') &&
+      !directusUrlEnv.includes('.') &&
+      !directusUrlEnv.includes('/') &&
+      !directusUrlEnv.includes(':') &&
+      directusUrlEnv.length >= 20
+    ) {
       return directusUrlEnv;
     }
-    return process.env.DIRECTUS_ADMIN_TOKEN || process.env.VITE_DIRECTUS_ADMIN_TOKEN || '';
+
+    return '';
+  }
+
+  public static getUserRoleId(): string {
+    const rawCandidates = [
+      process.env.DIRECTUS_USER_ROLE_ID,
+      process.env.DIRECTUS_TENANT_ROLE_ID,
+      process.env.VITE_DIRECTUS_USER_ROLE_ID,
+      process.env.VITE_DIRECTUS_TENANT_ROLE_ID,
+    ];
+
+    for (const raw of rawCandidates) {
+      if (raw && typeof raw === 'string') {
+        const cleaned = raw.trim().replace(/^["']|["']$/g, '').trim();
+        if (cleaned) {
+          return cleaned;
+        }
+      }
+    }
+
+    return '5cd02fe5-1738-4029-b95b-babf6d7fb7be';
   }
 
   public static getHeaders(): HeadersInit {

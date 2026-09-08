@@ -82,7 +82,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
         quantity: qtyNum,
         reference_type: referenceType,
         reference_id: referenceId || `MAN-${Date.now().toString().slice(-5)}`,
-        note: note || 'تغییر دستی موجودی توسط کاربر',
+        note: note || t('inventory.stockAdjustment'),
         sku: variantObj?.sku,
         warehouse_name: warehouseObj?.name,
       });
@@ -122,7 +122,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
       title={
         <div className="flex items-center gap-2 font-bold text-slate-900">
           <RefreshCw className="w-5 h-5 text-indigo-600" />
-          <span>ثبت ورود/خروج و اصلاح موجودی کالا</span>
+          <span>{t('inventory.stockAdjustmentModalTitle')}</span>
         </div>
       }
       maxWidth="lg"
@@ -136,14 +136,14 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
             isLoading={isSaving}
             icon={<RefreshCw className="w-4 h-4" />}
           >
-            ثبت گردش و بروزرسانی موجودی
+            {t('inventory.saveAdjustmentBtn')}
           </Button>
         </>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <Select
-          label="انتخاب کالا / تنوع (SKU) *"
+          label={t('inventory.selectVariantSku') + ' *'}
           value={selectedVariantId}
           onChange={(e) => setSelectedVariantId(Number(e.target.value))}
           options={variants.map((v) => ({
@@ -154,7 +154,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
-            label="انبار / فروشگاه مقصد *"
+            label={t('inventory.destWarehouseStore') + ' *'}
             value={selectedWarehouseId}
             onChange={(e) => setSelectedWarehouseId(Number(e.target.value))}
             options={warehouses.map((w) => ({
@@ -164,11 +164,11 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
           />
 
           <Select
-            label="قفسه / جایگاه دقیق انبار"
+            label={t('inventory.locationShelf')}
             value={selectedLocationId}
             onChange={(e) => setSelectedLocationId(e.target.value ? Number(e.target.value) : '')}
             options={[
-              { value: '', label: 'بدون جایگاه اختصاصی' },
+              { value: '', label: t('inventory.noDedicatedLocation') },
               ...availableLocations.map((l) => ({
                 value: l.id,
                 label: `${l.name} (${l.code || l.type})`,
@@ -179,22 +179,22 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
-            label="نوع گردش کالا *"
+            label={t('inventory.movementType') + ' *'}
             value={movementType}
             onChange={(e) => setMovementType(e.target.value as MovementType)}
             options={[
-              { value: 'purchase', label: 'ورود خرید (Purchase)' },
-              { value: 'sale', label: 'خروج فروش (Sale)' },
-              { value: 'return', label: 'ورود مرجوعی (Return)' },
-              { value: 'adjustment', label: 'اصلاح دستی موجودی (Adjustment)' },
-              { value: 'damage', label: 'اعلام ضایعات / آسیب (Damage)' },
-              { value: 'transfer_in', label: 'ورود از انتقال (Transfer In)' },
-              { value: 'transfer_out', label: 'خروج برای انتقال (Transfer Out)' },
+              { value: 'purchase', label: t('inventory.movementTypePurchase') },
+              { value: 'sale', label: t('inventory.movementTypeSale') },
+              { value: 'return', label: t('inventory.movementTypeReturn') },
+              { value: 'adjustment', label: t('inventory.movementTypeAdjustment') },
+              { value: 'damage', label: t('inventory.movementTypeDamage') },
+              { value: 'transfer_in', label: t('inventory.movementTypeTransferIn') },
+              { value: 'transfer_out', label: t('inventory.movementTypeTransferOut') },
             ]}
           />
 
           <Input
-            label="تعداد / مقدار تغییر *"
+            label={t('inventory.quantityChange') + ' *'}
             type="number"
             min={1}
             value={quantity}
@@ -205,13 +205,13 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="نقطه سفارش مجدد (Reorder Point)"
+            label={t('inventory.reorderPoint')}
             type="number"
             value={reorderPoint}
             onChange={(e) => setReorderPoint(e.target.value ? Number(e.target.value) : '')}
           />
           <Input
-            label="ذخیره اطمینان (Safety Stock)"
+            label={t('inventory.safetyStock')}
             type="number"
             value={safetyStock}
             onChange={(e) => setSafetyStock(e.target.value ? Number(e.target.value) : '')}
@@ -219,13 +219,13 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs font-semibold text-slate-700">توضیحات و علت گردش کالا</label>
+          <label className="block text-xs font-semibold text-slate-700">{t('inventory.movementDescriptionLabel')}</label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={2}
             className="w-full bg-white border border-slate-300 rounded-xl text-slate-900 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="مثال: رسید فاکتور خرید فصلی، انبارگردانی پایان ماه..."
+            placeholder={t('inventory.movementDescriptionPlaceholder')}
           />
         </div>
       </form>

@@ -83,8 +83,8 @@ export const TransfersView: React.FC = () => {
         const toWh = whList.find((w) => w.id === (typeof trf.to_warehouse_id === 'object' ? trf.to_warehouse_id.id : trf.to_warehouse_id));
         return {
           ...trf,
-          from_warehouse_name: fromWh ? fromWh.name : 'انبار مبدا',
-          to_warehouse_name: toWh ? toWh.name : 'انبار مقصد',
+          from_warehouse_name: fromWh ? fromWh.name : t('inventory.sourceWarehouse'),
+          to_warehouse_name: toWh ? toWh.name : t('inventory.destinationWarehouse'),
         };
       });
 
@@ -130,15 +130,15 @@ export const TransfersView: React.FC = () => {
   const handleCreateTransfer = async (status: TransferStatus = 'draft') => {
     setFormError(null);
     if (!fromWhId || !toWhId) {
-      setFormError('لطفاً انبار مبدا و انبار مقصد را انتخاب کنید.');
+      setFormError(t('inventory.selectSourceAndDestWarehouseError'));
       return;
     }
     if (fromWhId === toWhId) {
-      setFormError('انبار مبدا و انبار مقصد نمی‌توانند یکسان باشند.');
+      setFormError(t('inventory.sameWarehouseError'));
       return;
     }
     if (selectedItems.length === 0) {
-      setFormError('لطفاً حداقل یک قلم کالا برای جابجایی اضافه کنید.');
+      setFormError(t('inventory.addAtLeastOneItemError'));
       return;
     }
 
@@ -175,7 +175,7 @@ export const TransfersView: React.FC = () => {
       await loadData();
     } catch (err) {
       console.error('[TransfersView] Error saving stock transfer:', err);
-      setFormError('خطا در ثبت انتقال انبار.');
+      setFormError(t('inventory.transferSaveError'));
     } finally {
       setIsSaving(false);
     }
@@ -206,7 +206,7 @@ export const TransfersView: React.FC = () => {
             quantity: 1,
             reference_type: 'transfer',
             reference_id: String(transfer.id),
-            note: `انتقال خروجی به انبار ${transfer.to_warehouse_name}`,
+            note: `${t('inventory.typeTransferOut')} -> ${transfer.to_warehouse_name}`,
           });
           await adapter.recordMovement({
             organization_id: activeOrganization?.id || 1,
@@ -216,7 +216,7 @@ export const TransfersView: React.FC = () => {
             quantity: 1,
             reference_type: 'transfer',
             reference_id: String(transfer.id),
-            note: `انتقال ورودی از انبار ${transfer.from_warehouse_name}`,
+            note: `${t('inventory.typeTransferIn')} <- ${transfer.from_warehouse_name}`,
           });
         }
       }
@@ -229,7 +229,7 @@ export const TransfersView: React.FC = () => {
 
   const handleDeleteTransfer = async (trf: StockTransfer) => {
     if (!trf.id) return;
-    const isConfirmed = await confirmAction(`آیا از حذف حواله انتقال «${trf.transfer_number}» اطمینان دارید؟`);
+    const isConfirmed = await confirmAction(t('inventory.confirmDeleteTransfer'));
     if (!isConfirmed) return;
 
     try {
@@ -265,7 +265,7 @@ export const TransfersView: React.FC = () => {
         quantity: item.quantity,
         reference_type: 'transfer',
         reference_id: String(transfer.id),
-        note: `انتقال بین انبار (خروجی) به انبار #${toId}`,
+        note: `${t('inventory.typeTransferOut')} -> #${toId}`,
       });
 
       // If completed, record Transfer In immediately
@@ -278,7 +278,7 @@ export const TransfersView: React.FC = () => {
           quantity: item.quantity,
           reference_type: 'transfer',
           reference_id: String(transfer.id),
-          note: `انتقال بین انبار (ورودی) از انبار #${fromId}`,
+          note: `${t('inventory.typeTransferIn')} <- #${fromId}`,
         });
       }
     }
@@ -287,13 +287,13 @@ export const TransfersView: React.FC = () => {
   const getStatusBadge = (status: TransferStatus) => {
     switch (status) {
       case 'draft':
-        return <Badge variant="neutral">پیش‌نویس</Badge>;
+        return <Badge variant="neutral">{t('inventory.transferStatusDraft')}</Badge>;
       case 'in_transit':
-        return <Badge variant="warning">در حال ارسال (ترانزیت)</Badge>;
+        return <Badge variant="warning">{t('inventory.transferStatusInTransit')}</Badge>;
       case 'completed':
-        return <Badge variant="success">تحویل و تکمیل شده</Badge>;
+        return <Badge variant="success">{t('inventory.transferStatusCompleted')}</Badge>;
       case 'cancelled':
-        return <Badge variant="error">لغو شده</Badge>;
+        return <Badge variant="error">{t('inventory.transferStatusCancelled')}</Badge>;
       default:
         return <Badge variant="neutral">{status}</Badge>;
     }
@@ -301,7 +301,7 @@ export const TransfersView: React.FC = () => {
 
   const getVariantLabel = (v: ProductVariant) => {
     const prod = products.find((p) => p.id === (typeof v.product_id === 'object' ? v.product_id.id : v.product_id));
-    return `${prod ? prod.title : 'محصول'} - SKU: ${v.sku}`;
+    return `${prod ? prod.title : t('products.product')} - SKU: ${v.sku}`;
   };
 
   const filteredTransfers = transfers.filter((trf) => {
@@ -316,14 +316,14 @@ export const TransfersView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="انتقال بین انبارها (Stock Transfers)"
-        subtitle="مدیریت، جابجایی و حواله‌های انتقال کالاهای انبار بین شعب و سوله‌های مختلف"
+        title={t('inventory.transfersViewTitle')}
+        subtitle={t('inventory.transfersViewSubtitle')}
         action={
           <Button
             onClick={() => setIsCreateModalOpen(true)}
             icon={<Plus className="w-4 h-4" />}
           >
-            ایجاد حواله انتقال جدید
+            {t('inventory.createTransferBtn')}
           </Button>
         }
       />
@@ -333,7 +333,7 @@ export const TransfersView: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="w-full sm:w-72">
             <Input
-              placeholder="جستجو با شماره حواله یا انبار..."
+              placeholder={t('inventory.searchTransferPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search className="w-4 h-4" />}
@@ -345,11 +345,11 @@ export const TransfersView: React.FC = () => {
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               options={[
-                { value: 'all', label: 'همه وضعیت‌ها' },
-                { value: 'draft', label: 'پیش‌نویس' },
-                { value: 'in_transit', label: 'در حال ارسال (ترانزیت)' },
-                { value: 'completed', label: 'تکمیل شده' },
-                { value: 'cancelled', label: 'لغو شده' },
+                { value: 'all', label: t('inventory.allStatuses') },
+                { value: 'draft', label: t('inventory.transferStatusDraft') },
+                { value: 'in_transit', label: t('inventory.transferStatusInTransit') },
+                { value: 'completed', label: t('inventory.transferStatusCompleted') },
+                { value: 'cancelled', label: t('inventory.transferStatusCancelled') },
               ]}
             />
           </div>
@@ -362,11 +362,11 @@ export const TransfersView: React.FC = () => {
           data={filteredTransfers}
           keyExtractor={(trf) => trf.id}
           isLoading={isLoading}
-          emptyMessage="هیچ حواله انتقالی ثبت نشده است."
+          emptyMessage={t('inventory.noTransfersFound')}
           columns={[
             {
               key: 'transfer_number',
-              header: 'شماره حواله',
+              header: t('inventory.transferNumber'),
               render: (trf) => (
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-mono font-bold text-xs shrink-0">
@@ -385,7 +385,7 @@ export const TransfersView: React.FC = () => {
             },
             {
               key: 'from_warehouse_id',
-              header: 'انبار مبدا (فرستنده)',
+              header: t('inventory.sourceWarehouseSender'),
               render: (trf) => (
                 <div className="flex items-center gap-1.5 font-medium text-slate-800 text-xs">
                   <Building2 className="w-3.5 h-3.5 text-slate-400" />
@@ -395,7 +395,7 @@ export const TransfersView: React.FC = () => {
             },
             {
               key: 'to_warehouse_id',
-              header: 'انبار مقصد (گیرنده)',
+              header: t('inventory.destWarehouseReceiver'),
               render: (trf) => (
                 <div className="flex items-center gap-1.5 font-medium text-slate-800 text-xs">
                   <Building2 className="w-3.5 h-3.5 text-slate-400" />
@@ -405,7 +405,7 @@ export const TransfersView: React.FC = () => {
             },
             {
               key: 'status',
-              header: 'وضعیت',
+              header: t('common.status'),
               render: (trf) => getStatusBadge(trf.status),
             },
           ]}
@@ -420,7 +420,7 @@ export const TransfersView: React.FC = () => {
                 }}
                 icon={<Eye className="w-3.5 h-3.5" />}
               >
-                جزییات
+                {t('common.details')}
               </Button>
 
               {trf.status === 'draft' && (
@@ -430,7 +430,7 @@ export const TransfersView: React.FC = () => {
                   onClick={() => handleUpdateStatus(trf, 'in_transit')}
                   icon={<Truck className="w-3.5 h-3.5 text-amber-600" />}
                 >
-                  تایید و ارسال
+                  {t('inventory.confirmAndSend')}
                 </Button>
               )}
 
@@ -441,7 +441,7 @@ export const TransfersView: React.FC = () => {
                   onClick={() => handleUpdateStatus(trf, 'completed')}
                   icon={<CheckCircle2 className="w-3.5 h-3.5" />}
                 >
-                  تایید تحویل
+                  {t('inventory.confirmDelivery')}
                 </Button>
               )}
 
@@ -452,7 +452,7 @@ export const TransfersView: React.FC = () => {
                 onClick={() => handleDeleteTransfer(trf)}
                 icon={<Trash2 className="w-3.5 h-3.5" />}
               >
-                حذف
+                {t('common.delete')}
               </Button>
             </div>
           )}
@@ -463,7 +463,7 @@ export const TransfersView: React.FC = () => {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="ایجاد حواله انتقال بین انبارها"
+        title={t('inventory.createTransferModalTitle')}
       >
         <div className="space-y-4">
           {formError && (
@@ -475,14 +475,14 @@ export const TransfersView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="انبار مبدا (فرستنده)"
+              label={t('inventory.sourceWarehouseSender')}
               value={fromWhId}
               onChange={(e) => setFromWhId(Number(e.target.value))}
               options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
             />
 
             <Select
-              label="انبار مقصد (گیرنده)"
+              label={t('inventory.destWarehouseReceiver')}
               value={toWhId}
               onChange={(e) => setToWhId(Number(e.target.value))}
               options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
@@ -490,10 +490,10 @@ export const TransfersView: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">توضیحات و یادداشت</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">{t('inventory.transferNotesLabel')}</label>
             <textarea
               rows={2}
-              placeholder="مثلا: انتقال موجودی شعبه ۱ به انبار مرکزی..."
+              placeholder={t('inventory.transferNotesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
@@ -504,18 +504,18 @@ export const TransfersView: React.FC = () => {
           <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
             <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <Package className="w-4 h-4 text-indigo-600" />
-              افزودن اقلام به حواله
+              {t('inventory.addItemsToTransfer')}
             </h4>
 
             <div className="flex flex-col sm:flex-row items-end gap-2">
               <div className="flex-1 w-full">
-                <label className="block text-[11px] text-slate-500 mb-1">انتخاب تنوع کالا (SKU)</label>
+                <label className="block text-[11px] text-slate-500 mb-1">{t('inventory.selectItemVariantSku')}</label>
                 <select
                   value={itemVariantId}
                   onChange={(e) => setItemVariantId(Number(e.target.value))}
                   className="w-full p-2 text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
                 >
-                  <option value={0}>-- انتخاب کالا --</option>
+                  <option value={0}>{t('inventory.selectVariantPlaceholder')}</option>
                   {variants.map((v, vIdx) => (
                     <option key={`trf_var_opt_${v.id}_${vIdx}`} value={v.id}>
                       {getVariantLabel(v)}
@@ -526,7 +526,7 @@ export const TransfersView: React.FC = () => {
 
               <div className="w-full sm:w-28">
                 <Input
-                  label="تعداد"
+                  label={t('inventory.quantity')}
                   type="number"
                   min={1}
                   value={itemQty}
@@ -539,7 +539,7 @@ export const TransfersView: React.FC = () => {
                 onClick={handleAddItem}
                 icon={<Plus className="w-4 h-4" />}
               >
-                افزودن
+                {t('inventory.addBtn')}
               </Button>
             </div>
 
@@ -551,15 +551,15 @@ export const TransfersView: React.FC = () => {
                   return (
                     <div key={`trf_sel_${item.variant_id}_${index}`} className="p-2.5 flex items-center justify-between text-xs">
                       <div>
-                        <span className="font-bold text-slate-900">{v ? getVariantLabel(v) : `تنوع #${item.variant_id}`}</span>
-                        <span className="mr-3 text-indigo-600 font-mono font-bold">تعداد: {item.quantity} عدد</span>
+                        <span className="font-bold text-slate-900">{v ? getVariantLabel(v) : `${t('products.variant')} #${item.variant_id}`}</span>
+                        <span className="mr-3 text-indigo-600 font-mono font-bold">{t('inventory.quantity')}: {item.quantity}</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(item.variant_id)}
                         className="text-red-500 hover:text-red-700 text-xs p-1"
                       >
-                        حذف
+                        {t('common.delete')}
                       </button>
                     </div>
                   );
@@ -570,13 +570,13 @@ export const TransfersView: React.FC = () => {
 
           <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
             <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
-              انصراف
+              {t('common.cancel')}
             </Button>
             <Button variant="secondary" onClick={() => handleCreateTransfer('draft')} isLoading={isSaving}>
-              ذخیره پیش‌نویس
+              {t('inventory.saveDraft')}
             </Button>
             <Button variant="primary" onClick={() => handleCreateTransfer('in_transit')} isLoading={isSaving}>
-              ارسال حواله (در حال ترانزیت)
+              {t('inventory.sendTransferInTransit')}
             </Button>
           </div>
         </div>
@@ -587,38 +587,38 @@ export const TransfersView: React.FC = () => {
         <Modal
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
-          title={`جزییات حواله انتقال ${selectedTransfer.transfer_number}`}
+          title={`${t('inventory.transferDetailsTitle')} ${selectedTransfer.transfer_number}`}
         >
           <div className="space-y-4 text-xs">
             <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200/80">
               <div>
-                <span className="text-slate-500 block">انبار مبدا:</span>
+                <span className="text-slate-500 block">{t('inventory.sourceWarehouseSender')}:</span>
                 <span className="font-bold text-slate-900">{selectedTransfer.from_warehouse_name}</span>
               </div>
               <div>
-                <span className="text-slate-500 block">انبار مقصد:</span>
+                <span className="text-slate-500 block">{t('inventory.destWarehouseReceiver')}:</span>
                 <span className="font-bold text-slate-900">{selectedTransfer.to_warehouse_name}</span>
               </div>
               <div>
-                <span className="text-slate-500 block">وضعیت:</span>
+                <span className="text-slate-500 block">{t('common.status')}:</span>
                 <div>{getStatusBadge(selectedTransfer.status)}</div>
               </div>
               <div>
-                <span className="text-slate-500 block">تاریخ ایجاد:</span>
+                <span className="text-slate-500 block">{t('inventory.dateTime')}:</span>
                 <span className="font-mono text-slate-800">{formatDate(selectedTransfer.date_created, isPersian)}</span>
               </div>
             </div>
 
             {selectedTransfer.notes && (
               <div className="p-3 bg-amber-50/60 border border-amber-200/60 rounded-xl text-amber-900">
-                <span className="font-bold block mb-1">توضیحات:</span>
+                <span className="font-bold block mb-1">{t('inventory.transferNotesLabel')}:</span>
                 <p>{selectedTransfer.notes}</p>
               </div>
             )}
 
             <div className="flex justify-end pt-3">
               <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>
-                بستن
+                {t('common.close')}
               </Button>
             </div>
           </div>

@@ -23,6 +23,7 @@ export interface RoleDefinition {
   labelFa: string;
   labelEn: string;
   descriptionFa: string;
+  descriptionEn: string;
   badgeVariant: 'primary' | 'secondary' | 'info' | 'warning' | 'neutral';
   permissions: RolePermissions;
 }
@@ -31,8 +32,9 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
   owner: {
     key: 'owner',
     labelFa: 'مالک سازمان',
-    labelEn: 'Owner',
+    labelEn: 'Organization Owner',
     descriptionFa: 'دسترسی کامل به تمام امکانات سیستم، مدیریت مالی، اعضا و تنظیمات سازمان',
+    descriptionEn: 'Full access to all system features, financial management, team members, and organization settings.',
     badgeVariant: 'primary',
     permissions: {
       canManageOrgSettings: true,
@@ -57,6 +59,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
     labelFa: 'مدیر فروشگاه',
     labelEn: 'Store Manager',
     descriptionFa: 'مدیر کل فروشگاه و انبار، ثبت و ویرایش محصولات، سفارشات و خریدها (بدون دسترسی به تنظیمات اصلی سازمان و حذف اعضا)',
+    descriptionEn: 'Store and warehouse management, products, orders, and purchasing (excluding organization settings and member deletion).',
     badgeVariant: 'info',
     permissions: {
       canManageOrgSettings: false,
@@ -81,6 +84,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
     labelFa: 'انباردار',
     labelEn: 'Warehouse Manager',
     descriptionFa: 'دسترسی کامل به مدیریت موجودی انبار، انبارها، جایگاه‌ها، انتقال کالا، چاپ بارکد و رسید سفارشات خرید',
+    descriptionEn: 'Full inventory control, warehouses, bins/locations, stock transfers, barcode printing, and purchase receipts.',
     badgeVariant: 'secondary',
     permissions: {
       canManageOrgSettings: false,
@@ -105,6 +109,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
     labelFa: 'فروشنده / صندوق‌دار',
     labelEn: 'Sales Representative',
     descriptionFa: 'دسترسی به مشاهده محصولات، مشتریان و ثبت سفارشات فروش جدید (بدون دسترسی به تنظیمات انبار و خرید)',
+    descriptionEn: 'Access to catalog products, customers, and creating sales orders (without inventory/purchasing administration).',
     badgeVariant: 'warning',
     permissions: {
       canManageOrgSettings: false,
@@ -129,6 +134,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
     labelFa: 'مشاهده‌گر',
     labelEn: 'Viewer',
     descriptionFa: 'فقط مشاهده کاتالوگ محصولات، موجودی‌ها و راهنمای سایز (بدون قابلیت تغییر داده‌ها)',
+    descriptionEn: 'Read-only access to catalog products, inventory levels, and size guides (no write permissions).',
     badgeVariant: 'neutral',
     permissions: {
       canManageOrgSettings: false,
@@ -173,4 +179,14 @@ export function getRoleDefinition(role?: string | null): RoleDefinition {
     return ROLE_DEFINITIONS.owner;
   }
   return ROLE_DEFINITIONS.viewer;
+}
+
+export function getRoleLabel(role?: string | null, isPersian = true): string {
+  const def = getRoleDefinition(role);
+  return isPersian ? def.labelFa : def.labelEn;
+}
+
+export function getRoleDescription(role?: string | null, isPersian = true): string {
+  const def = getRoleDefinition(role);
+  return isPersian ? def.descriptionFa : def.descriptionEn;
 }

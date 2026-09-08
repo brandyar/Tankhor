@@ -207,7 +207,7 @@ authRouter.post('/register', async (req: Request, res: Response) => {
       }
     } else {
       // 2. Create User in Directus via Admin Client with tenant role
-      const DIRECTUS_TENANT_ROLE_ID = 'dbc2022f-0dea-4ef4-bb00-00a577e3208d';
+      const userRoleId = DirectusAdminClient.getUserRoleId();
       const userPayload: any = {
         email: userEmail,
         password: password,
@@ -215,7 +215,7 @@ authRouter.post('/register', async (req: Request, res: Response) => {
         last_name: userLastName,
         user_phone: user_phone,
         status: 'active',
-        role: DIRECTUS_TENANT_ROLE_ID,
+        role: userRoleId,
       };
 
       let newUser: any;
@@ -225,8 +225,24 @@ authRouter.post('/register', async (req: Request, res: Response) => {
           body: JSON.stringify(userPayload),
         });
       } catch (err: any) {
-        console.error('[Auth Service] User creation error:', err);
-        return res.status(500).json({ error: `خطا در ایجاد حساب کاربری: ${err.message}` });
+        console.error('[Auth Service] User creation error:', err.message);
+        const errMsg = err?.message || '';
+
+        if (
+          errMsg.includes('RECORD_NOT_UNIQUE') ||
+          errMsg.toLowerCase().includes('unique') ||
+          errMsg.toLowerCase().includes('already exists')
+        ) {
+          return res.status(400).json({ error: 'این ایمیل قبلاً در دایرکتوس ثبت شده است. لطفاً وارد شوید.' });
+        }
+
+        if (errMsg.includes('INVALID_CREDENTIALS') || errMsg.includes('Invalid user credentials')) {
+          return res.status(500).json({
+            error: 'خطای احراز هویت توکن ادمین دایرکتوس (Directus Admin Token). لطفاً متغیر DIRECTUS_ADMIN_TOKEN را در تنظیمات Secrets بررسی نمایید.',
+          });
+        }
+
+        return res.status(500).json({ error: `خطا در ایجاد حساب کاربری در سرور: ${errMsg}` });
       }
 
       userId = newUser.id;

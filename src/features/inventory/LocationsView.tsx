@@ -122,12 +122,12 @@ export const LocationsView: React.FC = () => {
 
   const getLocationTypeBadge = (type: LocationType) => {
     const labels: Record<LocationType, { text: string; variant: 'info' | 'success' | 'warning' | 'neutral' }> = {
-      zone: { text: 'زون / سالن', variant: 'info' },
-      aisle: { text: 'راهرو (Aisle)', variant: 'neutral' },
-      rack: { text: 'قفسه / رگال (Rack)', variant: 'success' },
-      shelf: { text: 'طبقه (Shelf)', variant: 'warning' },
-      bin: { text: 'باکس / جعبه (Bin)', variant: 'neutral' },
-      other: { text: 'سایر', variant: 'neutral' },
+      zone: { text: t('inventory.locationZoneOption'), variant: 'info' },
+      aisle: { text: t('inventory.locationAisleOption'), variant: 'neutral' },
+      rack: { text: t('inventory.locationRackOption'), variant: 'success' },
+      shelf: { text: t('inventory.locationShelfOption'), variant: 'warning' },
+      bin: { text: t('inventory.locationBinOption'), variant: 'neutral' },
+      other: { text: t('inventory.locationOtherOption'), variant: 'neutral' },
     };
     const item = labels[type] || labels.other;
     return <Badge variant={item.variant}>{item.text}</Badge>;
@@ -136,7 +136,7 @@ export const LocationsView: React.FC = () => {
   const columns: Column<WarehouseLocation>[] = [
     {
       key: 'name',
-      header: 'نام جایگاه / قفسه',
+      header: t('inventory.locationNameLabel').replace(' *', ''),
       render: (loc) => (
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 font-bold text-xs">
@@ -151,12 +151,12 @@ export const LocationsView: React.FC = () => {
     },
     {
       key: 'type',
-      header: 'نوع ساختار',
+      header: t('inventory.locationStructureType'),
       render: (loc) => getLocationTypeBadge(loc.type),
     },
     {
       key: 'warehouse_id',
-      header: 'انبار مربوطه',
+      header: t('inventory.relatedWarehouse'),
       render: (loc) => {
         const wId = typeof loc.warehouse_id === 'number' ? loc.warehouse_id : loc.warehouse_id.id;
         const wh = warehouses.find((w) => w.id === wId);
@@ -165,7 +165,7 @@ export const LocationsView: React.FC = () => {
     },
     {
       key: 'barcode',
-      header: 'بارکد قفسه',
+      header: t('inventory.locationBarcode'),
       render: (loc) => (
         <span className="inline-flex items-center gap-1 font-mono text-xs text-slate-600 dark:text-neutral-300 bg-slate-100 dark:bg-neutral-800 px-2 py-1 rounded-md">
           <BarcodeIcon className="w-3 h-3 text-slate-400 dark:text-neutral-500" />
@@ -178,7 +178,7 @@ export const LocationsView: React.FC = () => {
       header: t('common.status'),
       render: (loc) => (
         <Badge variant={loc.status === 'active' ? 'success' : 'danger'}>
-          {loc.status === 'active' ? 'فعال' : 'غیرفعال'}
+          {loc.status === 'active' ? t('inventory.active') : t('inventory.inactive')}
         </Badge>
       ),
     },
@@ -188,10 +188,10 @@ export const LocationsView: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title={t('navigation.locations')}
-        subtitle="مدیریت جایگاه‌های دقیق انبار، زون‌ها، رگال‌ها، طبقات و بارکد قفسه‌ها"
+        subtitle={t('inventory.locationsManagementSubtitle')}
         action={
           <Button onClick={() => handleOpenModal()} icon={<Plus className="w-4 h-4" />}>
-            تعریف جایگاه جدید
+            {t('inventory.newLocation')}
           </Button>
         }
       />
@@ -204,7 +204,7 @@ export const LocationsView: React.FC = () => {
               onChange={(e) => setSelectedWarehouseFilter(e.target.value ? Number(e.target.value) : '')}
               className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-200 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
-              <option value="">همه انبارها</option>
+              <option value="">{t('inventory.allWarehousesOption')}</option>
               {warehouses.map((w, wIdx) => (
                 <option key={`loc_wh_${w.id}_${wIdx}`} value={w.id}>
                   {w.name}
@@ -243,7 +243,7 @@ export const LocationsView: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingLocation ? 'ویرایش جایگاه قفسه' : 'تعریف جایگاه جدید در انبار'}
+        title={editingLocation ? t('inventory.editLocation') : t('inventory.newLocationInWarehouse')}
         footer={
           <>
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
@@ -257,7 +257,7 @@ export const LocationsView: React.FC = () => {
       >
         <form id="location-form" onSubmit={handleSaveLocation} className="space-y-4">
           <Select
-            label="انبار مربوطه *"
+            label={t('inventory.relatedWarehouse') + ' *'}
             value={warehouseId}
             onChange={(e) => setWarehouseId(Number(e.target.value))}
             options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
@@ -265,8 +265,8 @@ export const LocationsView: React.FC = () => {
           />
 
           <Input
-            label="عنوان جایگاه / قفسه *"
-            placeholder="مانند: رگال A1 - طبقه فوقانی"
+            label={t('inventory.locationNameLabel')}
+            placeholder={t('inventory.locationNamePlaceholder')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -274,42 +274,42 @@ export const LocationsView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="کد اختصاری قفسه"
-              placeholder="A1-R2"
+              label={t('inventory.locationCodeLabel')}
+              placeholder={t('inventory.locationCodePlaceholder')}
               value={code}
               onChange={(e) => setCode(e.target.value)}
             />
 
             <Select
-              label="سطح و نوع جایگاه *"
+              label={t('inventory.locationStructureTypeLabel')}
               value={type}
               onChange={(e) => setType(e.target.value as LocationType)}
               options={[
-                { value: 'zone', label: 'زون / سالن (Zone)' },
-                { value: 'aisle', label: 'راهرو (Aisle)' },
-                { value: 'rack', label: 'قفسه / رگال (Rack)' },
-                { value: 'shelf', label: 'طبقه (Shelf)' },
-                { value: 'bin', label: 'باکس / جعبه (Bin)' },
-                { value: 'other', label: 'سایر' },
+                { value: 'zone', label: t('inventory.locationZoneOption') },
+                { value: 'aisle', label: t('inventory.locationAisleOption') },
+                { value: 'rack', label: t('inventory.locationRackOption') },
+                { value: 'shelf', label: t('inventory.locationShelfOption') },
+                { value: 'bin', label: t('inventory.locationBinOption') },
+                { value: 'other', label: t('inventory.locationOtherOption') },
               ]}
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="بارکد قفسه"
+              label={t('inventory.locationBarcodeLabel')}
               placeholder="626LOC..."
               value={barcode}
               onChange={(e) => setBarcode(e.target.value)}
             />
 
             <Select
-              label="وضعیت *"
+              label={t('inventory.warehouseStatusLabel')}
               value={status}
               onChange={(e) => setStatus(e.target.value as Status)}
               options={[
-                { value: 'active', label: 'فعال' },
-                { value: 'inactive', label: 'غیرفعال' },
+                { value: 'active', label: t('inventory.active') },
+                { value: 'inactive', label: t('inventory.inactive') },
               ]}
             />
           </div>

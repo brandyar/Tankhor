@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '../../i18n';
 
 export interface Column<T> {
   key: string;
@@ -21,14 +22,17 @@ export function DataTable<T>({
   data,
   keyExtractor,
   isLoading = false,
-  emptyMessage = 'داده‌ای یافت نشد',
+  emptyMessage,
   actions,
 }: DataTableProps<T>) {
+  const { t } = useTranslation();
+  const effectiveEmptyMessage = emptyMessage || t('common.noData');
+
   if (isLoading) {
     return (
       <div className="w-full py-12 flex flex-col items-center justify-center text-neutral-400">
         <div className="w-7 h-7 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin mb-3" />
-        <span className="text-xs font-mono text-neutral-500">در حال دریافت داده‌ها...</span>
+        <span className="text-xs font-mono text-neutral-500">{t('common.loadingData')}</span>
       </div>
     );
   }
@@ -36,7 +40,7 @@ export function DataTable<T>({
   if (!data || data.length === 0) {
     return (
       <div className="w-full py-12 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 bg-neutral-50/50 dark:bg-neutral-900/40">
-        <p className="text-xs font-mono text-neutral-500 dark:text-neutral-400">{emptyMessage}</p>
+        <p className="text-xs font-mono text-neutral-500 dark:text-neutral-400">{effectiveEmptyMessage}</p>
       </div>
     );
   }
@@ -51,7 +55,7 @@ export function DataTable<T>({
                 {col.header}
               </th>
             ))}
-            {actions && <th className="px-4 py-3 text-end font-bold">عملیات</th>}
+            {actions && <th className="px-4 py-3 text-end font-bold">{t('common.actions')}</th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">

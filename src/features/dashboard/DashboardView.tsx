@@ -145,23 +145,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   );
 
   const categoryStockData = useMemo(
-    () => computeCategoryStock(categories, products, variants),
-    [categories, products, variants]
+    () => computeCategoryStock(categories, products, variants, isPersian),
+    [categories, products, variants, isPersian]
   );
 
   const stockHealthData = useMemo(
-    () => computeStockHealth(variants),
-    [variants]
+    () => computeStockHealth(variants, isPersian),
+    [variants, isPersian]
   );
 
   const warehouseStockData = useMemo(
-    () => computeWarehouseDistribution(warehouses, variants),
-    [warehouses, variants]
+    () => computeWarehouseDistribution(warehouses, variants, isPersian),
+    [warehouses, variants, isPersian]
   );
 
   const topProducts = useMemo(
-    () => computeTopProducts(products, variants, categories, movements),
-    [products, variants, categories, movements]
+    () => computeTopProducts(products, variants, categories, movements, isPersian),
+    [products, variants, categories, movements, isPersian]
   );
 
   const movementColumns: Column<InventoryMovement>[] = [
@@ -177,14 +177,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     },
     {
       key: 'type',
-      header: 'نوع گردش',
+      header: t('dashboard.movementType'),
       render: (m) => {
         const isIn = m.type === 'purchase' || m.type === 'transfer_in' || m.type === 'return';
+        let label = m.type;
+        if (m.type === 'purchase') label = t('dashboard.purchaseIn');
+        else if (m.type === 'sale') label = t('dashboard.saleOut');
+        else if (m.type === 'return') label = t('dashboard.returnIn');
+        else if (m.type === 'transfer_in') label = t('inventory.typeTransferIn');
+        else if (m.type === 'transfer_out') label = t('inventory.typeTransferOut');
+        else if (m.type === 'adjustment') label = t('inventory.stockAdjustment');
+
         return (
           <Badge variant={isIn ? 'success' : 'danger'}>
             <span className="flex items-center gap-1 text-[11px]">
               {isIn ? <ArrowDownLeft className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
-              {m.type === 'purchase' ? 'ورود خرید' : m.type === 'sale' ? 'خروج فروش' : m.type === 'return' ? 'مرجوعی' : m.type}
+              {label}
             </span>
           </Badge>
         );
@@ -192,16 +200,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     },
     {
       key: 'quantity',
-      header: 'تعداد',
+      header: t('orders.quantity'),
       render: (m) => (
         <span className="font-bold text-slate-900 dark:text-neutral-100 font-mono text-xs">
-          {toPersianDigits(m.quantity)} عدد
+          {isPersian ? toPersianDigits(m.quantity) : m.quantity} {t('dashboard.unitsCount')}
         </span>
       ),
     },
     {
       key: 'reference_id',
-      header: 'مرجع / شماره سند',
+      header: t('dashboard.referenceNumber'),
       render: (m) => <span className="text-slate-500 dark:text-neutral-400 font-mono text-xs">{m.reference_id || '-'}</span>,
     },
   ];
@@ -233,14 +241,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 TANKHOR PLATFORM
               </span>
               <span className="font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
-                {activeOrganization?.name || 'سازمان پیش‌فرض'}
+                {activeOrganization?.name || t('dashboard.defaultOrgName')}
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight">
-              پیشخوان گزارشات و مدیریت جامع تن‌خور
+              {t('dashboard.heroTitle')}
             </h1>
             <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
-              نمای زنده از موجودی انبارها، وضعیت سفارشات، گردش کالا و تحلیل شاخص‌های عملکرد کسب‌وکار
+              {t('dashboard.heroSubtitle')}
             </p>
           </div>
           <div className="flex items-center gap-2.5 shrink-0">
@@ -250,7 +258,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 onClick={() => onNavigate('orders/create')}
                 icon={<Plus className="w-4 h-4" />}
               >
-                ثبت سفارش جدید
+                {t('dashboard.createOrder')}
               </Button>
             )}
             {permissions.canEditProducts && (
@@ -259,7 +267,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 onClick={() => onNavigate('products/all')}
                 icon={<Shirt className="w-4 h-4" />}
               >
-                افزودن کالا
+                {t('dashboard.addProduct')}
               </Button>
             )}
           </div>
@@ -274,9 +282,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">به نرم‌افزار تن‌خور خوش آمدید!</h3>
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">{t('dashboard.emptyStateWelcome')}</h3>
               <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1 leading-relaxed max-w-2xl">
-                پایگاه داده شما خالی است. می‌توانید با یک کلیک <strong>«اطلاعات نمونه بوتیک پوشاک»</strong> (شامل پالتو، هودی، جین، کفش، انبارها، جداول سایز و فاکتورها) را بارگذاری نموده یا فایل پشتیبان سیستم قبلی خود را بازیابی کنید.
+                {t('dashboard.emptyStateDesc')}
               </p>
             </div>
           </div>
@@ -303,7 +311,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               icon={<Sparkles className="w-4 h-4" />}
               className="bg-emerald-600 hover:bg-emerald-700 font-bold text-xs"
             >
-              بارگذاری داده‌های نمونه پوشاک
+              {t('dashboard.loadDemoData')}
             </Button>
             <Button
               variant="outline"
@@ -312,7 +320,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               icon={<HardDriveUpload className="w-4 h-4 text-blue-600" />}
               className="text-xs font-bold border-neutral-300 hover:bg-white"
             >
-              بازیابی از فایل پشتیبان
+              {t('dashboard.restoreFromBackup')}
             </Button>
           </div>
         </div>
@@ -366,14 +374,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         <div className="lg:col-span-2 space-y-4">
           <Card
             title={t('dashboard.recentMovements')}
-            subtitle="آخرین اسناد ورود، خروج، انتقال و تعدیل موجودی در انبار"
+            subtitle={t('dashboard.recentMovementsSubtitle')}
             action={
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => onNavigate('inventory/movements')}
               >
-                مشاهده همه
+                {t('dashboard.viewAll')}
               </Button>
             }
           >
@@ -382,7 +390,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               data={movements.slice(0, 6)}
               keyExtractor={(m) => m.id}
               isLoading={isLoading}
-              emptyMessage="هیچ گردش کالایی ثبت نشده است."
+              emptyMessage={t('dashboard.noMovementsLogged')}
             />
           </Card>
         </div>
@@ -441,7 +449,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 <div>
                   <p className="font-bold">{t('dashboard.offlineReady')}</p>
                   <p className="text-[11px] text-emerald-800/90 dark:text-emerald-300/80 mt-0.5 leading-relaxed">
-                    تمامی محاسبات آماری و گزارشات به‌صورت بلادرنگ (Real-time) از دیتابیس محلی استخراج و نمایش داده می‌شوند.
+                    {t('dashboard.realtimeEngineNote')}
                   </p>
                 </div>
               </div>

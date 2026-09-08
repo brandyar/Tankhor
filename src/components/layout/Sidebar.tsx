@@ -119,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {
           type: 'submenu',
           key: 'stockOperations',
-          label: t('navigation.stockOperations', 'گردش و انتقال کالا'),
+          label: t('navigation.stockOperations'),
           icon: ArrowLeftRight,
           visible: permissions.canViewInventory,
           items: [
@@ -130,7 +130,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {
           type: 'submenu',
           key: 'warehouseManagement',
-          label: t('navigation.warehouseManagement', 'انبارها و قفسه‌بندی'),
+          label: t('navigation.warehouseManagement'),
           icon: WarehouseIcon,
           visible: permissions.canManageInventory,
           items: [
@@ -149,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {
           type: 'submenu',
           key: 'catalogAttributes',
-          label: t('navigation.catalogAttributes', 'مشخصات و ویژگی‌ها'),
+          label: t('navigation.catalogAttributes'),
           icon: SlidersHorizontal,
           visible: permissions.canViewProducts,
           items: [
@@ -172,9 +172,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
-      title: t('navigation.reportsGroup', 'گزارش‌ها و تحلیل‌ها'),
+      title: t('navigation.reportsGroup'),
       entries: [
-        { type: 'item', route: 'reports/apparel', label: t('navigation.apparelReports', 'گزارش‌ها'), icon: BarChart3, visible: permissions.canViewOrders || permissions.canViewFinancials },
+        { type: 'item', route: 'reports/apparel', label: t('navigation.apparelReports'), icon: BarChart3, visible: permissions.canViewOrders || permissions.canViewFinancials },
       ],
     },
     {
@@ -247,7 +247,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="flex items-center gap-2.5 overflow-hidden">
               <img
                 src="/logo-light.png"
-                alt="تن‌خور"
+                alt={t('common.appName')}
                 className="h-8 max-w-[110px] object-contain shrink-0"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
@@ -266,7 +266,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="flex items-center justify-center">
               <img
                 src="/logo-light.png"
-                alt="تن‌خور"
+                alt={t('common.appName')}
                 className="h-7 w-auto max-w-[36px] object-contain shrink-0"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
@@ -280,7 +280,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                title={isCollapsed ? 'باز کردن سایدبار' : 'بستن سایدبار'}
+                title={isCollapsed ? t('common.expandSidebar') : t('common.collapseSidebar')}
                 className="hidden lg:flex p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
               >
                 {isCollapsed ? (

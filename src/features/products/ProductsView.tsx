@@ -207,7 +207,7 @@ export const ProductsView: React.FC = () => {
     },
     {
       key: 'category_id',
-      header: 'دسته‌بندی و مجموعه',
+      header: `${t('products.category')} & ${t('products.collection')}`,
       render: (p) => {
         const cat = categories.find((c) => c.id === p.category_id);
         const col = collections.find((c) => c.id === p.collection_id);
@@ -233,13 +233,13 @@ export const ProductsView: React.FC = () => {
       header: t('common.status'),
       render: (p) => (
         <Badge variant={p.status === 'published' ? 'success' : 'warning'}>
-          {p.status === 'published' ? 'منتشر شده' : 'پیش‌نویس'}
+          {p.status === 'published' ? t('common.published') : t('common.draft')}
         </Badge>
       ),
     },
     {
       key: 'variants_count',
-      header: 'تعداد تنوع (SKU)',
+      header: t('products.variantsCount'),
       render: (p) => (
         <button
           type="button"
@@ -247,16 +247,16 @@ export const ProductsView: React.FC = () => {
           className="font-mono text-xs font-semibold text-neutral-800 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 px-2.5 py-0.5 rounded-full border border-neutral-200/80 dark:border-neutral-700 cursor-pointer transition-colors inline-flex items-center gap-1"
         >
           <Layers className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
-          <span>{toPersianDigits(p.variants_count || 0)} تنوع</span>
+          <span>{toPersianDigits(p.variants_count || 0)}</span>
         </button>
       ),
     },
     {
       key: 'total_stock',
-      header: 'کل موجودی انبار',
+      header: t('products.totalStock'),
       render: (p) => (
         <span className="font-mono text-xs font-semibold text-amber-900 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 px-2.5 py-0.5 rounded-full">
-          {toPersianDigits(p.total_stock || 0)} عدد
+          {toPersianDigits(p.total_stock || 0)}
         </span>
       ),
     },
@@ -303,7 +303,7 @@ export const ProductsView: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title={t('navigation.allProducts')}
-        subtitle="مدیریت کاتالوگ کامل پوشاک، تنوع‌ها، برندها، مجموعه‌ها و فیلترهای پیشرفته"
+        subtitle={t('products.subtitle')}
         action={
           permissions.canEditProducts ? (
             <Button onClick={handleOpenNewProduct} icon={<Plus className="w-4 h-4" />}>
@@ -334,7 +334,7 @@ export const ProductsView: React.FC = () => {
                 onChange={(e) => setSelectedCategoryFilter(e.target.value ? Number(e.target.value) : '')}
                 className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-200 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
-                <option value="">همه دسته‌بندی‌ها</option>
+                <option value="">{t('products.categoriesTitle')}: {t('common.all')}</option>
                 {getCategoryFilterOptions().map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -350,7 +350,7 @@ export const ProductsView: React.FC = () => {
                 onChange={(e) => setSelectedBrandFilter(e.target.value)}
                 className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-200 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
-                <option value="">همه برندها</option>
+                <option value="">{t('products.brandsTitle')}: {t('common.all')}</option>
                 {brands.map((b, bIdx) => (
                   <option key={`prod_brand_${b.id || b.name}_${bIdx}`} value={b.name}>
                     {b.name}
@@ -366,7 +366,7 @@ export const ProductsView: React.FC = () => {
                 onChange={(e) => setSelectedCollectionFilter(e.target.value ? Number(e.target.value) : '')}
                 className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-200 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
-                <option value="">همه کالکشن‌ها</option>
+                <option value="">{t('products.collectionsTitle')}: {t('common.all')}</option>
                 {collections.map((col, colIdx) => (
                   <option key={`prod_col_${col.id}_${colIdx}`} value={col.id}>
                     {col.name}

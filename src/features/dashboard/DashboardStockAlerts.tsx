@@ -7,8 +7,9 @@ import { TopProductMetric } from './dashboardUtils';
 import { ProductVariant, Organization } from '../../types';
 import {
   AlertTriangle, ArrowUpRight, Plus, RefreshCw, Shirt,
-  CheckCircle2, ShoppingCart, ChevronLeft
+  CheckCircle2, ShoppingCart, ChevronLeft, ChevronRight
 } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 
 interface DashboardStockAlertsProps {
   topProducts: TopProductMetric[];
@@ -31,20 +32,22 @@ export const DashboardStockAlerts: React.FC<DashboardStockAlertsProps> = ({
   activeOrganization,
   isPersian,
 }) => {
+  const { t, isRtl } = useTranslation();
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* 1. Top High Demand / Best Performing Models */}
       <Card
-        title="کالاهای پرطرفدار و پرفروش"
-        subtitle="مدل‌های دارای بالاترین گردش فروش و تقاضا در فروشگاه"
+        title={t('dashboard.topSellingModels')}
+        subtitle={t('dashboard.topSellingSubtitle')}
         action={
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onNavigate('products/all')}
-            icon={<ChevronLeft className="w-4 h-4" />}
+            icon={isRtl ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           >
-            مشاهده کاتالوگ
+            {t('dashboard.viewCatalog')}
           </Button>
         }
       >
@@ -52,14 +55,14 @@ export const DashboardStockAlerts: React.FC<DashboardStockAlertsProps> = ({
           {topProducts.length === 0 ? (
             <div className="py-8 text-center text-neutral-400 dark:text-neutral-500 text-xs">
               <Shirt className="w-8 h-8 mx-auto mb-2 text-neutral-300 dark:text-neutral-600 stroke-1" />
-              <span>هنوز محصولی در کاتالوگ ثبت نشده است.</span>
+              <span>{t('dashboard.noProductsInCatalog')}</span>
             </div>
           ) : (
             topProducts.map((p, idx) => (
               <div key={p.id} className="py-3 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-mono text-xs font-bold flex items-center justify-center shrink-0">
-                    {toPersianDigits(idx + 1)}
+                    {isPersian ? toPersianDigits(idx + 1) : (idx + 1)}
                   </span>
                   {p.image ? (
                     <img
@@ -79,14 +82,14 @@ export const DashboardStockAlerts: React.FC<DashboardStockAlertsProps> = ({
                     <p className="text-[11px] text-neutral-500 dark:text-neutral-400 flex items-center gap-2 mt-0.5">
                       <span>{p.categoryName}</span>
                       <span>•</span>
-                      <span>{toPersianDigits(p.variantsCount)} تنوع رنگ/سایز</span>
+                      <span>{isPersian ? toPersianDigits(p.variantsCount) : p.variantsCount} {t('dashboard.colorSizeVariants')}</span>
                     </p>
                   </div>
                 </div>
 
                 <div className="text-end shrink-0">
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200/50 dark:border-neutral-700/50">
-                    {toPersianDigits(p.totalStock)} عدد موجود
+                    {isPersian ? toPersianDigits(p.totalStock) : p.totalStock} {t('dashboard.unitsInStock')}
                   </span>
                 </div>
               </div>
@@ -97,8 +100,8 @@ export const DashboardStockAlerts: React.FC<DashboardStockAlertsProps> = ({
 
       {/* 2. Urgent Stock Replenishment Needed */}
       <Card
-        title="هشدار کسری موجودی و نیاز به شارژ (Low Stock Alert)"
-        subtitle="تنوع‌هایی که موجودی فیزیکی آن‌ها به مرز بحرانی (زیر ۵ عدد) رسیده است"
+        title={t('dashboard.replenishmentAlert')}
+        subtitle={t('dashboard.replenishmentSubtitle')}
         action={
           canViewPurchasing ? (
             <Button
@@ -107,7 +110,7 @@ export const DashboardStockAlerts: React.FC<DashboardStockAlertsProps> = ({
               onClick={() => onNavigate('purchasing/orders')}
               icon={<Plus className="w-3.5 h-3.5" />}
             >
-              سفارش خرید
+              {t('dashboard.createPurchaseOrder')}
             </Button>
           ) : undefined
         }
@@ -118,8 +121,8 @@ export const DashboardStockAlerts: React.FC<DashboardStockAlertsProps> = ({
               <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-2 border border-emerald-200 dark:border-emerald-800/50">
                 <CheckCircle2 className="w-5 h-5" />
               </div>
-              <p className="font-bold text-emerald-800 dark:text-emerald-300">وضعیت موجودی انبار کاملاً ایده‌آل است</p>
-              <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-1">هیچ کالایی در وضعیت اتمام یا کسری بحرانی قرار ندارد.</p>
+              <p className="font-bold text-emerald-800 dark:text-emerald-300">{t('dashboard.idealStockStatus')}</p>
+              <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-1">{t('dashboard.idealStockSubtitle')}</p>
             </div>
           ) : (
             lowStockVariants.slice(0, 6).map((v) => {
@@ -134,25 +137,25 @@ export const DashboardStockAlerts: React.FC<DashboardStockAlertsProps> = ({
                         {v.sku}
                       </span>
                       {isOut ? (
-                        <Badge variant="danger">ناموجود</Badge>
+                        <Badge variant="danger">{t('dashboard.outOfStock')}</Badge>
                       ) : (
                         <Badge variant="warning">
-                          {toPersianDigits(qty)} عدد باقی‌مانده
+                          {isPersian ? toPersianDigits(qty) : qty} {t('dashboard.unitsRemaining')}
                         </Badge>
                       )}
                     </div>
                     <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 flex items-center gap-1.5">
-                      <span>{v.product_title || 'محصول'}</span>
+                      <span>{v.product_title || t('products.product')}</span>
                       {v.color_name && (
                         <>
                           <span>•</span>
-                          <span>رنگ: {v.color_name}</span>
+                          <span>{t('products.color')}: {v.color_name}</span>
                         </>
                       )}
                       {v.size_name && (
                         <>
                           <span>•</span>
-                          <span>سایز: {v.size_name}</span>
+                          <span>{t('products.size')}: {v.size_name}</span>
                         </>
                       )}
                     </p>
@@ -167,7 +170,7 @@ export const DashboardStockAlerts: React.FC<DashboardStockAlertsProps> = ({
                         onClick={() => onNavigate('inventory/movements')}
                         icon={<RefreshCw className="w-3 h-3 text-neutral-600 dark:text-neutral-400" />}
                       >
-                        ورود به انبار
+                        {t('dashboard.stockInAction')}
                       </Button>
                     )}
                   </div>

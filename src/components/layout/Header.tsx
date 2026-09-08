@@ -95,20 +95,20 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
   };
 
   const getUserRoleLabel = () => {
-    if (!isCloudAuthenticated) return 'مالک سازمان (آفلاین)';
+    if (!isCloudAuthenticated) return t('common.roleOwnerOffline');
     switch (userRole) {
       case 'owner':
-        return 'مالک سازمان (Owner)';
+        return t('common.roleOwner');
       case 'manager':
-        return 'مدیر فروشگاه (Manager)';
+        return t('common.roleManager');
       case 'warehouse':
-        return 'انباردار (Warehouse)';
+        return t('common.roleWarehouse');
       case 'sales':
-        return 'فروشنده / صندوق‌دار (Sales)';
+        return t('common.roleSales');
       case 'viewer':
-        return 'مشاهده‌گر (Viewer)';
+        return t('common.roleViewer');
       default:
-        return userRole || 'کاربر';
+        return userRole || t('common.userRole');
     }
   };
 
@@ -119,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={onToggleSidebar}
-            title="تغییر وضعیت سایدبار"
+            title={t('common.toggleSidebar')}
             className="p-2 rounded-lg text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
           >
             <PanelLeft className="w-5 h-5 shrink-0" />
@@ -136,7 +136,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
               </div>
               <div className="text-start pe-1">
                 <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 block truncate max-w-[140px] sm:max-w-[180px]">
-                  {activeOrganization?.name || 'انتخاب سازمان'}
+                  {activeOrganization?.name || t('common.selectOrg')}
                 </span>
               </div>
               <ChevronDown className={`w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400 transition-transform ${isOrgMenuOpen ? 'rotate-180' : ''}`} />
@@ -146,9 +146,9 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
             {isOrgMenuOpen && (
               <div className="absolute start-0 mt-2 w-72 bg-white dark:bg-[#14161c] rounded-2xl shadow-xl border border-neutral-200/90 dark:border-neutral-800 py-2 z-50 animate-fade-in text-neutral-800 dark:text-neutral-200">
                 <div className="px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-                  <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">سازمان‌ها و فروشگاه‌ها</span>
+                  <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{t('common.orgsAndStores')}</span>
                   <span className="text-[11px] font-mono font-semibold bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full text-neutral-600 dark:text-neutral-400">
-                    {organizations.length} سازمان
+                    {organizations.length} {t('common.organization')}
                   </span>
                 </div>
 
@@ -202,7 +202,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                     className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-xl transition-colors text-start cursor-pointer"
                   >
                     <Plus className="w-4 h-4 shrink-0 text-blue-600 dark:text-blue-400" />
-                    <span>ایجاد سازمان / فروشگاه جدید</span>
+                    <span>{t('common.createNewOrg')}</span>
                   </button>
                 </div>
               </div>
@@ -220,7 +220,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
           >
             <span className={`w-2 h-2 rounded-full ${mode === 'cloud_synced' && isCloudAuthenticated ? 'bg-blue-500 animate-pulse' : 'bg-emerald-500'}`} />
             <span className="hidden md:inline">
-              {mode === 'local_offline' ? t('common.localOffline') : (isCloudAuthenticated ? t('common.cloudSynced') : 'اتصال ابری (ورود لازم است)')}
+              {mode === 'local_offline' ? t('common.localOffline') : (isCloudAuthenticated ? t('common.cloudSynced') : t('common.cloudLoginRequired'))}
             </span>
           </button>
 
@@ -240,7 +240,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
           <div className="relative" ref={themeMenuRef}>
             <button
               onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
-              title={`پوسته: ${theme === 'dark' ? 'تیره' : theme === 'light' ? 'روشن' : 'سیستم'}`}
+              title={`${t('common.theme')}: ${theme === 'dark' ? t('common.themeDark') : theme === 'light' ? t('common.themeLight') : t('common.themeSystem')}`}
               className="flex items-center justify-center w-8 h-8 rounded-full border border-neutral-200/80 dark:border-neutral-700/80 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200 transition-colors cursor-pointer shadow-2xs"
             >
               {theme === 'dark' ? (
@@ -264,7 +264,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                   }`}
                 >
                   <Sun className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span>روشن (Light)</span>
+                  <span>{t('common.themeLight')}</span>
                 </button>
                 <button
                   onClick={() => {
@@ -276,7 +276,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                   }`}
                 >
                   <Moon className="w-4 h-4 text-indigo-400 shrink-0" />
-                  <span>تیره (Dark)</span>
+                  <span>{t('common.themeDark')}</span>
                 </button>
                 <button
                   onClick={() => {
@@ -288,7 +288,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                   }`}
                 >
                   <Monitor className="w-4 h-4 text-neutral-500 shrink-0" />
-                  <span>سیستم (System)</span>
+                  <span>{t('common.themeSystem')}</span>
                 </button>
               </div>
             )}
@@ -336,7 +336,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                   </p>
                   <div className="mt-2 flex items-center gap-1.5">
                     <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border ${isCloudAuthenticated ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/60' : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'}`}>
-                      {isCloudAuthenticated ? 'متصل به همگام‌سازی ابری' : 'حالت آفلاین محلی'}
+                      {isCloudAuthenticated ? t('common.connectedCloud') : t('common.localOffline')}
                     </span>
                   </div>
                 </div>
@@ -344,13 +344,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                 {/* Account Details & Role */}
                 <div className="px-4 py-2.5 text-xs border-b border-neutral-100 dark:border-neutral-800 space-y-1">
                   <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-neutral-500 dark:text-neutral-400">نقش کاربری:</span>
+                    <span className="text-neutral-500 dark:text-neutral-400">{t('common.userRole')}</span>
                     <span className="font-bold text-neutral-800 dark:text-neutral-200">{getUserRoleLabel()}</span>
                   </div>
                   <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-neutral-500 dark:text-neutral-400">وضعیت اتصال:</span>
+                    <span className="text-neutral-500 dark:text-neutral-400">{t('common.connectionStatus')}</span>
                     <span className="font-bold text-neutral-800 dark:text-neutral-200">
-                      {isCloudAuthenticated ? 'ابری همگام' : 'آفلاین محلی'}
+                      {isCloudAuthenticated ? t('common.cloudSynced') : t('common.localOffline')}
                     </span>
                   </div>
                 </div>
@@ -366,7 +366,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                       className="w-full flex items-center gap-2 px-3 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-xl transition-colors text-start cursor-pointer font-bold"
                     >
                       <LogIn className="w-4 h-4 shrink-0 text-blue-600 dark:text-blue-400" />
-                      <span>ورود به حساب سرور ابری</span>
+                      <span>{t('common.loginToCloud')}</span>
                     </button>
                   ) : (
                     <button
@@ -377,7 +377,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                       className="w-full flex items-center gap-2 px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition-colors text-start cursor-pointer font-bold"
                     >
                       <LogOut className="w-4 h-4 shrink-0 text-red-600 dark:text-red-400" />
-                      <span>خروج از حساب ابری</span>
+                      <span>{t('common.logoutCloud')}</span>
                     </button>
                   )}
 
@@ -390,7 +390,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                       className="w-full flex items-center gap-2 px-3 py-2 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors text-start cursor-pointer"
                     >
                       <Settings className="w-4 h-4 shrink-0 text-neutral-500 dark:text-neutral-400" />
-                      <span>تنظیمات سرور و همگام‌سازی</span>
+                      <span>{t('common.serverSyncSettings')}</span>
                     </button>
                   )}
                 </div>

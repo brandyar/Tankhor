@@ -52,7 +52,7 @@ export const SuppliersView: React.FC = () => {
 
   const handleDeleteSupplier = async (sup: Supplier) => {
     if (!sup.id) return;
-    const isConfirmed = await confirmAction(`آیا از حذف تامین‌کننده «${sup.name}» اطمینان دارید؟`);
+    const isConfirmed = await confirmAction(`${t('purchasing.confirmDeleteSupplier')} (${sup.name})`);
     if (!isConfirmed) return;
 
     try {
@@ -124,11 +124,11 @@ export const SuppliersView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="تامین‌کنندگان و تولیدکنندگان (Suppliers)"
-        subtitle="بانک اطلاعات بنکداران، کارگاه‌های خیاطي، کارخانجات و تامین‌کنندگان پارچه و لباس"
+        title={t('purchasing.suppliersViewTitle')}
+        subtitle={t('purchasing.suppliersViewSubtitle')}
         action={
           <Button onClick={() => handleOpenModal()} icon={<Plus className="w-4 h-4" />}>
-            افزودن تامین‌کننده جدید
+            {t('purchasing.addNewSupplier')}
           </Button>
         }
       />
@@ -136,7 +136,7 @@ export const SuppliersView: React.FC = () => {
       <Card className="p-4">
         <div className="max-w-md">
           <Input
-            placeholder="جستجو نام تامین‌کننده، مسئول فروش یا تلفن..."
+            placeholder={t('purchasing.searchSuppliersPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             icon={<Search className="w-4 h-4" />}
@@ -149,11 +149,11 @@ export const SuppliersView: React.FC = () => {
           data={filteredSuppliers}
           keyExtractor={(s) => s.id}
           isLoading={isLoading}
-          emptyMessage="هیچ تامین‌کننده‌ای ثبت نشده است."
+          emptyMessage={t('purchasing.noSuppliersFound')}
           columns={[
             {
               key: 'name',
-              header: 'نام شرکت / تامین‌کننده',
+              header: t('purchasing.supplierName'),
               render: (s) => (
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xs shrink-0">
@@ -163,7 +163,7 @@ export const SuppliersView: React.FC = () => {
                     <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">{s.name}</span>
                     {s.contact_name && (
                       <div className="text-[10px] text-slate-500 dark:text-neutral-300 flex items-center gap-1 mt-0.5">
-                        <UserCheck className="w-3 h-3 text-indigo-500 dark:text-indigo-400" /> مسئول: {s.contact_name}
+                        <UserCheck className="w-3 h-3 text-indigo-500 dark:text-indigo-400" /> {t('purchasing.contactLabel')}: {s.contact_name}
                       </div>
                     )}
                   </div>
@@ -172,7 +172,7 @@ export const SuppliersView: React.FC = () => {
             },
             {
               key: 'phone',
-              header: 'شماره تماس',
+              header: t('purchasing.phone'),
               render: (s) => (
                 <div className="flex items-center gap-1.5 font-mono text-xs font-semibold text-slate-900 dark:text-white">
                   <Phone className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
@@ -182,7 +182,7 @@ export const SuppliersView: React.FC = () => {
             },
             {
               key: 'email',
-              header: 'ایمیل / آدرس',
+              header: t('purchasing.emailOrAddress'),
               render: (s) => (
                 <div className="text-xs text-slate-700 dark:text-neutral-200 truncate max-w-xs">
                   {s.email && (
@@ -203,7 +203,7 @@ export const SuppliersView: React.FC = () => {
             },
             {
               key: 'date_created',
-              header: 'تاریخ ثبت',
+              header: t('purchasing.registrationDate'),
               render: (s) => (
                 <span className="font-mono text-xs text-slate-600 dark:text-neutral-300">
                   {formatDate(s.date_created, isPersian)}
@@ -219,7 +219,7 @@ export const SuppliersView: React.FC = () => {
                 onClick={() => handleOpenModal(s)}
                 icon={<Edit className="w-3.5 h-3.5" />}
               >
-                ویرایش
+                {t('common.edit')}
               </Button>
               <Button
                 variant="ghost"
@@ -228,7 +228,7 @@ export const SuppliersView: React.FC = () => {
                 onClick={() => handleDeleteSupplier(s)}
                 icon={<Trash2 className="w-3.5 h-3.5" />}
               >
-                حذف
+                {t('common.delete')}
               </Button>
             </div>
           )}
@@ -238,12 +238,12 @@ export const SuppliersView: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingSupplier ? 'ویرایش اطلاعات تامین‌کننده' : 'افزودن تامین‌کننده جدید'}
+        title={editingSupplier ? t('purchasing.editSupplier') : t('purchasing.addNewSupplier')}
       >
         <form onSubmit={handleSaveSupplier} className="space-y-4">
           <Input
-            label="نام تولیدی / شرکت تامین‌کننده"
-            placeholder="مثلا: کارخانه تولیدی پوشاک آریا"
+            label={t('purchasing.companyName')}
+            placeholder={t('purchasing.companyPlaceholder')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -251,21 +251,21 @@ export const SuppliersView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="نام مسئول فروش / رابط"
-              placeholder="آقای رضایی"
+              label={t('purchasing.contactPerson')}
+              placeholder={t('purchasing.contactPlaceholder')}
               value={contactName}
               onChange={(e) => setContactName(e.target.value)}
             />
             <Input
-              label="شماره تلفن"
-              placeholder="02188888888"
+              label={t('purchasing.phone')}
+              placeholder={t('purchasing.phonePlaceholder')}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
           </div>
 
           <Input
-            label="آدرس ایمیل"
+            label={t('purchasing.email')}
             type="email"
             placeholder="supplier@example.com"
             value={email}
@@ -273,10 +273,10 @@ export const SuppliersView: React.FC = () => {
           />
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">آدرس کارخانه / دفتر</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">{t('purchasing.addressFactory')}</label>
             <textarea
               rows={2}
-              placeholder="استان، شهر، شهرک صنعتی..."
+              placeholder={t('purchasing.addressFactoryPlaceholder')}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               className="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-[#181a20] text-slate-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -285,10 +285,10 @@ export const SuppliersView: React.FC = () => {
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-neutral-800">
             <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>
-              انصراف
+              {t('common.cancel')}
             </Button>
             <Button type="submit" isLoading={isSaving}>
-              {editingSupplier ? 'ذخیره تغییرات' : 'ثبت تامین‌کننده'}
+              {editingSupplier ? t('customers.saveChanges') : t('purchasing.saveSupplier')}
             </Button>
           </div>
         </form>

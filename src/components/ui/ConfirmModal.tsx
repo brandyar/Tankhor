@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 import { registerConfirmHandler } from '../../utils/confirm';
+import { useTranslation } from '../../i18n';
 
 interface ConfirmState {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface ConfirmState {
 }
 
 export const ConfirmModalHost: React.FC = () => {
+  const { t } = useTranslation();
   const [state, setState] = useState<ConfirmState | null>(null);
 
   useEffect(() => {
@@ -17,13 +19,13 @@ export const ConfirmModalHost: React.FC = () => {
       return new Promise<boolean>((resolve) => {
         setState({
           isOpen: true,
-          title: title || 'تایید حذف',
+          title: title || t('common.confirmDeleteTitle'),
           message,
           resolve,
         });
       });
     });
-  }, []);
+  }, [t]);
 
   if (!state || !state.isOpen) return null;
 
@@ -60,7 +62,7 @@ export const ConfirmModalHost: React.FC = () => {
             onClick={handleCancel}
             className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
-            انصراف
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -68,7 +70,7 @@ export const ConfirmModalHost: React.FC = () => {
             className="flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 transition-colors cursor-pointer shadow-sm"
           >
             <Trash2 className="h-4 w-4" />
-            تایید و حذف
+            {t('common.confirmDelete')}
           </button>
         </div>
       </div>

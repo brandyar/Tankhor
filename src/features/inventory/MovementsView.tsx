@@ -64,54 +64,55 @@ export const MovementsView: React.FC = () => {
   }, [activeOrganization, selectedWarehouseFilter, selectedTypeFilter, search]);
 
   const getMovementTypeBadge = (type: MovementType, qty: number) => {
+    const formattedQty = isPersian ? toPersianDigits(qty) : qty;
     switch (type) {
       case 'purchase':
         return (
           <Badge variant="success" className="gap-1">
             <ArrowDownLeft className="w-3 h-3 text-emerald-600" />
-            <span>ورود خرید (+{toPersianDigits(qty)})</span>
+            <span>{t('inventory.movementTypePurchase')} (+{formattedQty})</span>
           </Badge>
         );
       case 'sale':
         return (
           <Badge variant="danger" className="gap-1">
             <ArrowUpRight className="w-3 h-3 text-red-600" />
-            <span>خروج فروش (-{toPersianDigits(qty)})</span>
+            <span>{t('inventory.movementTypeSale')} (-{formattedQty})</span>
           </Badge>
         );
       case 'return':
         return (
           <Badge variant="info" className="gap-1">
             <RefreshCw className="w-3 h-3 text-sky-600" />
-            <span>مرجوعی (+{toPersianDigits(qty)})</span>
+            <span>{t('inventory.movementTypeReturn')} (+{formattedQty})</span>
           </Badge>
         );
       case 'damage':
         return (
           <Badge variant="danger" className="gap-1">
             <AlertCircle className="w-3 h-3 text-red-600" />
-            <span>ضایعات (-{toPersianDigits(qty)})</span>
+            <span>{t('inventory.movementTypeDamage')} (-{formattedQty})</span>
           </Badge>
         );
       case 'adjustment':
         return (
           <Badge variant="neutral" className="gap-1">
             <RefreshCw className="w-3 h-3 text-slate-600" />
-            <span>اصلاح موجودی ({toPersianDigits(qty)})</span>
+            <span>{t('inventory.movementTypeAdjustment')} ({formattedQty})</span>
           </Badge>
         );
       case 'transfer_in':
         return (
           <Badge variant="info" className="gap-1">
             <ArrowDownLeft className="w-3 h-3 text-indigo-600" />
-            <span>ورود انتقال (+{toPersianDigits(qty)})</span>
+            <span>{t('inventory.movementTypeTransferIn')} (+{formattedQty})</span>
           </Badge>
         );
       case 'transfer_out':
         return (
           <Badge variant="warning" className="gap-1">
             <ArrowUpRight className="w-3 h-3 text-amber-600" />
-            <span>خروج انتقال (-{toPersianDigits(qty)})</span>
+            <span>{t('inventory.movementTypeTransferOut')} (-{formattedQty})</span>
           </Badge>
         );
       default:
@@ -122,7 +123,7 @@ export const MovementsView: React.FC = () => {
   const columns: Column<InventoryMovement>[] = [
     {
       key: 'created_at',
-      header: 'تاریخ و زمان',
+      header: t('inventory.dateTime'),
       render: (m) => (
         <span className="text-slate-600 dark:text-neutral-300 font-medium text-xs">
           {formatDate(m.created_at, isPersian)}
@@ -131,7 +132,7 @@ export const MovementsView: React.FC = () => {
     },
     {
       key: 'sku',
-      header: 'شناسه کالا (SKU)',
+      header: t('inventory.itemSku'),
       render: (m) => (
         <span className="font-extrabold text-slate-900 dark:text-neutral-100 font-mono text-xs">
           {m.sku || `VAR-#${m.variant_id}`}
@@ -140,19 +141,19 @@ export const MovementsView: React.FC = () => {
     },
     {
       key: 'warehouse_id',
-      header: 'انبار مربوطه',
+      header: t('inventory.relatedWarehouse'),
       render: (m) => (
-        <span className="font-bold text-slate-800 dark:text-neutral-100">{m.warehouse_name || 'انبار مرکزی'}</span>
+        <span className="font-bold text-slate-800 dark:text-neutral-100">{m.warehouse_name || t('inventory.mainWarehouseDefault')}</span>
       ),
     },
     {
       key: 'type',
-      header: 'نوع و تعداد گردش',
+      header: t('inventory.movementTypeAndQty'),
       render: (m) => getMovementTypeBadge(m.type, m.quantity),
     },
     {
       key: 'reference_id',
-      header: 'شماره سند / مرجع',
+      header: t('inventory.refDocNumber'),
       render: (m) => (
         <span className="font-mono text-xs text-slate-500 dark:text-neutral-300 bg-slate-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md">
           {m.reference_id || '-'}
@@ -161,7 +162,7 @@ export const MovementsView: React.FC = () => {
     },
     {
       key: 'note',
-      header: 'شرح گردش',
+      header: t('inventory.movementNote'),
       render: (m) => (
         <span className="text-slate-600 dark:text-neutral-300 text-xs truncate max-w-xs block">
           {m.note || '-'}
@@ -174,14 +175,14 @@ export const MovementsView: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title={t('navigation.movements')}
-        subtitle="سجل و دفتر روزنامه ثبت تمام ورودها، خروج‌ها، ضایعات و اصلاحات موجودی انبار"
+        subtitle={t('inventory.movementsViewSubtitle')}
       />
 
       <Card>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-72">
             <Input
-              placeholder="جستجو با SKU، کد سند یا توضیحات..."
+              placeholder={t('inventory.searchMovementsPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search className="w-4 h-4" />}
@@ -194,7 +195,7 @@ export const MovementsView: React.FC = () => {
               onChange={(e) => setSelectedWarehouseFilter(e.target.value ? Number(e.target.value) : '')}
               className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-100 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
-              <option value="">همه انبارها</option>
+              <option value="">{t('inventory.allWarehousesOption')}</option>
               {warehouses.map((w, wIdx) => (
                 <option key={`mov_wh_${w.id}_${wIdx}`} value={w.id}>
                   {w.name}
@@ -207,14 +208,14 @@ export const MovementsView: React.FC = () => {
               onChange={(e) => setSelectedTypeFilter(e.target.value as MovementType | '')}
               className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-100 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
-              <option value="">همه انواع گردش</option>
-              <option value="purchase">ورود خرید</option>
-              <option value="sale">خروج فروش</option>
-              <option value="return">ورود مرجوعی</option>
-              <option value="adjustment">اصلاح موجودی</option>
-              <option value="damage">اعلام ضایعات</option>
-              <option value="transfer_in">ورود انتقال</option>
-              <option value="transfer_out">خروج انتقال</option>
+              <option value="">{t('inventory.allMovementTypes')}</option>
+              <option value="purchase">{t('inventory.movementTypePurchase')}</option>
+              <option value="sale">{t('inventory.movementTypeSale')}</option>
+              <option value="return">{t('inventory.movementTypeReturn')}</option>
+              <option value="adjustment">{t('inventory.movementTypeAdjustment')}</option>
+              <option value="damage">{t('inventory.movementTypeDamage')}</option>
+              <option value="transfer_in">{t('inventory.movementTypeTransferIn')}</option>
+              <option value="transfer_out">{t('inventory.movementTypeTransferOut')}</option>
             </select>
           </div>
         </div>

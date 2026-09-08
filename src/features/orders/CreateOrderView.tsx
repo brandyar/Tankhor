@@ -167,11 +167,11 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
     if (matched) {
       handleAddToCart(matched);
       const prod = products.find((p) => p.id === (typeof matched.product_id === 'object' ? matched.product_id.id : matched.product_id));
-      const title = prod ? prod.title : 'کالای تن‌خور';
-      showToast('success', `کالای «${title}» به فاکتور اضافه شد.`);
+      const title = prod ? prod.title : t('orders.untitledProduct');
+      showToast('success', t('orders.itemAddedToCart', { title }));
       setBarcodeQuery('');
     } else {
-      showToast('error', `کالایی با بارکد یا کد SKU «${barcodeQuery}» یافت نشد.`);
+      showToast('error', t('orders.itemNotFoundWithBarcode', { barcode: barcodeQuery }));
     }
   };
 
@@ -185,7 +185,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
   // Add Variant to Cart
   const handleAddToCart = (variant: ProductVariant) => {
     const prod = products.find((p) => p.id === (typeof variant.product_id === 'object' ? variant.product_id.id : variant.product_id));
-    const title = prod ? prod.title : 'کالای تن‌خور';
+    const title = prod ? prod.title : t('orders.untitledProduct');
     const price = variant.price || 0;
 
     const existingIdx = cart.findIndex((c) => c.variant.id === variant.id);
@@ -229,7 +229,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
   const handleClearCart = async () => {
     if (cart.length === 0) return;
-    if (await confirmAction('آیا از پاک کردن کامل سبد خرید و فاکتور جاری اطمینان دارید؟')) {
+    if (await confirmAction(t('orders.confirmClearCart'))) {
       setCart([]);
       setExtraDiscount(0);
       setOrderNotes('');
@@ -240,9 +240,9 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
   const handlePreviewPrint = () => {
     if (cart.length === 0) return;
     const selectedCust = customers.find((c) => c.id === selectedCustomerId);
-    const customerName = selectedCust ? selectedCust.name : 'مشتری عمومی (کافه‌فروش)';
+    const customerName = selectedCust ? selectedCust.name : t('orders.generalCustomer');
     const selectedWh = warehouses.find((w) => w.id === selectedWarehouseId);
-    const warehouseName = selectedWh ? selectedWh.name : 'انبار اصلی';
+    const warehouseName = selectedWh ? selectedWh.name : t('orders.defaultWarehouse');
 
     setLastSavedOrder({
       order: {
@@ -288,7 +288,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
       setIsAddCustomerModalOpen(false);
       setNewCustomerName('');
       setNewCustomerPhone('');
-      showToast('success', `مشتری «${created.name}» ایجاد و انتخاب گردید.`);
+      showToast('success', t('orders.customerCreatedSuccess', { name: created.name }));
     } catch (err) {
       console.error('[CreateOrderView] Error creating quick customer:', err);
     } finally {
@@ -311,11 +311,11 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
     setErrorMsg(null);
 
     if (cart.length === 0) {
-      setErrorMsg('فاکتور خالی است. لطفاً حداقل یک کالا انتخاب یا اسکن نمایید.');
+      setErrorMsg(t('orders.emptyCartError'));
       return;
     }
     if (!selectedWarehouseId) {
-      setErrorMsg('لطفاً انبار خروج کالا را انتخاب کنید.');
+      setErrorMsg(t('orders.selectWarehouseError'));
       return;
     }
 
@@ -326,10 +326,10 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
       const orderNumber = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
 
       const selectedCust = customers.find((c) => c.id === selectedCustomerId);
-      const customerName = selectedCust ? selectedCust.name : 'مشتری عمومی (کافه‌فروش)';
+      const customerName = selectedCust ? selectedCust.name : t('orders.generalCustomer');
 
       const selectedWh = warehouses.find((w) => w.id === selectedWarehouseId);
-      const warehouseName = selectedWh ? selectedWh.name : 'انبار اصلی';
+      const warehouseName = selectedWh ? selectedWh.name : t('orders.defaultWarehouse');
 
       // Determine payment status according to method
       let actualPaymentStatus: PaymentStatus = paymentStatus;
@@ -351,14 +351,14 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         discount: totalDiscount,
         tax: taxAmount,
         total: grandTotal,
-        notes: `[روش پرداخت: ${
+        notes: `[${t('orders.paymentMethod')}: ${
           paymentType === 'pos'
-            ? 'کارتخوان'
+            ? t('orders.posTerminal')
             : paymentType === 'cash'
-            ? 'وجه نقد'
+            ? t('orders.cash')
             : paymentType === 'card_to_card'
-            ? 'کارت به کارت'
-            : 'نسیه / حساب مشتری'
+            ? t('orders.cardToCard')
+            : t('orders.storeCredit')
         }] ${orderNotes}`.trim(),
       };
 
@@ -384,7 +384,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             quantity: item.quantity,
             reference_type: 'order',
             reference_id: String(savedOrder.id),
-            note: `فروش صندوق POS سفارش #${orderNumber}`,
+            note: `POS #${orderNumber}`,
           });
         }
       }
@@ -405,7 +405,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
       if (onOrderCreated) onOrderCreated();
     } catch (err) {
       console.error('[CreateOrderView] Error saving POS order:', err);
-      setErrorMsg('خطا در ثبت و نهایی‌سازی سفارش POS.');
+      setErrorMsg(t('orders.orderSaveError'));
     } finally {
       setIsSaving(false);
     }
@@ -435,7 +435,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
   });
 
   const triggerPrint = () => {
-    printElement('printable-create-order-invoice', { title: `فاکتور_${lastSavedOrder?.order.order_number || 'جدید'}` });
+    printElement('printable-create-order-invoice', { title: `${t('orders.printInvoice')}_${lastSavedOrder?.order.order_number || 'draft'}` });
   };
 
   return (
@@ -447,23 +447,23 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             /* 80mm POS Thermal Receipt */
             <div className="w-[80mm] mx-auto text-xs space-y-3 font-mono leading-tight">
               <div className="text-center border-b border-black pb-2">
-                <h2 className="text-sm font-bold">پلتفرم مدیریت پوشاک تن‌خور</h2>
-                <p className="text-[10px]">رسید فروش صندوق POS</p>
-                <p className="text-[10px] mt-1">شماره: {lastSavedOrder.order.order_number}</p>
+                <h2 className="text-sm font-bold">{activeOrganization?.name || 'TANKHOR'}</h2>
+                <p className="text-[10px]">{t('orders.posReceiptTitle')}</p>
+                <p className="text-[10px] mt-1">{t('orders.orderNumber')}: {lastSavedOrder.order.order_number}</p>
                 <p className="text-[10px]">{formatDate(lastSavedOrder.order.date_created, isPersian)}</p>
               </div>
 
               <div className="text-[11px] space-y-0.5">
-                <p>مشتری: {lastSavedOrder.customerName}</p>
-                <p>انبار: {lastSavedOrder.warehouseName}</p>
+                <p>{t('orders.customer')}: {lastSavedOrder.customerName}</p>
+                <p>{t('orders.fulfillmentWarehouse')}: {lastSavedOrder.warehouseName}</p>
               </div>
 
               <table className="w-full text-right border-y border-black py-1">
                 <thead>
                   <tr className="border-b border-black font-bold">
-                    <th className="py-1">شرح کالا</th>
-                    <th className="py-1 text-center">تعداد</th>
-                    <th className="py-1 text-left">مبلغ کل</th>
+                    <th className="py-1">{t('orders.itemTitleAndSpecs')}</th>
+                    <th className="py-1 text-center">{t('orders.quantity')}</th>
+                    <th className="py-1 text-left">{t('orders.itemTotal')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -472,11 +472,11 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                       <td className="py-1">
                         <div>{it.productTitle}</div>
                         <div className="text-[9px] text-gray-600">
-                          {it.variant.size_name && `سایز: ${it.variant.size_name} `}
-                          {it.variant.color_name && `رنگ: ${it.variant.color_name}`}
+                          {it.variant.size_name && `${t('orders.size')}: ${it.variant.size_name} `}
+                          {it.variant.color_name && `${t('orders.color')}: ${it.variant.color_name}`}
                         </div>
                       </td>
-                      <td className="py-1 text-center">{it.quantity}</td>
+                      <td className="py-1 text-center">{isPersian ? it.quantity : it.quantity}</td>
                       <td className="py-1 text-left">{formatCurrency(it.quantity * it.unitPrice, 'TOMAN', isPersian)}</td>
                     </tr>
                   ))}
@@ -485,29 +485,29 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
               <div className="space-y-1 text-left text-xs pt-1">
                 <div className="flex justify-between">
-                  <span>جمع اقلام:</span>
+                  <span>{t('orders.subtotal')}:</span>
                   <span>{formatCurrency(lastSavedOrder.order.subtotal, 'TOMAN', isPersian)}</span>
                 </div>
                 {lastSavedOrder.order.discount > 0 && (
                   <div className="flex justify-between">
-                    <span>تخفیف:</span>
+                    <span>{t('orders.discount')}:</span>
                     <span>- {formatCurrency(lastSavedOrder.order.discount, 'TOMAN', isPersian)}</span>
                   </div>
                 )}
                 {lastSavedOrder.order.tax > 0 && (
                   <div className="flex justify-between">
-                    <span>مالیات:</span>
+                    <span>{t('orders.tax')}:</span>
                     <span>+ {formatCurrency(lastSavedOrder.order.tax, 'TOMAN', isPersian)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-sm pt-1 border-t border-black">
-                  <span>قابل پرداخت:</span>
+                  <span>{t('orders.payableAmount')}</span>
                   <span>{formatCurrency(lastSavedOrder.order.total, 'TOMAN', isPersian)}</span>
                 </div>
               </div>
 
               <div className="text-center text-[9px] pt-4 border-t border-black">
-                با تشکر از خرید شما · تن‌خور TANKHOR
+                {t('orders.thankYouForPurchase')}
               </div>
             </div>
           ) : (
@@ -515,22 +515,22 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             <div className="max-w-2xl mx-auto space-y-4 text-xs font-sans">
               <div className="flex justify-between items-center border-b-2 border-black pb-3">
                 <div>
-                  <h1 className="text-xl font-black">فاکتور رسمی فروش کالا</h1>
-                  <p className="text-gray-600 text-xs mt-1">پوشاک، کفش و اکسسوری تن‌خور (TANKHOR)</p>
+                  <h1 className="text-xl font-black">{t('orders.invoiceTitle')}</h1>
+                  <p className="text-gray-600 text-xs mt-1">{activeOrganization?.name || 'TANKHOR'}</p>
                 </div>
                 <div className="text-left font-mono text-xs space-y-1">
-                  <p><strong>شماره فاکتور:</strong> {lastSavedOrder.order.order_number}</p>
-                  <p><strong>تاریخ:</strong> {formatDate(lastSavedOrder.order.date_created, isPersian)}</p>
+                  <p><strong>{t('orders.orderNumber')}:</strong> {lastSavedOrder.order.order_number}</p>
+                  <p><strong>{t('orders.orderDate')}:</strong> {formatDate(lastSavedOrder.order.date_created, isPersian)}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 border border-gray-300 rounded-lg">
                 <div>
-                  <p className="font-bold text-gray-700">خریدار:</p>
+                  <p className="font-bold text-gray-700">{t('orders.buyerCustomer')}</p>
                   <p className="text-sm font-bold text-black">{lastSavedOrder.customerName}</p>
                 </div>
                 <div>
-                  <p className="font-bold text-gray-700">انبار خروج کالا:</p>
+                  <p className="font-bold text-gray-700">{t('orders.fulfillmentWarehouse')}</p>
                   <p className="text-sm text-black">{lastSavedOrder.warehouseName}</p>
                 </div>
               </div>
@@ -538,11 +538,11 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
               <table className="w-full text-right border-collapse border border-gray-300">
                 <thead>
                   <tr className="bg-gray-100 border-b border-gray-300 font-bold">
-                    <th className="p-2 border-r border-gray-300">ردیف</th>
-                    <th className="p-2 border-r border-gray-300">نام کالا و مشخصات فنی</th>
-                    <th className="p-2 border-r border-gray-300 text-center">تعداد</th>
-                    <th className="p-2 border-r border-gray-300 text-left">قیمت واحد (تومان)</th>
-                    <th className="p-2 text-left">جمع کل (تومان)</th>
+                    <th className="p-2 border-r border-gray-300">{t('orders.rowNumber')}</th>
+                    <th className="p-2 border-r border-gray-300">{t('orders.itemTitleAndSpecs')}</th>
+                    <th className="p-2 border-r border-gray-300 text-center">{t('orders.quantity')}</th>
+                    <th className="p-2 border-r border-gray-300 text-left">{t('orders.unitPrice')}</th>
+                    <th className="p-2 text-left">{t('orders.itemTotal')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -552,7 +552,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                       <td className="p-2 border-r border-gray-300">
                         <span className="font-bold">{it.productTitle}</span>
                         <div className="text-[10px] text-gray-500 font-mono">
-                          SKU: {it.variant.sku} | {it.variant.size_name ? `سایز: ${it.variant.size_name}` : ''} {it.variant.color_name ? `| رنگ: ${it.variant.color_name}` : ''}
+                          SKU: {it.variant.sku} | {it.variant.size_name ? `${t('orders.size')}: ${it.variant.size_name}` : ''} {it.variant.color_name ? `| ${t('orders.color')}: ${it.variant.color_name}` : ''}
                         </div>
                       </td>
                       <td className="p-2 border-r border-gray-300 text-center font-bold font-mono">{it.quantity}</td>
@@ -565,36 +565,36 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
               <div className="flex justify-between items-start pt-2">
                 <div className="w-1/2 p-2 border border-gray-200 rounded text-[11px] text-gray-600 space-y-1">
-                  <p className="font-bold text-gray-800">توضیحات فاکتور:</p>
-                  <p>{lastSavedOrder.order.notes || 'سفارش نهایی شده در صندوق POS تن‌خور.'}</p>
+                  <p className="font-bold text-gray-800">{t('orders.invoiceRemarks')}</p>
+                  <p>{lastSavedOrder.order.notes || t('orders.defaultInvoiceRemarks')}</p>
                 </div>
                 <div className="w-2/5 space-y-1 text-left font-mono text-xs">
                   <div className="flex justify-between py-1 border-b border-gray-200">
-                    <span>جمع کل اقلام:</span>
+                    <span>{t('orders.subtotal')}:</span>
                     <span>{formatCurrency(lastSavedOrder.order.subtotal, 'TOMAN', isPersian)}</span>
                   </div>
                   {lastSavedOrder.order.discount > 0 && (
                     <div className="flex justify-between py-1 border-b border-gray-200 text-red-600">
-                      <span>مجموع تخفیف:</span>
+                      <span>{t('orders.totalDiscount')}</span>
                       <span>- {formatCurrency(lastSavedOrder.order.discount, 'TOMAN', isPersian)}</span>
                     </div>
                   )}
                   {lastSavedOrder.order.tax > 0 && (
                     <div className="flex justify-between py-1 border-b border-gray-200">
-                      <span>مالیات بر ارزش افزوده:</span>
+                      <span>{t('orders.vatIncluded')}:</span>
                       <span>+ {formatCurrency(lastSavedOrder.order.tax, 'TOMAN', isPersian)}</span>
                     </div>
                   )}
                   <div className="flex justify-between py-2 font-bold text-sm border-t-2 border-black text-black">
-                    <span>مبلغ قابل پرداخت:</span>
+                    <span>{t('orders.payableAmount')}</span>
                     <span>{formatCurrency(lastSavedOrder.order.total, 'TOMAN', isPersian)}</span>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-8 text-center pt-8 border-t border-gray-300 text-xs">
-                <div>مهر و امضای فروشنده</div>
-                <div>امضای خریدار</div>
+                <div>{t('orders.sellerSignature')}</div>
+                <div>{t('orders.buyerSignature')}</div>
               </div>
             </div>
           )}
@@ -609,13 +609,13 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-[#171717] dark:text-neutral-100">پایانه فروش و صدور فاکتور (TANKHOR POS)</h1>
+              <h1 className="text-lg font-bold text-[#171717] dark:text-neutral-100">{t('orders.posTitle')}</h1>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 font-bold">
-                فعال و متصل
+                {t('orders.posOnline')}
               </span>
             </div>
             <p className="text-xs text-[#888888] dark:text-neutral-400 mt-0.5">
-              صدور سریع فاکتور خرید، اسکن بارکد، ثبت شیوه پرداخت و بروزرسانی آنی موجودی انبار
+              {t('orders.posSubtitle')}
             </p>
           </div>
         </div>
@@ -628,7 +628,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             disabled={cart.length === 0}
             icon={<Printer className="w-3.5 h-3.5 text-emerald-600" />}
           >
-            پیش‌نمایش / چاپ فاکتور
+            {t('orders.previewPrintInvoice')}
           </Button>
 
           <Button
@@ -637,7 +637,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             onClick={() => setIsAddCustomerModalOpen(true)}
             icon={<UserPlus className="w-3.5 h-3.5 text-indigo-600" />}
           >
-            تعریف مشتری سریع
+            {t('orders.quickCustomer')}
           </Button>
 
           <Button
@@ -648,7 +648,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             className="text-red-600 hover:bg-red-50 border-red-200"
             icon={<RotateCcw className="w-3.5 h-3.5" />}
           >
-            پاک کردن فاکتور
+            {t('orders.clearInvoice')}
           </Button>
         </div>
       </div>
@@ -687,9 +687,9 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             <div className="flex items-center justify-between text-xs font-bold text-[#171717] dark:text-neutral-100">
               <span className="flex items-center gap-1.5">
                 <Barcode className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                اسکن بارکد یا ورود سریع SKU کالا:
+                {t('orders.scanBarcodeOrSku')}
               </span>
-              <span className="text-[10px] text-[#888888] dark:text-neutral-400 font-mono">[کلید Enter جهت ثبت]</span>
+              <span className="text-[10px] text-[#888888] dark:text-neutral-400 font-mono">{t('orders.enterKeyHint')}</span>
             </div>
 
             <div className="relative">
@@ -698,7 +698,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                 type="text"
                 value={barcodeQuery}
                 onChange={(e) => setBarcodeQuery(e.target.value)}
-                placeholder="بارکدخوان فعال است... بارکد کالا را اسکن کنید یا کد SKU بنویسید"
+                placeholder={t('orders.barcodeScannerActivePlaceholder')}
                 className="w-full ps-9 pe-24 py-2 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 focus:border-[#171717] dark:focus:border-neutral-400 focus:bg-white dark:focus:bg-[#13151a] rounded-lg text-xs font-mono text-[#171717] dark:text-neutral-100 placeholder:text-[#a1a1a1] dark:placeholder:text-neutral-500 focus:outline-none transition-all shadow-inner"
               />
               <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-[#888888] dark:text-neutral-400">
@@ -706,7 +706,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
               </div>
               <div className="absolute inset-y-0 end-1.5 flex items-center">
                 <Button type="submit" variant="primary" size="sm" className="h-7 text-[11px] px-3 font-bold">
-                  افزودن سریع
+                  {t('orders.quickAdd')}
                 </Button>
               </div>
             </div>
@@ -717,7 +717,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="w-full sm:w-64">
                 <Input
-                  placeholder="جستجو کالا، کد یا مشخصه..."
+                  placeholder={t('orders.searchPlaceholder')}
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
                   icon={<Search className="w-3.5 h-3.5" />}
@@ -725,7 +725,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
               </div>
 
               <div className="text-xs font-mono text-[#888888] dark:text-neutral-400">
-                موجودی کالاها: <strong className="text-[#171717] dark:text-neutral-100">{filteredVariants.length} قلم</strong>
+                {t('orders.availableItemsCount', { count: filteredVariants.length })}
               </div>
             </div>
 
@@ -740,7 +740,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                     : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
                 }`}
               >
-                همه دسته‌ها
+                {t('orders.allCategories')}
               </button>
               {categories.map((cat, idx) => (
                 <button
@@ -762,10 +762,10 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
           {/* Catalog Items Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto custom-scrollbar p-1">
             {isLoading ? (
-              <div className="col-span-3 p-12 text-center text-[#888888] dark:text-neutral-400 text-xs">در حال بارگذاری کاتالوگ محصولات...</div>
+              <div className="col-span-3 p-12 text-center text-[#888888] dark:text-neutral-400 text-xs">{t('orders.loadingCatalog')}</div>
             ) : filteredVariants.length === 0 ? (
               <div className="col-span-3 p-12 text-center text-[#888888] dark:text-neutral-400 text-xs bg-white dark:bg-[#13151a] rounded-xl border border-[#ebebeb] dark:border-neutral-800">
-                هیچ کالایی با این مشخصات یافت نشد.
+                {t('orders.noProductsFound')}
               </div>
             ) : (
               filteredVariants.map((v, vIdx) => {
@@ -791,7 +791,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
                     <div>
                       <div className="font-bold text-[#171717] dark:text-neutral-100 text-xs leading-snug group-hover:text-black dark:group-hover:text-white line-clamp-2">
-                        {prod ? prod.title : 'محصول تن‌خور'}
+                        {prod ? prod.title : t('orders.untitledProduct')}
                       </div>
 
                       {/* Variant Specs Badge */}
@@ -803,7 +803,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                         )}
                         {v.size_name && (
                           <span className="text-[10px] px-1.5 py-0.5 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 rounded text-[#171717] dark:text-neutral-100 font-bold">
-                            سایز: {v.size_name}
+                            {t('orders.size')}: {v.size_name}
                           </span>
                         )}
                       </div>
@@ -819,7 +819,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                           {formatCurrency(v.price, 'TOMAN', isPersian)}
                         </div>
                         <div className={`text-[10px] font-mono mt-0.5 ${stock > 5 ? 'text-emerald-700 dark:text-emerald-400' : stock > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-red-600 dark:text-red-400 font-bold'}`}>
-                          {stock > 0 ? `موجودی: ${stock} عدد` : 'اتمام موجودی'}
+                          {stock > 0 ? t('orders.stockInCount', { count: stock }) : t('orders.outOfStock')}
                         </div>
                       </div>
 
@@ -841,9 +841,9 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             <div className="flex items-center justify-between pb-3 border-b border-[#ebebeb] dark:border-neutral-800">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <h2 className="font-bold text-[#171717] dark:text-neutral-100 text-sm">اقلام فاکتور فروش</h2>
+                <h2 className="font-bold text-[#171717] dark:text-neutral-100 text-sm">{t('orders.invoiceItems')}</h2>
               </div>
-              <Badge variant="neutral">{cart.length} کالا</Badge>
+              <Badge variant="neutral">{t('orders.itemsCount', { count: cart.length })}</Badge>
             </div>
 
             {/* Customer & Warehouse Selection */}
@@ -851,34 +851,34 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200">
-                    مشتری فاکتور
+                    {t('orders.invoiceCustomer')}
                   </label>
                   <button
                     type="button"
                     onClick={() => setSelectedCustomerId(0)}
                     className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold hover:underline"
                   >
-                    + انتخاب مشتری عمومی
+                    {t('orders.selectGeneralCustomer')}
                   </button>
                 </div>
                 <Select
                   value={selectedCustomerId}
                   onChange={(e) => setSelectedCustomerId(Number(e.target.value))}
                   options={[
-                    { value: 0, label: 'مشتری عمومی (کافه‌فروش)' },
-                    ...customers.map((c) => ({ value: c.id, label: `${c.name} (${c.phone || 'بدون شماره'})` })),
+                    { value: 0, label: t('orders.generalCustomer') },
+                    ...customers.map((c) => ({ value: c.id, label: `${c.name} (${c.phone || '-'})` })),
                   ]}
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200 mb-1">
-                  انبار تحویل کالا
+                  {t('orders.deliveryWarehouse')}
                 </label>
                 <Select
                   value={selectedWarehouseId}
                   onChange={(e) => setSelectedWarehouseId(Number(e.target.value))}
-                  options={warehouses.map((w) => ({ value: w.id, label: `${w.name} (${w.code || 'کد انبار'})` }))}
+                  options={warehouses.map((w) => ({ value: w.id, label: `${w.name} (${w.code || w.id})` }))}
                 />
               </div>
             </div>
@@ -888,7 +888,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
               {cart.length === 0 ? (
                 <div className="p-8 text-center text-[#888888] dark:text-neutral-400 text-xs space-y-2">
                   <Package className="w-8 h-8 text-[#a1a1a1] dark:text-neutral-500 mx-auto stroke-1" />
-                  <p>فاکتور خالی است. کالاها را اسکن کنید یا از کاتالوگ انتخاب نمایید.</p>
+                  <p>{t('orders.emptyCartHint')}</p>
                 </div>
               ) : (
                 cart.map((line, lIdx) => (
@@ -901,8 +901,8 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                         <span className="font-bold text-[#171717] dark:text-neutral-100 block leading-tight">{line.productTitle}</span>
                         <div className="text-[10px] text-[#888888] dark:text-neutral-400 font-mono mt-0.5">
                           SKU: {line.variant.sku}
-                          {line.variant.size_name ? ` | سایز: ${line.variant.size_name}` : ''}
-                          {line.variant.color_name ? ` | رنگ: ${line.variant.color_name}` : ''}
+                          {line.variant.size_name ? ` | ${t('orders.size')}: ${line.variant.size_name}` : ''}
+                          {line.variant.color_name ? ` | ${t('orders.color')}: ${line.variant.color_name}` : ''}
                         </div>
                       </div>
 
@@ -910,7 +910,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                         type="button"
                         onClick={() => handleRemoveLine(line.variant.id)}
                         className="text-[#888888] dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400 p-1 transition-colors"
-                        title="حذف از فاکتور"
+                        title={t('orders.removeFromCart')}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -961,14 +961,14 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
                 <label className="block text-[11px] font-bold text-[#4d4d4d] dark:text-neutral-300 mb-1">
-                  تخفیف ویژه فاکتور (تومان)
+                  {t('orders.specialDiscount')}
                 </label>
                 <input
                   type="number"
                   min="0"
                   value={extraDiscount || ''}
                   onChange={(e) => setExtraDiscount(Math.max(0, Number(e.target.value)))}
-                  placeholder="۰"
+                  placeholder="0"
                   className="w-full px-2.5 py-1.5 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 rounded-lg text-xs font-mono text-[#171717] dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-[#171717] dark:focus:ring-neutral-400"
                 />
               </div>
@@ -976,7 +976,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-[11px] font-bold text-[#4d4d4d] dark:text-neutral-300">
-                    ارزش افزوده (٪۹)
+                    {t('orders.vatRate')}
                   </label>
                   <button
                     type="button"
@@ -985,18 +985,18 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                       hasTax ? 'bg-emerald-600 text-white' : 'bg-[#ebebeb] dark:bg-neutral-800 text-[#4d4d4d] dark:text-neutral-300'
                     }`}
                   >
-                    {hasTax ? 'فعال' : 'غیرفعال'}
+                    {hasTax ? t('orders.active') : t('orders.inactive')}
                   </button>
                 </div>
                 <div className="px-2.5 py-1.5 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 rounded-lg text-xs font-mono text-[#888888] dark:text-neutral-400">
-                  {hasTax ? `${formatCurrency(taxAmount, 'TOMAN', isPersian)}` : 'بدون مالیات'}
+                  {hasTax ? `${formatCurrency(taxAmount, 'TOMAN', isPersian)}` : t('orders.noTax')}
                 </div>
               </div>
             </div>
 
             {/* Payment Method Selector Cards */}
             <div className="space-y-1.5 pt-1">
-              <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200">روش پرداخت POS:</label>
+              <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200">{t('orders.paymentMethodPos')}</label>
               <div className="grid grid-cols-4 gap-1.5">
                 <button
                   type="button"
@@ -1008,7 +1008,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   }`}
                 >
                   <CreditCard className="w-4 h-4 mx-auto mb-1" />
-                  <span className="text-[10px] font-bold block">کارتخوان</span>
+                  <span className="text-[10px] font-bold block">{t('orders.posTerminal')}</span>
                 </button>
 
                 <button
@@ -1021,7 +1021,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   }`}
                 >
                   <DollarSign className="w-4 h-4 mx-auto mb-1" />
-                  <span className="text-[10px] font-bold block">وجه نقد</span>
+                  <span className="text-[10px] font-bold block">{t('orders.cash')}</span>
                 </button>
 
                 <button
@@ -1034,7 +1034,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   }`}
                 >
                   <Tag className="w-4 h-4 mx-auto mb-1" />
-                  <span className="text-[10px] font-bold block">کارت‌به‌کارت</span>
+                  <span className="text-[10px] font-bold block">{t('orders.cardToCard')}</span>
                 </button>
 
                 <button
@@ -1047,7 +1047,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   }`}
                 >
                   <User className="w-4 h-4 mx-auto mb-1" />
-                  <span className="text-[10px] font-bold block">نسیه/اعتبار</span>
+                  <span className="text-[10px] font-bold block">{t('orders.storeCredit')}</span>
                 </button>
               </div>
             </div>
@@ -1056,18 +1056,18 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             {paymentType === 'cash' && (
               <div className="p-3 bg-emerald-50/60 border border-emerald-200/80 rounded-xl space-y-2 text-xs">
                 <div className="flex justify-between items-center">
-                  <span className="font-bold text-emerald-900">مبلغ دریافتی نقد از مشتری:</span>
+                  <span className="font-bold text-emerald-900">{t('orders.cashReceived')}</span>
                   <input
                     type="number"
                     value={cashReceived || ''}
                     onChange={(e) => setCashReceived(Number(e.target.value))}
-                    placeholder="مبلغ دریافتی..."
+                    placeholder={t('orders.cashReceivedPlaceholder')}
                     className="w-32 px-2 py-1 bg-white border border-emerald-300 rounded text-xs font-mono font-bold text-emerald-900 text-end"
                   />
                 </div>
 
                 <div className="flex justify-between items-center text-xs border-t border-emerald-200/60 pt-2 font-bold">
-                  <span className="text-emerald-800">باقی‌مانده / عودتی به مشتری:</span>
+                  <span className="text-emerald-800">{t('orders.cashChange')}</span>
                   <span className="font-mono text-emerald-900 text-sm">
                     {formatCurrency(cashChange, 'TOMAN', isPersian)}
                   </span>
@@ -1078,26 +1078,26 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             {/* Financial Totals Summary (Dark Ink Vercel Theme) */}
             <div className="p-4 bg-[#171717] text-white rounded-xl space-y-2 text-xs shadow-md">
               <div className="flex justify-between text-neutral-400">
-                <span>جمع کل اقلام:</span>
+                <span>{t('orders.subtotal')}:</span>
                 <span className="font-mono">{formatCurrency(subtotal, 'TOMAN', isPersian)}</span>
               </div>
 
               {totalDiscount > 0 && (
                 <div className="flex justify-between text-emerald-400">
-                  <span>مجموع تخفیف‌ها:</span>
+                  <span>{t('orders.totalDiscount')}</span>
                   <span className="font-mono">- {formatCurrency(totalDiscount, 'TOMAN', isPersian)}</span>
                 </div>
               )}
 
               {hasTax && (
                 <div className="flex justify-between text-neutral-300">
-                  <span>مالیات بر ارزش افزوده (٪۹):</span>
+                  <span>{t('orders.vatIncluded')}:</span>
                   <span className="font-mono">+ {formatCurrency(taxAmount, 'TOMAN', isPersian)}</span>
                 </div>
               )}
 
               <div className="flex justify-between items-center text-white font-bold text-base pt-2 border-t border-neutral-800">
-                <span>مبلغ قابل پرداخت:</span>
+                <span>{t('orders.payableAmount')}</span>
                 <span className="font-mono text-emerald-400 text-lg">
                   {formatCurrency(grandTotal, 'TOMAN', isPersian)}
                 </span>
@@ -1114,7 +1114,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                 disabled={cart.length === 0}
                 icon={<CheckCircle2 className="w-4 h-4 text-emerald-400" />}
               >
-                ثبت فاکتور و نهایی‌سازی فروش POS
+                {t('orders.submitOrderAndFinalize')}
               </Button>
 
               <Button
@@ -1125,7 +1125,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                 className="w-full py-2.5 text-xs text-neutral-300 border-neutral-700 hover:bg-neutral-800 hover:text-white justify-center"
                 icon={<Printer className="w-3.5 h-3.5 text-emerald-400" />}
               >
-                پیش‌نمایش و چاپ قبل از ثبت
+                {t('orders.previewAndPrint')}
               </Button>
             </div>
           </form>
@@ -1136,40 +1136,40 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
       <Modal
         isOpen={isAddCustomerModalOpen}
         onClose={() => setIsAddCustomerModalOpen(false)}
-        title="تعریف مشتری جدید"
+        title={t('orders.newCustomerTitle')}
         maxWidth="max-w-md"
       >
         <form onSubmit={handleCreateCustomer} className="space-y-4 pt-2">
           <div>
             <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200 mb-1">
-              نام و نام خانوادگی مشتری <span className="text-red-500">*</span>
+              {t('orders.customerNameLabel')} <span className="text-red-500">*</span>
             </label>
             <Input
               required
               value={newCustomerName}
               onChange={(e) => setNewCustomerName(e.target.value)}
-              placeholder="مثال: علی محمدی"
+              placeholder={t('orders.customerNamePlaceholder')}
             />
           </div>
 
           <div>
             <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200 mb-1">
-              شماره همراه / تلفن
+              {t('orders.customerPhoneLabel')}
             </label>
             <Input
               value={newCustomerPhone}
               onChange={(e) => setNewCustomerPhone(e.target.value)}
-              placeholder="مثال: ۰۹۱۲۳۴۵۶۷۸۹"
+              placeholder={t('orders.customerPhonePlaceholder')}
             />
           </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-[#ebebeb] dark:border-neutral-800">
             <Button variant="outline" type="button" onClick={() => setIsAddCustomerModalOpen(false)}>
-              انصراف
+              {t('orders.cancel')}
             </Button>
 
             <Button variant="primary" type="submit" isLoading={isSavingCustomer}>
-              ذخیره و انتخاب مشتری
+              {t('orders.saveAndSelectCustomer')}
             </Button>
           </div>
         </form>
@@ -1180,7 +1180,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         <Modal
           isOpen={isReceiptModalOpen}
           onClose={() => setIsReceiptModalOpen(false)}
-          title={`فاکتور سفارش #${lastSavedOrder.order.order_number} با موفقیت ثبت شد`}
+          title={t('orders.orderSuccessTitle', { number: lastSavedOrder.order.order_number })}
           maxWidth="max-w-lg"
         >
           <div className="space-y-4 text-xs font-sans pt-1">
@@ -1188,15 +1188,15 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
               <div className="flex items-center gap-2.5">
                 <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
                 <div>
-                  <p className="font-bold text-sm">فروش با موفقیت در سیستم ثبت گردید</p>
-                  <p className="text-[11px] text-emerald-800 dark:text-emerald-300 mt-0.5">موجودی انبار به‌صورت خودکار بروزرسانی شد.</p>
+                  <p className="font-bold text-sm">{t('orders.orderSuccessSubtitle')}</p>
+                  <p className="text-[11px] text-emerald-800 dark:text-emerald-300 mt-0.5">{t('orders.stockUpdatedSubtitle')}</p>
                 </div>
               </div>
             </div>
 
             {/* Receipt Format Switcher */}
             <div className="space-y-2">
-              <label className="block font-bold text-[#171717] dark:text-neutral-200">انتخاب قالب چاپ فاکتور:</label>
+              <label className="block font-bold text-[#171717] dark:text-neutral-200">{t('orders.selectPrintFormat')}</label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -1208,8 +1208,8 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   }`}
                 >
                   <FileText className="w-5 h-5 mb-1 text-indigo-400" />
-                  <span className="font-bold text-xs block">فاکتور رسمی A4 / A5</span>
-                  <span className="text-[10px] opacity-80 block mt-0.5">مناسب ارائه به خریدار و بایگانی</span>
+                  <span className="font-bold text-xs block">{t('orders.officialInvoiceFormat')}</span>
+                  <span className="text-[10px] opacity-80 block mt-0.5">{t('orders.officialInvoiceDesc')}</span>
                 </button>
 
                 <button
@@ -1222,8 +1222,8 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                   }`}
                 >
                   <Receipt className="w-5 h-5 mb-1 text-emerald-400" />
-                  <span className="font-bold text-xs block">رسید حرارتی POS (80mm)</span>
-                  <span className="text-[10px] opacity-80 block mt-0.5">مناسب پرینترهای حرارتی فیش پرینتر</span>
+                  <span className="font-bold text-xs block">{t('orders.thermalReceiptFormat')}</span>
+                  <span className="text-[10px] opacity-80 block mt-0.5">{t('orders.thermalReceiptDesc')}</span>
                 </button>
               </div>
             </div>
@@ -1231,15 +1231,15 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             {/* Financial Overview */}
             <div className="p-3 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-800 rounded-xl space-y-1.5 font-mono text-xs">
               <div className="flex justify-between">
-                <span className="text-[#888888] dark:text-neutral-400">شماره سفارش:</span>
+                <span className="text-[#888888] dark:text-neutral-400">{t('orders.orderNumber')}:</span>
                 <span className="font-bold text-[#171717] dark:text-neutral-100">{lastSavedOrder.order.order_number}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#888888] dark:text-neutral-400">مشتری:</span>
+                <span className="text-[#888888] dark:text-neutral-400">{t('orders.customer')}:</span>
                 <span className="text-[#171717] dark:text-neutral-100">{lastSavedOrder.customerName}</span>
               </div>
               <div className="flex justify-between font-bold pt-1 border-t border-[#ebebeb] dark:border-neutral-800">
-                <span className="text-[#171717] dark:text-neutral-100">مبلغ فاکتور:</span>
+                <span className="text-[#171717] dark:text-neutral-100">{t('orders.totalAmount')}:</span>
                 <span className="text-emerald-700 dark:text-emerald-400">{formatCurrency(lastSavedOrder.order.total, 'TOMAN', isPersian)}</span>
               </div>
             </div>
@@ -1247,11 +1247,11 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             {/* Actions */}
             <div className="flex items-center justify-between pt-3 border-t border-[#ebebeb] dark:border-neutral-800">
               <Button variant="outline" onClick={() => setIsReceiptModalOpen(false)}>
-                بستن و ثبت سفارش بعدی
+                {t('orders.closeAndNextOrder')}
               </Button>
 
               <Button variant="primary" onClick={triggerPrint} icon={<Printer className="w-4 h-4" />}>
-                چاپ فاکتور
+                {t('orders.printReceipt')}
               </Button>
             </div>
           </div>

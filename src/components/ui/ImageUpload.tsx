@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, X, Loader2, Sparkles, HardDrive, CheckCircle2 } from 'lucide-react';
+import { Upload, X, Loader2, Sparkles, HardDrive } from 'lucide-react';
 import { mediaManager } from '../../utils/mediaManager';
 import { isTauriEnvironment } from '../../storage';
+import { useTranslation } from '../../i18n';
 
 interface ImageUploadProps {
   label?: string;
@@ -14,7 +15,7 @@ interface ImageUploadProps {
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
-  label = 'تصویر محصول',
+  label,
   value,
   onChange,
   helperText,
@@ -22,6 +23,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   productId,
   mode = 'full',
 }) => {
+  const { t } = useTranslation();
+  const effectiveLabel = label !== undefined ? label : t('common.imageProduct');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -55,12 +58,12 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setError('لطفاً یک فایل تصویری (PNG, JPG, WEBP) انتخاب کنید.');
+      setError(t('common.imageFileTypeError'));
       return;
     }
 
     if (file.size > 20 * 1024 * 1024) {
-      setError('حجم فایل تصویر نباید بیش از ۲۰ مگابایت باشد.');
+      setError(t('common.imageFileSizeError'));
       return;
     }
 
@@ -77,7 +80,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       onChange(res.mediaId);
     } catch (err: any) {
       console.error('[ImageUpload] Error saving/compressing image:', err);
-      setError(`خطا در پردازش تصویر: ${err?.message || err}`);
+      setError(`${t('common.imageProcessingError')}: ${err?.message || err}`);
     } finally {
       setIsUploading(false);
     }
@@ -131,7 +134,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="p-1 bg-white/90 text-neutral-800 rounded hover:bg-white transition-colors"
-                  title="تغییر تصویر"
+                  title={t('common.changeImage')}
                 >
                   <Upload className="w-2.5 h-2.5" />
                 </button>
@@ -143,7 +146,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                     setResolvedDisplayUrl('');
                   }}
                   className="p-1 bg-rose-600 text-white rounded hover:bg-rose-700 transition-colors"
-                  title="حذف تصویر"
+                  title={t('common.deleteImage')}
                 >
                   <X className="w-2.5 h-2.5" />
                 </button>
@@ -155,7 +158,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             className="w-9 h-9 rounded-lg border border-dashed border-neutral-300 dark:border-neutral-700 hover:border-indigo-500 dark:hover:border-indigo-400 bg-neutral-50 dark:bg-neutral-900/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center justify-center transition-colors cursor-pointer"
-            title="افزودن تصویر به این تنوع"
+            title={t('common.addImageToVariant')}
           >
             {isUploading ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
@@ -178,9 +181,9 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
   return (
     <div className={`space-y-1.5 ${className}`}>
-      {label && (
+      {effectiveLabel && (
         <div className="flex items-center justify-between">
-          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">{label}</label>
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">{effectiveLabel}</label>
           {isTauriEnvironment() && (
             <span className="text-[10px] text-neutral-400 flex items-center gap-1 font-mono">
               <HardDrive className="w-3 h-3 text-emerald-500" />
@@ -204,7 +207,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           {compressionInfo && (
             <div className="mt-2 text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-mono">
               <Sparkles className="w-3 h-3" />
-              فشرده‌سازی خودکار: {formatFileSize(compressionInfo.origSize)} ⟵ {formatFileSize(compressionInfo.compSize)}
+              {t('common.autoCompression')}: {formatFileSize(compressionInfo.origSize)} ⟵ {formatFileSize(compressionInfo.compSize)}
             </div>
           )}
 
@@ -214,7 +217,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               onClick={() => fileInputRef.current?.click()}
               className="px-3 py-1.5 bg-white text-neutral-800 text-xs font-bold rounded-xl hover:bg-neutral-100 transition-colors cursor-pointer shadow-xs"
             >
-              تغییر تصویر
+              {t('common.changeImage')}
             </button>
             <button
               type="button"
@@ -224,7 +227,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                 setCompressionInfo(null);
               }}
               className="p-1.5 bg-rose-600 text-white rounded-xl hover:bg-rose-700 transition-colors cursor-pointer shadow-xs"
-              title="حذف تصویر"
+              title={t('common.deleteImage')}
             >
               <X className="w-4 h-4" />
             </button>
@@ -246,7 +249,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           {isUploading ? (
             <div className="flex flex-col items-center py-2 text-blue-600 dark:text-blue-400">
               <Loader2 className="w-6 h-6 animate-spin mb-2" />
-              <span className="text-xs font-medium">در حال بهینه‌سازی و ذخیره‌سازی محلی...</span>
+              <span className="text-xs font-medium">{t('common.optimizingAndSaving')}</span>
             </div>
           ) : (
             <>
@@ -254,10 +257,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                 <Upload className="w-5 h-5" />
               </div>
               <p className="text-xs font-bold text-neutral-700 dark:text-neutral-200 mb-1">
-                برای انتخاب تصویر کلیک کنید یا فایل را اینجا رها کنید
+                {t('common.clickOrDragImage')}
               </p>
               <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
-                فشرده‌سازی خودکار و تبدیل هوشمند به فرمت پرسرعت WebP
+                {t('common.autoConvertWebp')}
               </p>
             </>
           )}

@@ -157,11 +157,11 @@ export const OrganizationMembersSection: React.FC = () => {
   const getStatusBadge = (s: Status) => {
     switch (s) {
       case 'active':
-        return <Badge variant="success">فعال</Badge>;
+        return <Badge variant="success">{isPersian ? 'فعال' : 'Active'}</Badge>;
       case 'invited':
-        return <Badge variant="warning">دعوت‌شده</Badge>;
+        return <Badge variant="warning">{isPersian ? 'دعوت‌شده' : 'Invited'}</Badge>;
       case 'suspended':
-        return <Badge variant="danger">تعلیق‌شده</Badge>;
+        return <Badge variant="danger">{isPersian ? 'تعلیق‌شده' : 'Suspended'}</Badge>;
       default:
         return <Badge variant="neutral">{s}</Badge>;
     }
@@ -171,8 +171,12 @@ export const OrganizationMembersSection: React.FC = () => {
     <div className="space-y-6">
       {/* Header and Add Action */}
       <Card
-        title="مدیریت اعضا و دسترسی‌های سازمان"
-        subtitle={`کاربران عضو سازمان «${activeOrganization?.name || ''}» و تعیین سطوح دسترسی کارمندان`}
+        title={isPersian ? 'مدیریت اعضا و دسترسی‌های سازمان' : 'Organization Members & Roles'}
+        subtitle={
+          isPersian
+            ? `کاربران عضو سازمان «${activeOrganization?.name || ''}» و تعیین سطوح دسترسی کارمندان`
+            : `Members of "${activeOrganization?.name || ''}" and employee access level assignments`
+        }
         action={
           permissions.canManageUsers && (
             <Button
@@ -181,7 +185,7 @@ export const OrganizationMembersSection: React.FC = () => {
               onClick={handleOpenCreateModal}
               icon={<UserPlus className="w-4 h-4" />}
             >
-              افزودن / دعوت عضو جدید
+              {isPersian ? 'افزودن / دعوت عضو جدید' : 'Add / Invite New Member'}
             </Button>
           )
         }
@@ -191,7 +195,9 @@ export const OrganizationMembersSection: React.FC = () => {
             <div className="flex items-center gap-2.5 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs rounded-xl">
               <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
               <span>
-                شما دسترسی کافی جهت افزودن یا تغییر نقش اعضای سازمان را ندارید. ویرایش اعضا نیازمند نقش <strong>مالک</strong> یا <strong>مدیر</strong> است.
+                {isPersian
+                  ? 'شما دسترسی کافی جهت افزودن یا تغییر نقش اعضای سازمان را ندارید. ویرایش اعضا نیازمند نقش مالک یا مدیر است.'
+                  : 'You do not have permissions to manage team members. Editing members requires Owner or Manager role.'}
               </span>
             </div>
           )}
@@ -203,7 +209,7 @@ export const OrganizationMembersSection: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="جستجو بر اساس نام یا ایمیل عضو..."
+              placeholder={isPersian ? 'جستجو بر اساس نام یا ایمیل عضو...' : 'Search by member name or email...'}
               className="w-full ps-9 pe-4 py-2 text-xs bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-[#13151a] text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 transition-all"
             />
           </div>
@@ -213,8 +219,12 @@ export const OrganizationMembersSection: React.FC = () => {
             {filteredMembers.length === 0 ? (
               <div className="col-span-full py-10 text-center border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl bg-neutral-50/50 dark:bg-neutral-900/30">
                 <Users className="w-10 h-10 text-neutral-300 dark:text-neutral-700 mx-auto mb-2" />
-                <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300">عضوی با این مشخصات یافت نشد</p>
-                <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-1">با کلیک روی «افزودن عضو جدید» کارمندان خود را اضافه کنید.</p>
+                <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                  {isPersian ? 'عضوی با این مشخصات یافت نشد' : 'No members found'}
+                </p>
+                <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-1">
+                  {isPersian ? 'با کلیک روی «افزودن عضو جدید» کارمندان خود را اضافه کنید.' : 'Click "Add / Invite New Member" to add team members.'}
+                </p>
               </div>
             ) : (
               filteredMembers.map((member) => {
@@ -234,13 +244,13 @@ export const OrganizationMembersSection: React.FC = () => {
                             <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
                               {member.first_name || member.last_name
                                 ? `${member.first_name || ''} ${member.last_name || ''}`
-                                : 'کاربر بدون نام'}
+                                : (isPersian ? 'کاربر بدون نام' : 'Unnamed User')}
                             </h4>
                             {getStatusBadge(member.status)}
                           </div>
                           <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-mono mt-0.5 flex items-center gap-1">
                             <Mail className="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
-                            <span>{member.email || 'بدون ایمیل'}</span>
+                            <span>{member.email || (isPersian ? 'بدون ایمیل' : 'No Email')}</span>
                           </p>
                         </div>
                       </div>
@@ -251,7 +261,7 @@ export const OrganizationMembersSection: React.FC = () => {
                             type="button"
                             onClick={() => handleOpenEditModal(member)}
                             className="p-1.5 text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg transition-colors cursor-pointer"
-                            title="ویرایش دسترسی"
+                            title={isPersian ? 'ویرایش دسترسی' : 'Edit Member'}
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
@@ -260,7 +270,7 @@ export const OrganizationMembersSection: React.FC = () => {
                               type="button"
                               onClick={() => setDeleteConfirmId(member.id)}
                               className="p-1.5 text-neutral-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
-                              title="حذف عضو"
+                              title={isPersian ? 'حذف عضو' : 'Remove Member'}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -273,10 +283,12 @@ export const OrganizationMembersSection: React.FC = () => {
                     <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-[11px]">
                       <div className="flex items-center gap-1.5">
                         {getRoleIcon(member.role)}
-                        <span className="font-bold text-neutral-800 dark:text-neutral-200">{roleDef.labelFa}</span>
+                        <span className="font-bold text-neutral-800 dark:text-neutral-200">
+                          {isPersian ? roleDef.labelFa : roleDef.labelEn}
+                        </span>
                       </div>
                       <span className="text-neutral-400 dark:text-neutral-500 text-[10px] font-mono">
-                        عضویت: {formatDate(member.date_joined || new Date().toISOString())}
+                        {isPersian ? 'عضویت:' : 'Joined:'} {formatDate(member.date_joined || new Date().toISOString())}
                       </span>
                     </div>
                   </div>
@@ -480,19 +492,23 @@ export const OrganizationMembersSection: React.FC = () => {
           <div className="p-3 rounded-xl bg-neutral-50 dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-600 dark:text-neutral-400 space-y-1">
             <div className="font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <span>اختیارات نقش انتخاب شده ({ROLE_DEFINITIONS[role]?.labelFa}):</span>
+              <span>
+                {isPersian
+                  ? `اختیارات نقش انتخاب شده (${ROLE_DEFINITIONS[role]?.labelFa}):`
+                  : `Selected Role Permissions (${ROLE_DEFINITIONS[role]?.labelEn}):`}
+              </span>
             </div>
             <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-              {ROLE_DEFINITIONS[role]?.descriptionFa}
+              {isPersian ? ROLE_DEFINITIONS[role]?.descriptionFa : ROLE_DEFINITIONS[role]?.descriptionEn}
             </p>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
             <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>
-              انصراف
+              {t('common.cancel')}
             </Button>
             <Button variant="primary" type="submit" isLoading={isSaving}>
-              ذخیره تغییرات عضو
+              {isPersian ? 'ذخیره تغییرات عضو' : 'Save Member Changes'}
             </Button>
           </div>
         </form>
@@ -503,16 +519,18 @@ export const OrganizationMembersSection: React.FC = () => {
         <Modal
           isOpen={true}
           onClose={() => setDeleteConfirmId(null)}
-          title="تایید حذف عضو از سازمان"
+          title={isPersian ? 'تایید حذف عضو از سازمان' : 'Confirm Remove Member'}
           maxWidth="sm"
         >
           <div className="space-y-4">
             <p className="text-xs text-neutral-700 dark:text-neutral-300">
-              آیا از حذف این کاربر از لیست اعضای سازمان اطمینان دارید؟ این کاربر دیگر به اطلاعات و منوهای این سازمان دسترسی نخواهد داشت.
+              {isPersian
+                ? 'آیا از حذف این کاربر از لیست اعضای سازمان اطمینان دارید؟ این کاربر دیگر به اطلاعات و منوهای این سازمان دسترسی نخواهد داشت.'
+                : 'Are you sure you want to remove this member? They will no longer have access to this organization.'}
             </p>
             <div className="flex items-center justify-end gap-2 pt-2">
               <Button variant="outline" size="sm" onClick={() => setDeleteConfirmId(null)}>
-                انصراف
+                {t('common.cancel')}
               </Button>
               <Button
                 variant="danger"
@@ -520,7 +538,7 @@ export const OrganizationMembersSection: React.FC = () => {
                 onClick={() => handleDeleteMember(deleteConfirmId)}
                 isLoading={isSaving}
               >
-                حذف عضو
+                {isPersian ? 'حذف عضو' : 'Remove Member'}
               </Button>
             </div>
           </div>

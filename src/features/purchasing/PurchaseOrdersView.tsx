@@ -79,7 +79,7 @@ export const PurchaseOrdersView: React.FC = () => {
         const sup = supList.find((s) => s.id === (typeof po.supplier_id === 'object' ? po.supplier_id.id : po.supplier_id));
         return {
           ...po,
-          supplier_name: sup ? sup.name : 'تامین‌کننده عمومی',
+          supplier_name: sup ? sup.name : t('purchasing.generalSupplier'),
         };
       });
 
@@ -106,7 +106,7 @@ export const PurchaseOrdersView: React.FC = () => {
     const prod = products.find((p) => p.id === (typeof v.product_id === 'object' ? (v.product_id as any).id : v.product_id));
     const colorName = (v as any).color_name || (typeof v.color_id === 'object' ? (v.color_id as any).name : undefined);
     const sizeName = (v as any).size_name || (typeof v.size_id === 'object' ? (v.size_id as any).name : undefined);
-    const title = prod?.title || (v as any).product_title || `کالا #${v.id}`;
+    const title = prod?.title || (v as any).product_title || `#${v.id}`;
     const details = [colorName, sizeName].filter(Boolean).join(' / ');
     const skuText = v.sku ? ` (${v.sku})` : '';
     return `${title}${details ? ` - ${details}` : ''}${skuText}`;
@@ -114,7 +114,7 @@ export const PurchaseOrdersView: React.FC = () => {
 
   const handleAddItem = () => {
     if (!selectedVariantId || selectedVariantId <= 0) {
-      alert(isPersian ? 'لطفاً یک کالا را انتخاب کنید.' : 'Please select a variant.');
+      alert(t('purchasing.pleaseSelectVariant'));
       return;
     }
     const qty = Math.max(1, Number(itemQty) || 1);
@@ -153,7 +153,7 @@ export const PurchaseOrdersView: React.FC = () => {
         warehouse_id: warehouseId,
         purchase_number: poNumber,
         status,
-        currency: 'TOMAN',
+        currency: activeOrganization?.currency || 'TOMAN',
         subtotal: totalAmount,
         discount: 0,
         tax: 0,
@@ -183,7 +183,7 @@ export const PurchaseOrdersView: React.FC = () => {
             quantity: item.quantity,
             reference_type: 'purchase_order',
             reference_id: String(savedPO.id),
-            note: `تحویل سفارش خرید #${poNumber}`,
+            note: `${t('purchasing.poReceiveStock')} #${poNumber}`,
           });
         }
       }
@@ -216,7 +216,7 @@ export const PurchaseOrdersView: React.FC = () => {
             quantity: 10,
             reference_type: 'purchase_order',
             reference_id: String(po.id),
-            note: `تکمیل خرید سفارش #${po.purchase_number}`,
+            note: `${t('purchasing.poReceiveStock')} #${po.purchase_number}`,
           });
         }
       }
@@ -229,7 +229,7 @@ export const PurchaseOrdersView: React.FC = () => {
 
   const handleDeletePO = async (po: PurchaseOrder) => {
     if (!po.id) return;
-    const isConfirmed = await confirmAction(`آیا از حذف سفارش خرید «${po.purchase_number}» اطمینان دارید؟`);
+    const isConfirmed = await confirmAction(`${t('purchasing.confirmDeletePO')} (${po.purchase_number})`);
     if (!isConfirmed) return;
 
     try {
@@ -248,15 +248,15 @@ export const PurchaseOrdersView: React.FC = () => {
   const getPOStatusBadge = (status: PurchaseOrderStatus) => {
     switch (status) {
       case 'received':
-        return <Badge variant="success">رسید و تحویل شده</Badge>;
+        return <Badge variant="success">{t('purchasing.poStatusReceivedBadge')}</Badge>;
       case 'ordered':
-        return <Badge variant="primary">سفارش داده شده به تامین‌کننده</Badge>;
+        return <Badge variant="primary">{t('purchasing.poStatusOrderedBadge')}</Badge>;
       case 'partially_received':
-        return <Badge variant="warning">تحویل جزئی</Badge>;
+        return <Badge variant="warning">{t('purchasing.poStatusPartialBadge')}</Badge>;
       case 'draft':
-        return <Badge variant="neutral">پیش‌نویس</Badge>;
+        return <Badge variant="neutral">{t('purchasing.poStatusDraftBadge')}</Badge>;
       case 'cancelled':
-        return <Badge variant="error">لغو شده</Badge>;
+        return <Badge variant="error">{t('purchasing.poStatusCancelledBadge')}</Badge>;
       default:
         return <Badge variant="neutral">{status}</Badge>;
     }
@@ -272,11 +272,11 @@ export const PurchaseOrdersView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="سفارشات خرید و تامین (Purchase Orders)"
-        subtitle="مدیریت سفارش خریدهای کارخانه، ورود کالای جدید به انبار و تامین موجودی"
+        title={t('purchasing.poViewTitle')}
+        subtitle={t('purchasing.poViewSubtitle')}
         action={
           <Button onClick={() => setIsCreateModalOpen(true)} icon={<Plus className="w-4 h-4" />}>
-            ایجاد سفارش خرید جدید
+            {t('purchasing.createPOBtn')}
           </Button>
         }
       />
@@ -284,7 +284,7 @@ export const PurchaseOrdersView: React.FC = () => {
       <Card className="p-4">
         <div className="max-w-md">
           <Input
-            placeholder="جستجو شماره سفارش خرید یا تامین‌کننده..."
+            placeholder={t('purchasing.searchPOPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             icon={<Search className="w-4 h-4" />}
@@ -297,11 +297,11 @@ export const PurchaseOrdersView: React.FC = () => {
           data={filteredPOs}
           keyExtractor={(po) => po.id}
           isLoading={isLoading}
-          emptyMessage="هیچ سفارش خریدی ثبت نشده است."
+          emptyMessage={t('purchasing.noPOsFound')}
           columns={[
             {
               key: 'purchase_number',
-              header: 'شماره سفارش خرید',
+              header: t('purchasing.poNumber'),
               render: (po) => (
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-mono font-bold text-xs shrink-0">
@@ -320,23 +320,23 @@ export const PurchaseOrdersView: React.FC = () => {
             },
             {
               key: 'supplier_id',
-              header: 'تامین‌کننده',
+              header: t('purchasing.supplier'),
               render: (po) => (
                 <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">{po.supplier_name}</span>
               ),
             },
             {
               key: 'total',
-              header: 'مبلغ کل فاکتور خرید',
+              header: t('purchasing.poTotalInvoice'),
               render: (po) => (
                 <span className="font-bold font-mono text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm">
-                  {formatCurrency(po.total, 'TOMAN', isPersian)}
+                  {formatCurrency(po.total, activeOrganization?.currency, isPersian)}
                 </span>
               ),
             },
             {
               key: 'status',
-              header: 'وضعیت سفارش',
+              header: t('purchasing.poStatus'),
               render: (po) => getPOStatusBadge(po.status),
             },
           ]}
@@ -351,7 +351,7 @@ export const PurchaseOrdersView: React.FC = () => {
                 }}
                 icon={<Eye className="w-3.5 h-3.5" />}
               >
-                جزییات
+                {t('purchasing.poDetails')}
               </Button>
 
               {po.status === 'ordered' && (
@@ -361,7 +361,7 @@ export const PurchaseOrdersView: React.FC = () => {
                   onClick={() => handleUpdateStatus(po, 'received')}
                   icon={<PackageCheck className="w-3.5 h-3.5" />}
                 >
-                  رسید انبار
+                  {t('purchasing.poReceiveStock')}
                 </Button>
               )}
 
@@ -372,7 +372,7 @@ export const PurchaseOrdersView: React.FC = () => {
                 onClick={() => handleDeletePO(po)}
                 icon={<Trash2 className="w-3.5 h-3.5" />}
               >
-                حذف
+                {t('common.delete')}
               </Button>
             </div>
           )}
@@ -383,12 +383,12 @@ export const PurchaseOrdersView: React.FC = () => {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="ایجاد سفارش خرید جدید از تامین‌کننده"
+        title={t('purchasing.createPOModalTitle')}
         maxWidth="2xl"
         footer={
           <div className="flex flex-wrap items-center justify-end gap-2 w-full">
             <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
-              انصراف
+              {t('common.cancel')}
             </Button>
             <Button
               variant="secondary"
@@ -396,7 +396,7 @@ export const PurchaseOrdersView: React.FC = () => {
               isLoading={isSaving}
               disabled={items.length === 0}
             >
-              ثبت سفارش (ارسال به تامین‌کننده)
+              {t('purchasing.submitPOToSupplier')}
             </Button>
             <Button
               variant="primary"
@@ -404,7 +404,7 @@ export const PurchaseOrdersView: React.FC = () => {
               isLoading={isSaving}
               disabled={items.length === 0}
             >
-              تحویل فوری و رسید انبار
+              {t('purchasing.instantReceive')}
             </Button>
           </div>
         }
@@ -412,14 +412,14 @@ export const PurchaseOrdersView: React.FC = () => {
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="تامین‌کننده *"
+              label={t('purchasing.selectSupplierLabel')}
               value={supplierId}
               onChange={(e) => setSupplierId(Number(e.target.value))}
               options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
             />
 
             <Select
-              label="انبار تحویل گیرنده *"
+              label={t('purchasing.selectWarehouseLabel')}
               value={warehouseId}
               onChange={(e) => setWarehouseId(Number(e.target.value))}
               options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
@@ -427,11 +427,11 @@ export const PurchaseOrdersView: React.FC = () => {
           </div>
 
           <div className="p-4 bg-slate-50 dark:bg-[#181a20] border border-slate-200/80 dark:border-neutral-800 rounded-xl space-y-3">
-            <h4 className="text-xs font-bold text-slate-900 dark:text-neutral-100">انتخاب کالا و اضافه کردن به فاکتور خرید</h4>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-neutral-100">{t('purchasing.selectItemsBoxTitle')}</h4>
             
             <div className="flex flex-col sm:flex-row items-end gap-2">
               <div className="flex-1 w-full">
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 mb-1">انتخاب کالا / تنوع (SKU) *</label>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 mb-1">{t('purchasing.selectVariantLabel')}</label>
                 <select
                   value={selectedVariantId}
                   onChange={(e) => {
@@ -447,7 +447,7 @@ export const PurchaseOrdersView: React.FC = () => {
                   }}
                   className="w-full p-2.5 text-xs border border-slate-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-[#13151a] text-slate-900 dark:text-neutral-100 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                 >
-                  <option value={0} className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">-- انتخاب کالا --</option>
+                  <option value={0} className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('purchasing.selectVariantPlaceholder')}</option>
                   {variants.map((v, vIdx) => (
                     <option key={`po_var_opt_${v.id}_${vIdx}`} value={v.id} className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">
                       {getVariantLabel(v)}
@@ -458,7 +458,7 @@ export const PurchaseOrdersView: React.FC = () => {
 
               <div className="w-28 sm:w-24">
                 <Input
-                  label="تعداد"
+                  label={t('purchasing.quantityLabel')}
                   type="number"
                   min={1}
                   value={itemQty}
@@ -468,7 +468,7 @@ export const PurchaseOrdersView: React.FC = () => {
 
               <div className="w-36 sm:w-32">
                 <Input
-                  label="قیمت خرید واحد"
+                  label={t('purchasing.unitCostLabel')}
                   type="number"
                   value={itemCost}
                   onChange={(e) => setItemCost(Number(e.target.value))}
@@ -482,38 +482,38 @@ export const PurchaseOrdersView: React.FC = () => {
                 icon={<Plus className="w-4 h-4" />}
                 className="whitespace-nowrap"
               >
-                افزودن
+                {t('purchasing.addBtn')}
               </Button>
             </div>
 
             {/* List of Added Order Items */}
             {items.length === 0 ? (
               <div className="text-center py-6 border border-dashed border-slate-200 dark:border-neutral-800 rounded-lg bg-white dark:bg-[#13151a] text-slate-500 dark:text-neutral-400 text-xs">
-                هیچ کالایی به سفارش خرید اضافه نشده است. کالا و تعداد را از کادر بالا انتخاب کنید.
+                {t('purchasing.noItemsAdded')}
               </div>
             ) : (
               <div className="space-y-2 pt-1">
                 <div className="divide-y divide-slate-100 dark:divide-neutral-800 bg-white dark:bg-[#13151a] border border-slate-200 dark:border-neutral-800 rounded-lg overflow-hidden">
                   {items.map((item, idx) => {
                     const v = variants.find((varObj) => varObj.id === item.variant_id);
-                    const label = v ? getVariantLabel(v) : `کالا #${item.variant_id}`;
+                    const label = v ? getVariantLabel(v) : `#${item.variant_id}`;
                     return (
                       <div key={`po_item_row_${item.variant_id}_${idx}`} className="p-2.5 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
-                        <div className="flex-1 min-w-0 pr-2">
+                        <div className="flex-1 min-w-0 pe-2">
                           <span className="font-bold text-slate-900 dark:text-white block truncate">{label}</span>
                           <span className="text-slate-500 dark:text-neutral-400 text-[11px] font-mono">
-                            {toPersianDigits(item.quantity)} عدد × {formatCurrency(item.unit_cost, 'TOMAN', isPersian)}
+                            {toPersianDigits(item.quantity)} × {formatCurrency(item.unit_cost, activeOrganization?.currency, isPersian)}
                           </span>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">
-                            {formatCurrency(item.quantity * item.unit_cost, 'TOMAN', isPersian)}
+                            {formatCurrency(item.quantity * item.unit_cost, activeOrganization?.currency, isPersian)}
                           </span>
                           <button
                             type="button"
                             onClick={() => setItems(items.filter((_, itemIdx) => itemIdx !== idx))}
                             className="p-1 text-slate-400 dark:text-neutral-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
-                            title="حذف آیتم"
+                            title={t('purchasing.deleteItem')}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -524,9 +524,9 @@ export const PurchaseOrdersView: React.FC = () => {
                 </div>
 
                 <div className="flex justify-between items-center p-3 bg-indigo-50/80 dark:bg-indigo-950/60 rounded-xl border border-indigo-100 dark:border-indigo-900/60 text-xs font-bold text-indigo-950 dark:text-indigo-200">
-                  <span>جمع کل فاکتور سفارش خرید:</span>
+                  <span>{t('purchasing.poTotalSum')}</span>
                   <span className="font-mono text-sm text-indigo-700 dark:text-indigo-300">
-                    {formatCurrency(items.reduce((sum, i) => sum + i.quantity * i.unit_cost, 0), 'TOMAN', isPersian)}
+                    {formatCurrency(items.reduce((sum, i) => sum + i.quantity * i.unit_cost, 0), activeOrganization?.currency, isPersian)}
                   </span>
                 </div>
               </div>
@@ -534,12 +534,12 @@ export const PurchaseOrdersView: React.FC = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">یادداشت‌ها و توضیحات سفارش (اختیاری)</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">{t('purchasing.poNotesOptional')}</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              placeholder="توضیحات نحوه تسویه، زمان تحویل یا شرایط حمل..."
+              placeholder={t('purchasing.poNotesPlaceholder')}
               className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-xs p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -551,29 +551,29 @@ export const PurchaseOrdersView: React.FC = () => {
         <Modal
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
-          title={`جزییات فاکتور خرید ${selectedPO.purchase_number}`}
+          title={`${t('purchasing.poDetailsTitle')} ${selectedPO.purchase_number}`}
         >
           <div className="space-y-4 text-xs">
             <div className="p-3 bg-slate-50 dark:bg-[#181a20] border border-slate-200 dark:border-neutral-800 rounded-xl space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-600 dark:text-neutral-400">تامین‌کننده:</span>
+                <span className="text-slate-600 dark:text-neutral-400">{t('purchasing.supplier')}:</span>
                 <span className="font-bold text-slate-900 dark:text-white">{selectedPO.supplier_name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600 dark:text-neutral-400">وضعیت:</span>
+                <span className="text-slate-600 dark:text-neutral-400">{t('purchasing.poStatus')}:</span>
                 <div>{getPOStatusBadge(selectedPO.status)}</div>
               </div>
               <div className="flex justify-between font-bold text-slate-900 dark:text-neutral-100 pt-2 border-t border-slate-200 dark:border-neutral-800">
-                <span>مبلغ کل:</span>
+                <span>{t('purchasing.totalCost')}:</span>
                 <span className="font-mono text-emerald-700 dark:text-emerald-400">
-                  {formatCurrency(selectedPO.total, 'TOMAN', isPersian)}
+                  {formatCurrency(selectedPO.total, activeOrganization?.currency, isPersian)}
                 </span>
               </div>
             </div>
 
             <div className="flex justify-end pt-2">
               <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>
-                بستن
+                {t('common.close')}
               </Button>
             </div>
           </div>

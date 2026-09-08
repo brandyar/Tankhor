@@ -16,6 +16,7 @@ import {
   Layers, Package, Building2, Calendar, Sparkles
 } from 'lucide-react';
 import { Organization } from '../../types';
+import { useTranslation } from '../../i18n';
 
 interface DashboardAnalyticsChartsProps {
   timeRange: TimeRange;
@@ -31,24 +32,24 @@ interface DashboardAnalyticsChartsProps {
 }
 
 // Custom Tooltip for Sales & Revenue Area Chart
-const CustomSalesTooltip = ({ active, payload, label, currency, isPersian }: any) => {
+const CustomSalesTooltip = ({ active, payload, label, currency, isPersian, t }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload as DailySalesData;
     return (
       <div className="bg-neutral-900 dark:bg-[#181a20] text-white p-3 rounded-lg shadow-xl border border-neutral-800 dark:border-neutral-700 text-xs font-sans space-y-1 min-w-[160px]">
         <p className="text-neutral-400 font-mono text-[11px] pb-1 border-b border-neutral-800 dark:border-neutral-700">
-          تاریخ: {data.displayDate || label}
+          {t('dashboard.date')} {data.displayDate || label}
         </p>
         <div className="flex items-center justify-between gap-4 pt-1">
-          <span className="text-neutral-300">مبلغ فروش:</span>
+          <span className="text-neutral-300">{t('dashboard.salesAmount')}</span>
           <span className="font-bold text-emerald-400 font-mono">
             {formatCurrency(data.revenue, currency, isPersian)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-neutral-300">تعداد سفارش:</span>
+          <span className="text-neutral-300">{t('dashboard.ordersCount')}</span>
           <span className="font-bold text-white font-mono">
-            {toPersianDigits(data.ordersCount)} عدد
+            {isPersian ? toPersianDigits(data.ordersCount) : data.ordersCount} {t('dashboard.unitsCount')}
           </span>
         </div>
       </div>
@@ -58,27 +59,27 @@ const CustomSalesTooltip = ({ active, payload, label, currency, isPersian }: any
 };
 
 // Custom Tooltip for Inventory In/Out Bar Chart
-const CustomFlowTooltip = ({ active, payload, label }: any) => {
+const CustomFlowTooltip = ({ active, payload, label, isPersian, t }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload as InventoryFlowData;
     return (
       <div className="bg-neutral-900 dark:bg-[#181a20] text-white p-3 rounded-lg shadow-xl border border-neutral-800 dark:border-neutral-700 text-xs font-sans space-y-1.5 min-w-[150px]">
         <p className="text-neutral-400 font-mono text-[11px] pb-1 border-b border-neutral-800 dark:border-neutral-700">
-          تاریخ: {data.displayDate || label}
+          {t('dashboard.date')} {data.displayDate || label}
         </p>
         <div className="flex items-center justify-between gap-4 text-emerald-400">
           <span className="flex items-center gap-1">
             <ArrowDownLeft className="w-3.5 h-3.5" />
-            ورود به انبار:
+            {t('dashboard.stockInflow')}:
           </span>
-          <span className="font-bold font-mono">+{toPersianDigits(data.inflow)}</span>
+          <span className="font-bold font-mono">+{isPersian ? toPersianDigits(data.inflow) : data.inflow}</span>
         </div>
         <div className="flex items-center justify-between gap-4 text-rose-400">
           <span className="flex items-center gap-1">
             <ArrowUpRight className="w-3.5 h-3.5" />
-            خروج از انبار:
+            {t('dashboard.stockOutflow')}:
           </span>
-          <span className="font-bold font-mono">-{toPersianDigits(data.outflow)}</span>
+          <span className="font-bold font-mono">-{isPersian ? toPersianDigits(data.outflow) : data.outflow}</span>
         </div>
       </div>
     );
@@ -87,19 +88,19 @@ const CustomFlowTooltip = ({ active, payload, label }: any) => {
 };
 
 // Custom Tooltip for Category Donut
-const CustomCategoryTooltip = ({ active, payload }: any) => {
+const CustomCategoryTooltip = ({ active, payload, isPersian, t }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload as CategoryStockData;
     return (
       <div className="bg-neutral-900 dark:bg-[#181a20] text-white p-2.5 rounded-lg shadow-xl border border-neutral-800 dark:border-neutral-700 text-xs font-sans space-y-1">
         <p className="font-bold text-neutral-100">{data.name}</p>
         <div className="flex items-center justify-between gap-4 text-neutral-300">
-          <span>موجودی کل:</span>
-          <span className="font-mono font-bold text-white">{toPersianDigits(data.value)} عدد</span>
+          <span>{t('dashboard.totalStockLabel')}</span>
+          <span className="font-mono font-bold text-white">{isPersian ? toPersianDigits(data.value) : data.value} {t('dashboard.unitsCount')}</span>
         </div>
         <div className="flex items-center justify-between gap-4 text-neutral-400 text-[11px]">
-          <span>تعداد مدل‌ها:</span>
-          <span className="font-mono">{toPersianDigits(data.productCount)} مدل</span>
+          <span>{t('dashboard.modelsCountLabel')}</span>
+          <span className="font-mono">{isPersian ? toPersianDigits(data.productCount) : data.productCount} {t('dashboard.modelsCount')}</span>
         </div>
       </div>
     );
@@ -119,6 +120,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
   activeOrganization,
   isPersian,
 }) => {
+  const { t } = useTranslation();
   const [salesMetricView, setSalesMetricView] = useState<'revenue' | 'orders'>('revenue');
 
   const totalCategoryStock = categoryStockData.reduce((acc, c) => acc + c.value, 0);
@@ -129,7 +131,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-[#13151a] p-3 sm:p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs transition-colors">
         <div className="flex items-center gap-2 text-xs font-bold text-neutral-800 dark:text-neutral-200">
           <Calendar className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
-          <span>بازه زمانی گزارشات و تحلیل‌ها:</span>
+          <span>{t('dashboard.timeRangeLabel')}</span>
         </div>
         <div className="flex items-center gap-1 bg-neutral-100 dark:bg-[#181a20] p-1 rounded-lg w-full sm:w-auto">
           <button
@@ -140,7 +142,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                 : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
             }`}
           >
-            ۷ روز گذشته
+            {t('dashboard.last7Days')}
           </button>
           <button
             onClick={() => onTimeRangeChange('30d')}
@@ -150,7 +152,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                 : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
             }`}
           >
-            ۳۰ روز گذشته
+            {t('dashboard.last30Days')}
           </button>
           <button
             onClick={() => onTimeRangeChange('90d')}
@@ -160,7 +162,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                 : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
             }`}
           >
-            ۳ ماه اخیر
+            {t('dashboard.last90Days')}
           </button>
           <button
             onClick={() => onTimeRangeChange('all')}
@@ -170,7 +172,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                 : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
             }`}
           >
-            کل دوره
+            {t('dashboard.allTime')}
           </button>
         </div>
       </div>
@@ -179,8 +181,8 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Chart 1: Sales / Orders Performance */}
         <Card
-          title={canViewFinancials ? 'تحلیل روند فروش و درآمد' : 'تحلیل تعداد سفارشات'}
-          subtitle={canViewFinancials ? 'نمودار پیوسته گردش مالی و سفارش‌های ثبت‌شده' : 'نمودار توزیع سفارشات فروش در طول زمان'}
+          title={canViewFinancials ? t('dashboard.salesTrendTitle') : t('dashboard.ordersTrendTitle')}
+          subtitle={canViewFinancials ? t('dashboard.salesTrendSubtitle') : t('dashboard.ordersTrendSubtitle')}
           action={
             canViewFinancials && (
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-[#181a20] p-0.5 rounded-lg text-xs">
@@ -192,7 +194,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                       : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
                   }`}
                 >
-                  ریالی
+                  {t('dashboard.metricRevenue')}
                 </button>
                 <button
                   onClick={() => setSalesMetricView('orders')}
@@ -202,7 +204,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                       : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
                   }`}
                 >
-                  تعداد فروش
+                  {t('dashboard.metricOrders')}
                 </button>
               </div>
             )
@@ -212,7 +214,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
             {salesData.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500 text-xs">
                 <TrendingUp className="w-8 h-8 stroke-1 mb-2 text-neutral-300 dark:text-neutral-600" />
-                <span>داده‌ای برای این بازه زمانی ثبت نشده است.</span>
+                <span>{t('dashboard.noDataTimeRange')}</span>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -241,11 +243,11 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                     tickFormatter={(val) =>
                       salesMetricView === 'revenue' && canViewFinancials
                         ? val >= 1000000
-                          ? `${toPersianDigits(Math.round(val / 1000000))}M`
+                          ? `${isPersian ? toPersianDigits(Math.round(val / 1000000)) : Math.round(val / 1000000)}M`
                           : val >= 1000
-                          ? `${toPersianDigits(Math.round(val / 1000))}k`
-                          : toPersianDigits(val)
-                        : toPersianDigits(val)
+                          ? `${isPersian ? toPersianDigits(Math.round(val / 1000)) : Math.round(val / 1000)}k`
+                          : isPersian ? toPersianDigits(val) : val
+                        : isPersian ? toPersianDigits(val) : val
                     }
                   />
                   <Tooltip
@@ -253,6 +255,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                       <CustomSalesTooltip
                         currency={activeOrganization?.currency}
                         isPersian={isPersian}
+                        t={t}
                       />
                     }
                   />
@@ -273,14 +276,14 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
 
         {/* Chart 2: Inventory Movements (Inflow vs Outflow) */}
         <Card
-          title="گردش ورود و خروج کالا از انبار"
-          subtitle="مقایسه خریدهای ورودی و مرجوعی‌ها در برابر فروش و خروج کالا"
+          title={t('dashboard.stockFlowTitle')}
+          subtitle={t('dashboard.stockFlowSubtitle')}
         >
           <div className="h-72 w-full pt-4">
             {inventoryFlowData.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500 text-xs">
                 <Package className="w-8 h-8 stroke-1 mb-2 text-neutral-300 dark:text-neutral-600" />
-                <span>هیچ گردش کالایی در این بازه ثبت نشده است.</span>
+                <span>{t('dashboard.noMovementTimeRange')}</span>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -296,9 +299,9 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                     tick={{ fontSize: 11, fill: '#94a3b8', fontFamily: 'inherit' }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(val) => toPersianDigits(val)}
+                    tickFormatter={(val) => (isPersian ? toPersianDigits(val) : val)}
                   />
-                  <Tooltip content={<CustomFlowTooltip />} />
+                  <Tooltip content={<CustomFlowTooltip isPersian={isPersian} t={t} />} />
                   <Legend
                     verticalAlign="top"
                     align="right"
@@ -306,7 +309,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                     wrapperStyle={{ fontSize: '11px', paddingBottom: '10px' }}
                     formatter={(val) => (
                       <span className="text-neutral-700 dark:text-neutral-300">
-                        {val === 'inflow' ? 'ورود به انبار' : 'خروج از انبار'}
+                        {val === 'inflow' ? t('dashboard.stockInflow') : t('dashboard.stockOutflow')}
                       </span>
                     )}
                   />
@@ -323,14 +326,14 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Donut 1: Category Stock Distribution */}
         <Card
-          title="ترکیب دسته‌بندی‌های کالا"
-          subtitle="سهم هر دسته‌بندی از کل موجودی فیزیکی"
+          title={t('dashboard.categoryComposition')}
+          subtitle={t('dashboard.categoryCompSubtitle')}
         >
           <div className="h-64 w-full relative flex items-center justify-center">
             {totalCategoryStock === 0 ? (
               <div className="text-center text-neutral-400 dark:text-neutral-500 text-xs">
                 <PieIcon className="w-8 h-8 mx-auto mb-2 text-neutral-300 dark:text-neutral-600 stroke-1" />
-                <span>داده‌ای برای نمایش دسته‌بندی‌ها وجود ندارد.</span>
+                <span>{t('dashboard.noCategoryData')}</span>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -348,7 +351,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip content={<CustomCategoryTooltip />} />
+                  <Tooltip content={<CustomCategoryTooltip isPersian={isPersian} t={t} />} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -364,8 +367,8 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                     <span className="text-neutral-800 dark:text-neutral-200 font-medium">{cat.name}</span>
                   </div>
                   <div className="flex items-center gap-2 font-mono text-[11px]">
-                    <span className="text-neutral-500 dark:text-neutral-400">{toPersianDigits(cat.value)} عدد</span>
-                    <span className="text-neutral-400 dark:text-neutral-500 font-normal">({toPersianDigits(pct)}٪)</span>
+                    <span className="text-neutral-500 dark:text-neutral-400">{isPersian ? toPersianDigits(cat.value) : cat.value} {t('dashboard.unitsCount')}</span>
+                    <span className="text-neutral-400 dark:text-neutral-500 font-normal">({isPersian ? toPersianDigits(pct) : pct}%)</span>
                   </div>
                 </div>
               );
@@ -375,8 +378,8 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
 
         {/* Donut 2: Stock Health & Alert Status */}
         <Card
-          title="وضعیت سلامت موجودی انبار"
-          subtitle="تفکیک تنوع‌ها بر اساس سطوح ریسک کسری"
+          title={t('dashboard.stockHealthTitle')}
+          subtitle={t('dashboard.stockHealthSubtitle')}
         >
           <div className="space-y-4 pt-2">
             {stockHealthData.map((item, idx) => (
@@ -387,8 +390,8 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                     {item.name}
                   </span>
                   <div className="flex items-center gap-1.5 font-mono text-xs">
-                    <span className="font-bold text-neutral-900 dark:text-neutral-100">{toPersianDigits(item.value)} تنوع</span>
-                    <span className="text-neutral-400 dark:text-neutral-500">({toPersianDigits(item.percentage)}٪)</span>
+                    <span className="font-bold text-neutral-900 dark:text-neutral-100">{isPersian ? toPersianDigits(item.value) : item.value} {t('products.variantsCount')}</span>
+                    <span className="text-neutral-400 dark:text-neutral-500">({isPersian ? toPersianDigits(item.percentage) : item.percentage}%)</span>
                   </div>
                 </div>
                 {/* Progress Bar */}
@@ -408,22 +411,22 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
           <div className="mt-6 p-3 rounded-lg bg-neutral-50 dark:bg-[#181a20] border border-neutral-200/60 dark:border-neutral-800 text-[11px] text-neutral-600 dark:text-neutral-300 leading-relaxed">
             <p className="flex items-center gap-1 font-bold text-neutral-800 dark:text-neutral-200 mb-1">
               <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              توصیه مدیریت هوشمند موجودی:
+              {t('dashboard.smartStockRecommendation')}
             </p>
-            تنوع‌های با موجودی کمتر از ۵ عدد نیازمند ثبت سفارش خرید سریع برای جلوگیری از توقف فروش هستند.
+            {t('dashboard.smartStockTip')}
           </div>
         </Card>
 
         {/* Donut 3 / Bars: Warehouse Capacity Allocation */}
         <Card
-          title="توزیع موجودی در انبارها"
-          subtitle="حجم کالای مستقر در هر انبار فیزیکی یا فروشگاه"
+          title={t('dashboard.warehouseDistribution')}
+          subtitle={t('dashboard.warehouseDistSubtitle')}
         >
           <div className="space-y-4 pt-1">
             {warehouseStockData.length === 0 ? (
               <div className="text-center py-10 text-neutral-400 dark:text-neutral-500 text-xs">
                 <Building2 className="w-8 h-8 mx-auto mb-2 text-neutral-300 dark:text-neutral-600 stroke-1" />
-                <span>هیچ انباری تعریف نشده است.</span>
+                <span>{t('dashboard.noWarehousesDefined')}</span>
               </div>
             ) : (
               warehouseStockData.map((wh, idx) => (
@@ -434,18 +437,18 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                       {wh.name}
                     </span>
                     <Badge variant="neutral">
-                      {toPersianDigits(wh.variantsCount)} تنوع فعال
+                      {isPersian ? toPersianDigits(wh.variantsCount) : wh.variantsCount} {t('dashboard.activeVariantsCount')}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-xs pt-1 border-t border-neutral-200/60 dark:border-neutral-800">
-                    <span className="text-neutral-500 dark:text-neutral-400">موجودی کالا:</span>
+                    <span className="text-neutral-500 dark:text-neutral-400">{t('dashboard.stockQuantityLabel')}</span>
                     <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100 text-[13px]">
-                      {toPersianDigits(wh.stockCount)} <span className="text-xs font-normal text-neutral-500 dark:text-neutral-400">عدد</span>
+                      {isPersian ? toPersianDigits(wh.stockCount) : wh.stockCount} <span className="text-xs font-normal text-neutral-500 dark:text-neutral-400">{t('dashboard.unitsCount')}</span>
                     </span>
                   </div>
                   {canViewFinancials && wh.totalValue > 0 && (
                     <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
-                      <span>ارزش موجودی:</span>
+                      <span>{t('dashboard.stockValueLabel')}</span>
                       <span className="font-mono text-neutral-700 dark:text-neutral-300">
                         {formatCurrency(wh.totalValue, activeOrganization?.currency, isPersian)}
                       </span>

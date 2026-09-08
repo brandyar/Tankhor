@@ -2,10 +2,28 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { commonFa } from './locales/fa/common';
 import { navigationFa } from './locales/fa/navigation';
 import { dashboardFa } from './locales/fa/dashboard';
+import { productsFa } from './locales/fa/products';
+import { ordersFa } from './locales/fa/orders';
+import { inventoryFa } from './locales/fa/inventory';
+import { purchasingFa } from './locales/fa/purchasing';
+import { customersFa } from './locales/fa/customers';
+import { sizeguidesFa } from './locales/fa/sizeguides';
+import { settingsFa } from './locales/fa/settings';
+import { authFa } from './locales/fa/auth';
+import { reportsFa } from './locales/fa/reports';
 
 import { commonEn } from './locales/en/common';
 import { navigationEn } from './locales/en/navigation';
 import { dashboardEn } from './locales/en/dashboard';
+import { productsEn } from './locales/en/products';
+import { ordersEn } from './locales/en/orders';
+import { inventoryEn } from './locales/en/inventory';
+import { purchasingEn } from './locales/en/purchasing';
+import { customersEn } from './locales/en/customers';
+import { sizeguidesEn } from './locales/en/sizeguides';
+import { settingsEn } from './locales/en/settings';
+import { authEn } from './locales/en/auth';
+import { reportsEn } from './locales/en/reports';
 
 export type Locale = 'fa' | 'en';
 export type Direction = 'rtl' | 'ltr';
@@ -15,11 +33,29 @@ const translations = {
     common: commonFa,
     navigation: navigationFa,
     dashboard: dashboardFa,
+    products: productsFa,
+    orders: ordersFa,
+    inventory: inventoryFa,
+    purchasing: purchasingFa,
+    customers: customersFa,
+    sizeguides: sizeguidesFa,
+    settings: settingsFa,
+    auth: authFa,
+    reports: reportsFa,
   },
   en: {
     common: commonEn,
     navigation: navigationEn,
     dashboard: dashboardEn,
+    products: productsEn,
+    orders: ordersEn,
+    inventory: inventoryEn,
+    purchasing: purchasingEn,
+    customers: customersEn,
+    sizeguides: sizeguidesEn,
+    settings: settingsEn,
+    auth: authEn,
+    reports: reportsEn,
   },
 };
 
@@ -43,6 +79,13 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('tankhor_locale', locale);
     document.documentElement.lang = locale;
     document.documentElement.dir = direction;
+    if (direction === 'ltr') {
+      document.body.classList.add('font-sans-en');
+      document.body.classList.remove('font-vazir');
+    } else {
+      document.body.classList.add('font-vazir');
+      document.body.classList.remove('font-sans-en');
+    }
   }, [locale, direction]);
 
   const setLocale = (newLocale: Locale) => {
@@ -57,6 +100,17 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (current && typeof current === 'object' && part in current) {
         current = current[part];
       } else {
+        // Try fallback to Persian or provided fallback
+        let fallbackCurrent: any = translations['fa'];
+        for (const fPart of parts) {
+          if (fallbackCurrent && typeof fallbackCurrent === 'object' && fPart in fallbackCurrent) {
+            fallbackCurrent = fallbackCurrent[fPart];
+          } else {
+            fallbackCurrent = null;
+            break;
+          }
+        }
+        if (typeof fallbackCurrent === 'string') return fallbackCurrent;
         return fallback || path;
       }
     }

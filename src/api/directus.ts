@@ -397,9 +397,30 @@ class DirectusClient {
         method: 'POST',
         body: JSON.stringify({ ...data, email: cleanEmail }),
       });
+      const token = res.token || res.access_token;
+      const refreshToken = res.refresh_token;
+      if (token) {
+        this.setToken(token, refreshToken);
+      }
+      const orgId = res.activeOrganization?.id || res.organization?.id;
+      if (orgId && typeof window !== 'undefined') {
+        localStorage.setItem('tankhor_active_org_id', String(orgId));
+      }
+      return res;
     } catch (err: any) {
+      // If we are calling the BFF server gateway (/api) or if the server gave an explicit error message, rethrow directly
+      const baseUrl = this.getBaseUrl();
+      if (baseUrl === '/api' || baseUrl === '' || !baseUrl.startsWith('http')) {
+        throw err;
+      }
+
+      // Direct directus fallback (only when directly connected to Directus instance)
       try {
-        const DIRECTUS_TENANT_ROLE_ID = 'dbc2022f-0dea-4ef4-bb00-00a577e3208d';
+        const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
+        const tenantRoleId =
+          metaEnv?.VITE_DIRECTUS_USER_ROLE_ID ||
+          metaEnv?.VITE_DIRECTUS_TENANT_ROLE_ID ||
+          '5cd02fe5-1738-4029-b95b-babf6d7fb7be';
         let newUser: any = null;
         try {
           const userRaw = await this.request('/users', {
@@ -411,7 +432,7 @@ class DirectusClient {
               last_name: data.last_name || '',
               user_phone: data.user_phone || '',
               status: 'active',
-              role: DIRECTUS_TENANT_ROLE_ID,
+              role: tenantRoleId,
             }),
           });
           newUser = userRaw?.data || userRaw;

@@ -173,7 +173,8 @@ export function computeInventoryFlow(movements: InventoryMovement[], range: Time
 export function computeCategoryStock(
   categories: Category[],
   products: Product[],
-  variants: ProductVariant[]
+  variants: ProductVariant[],
+  isPersian: boolean = true
 ): CategoryStockData[] {
   const prodCatMap = new Map<number, number>();
   products.forEach((p) => {
@@ -221,7 +222,7 @@ export function computeCategoryStock(
 
   if (uncategorizedStock > 0 || uncategorizedProds.size > 0) {
     results.push({
-      name: 'سایر / بدون دسته‌بندی',
+      name: isPersian ? 'سایر / بدون دسته‌بندی' : 'Other / Uncategorized',
       value: uncategorizedStock,
       productCount: uncategorizedProds.size,
       color: '#94a3b8',
@@ -230,13 +231,13 @@ export function computeCategoryStock(
 
   // If empty, return a clean placeholder segment
   if (results.length === 0) {
-    return [{ name: 'بدون موجودی', value: 0, productCount: 0, color: '#e2e8f0' }];
+    return [{ name: isPersian ? 'بدون موجودی' : 'No Inventory', value: 0, productCount: 0, color: '#e2e8f0' }];
   }
 
   return results.sort((a, b) => b.value - a.value);
 }
 
-export function computeStockHealth(variants: ProductVariant[]): StockHealthData[] {
+export function computeStockHealth(variants: ProductVariant[], isPersian: boolean = true): StockHealthData[] {
   let adequate = 0; // > 10
   let moderate = 0; // 6 - 10
   let low = 0;      // 1 - 5
@@ -259,28 +260,28 @@ export function computeStockHealth(variants: ProductVariant[]): StockHealthData[
 
   return [
     {
-      name: 'موجودی مطلوب (>۱۰)',
+      name: isPersian ? 'موجودی مطلوب (>۱۰)' : 'Optimal Stock (>10)',
       value: adequate,
       percentage: Math.round((adequate / total) * 100),
       color: '#059669', // Emerald 600
       key: 'adequate',
     },
     {
-      name: 'موجودی متوسط (۶ تا ۱۰)',
+      name: isPersian ? 'موجودی متوسط (۶ تا ۱۰)' : 'Moderate Stock (6-10)',
       value: moderate,
       percentage: Math.round((moderate / total) * 100),
       color: '#0284c7', // Sky 600
       key: 'moderate',
     },
     {
-      name: 'هشدار کسری (۱ تا ۵)',
+      name: isPersian ? 'هشدار کسری (۱ تا ۵)' : 'Low Stock Alert (1-5)',
       value: low,
       percentage: Math.round((low / total) * 100),
       color: '#d97706', // Amber 600
       key: 'low',
     },
     {
-      name: 'اتمام موجودی (۰)',
+      name: isPersian ? 'اتمام موجودی (۰)' : 'Out of Stock (0)',
       value: outOfStock,
       percentage: Math.round((outOfStock / total) * 100),
       color: '#e11d48', // Rose 600
@@ -291,7 +292,8 @@ export function computeStockHealth(variants: ProductVariant[]): StockHealthData[
 
 export function computeWarehouseDistribution(
   warehouses: Warehouse[],
-  variants: ProductVariant[]
+  variants: ProductVariant[],
+  isPersian: boolean = true
 ): WarehouseStockData[] {
   // If we have inventory_items mapped or variant counts
   const totalStock = variants.reduce((acc, v) => acc + (v.stock_quantity || 0), 0);
@@ -300,7 +302,7 @@ export function computeWarehouseDistribution(
   if (warehouses.length === 0) {
     return [
       {
-        name: 'انبار پیش‌فرض',
+        name: isPersian ? 'انبار پیش‌فرض' : 'Default Warehouse',
         stockCount: totalStock,
         variantsCount: variants.length,
         totalValue: totalVal,
@@ -317,7 +319,7 @@ export function computeWarehouseDistribution(
     const vCount = warehouses.length === 1 ? variants.length : Math.round(variants.length * factor);
 
     return {
-      name: wh.name || `انبار ${wh.id}`,
+      name: wh.name || (isPersian ? `انبار ${wh.id}` : `Warehouse ${wh.id}`),
       stockCount: stock,
       variantsCount: vCount,
       totalValue: val,
@@ -329,7 +331,8 @@ export function computeTopProducts(
   products: Product[],
   variants: ProductVariant[],
   categories: Category[],
-  movements: InventoryMovement[]
+  movements: InventoryMovement[],
+  isPersian: boolean = true
 ): TopProductMetric[] {
   const catMap = new Map<number, string>();
   categories.forEach((c) => catMap.set(Number(c.id), c.name));
@@ -368,8 +371,8 @@ export function computeTopProducts(
     const stats = prodStats.get(Number(p.id)) || { stock: 0, variantsCount: 0, sold: 0 };
     return {
       id: Number(p.id),
-      title: p.title || 'محصول بدون عنوان',
-      categoryName: catId ? catMap.get(catId) || 'دسته‌بندی نشده' : 'دسته‌بندی نشده',
+      title: p.title || (isPersian ? 'محصول بدون عنوان' : 'Untitled Product'),
+      categoryName: catId ? catMap.get(catId) || (isPersian ? 'دسته‌بندی نشده' : 'Uncategorized') : (isPersian ? 'دسته‌بندی نشده' : 'Uncategorized'),
       totalStock: stats.stock,
       variantsCount: stats.variantsCount,
       soldCount: stats.sold,

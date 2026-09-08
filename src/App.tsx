@@ -37,25 +37,31 @@ import { PaymentResultModal } from './components/modals/PaymentResultModal';
 import { Card } from './components/ui/Card';
 import { Button } from './components/ui/Button';
 import { ShieldAlert, RefreshCw, Shirt, Home } from 'lucide-react';
+import { useTranslation } from './i18n';
 
-const AccessDeniedCard: React.FC<{ userRole: string; onReturn: () => void }> = ({ userRole, onReturn }) => (
-  <div className="py-12 px-4 max-w-xl mx-auto text-center">
-    <Card className="p-8 border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20">
-      <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex items-center justify-center mx-auto mb-4 border border-amber-300/80 dark:border-amber-800/80 shadow-xs">
-        <ShieldAlert className="w-7 h-7" />
-      </div>
-      <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">عدم دسترسی به این بخش</h3>
-      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-2 leading-relaxed">
-        شما با نقش <strong className="text-amber-900 dark:text-amber-300 font-bold">{userRole}</strong> به این صفحه یا عملیات دسترسی ندارید.
-      </p>
-      <div className="mt-6 flex justify-center">
-        <Button variant="primary" onClick={onReturn} icon={<Home className="w-4 h-4" />}>
-          بازگشت به پیشخوان اصلی
-        </Button>
-      </div>
-    </Card>
-  </div>
-);
+const AccessDeniedCard: React.FC<{ userRole: string; onReturn: () => void }> = ({ userRole, onReturn }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="py-12 px-4 max-w-xl mx-auto text-center">
+      <Card className="p-8 border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20">
+        <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex items-center justify-center mx-auto mb-4 border border-amber-300/80 dark:border-amber-800/80 shadow-xs">
+          <ShieldAlert className="w-7 h-7" />
+        </div>
+        <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
+          {t('common.accessDenied')}
+        </h3>
+        <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-2 leading-relaxed">
+          {t('common.accessDeniedDesc').replace('{role}', userRole)}
+        </p>
+        <div className="mt-6 flex justify-center">
+          <Button variant="primary" onClick={onReturn} icon={<Home className="w-4 h-4" />}>
+            {t('common.returnToDashboard')}
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
+};
 
 const AuthenticatedApp: React.FC = () => {
   const [currentRoute, setCurrentRoute] = useState<string>('dashboard');
@@ -184,6 +190,7 @@ const AuthenticatedApp: React.FC = () => {
 
 const MainAppContent: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useTranslation();
 
   if (isLoading) {
     return (
@@ -191,10 +198,10 @@ const MainAppContent: React.FC = () => {
         <div className="w-12 h-12 rounded-2xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 flex items-center justify-center mb-4 shadow-md animate-bounce">
           <Shirt className="w-6 h-6 text-white dark:text-neutral-900" />
         </div>
-        <p className="text-sm font-bold text-neutral-800 dark:text-neutral-200">سامانه تن‌خور</p>
+        <p className="text-sm font-bold text-neutral-800 dark:text-neutral-200">{t('common.appName')}</p>
         <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono mt-1 flex items-center gap-1.5">
           <RefreshCw className="w-3.5 h-3.5 animate-spin text-neutral-400 dark:text-neutral-500" />
-          <span>در حال بررسی نشست کاربری...</span>
+          <span>{t('common.checkingSession')}</span>
         </p>
       </div>
     );
