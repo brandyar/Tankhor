@@ -88,6 +88,7 @@ jobs:
           const tag = process.env.TAG_NAME || "v1.0.18";
           const version = tag.replace(/^v/, "");
           const repo = process.env.REPO || "brandyar/Tankhor";
+          const baseUrl = process.env.DOWNLOAD_BASE_URL || `https://dl.tankhor.com/${tag}`;
           const files = fs.readdirSync(".");
 
           console.log("All downloaded release assets:", files);
@@ -138,7 +139,7 @@ jobs:
           if (macArchive) {
             const macSig = signatures[macArchive] || signatures[macArchive + ".sig"];
             if (macSig) {
-              const macUrl = `https://github.com/${repo}/releases/download/${tag}/${macArchive}`;
+              const macUrl = `${baseUrl}/${macArchive}`;
               console.log(`Resolved valid macOS updater asset: ${macArchive}`);
 
               const macTargets = [
@@ -173,7 +174,7 @@ jobs:
           if (nsisArchive) {
             const nsisSig = signatures[nsisArchive] || signatures[nsisArchive + ".sig"] || getSignature(nsisArchive);
             if (nsisSig) {
-              const nsisUrl = `https://github.com/${repo}/releases/download/${tag}/${nsisArchive}`;
+              const nsisUrl = `${baseUrl}/${nsisArchive}`;
               console.log(`Resolved NSIS Windows updater asset: ${nsisArchive}`);
 
               const nsisTargets = [
@@ -198,7 +199,7 @@ jobs:
           if (winMsiArchive) {
             const msiSig = signatures[winMsiArchive] || signatures[winMsiArchive + ".sig"] || getSignature(winMsiArchive);
             if (msiSig) {
-              const msiUrl = `https://github.com/${repo}/releases/download/${tag}/${winMsiArchive}`;
+              const msiUrl = `${baseUrl}/${winMsiArchive}`;
               console.log(`Resolved MSI Windows updater asset: ${winMsiArchive}`);
 
               const msiTargets = [
@@ -221,7 +222,7 @@ jobs:
           if (linuxAsset) {
             const linuxSig = signatures[linuxAsset] || signatures[linuxAsset + ".sig"];
             if (linuxSig) {
-              const linuxUrl = `https://github.com/${repo}/releases/download/${tag}/${linuxAsset}`;
+              const linuxUrl = `${baseUrl}/${linuxAsset}`;
               if (!platforms["linux-x86_64"]) platforms["linux-x86_64"] = { signature: linuxSig, url: linuxUrl };
               if (!platforms["linux-x86_64-appimage"]) platforms["linux-x86_64-appimage"] = { signature: linuxSig, url: linuxUrl };
             }

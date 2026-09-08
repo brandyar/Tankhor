@@ -117,13 +117,13 @@ export const UpdateNotificationModal: React.FC = () => {
             </div>
             <div className="pt-1 flex items-center justify-end">
               <a
-                href="https://github.com/brandyar/Tankhor/releases/latest"
+                href="https://dl.tankhor.com"
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors shadow-xs"
               >
                 <Download className="w-3.5 h-3.5" />
-                دانلود مستقیم فایل نصبی جدید از گیت‌هاب
+                دانلود مستقیم فایل نصبی جدید از سرور تن‌خور
               </a>
             </div>
           </div>
