@@ -89,7 +89,7 @@ export const SizeGroupsView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (await confirmAction('آیا از حذف این گروه سایز مطمئن هستید؟')) {
+    if (await confirmAction(t('products.confirmDeleteSizeGroup'))) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteSizeGroup(id);
       await loadGroups();
@@ -101,16 +101,16 @@ export const SizeGroupsView: React.FC = () => {
     : groups;
 
   const categoryLabels: Record<SizeCategory, string> = {
-    apparel: 'پوشاک و لباس',
-    shoes: 'کفش و پاپوش',
-    accessories: 'کیف و اکسسوری',
-    other: 'سایر / متفرقه',
+    apparel: t('products.apparelCategory'),
+    shoes: t('products.shoesCategory'),
+    accessories: t('products.accessoriesCategory'),
+    other: t('products.otherCategory'),
   };
 
   const columns: Column<SizeGroup>[] = [
     {
       key: 'name',
-      header: 'نام گروه سایز',
+      header: t('products.groupName'),
       render: (group) => (
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
@@ -124,7 +124,7 @@ export const SizeGroupsView: React.FC = () => {
     },
     {
       key: 'category',
-      header: 'دسته‌بندی مرتبط',
+      header: t('products.generalCategory'),
       render: (group) => (
         <span className="text-xs font-bold text-slate-700 dark:text-neutral-300 bg-slate-100 dark:bg-neutral-800 px-2.5 py-1 rounded-lg">
           {categoryLabels[group.category] || group.category}
@@ -133,10 +133,10 @@ export const SizeGroupsView: React.FC = () => {
     },
     {
       key: 'status',
-      header: 'وضعیت',
+      header: t('products.productStatus'),
       render: (group) => (
         <Badge variant={group.status === 'active' ? 'success' : 'neutral'}>
-          {group.status === 'active' ? 'فعال' : 'غیرفعال'}
+          {group.status === 'active' ? t('products.statusActive') : t('products.statusInactive')}
         </Badge>
       ),
     },
@@ -145,11 +145,11 @@ export const SizeGroupsView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="مدیریت گروه‌های سایزبندی"
-        subtitle="تعریف دسته‌بندی‌های کلی سایز مانند «سایز استاندارد پوشاک»، «کفش یورو»، «سایز بچگانه»"
+        title={t('products.sizeGroupsTitle')}
+        subtitle={t('products.sizeGroupsSubtitle')}
         actions={
           <Button onClick={() => handleOpenModal()} icon={<Plus className="w-4 h-4" />}>
-            افزودن گروه جدید
+            {t('products.createSizeGroup')}
           </Button>
         }
       />
@@ -158,7 +158,7 @@ export const SizeGroupsView: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="جستجو در گروه‌های سایز..."
+              placeholder={t('products.searchSizeGroups')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search className="w-4 h-4" />}
@@ -194,7 +194,7 @@ export const SizeGroupsView: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingGroup ? 'ویرایش گروه سایز' : 'افزودن گروه سایز جدید'}
+        title={editingGroup ? t('products.editSizeGroup') : t('products.createSizeGroup')}
         maxWidth="md"
         footer={
           <>
@@ -209,8 +209,8 @@ export const SizeGroupsView: React.FC = () => {
       >
         <form id="size-group-form" onSubmit={handleSave} className="space-y-4">
           <Input
-            label="نام گروه سایزبندی *"
-            placeholder="مثال: سایزبندی مردانه لباس یا یورو کفش"
+            label={`${t('products.groupName')} *`}
+            placeholder="Men Clothing, EU Shoes..."
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -218,23 +218,23 @@ export const SizeGroupsView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="دسته‌بندی کلی *"
+              label={`${t('products.generalCategory')} *`}
               value={category}
               onChange={(e) => setCategory(e.target.value as SizeCategory)}
               options={[
-                { value: 'apparel', label: 'پوشاک و لباس' },
-                { value: 'shoes', label: 'کفش و پاپوش' },
-                { value: 'accessories', label: 'کیف و اکسسوری' },
-                { value: 'other', label: 'سایر / متفرقه' },
+                { value: 'apparel', label: t('products.apparelCategory') },
+                { value: 'shoes', label: t('products.shoesCategory') },
+                { value: 'accessories', label: t('products.accessoriesCategory') },
+                { value: 'other', label: t('products.otherCategory') },
               ]}
             />
             <Select
-              label="وضعیت"
+              label={t('products.productStatus')}
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
               options={[
-                { value: 'active', label: 'فعال' },
-                { value: 'inactive', label: 'غیرفعال' },
+                { value: 'active', label: t('products.statusActive') },
+                { value: 'inactive', label: t('products.statusInactive') },
               ]}
             />
           </div>

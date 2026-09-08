@@ -91,18 +91,18 @@ export const SizeGuidesView: React.FC = () => {
         adapter.getSizeGuideTemplates({ organization_id: orgId }),
         adapter.getSizes({ organization_id: orgId }),
       ]);
-      const safeTpls = (Array.isArray(tplList) ? tplList : []).map((t) => ({
-        ...t,
-        name: t.name || (t as any).title || 'قالب بدون عنوان',
-        type: (t.type || (t as any).template_type || 'apparel') as SizeGuideType,
-        unit: (t.unit || 'cm') as SizeUnit,
+      const safeTpls = (Array.isArray(tplList) ? tplList : []).map((tItem) => ({
+        ...tItem,
+        name: tItem.name || (tItem as any).title || t('sizeguides.untitledTemplate'),
+        type: (tItem.type || (tItem as any).template_type || 'apparel') as SizeGuideType,
+        unit: (tItem.unit || 'cm') as SizeUnit,
       }));
       const safeSizes = Array.isArray(sizeList) ? sizeList : [];
       setTemplates(safeTpls);
       setSizes(safeSizes);
 
       // Default select first template if none selected or invalid
-      if (safeTpls.length > 0 && (!selectedTemplate || !safeTpls.some((t) => t.id === selectedTemplate.id))) {
+      if (safeTpls.length > 0 && (!selectedTemplate || !safeTpls.some((tItem) => tItem.id === selectedTemplate.id))) {
         handleSelectTemplate(safeTpls[0]);
       }
     } catch (err) {
@@ -209,27 +209,27 @@ export const SizeGuidesView: React.FC = () => {
 
     if (type === 'apparel') {
       defaultMeas = [
-        { name: 'دور سینه', code: 'chest', type: 'circumference', unit: 'cm' },
-        { name: 'دور کمر', code: 'waist', type: 'circumference', unit: 'cm' },
-        { name: 'دور باسن', code: 'hip', type: 'circumference', unit: 'cm' },
-        { name: 'قد لباس', code: 'length', type: 'length', unit: 'cm' },
-        { name: 'قد آستین', code: 'sleeve', type: 'length', unit: 'cm' },
+        { name: isPersian ? 'دور سینه' : 'Chest', code: 'chest', type: 'circumference', unit: 'cm' },
+        { name: isPersian ? 'دور کمر' : 'Waist', code: 'waist', type: 'circumference', unit: 'cm' },
+        { name: isPersian ? 'دور باسن' : 'Hip', code: 'hip', type: 'circumference', unit: 'cm' },
+        { name: isPersian ? 'قد لباس' : 'Length', code: 'length', type: 'length', unit: 'cm' },
+        { name: isPersian ? 'قد آستین' : 'Sleeve', code: 'sleeve', type: 'length', unit: 'cm' },
       ];
     } else if (type === 'footwear') {
       defaultMeas = [
-        { name: 'طول کفی (پا)', code: 'insole_length', type: 'length', unit: 'cm' },
-        { name: 'عرض پنجه پا', code: 'foot_width', type: 'width', unit: 'cm' },
+        { name: isPersian ? 'طول کفی (پا)' : 'Insole Length', code: 'insole_length', type: 'length', unit: 'cm' },
+        { name: isPersian ? 'عرض پنجه پا' : 'Foot Width', code: 'foot_width', type: 'width', unit: 'cm' },
       ];
     } else if (type === 'bags') {
       defaultMeas = [
-        { name: 'ارتفاع کیف', code: 'height', type: 'height', unit: 'cm' },
-        { name: 'عرض کیف', code: 'width', type: 'width', unit: 'cm' },
-        { name: 'عمق کیف', code: 'depth', type: 'depth', unit: 'cm' },
+        { name: isPersian ? 'ارتفاع کیف' : 'Bag Height', code: 'height', type: 'height', unit: 'cm' },
+        { name: isPersian ? 'عرض کیف' : 'Bag Width', code: 'width', type: 'width', unit: 'cm' },
+        { name: isPersian ? 'عمق کیف' : 'Bag Depth', code: 'depth', type: 'depth', unit: 'cm' },
       ];
     } else if (type === 'accessories') {
       defaultMeas = [
-        { name: 'طول کل', code: 'length', type: 'length', unit: 'cm' },
-        { name: 'دور مچ / گردن', code: 'circumference', type: 'circumference', unit: 'cm' },
+        { name: isPersian ? 'طول کل' : 'Total Length', code: 'length', type: 'length', unit: 'cm' },
+        { name: isPersian ? 'دور مچ / گردن' : 'Wrist / Neck Circumference', code: 'circumference', type: 'circumference', unit: 'cm' },
       ];
     }
 
@@ -247,7 +247,7 @@ export const SizeGuidesView: React.FC = () => {
 
   // Delete Template
   const handleDeleteTemplate = async (id: number) => {
-    if (!(await confirmAction('آیا از حذف این قالب راهنمای سایز اطمینان دارید؟'))) return;
+    if (!(await confirmAction(t('sizeguides.confirmDeleteTemplate')))) return;
     try {
       const adapter = storageManager.getAdapter();
       await adapter.deleteSizeGuideTemplate(id);
@@ -304,7 +304,7 @@ export const SizeGuidesView: React.FC = () => {
 
   // Delete Measurement Parameter
   const handleDeleteMeasurement = async (measId: number) => {
-    if (!(await confirmAction('آیا از حذف این پارامتر اندازه اطمینان دارید؟'))) return;
+    if (!(await confirmAction(t('sizeguides.confirmDeleteMeasurement')))) return;
     try {
       const adapter = storageManager.getAdapter();
       await adapter.deleteSizeGuideMeasurement(measId);
@@ -372,25 +372,25 @@ export const SizeGuidesView: React.FC = () => {
     const safeType = (type || 'apparel').toLowerCase();
     switch (safeType) {
       case 'apparel':
-        return <Badge variant="primary">پوشاک</Badge>;
+        return <Badge variant="primary">{t('sizeguides.typeApparelBadge')}</Badge>;
       case 'footwear':
-        return <Badge variant="warning">کفش و پاپوش</Badge>;
+        return <Badge variant="warning">{t('sizeguides.typeFootwearBadge')}</Badge>;
       case 'bags':
-        return <Badge variant="info">کیف و کوله</Badge>;
+        return <Badge variant="info">{t('sizeguides.typeBagsBadge')}</Badge>;
       case 'accessories':
-        return <Badge variant="success">اکسسوری</Badge>;
+        return <Badge variant="success">{t('sizeguides.typeAccessoriesBadge')}</Badge>;
       default:
-        return <Badge variant="neutral">سایر / سفارشی</Badge>;
+        return <Badge variant="neutral">{t('sizeguides.typeCustomBadge')}</Badge>;
     }
   };
 
-  const filteredTemplates = (templates || []).filter((t) => {
-    if (!t) return false;
-    const nameStr = String(t.name || (t as any).title || '').toLowerCase();
-    const descStr = String(t.description || '').toLowerCase();
+  const filteredTemplates = (templates || []).filter((item) => {
+    if (!item) return false;
+    const nameStr = String(item.name || (item as any).title || '').toLowerCase();
+    const descStr = String(item.description || '').toLowerCase();
     const query = (search || '').toLowerCase();
     const matchesSearch = !query || nameStr.includes(query) || descStr.includes(query);
-    const tType = t.type || (t as any).template_type || 'apparel';
+    const tType = item.type || (item as any).template_type || 'apparel';
     const matchesType = selectedTypeFilter === 'all' || tType === selectedTypeFilter;
     return matchesSearch && matchesType;
   });
@@ -398,14 +398,14 @@ export const SizeGuidesView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="قالب‌های راهنمای سایز"
-        subtitle="تعریف ماتریس اندازه و جدول راهنمای سایز هوشمند برای انواع دسته محصولات"
+        title={t('sizeguides.title')}
+        subtitle={t('sizeguides.subtitle')}
         action={
           <Button
             onClick={() => handleOpenTemplateModal()}
             icon={<Plus className="w-4 h-4" />}
           >
-            افزودن قالب جدید
+            {t('sizeguides.createTemplate')}
           </Button>
         }
       />
@@ -418,17 +418,17 @@ export const SizeGuidesView: React.FC = () => {
             <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-neutral-800">
               <h3 className="font-bold text-slate-900 dark:text-neutral-100 text-sm flex items-center gap-2">
                 <Ruler className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                لیست قالب‌های راهنمای سایز
+                {t('sizeguides.templatesList')}
               </h3>
               <span className="text-xs text-slate-500 dark:text-neutral-400 font-mono font-medium">
-                {filteredTemplates.length} قالب
+                {filteredTemplates.length} {t('sizeguides.templatesCountSuffix')}
               </span>
             </div>
 
             {/* Filter controls */}
             <div className="space-y-2">
               <Input
-                placeholder="جستجو در قالب‌ها..."
+                placeholder={t('sizeguides.searchTemplates')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 icon={<Search className="w-4 h-4" />}
@@ -437,12 +437,12 @@ export const SizeGuidesView: React.FC = () => {
                 value={selectedTypeFilter}
                 onChange={(e) => setSelectedTypeFilter(e.target.value)}
                 options={[
-                  { value: 'all', label: 'همه دسته‌ها' },
-                  { value: 'apparel', label: 'پوشاک' },
-                  { value: 'footwear', label: 'کفش و پاپوش' },
-                  { value: 'bags', label: 'کیف و کوله' },
-                  { value: 'accessories', label: 'اکسسوری' },
-                  { value: 'custom', label: 'سفارشی' },
+                  { value: 'all', label: t('sizeguides.allCategoriesFilter') },
+                  { value: 'apparel', label: t('sizeguides.typeApparelBadge') },
+                  { value: 'footwear', label: t('sizeguides.typeFootwearBadge') },
+                  { value: 'bags', label: t('sizeguides.typeBagsBadge') },
+                  { value: 'accessories', label: t('sizeguides.typeAccessoriesBadge') },
+                  { value: 'custom', label: t('sizeguides.typeCustomBadge') },
                 ]}
               />
             </div>
@@ -450,9 +450,9 @@ export const SizeGuidesView: React.FC = () => {
             {/* Template Items */}
             <div className="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar pt-1">
               {isLoading ? (
-                <div className="p-6 text-center text-slate-400 dark:text-neutral-500 text-xs">در حال دریافت قالب‌ها...</div>
+                <div className="p-6 text-center text-slate-400 dark:text-neutral-500 text-xs">{t('sizeguides.loadingTemplates')}</div>
               ) : filteredTemplates.length === 0 ? (
-                <div className="p-6 text-center text-slate-400 dark:text-neutral-500 text-xs">هیچ قالبی یافت نشد.</div>
+                <div className="p-6 text-center text-slate-400 dark:text-neutral-500 text-xs">{t('sizeguides.noTemplatesFound')}</div>
               ) : (
                 filteredTemplates.map((tpl, tplIdx) => {
                   const isSelected = selectedTemplate?.id === tpl.id;
@@ -460,7 +460,7 @@ export const SizeGuidesView: React.FC = () => {
                     <div
                       key={tpl.id ? `sg_tpl_${tpl.id}_${tplIdx}` : `sg_tpl_idx_${tplIdx}`}
                       onClick={() => handleSelectTemplate(tpl)}
-                      className={`p-3 rounded-xl border text-right cursor-pointer transition-all duration-150 ${
+                      className={`p-3 rounded-xl border text-start cursor-pointer transition-all duration-150 ${
                         isSelected
                           ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 shadow-2xs'
                           : 'bg-white dark:bg-[#181a20] border-slate-100 dark:border-neutral-800 hover:border-slate-200 dark:hover:border-neutral-700 hover:bg-slate-50/60 dark:hover:bg-neutral-800/40'
@@ -468,7 +468,7 @@ export const SizeGuidesView: React.FC = () => {
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-bold text-slate-900 dark:text-neutral-100 text-xs sm:text-sm truncate">
-                          {tpl.name || (tpl as any).title || 'قالب بدون عنوان'}
+                          {tpl.name || (tpl as any).title || t('sizeguides.untitledTemplate')}
                         </span>
                         <div className="flex items-center gap-1 shrink-0">
                           <button
@@ -478,7 +478,7 @@ export const SizeGuidesView: React.FC = () => {
                               handleOpenTemplateModal(tpl);
                             }}
                             className="p-1 hover:bg-slate-200/60 dark:hover:bg-neutral-700/60 rounded text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200"
-                            title="ویرایش قالب"
+                            title={t('sizeguides.editTemplate')}
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </button>
@@ -489,7 +489,7 @@ export const SizeGuidesView: React.FC = () => {
                               handleDeleteTemplate(tpl.id);
                             }}
                             className="p-1 hover:bg-red-50 dark:hover:bg-red-950/40 rounded text-slate-400 hover:text-red-600 dark:hover:text-red-400"
-                            title="حذف قالب"
+                            title={t('common.delete')}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -499,7 +499,7 @@ export const SizeGuidesView: React.FC = () => {
                       <div className="flex items-center justify-between gap-2 mt-2">
                         {getTypeBadge(tpl.type || (tpl as any).template_type)}
                         <span className="text-[11px] font-mono text-slate-500 dark:text-neutral-400 bg-slate-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">
-                          واحد: {tpl.unit || 'cm'}
+                          {t('sizeguides.unitPrefix')}: {tpl.unit || 'cm'}
                         </span>
                       </div>
                     </div>
@@ -515,7 +515,7 @@ export const SizeGuidesView: React.FC = () => {
           {!selectedTemplate ? (
             <Card className="p-12 text-center text-slate-400 dark:text-neutral-500">
               <Ruler className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-neutral-600 stroke-[1.5]" />
-              <p className="font-medium text-sm">لطفا یک قالب راهنمای سایز را برای نمایش و ویرایش ماتریس انتخاب کنید.</p>
+              <p className="font-medium text-sm">{t('sizeguides.selectTemplateHint')}</p>
             </Card>
           ) : (
             <>
@@ -524,9 +524,9 @@ export const SizeGuidesView: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-neutral-800 pb-4">
                   <div>
                     <div className="flex items-center gap-3">
-                      <h2 className="text-lg font-bold text-slate-900 dark:text-neutral-100">{selectedTemplate.name || (selectedTemplate as any).title || 'قالب راهنمای سایز'}</h2>
+                      <h2 className="text-lg font-bold text-slate-900 dark:text-neutral-100">{selectedTemplate.name || (selectedTemplate as any).title || t('sizeguides.defaultTemplateTitle')}</h2>
                       {getTypeBadge(selectedTemplate.type || (selectedTemplate as any).template_type)}
-                      <Badge variant="neutral">واحد {selectedTemplate.unit || 'cm'}</Badge>
+                      <Badge variant="neutral">{t('sizeguides.unitPrefix')} {selectedTemplate.unit || 'cm'}</Badge>
                     </div>
                     {selectedTemplate.description && (
                       <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">{selectedTemplate.description}</p>
@@ -540,7 +540,7 @@ export const SizeGuidesView: React.FC = () => {
                       onClick={() => setIsPreviewModalOpen(true)}
                       icon={<Eye className="w-3.5 h-3.5" />}
                     >
-                      پیش‌نمایش و چاپ کارت
+                      {t('sizeguides.previewAndPrintCard')}
                     </Button>
                     <Button
                       variant="outline"
@@ -548,7 +548,7 @@ export const SizeGuidesView: React.FC = () => {
                       onClick={() => handleOpenMeasModal()}
                       icon={<Plus className="w-3.5 h-3.5" />}
                     >
-                      افزودن پارامتر اندازه
+                      {t('sizeguides.addMeasurementParam')}
                     </Button>
                     <Button
                       variant="primary"
@@ -557,7 +557,7 @@ export const SizeGuidesView: React.FC = () => {
                       isLoading={isSavingMatrix}
                       icon={<Check className="w-3.5 h-3.5" />}
                     >
-                      ذخیره ماتریس سایزها
+                      {t('sizeguides.saveSizeMatrix')}
                     </Button>
                   </div>
                 </div>
@@ -565,7 +565,7 @@ export const SizeGuidesView: React.FC = () => {
                 {saveSuccessMsg && (
                   <div className="mt-3 p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-lg text-xs flex items-center gap-2 animate-fade-in">
                     <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                    ماتریس مقادیر راهنمای سایز با موفقیت ذخیره شد.
+                    {t('sizeguides.matrixSavedSuccess')}
                   </div>
                 )}
               </Card>
@@ -575,15 +575,15 @@ export const SizeGuidesView: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-neutral-400 font-mono flex items-center gap-1.5">
                     <Sliders className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                    پارامترهای اندازه‌گیری تعریف شده ({measurements.length})
+                    {t('sizeguides.definedMeasurements')} ({measurements.length})
                   </h4>
                 </div>
 
                 {measurements.length === 0 ? (
                   <div className="p-4 bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/60 rounded-xl text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between gap-2">
-                    <span>هیچ پارامتر اندازه‌ای (مانند دور سینه، قد، طول کفی و...) تعریف نشده است.</span>
+                    <span>{t('sizeguides.noMeasurementsAlert')}</span>
                     <Button size="sm" variant="outline" onClick={() => handleOpenMeasModal()}>
-                      تعریف اولین پارامتر
+                      {t('sizeguides.defineFirstParam')}
                     </Button>
                   </div>
                 ) : (
@@ -598,7 +598,7 @@ export const SizeGuidesView: React.FC = () => {
                         <span className="font-mono text-[10px] bg-white dark:bg-neutral-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-neutral-700 text-slate-600 dark:text-neutral-300">
                           {m.unit}
                         </span>
-                        <div className="flex items-center gap-0.5 mr-1 pr-1 border-r border-slate-300 dark:border-neutral-700">
+                        <div className="flex items-center gap-0.5 ms-1 ps-1 border-s border-slate-300 dark:border-neutral-700">
                           <button
                             type="button"
                             onClick={() => handleOpenMeasModal(m)}
@@ -625,27 +625,27 @@ export const SizeGuidesView: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-neutral-400 font-mono flex items-center gap-1.5">
                     <Table className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                    ماتریس هوشمند اندازه‌ها (جدول راهنما)
+                    {t('sizeguides.smartSizeMatrix')}
                   </h4>
                   <span className="text-[11px] text-slate-400 dark:text-neutral-500">
-                    مقادیر به سانتی‌متر / اینچ طبق واحد قالب
+                    {t('sizeguides.matrixUnitHint')}
                   </span>
                 </div>
 
                 {measurements.length === 0 ? (
                   <div className="p-8 text-center text-slate-400 dark:text-neutral-500 text-xs">
-                    ابتدا پارامترهای اندازه را تعریف کنید تا جدول ماتریس تشکیل شود.
+                    {t('sizeguides.defineParamsFirst')}
                   </div>
                 ) : sizes.length === 0 ? (
                   <div className="p-8 text-center text-slate-400 dark:text-neutral-500 text-xs">
-                    هیچ سایزی در سیستم یافت نشد. لطفا ابتدا در بخش «سایزها» سایزهای استاندارد را ایجاد کنید.
+                    {t('sizeguides.noSizesFound')}
                   </div>
                 ) : (
                   <div className="overflow-x-auto custom-scrollbar border border-slate-200 dark:border-neutral-800 rounded-xl">
-                    <table className="w-full text-right text-xs">
+                    <table className="w-full text-start text-xs">
                       <thead>
                         <tr className="bg-slate-100/80 dark:bg-neutral-800/80 border-b border-slate-200 dark:border-neutral-800 text-slate-700 dark:text-neutral-300 font-bold">
-                          <th className="p-3 w-32 sticky right-0 bg-slate-100 dark:bg-neutral-800 z-10">نام سایز</th>
+                          <th className="p-3 w-32 sticky start-0 bg-slate-100 dark:bg-neutral-800 z-10">{t('sizeguides.sizeNameCol')}</th>
                           {measurements.map((m, mIdx) => (
                             <th key={m.id ? `th_m_${m.id}_${mIdx}` : `th_m_idx_${mIdx}`} className="p-3 text-center min-w-[110px]">
                               <div>{m.name}</div>
@@ -659,7 +659,7 @@ export const SizeGuidesView: React.FC = () => {
                       <tbody className="divide-y divide-slate-100 dark:divide-neutral-800 bg-white dark:bg-[#13151a]">
                         {sizes.map((sz, szIdx) => (
                           <tr key={sz.id ? `tr_sz_${sz.id}_${szIdx}` : `tr_sz_idx_${szIdx}`} className="hover:bg-slate-50/60 dark:hover:bg-neutral-800/50 transition-colors">
-                            <td className="p-3 font-bold text-slate-900 dark:text-neutral-100 sticky right-0 bg-white dark:bg-[#13151a] shadow-xs z-10">
+                            <td className="p-3 font-bold text-slate-900 dark:text-neutral-100 sticky start-0 bg-white dark:bg-[#13151a] shadow-xs z-10">
                               <span className="px-2 py-1 bg-slate-100 dark:bg-neutral-800 rounded-md font-mono text-xs text-slate-800 dark:text-neutral-200">
                                 {sz.name}
                               </span>
@@ -696,12 +696,12 @@ export const SizeGuidesView: React.FC = () => {
       <Modal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
-        title={editingTemplate ? 'ویرایش قالب راهنمای سایز' : 'افزودن قالب راهنمای سایز جدید'}
+        title={editingTemplate ? t('sizeguides.editTemplate') : t('sizeguides.newTemplateModalTitle')}
       >
         <form onSubmit={handleSaveTemplate} className="space-y-4">
           <Input
-            label="عنوان قالب"
-            placeholder="مثلا: راهنمای سایز تیشرت زنانه"
+            label={t('sizeguides.templateName')}
+            placeholder={t('sizeguides.templateNamePlaceholder')}
             value={tplName}
             onChange={(e) => setTplName(e.target.value)}
             required
@@ -709,35 +709,35 @@ export const SizeGuidesView: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <Select
-              label="دسته/نوع قالب"
+              label={t('sizeguides.templateTypeLabel')}
               value={tplType}
               onChange={(e) => setTplType(e.target.value as SizeGuideType)}
               options={[
-                { value: 'apparel', label: 'پوشاک (Apparel)' },
-                { value: 'footwear', label: 'کفش و پاپوش (Footwear)' },
-                { value: 'bags', label: 'کیف و کوله (Bags)' },
-                { value: 'accessories', label: 'اکسسوری (Accessories)' },
-                { value: 'custom', label: 'سفارشی (Custom)' },
+                { value: 'apparel', label: t('sizeguides.typeApparelBadge') },
+                { value: 'footwear', label: t('sizeguides.typeFootwearBadge') },
+                { value: 'bags', label: t('sizeguides.typeBagsBadge') },
+                { value: 'accessories', label: t('sizeguides.typeAccessoriesBadge') },
+                { value: 'custom', label: t('sizeguides.typeCustomBadge') },
               ]}
             />
 
             <Select
-              label="واحد اندازه‌گیری پیش‌فرض"
+              label={t('sizeguides.defaultUnitLabel')}
               value={tplUnit}
               onChange={(e) => setTplUnit(e.target.value as SizeUnit)}
               options={[
-                { value: 'cm', label: 'سانتی‌متر (cm)' },
-                { value: 'in', label: 'اینچ (in)' },
-                { value: 'mm', label: 'میلی‌متر (mm)' },
+                { value: 'cm', label: t('sizeguides.unitCm') },
+                { value: 'in', label: t('sizeguides.unitInch') },
+                { value: 'mm', label: t('sizeguides.unitMm') },
               ]}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">توضیحات / راهنمای اندازه‌گیری</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">{t('sizeguides.measInstructionsLabel')}</label>
             <textarea
               rows={3}
-              placeholder="توضیحاتی درباره نحوه‌ی اندازه‌گیری پارامترها..."
+              placeholder={t('sizeguides.measInstructionsPlaceholder')}
               value={tplDesc}
               onChange={(e) => setTplDesc(e.target.value)}
               className="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-[#181a20] text-slate-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
@@ -745,21 +745,21 @@ export const SizeGuidesView: React.FC = () => {
           </div>
 
           <Select
-            label="وضعیت"
+            label={t('products.productStatus')}
             value={tplStatus}
             onChange={(e) => setTplStatus(e.target.value as 'active' | 'inactive')}
             options={[
-              { value: 'active', label: 'فعال' },
-              { value: 'inactive', label: 'غیرفعال' },
+              { value: 'active', label: t('products.statusActive') },
+              { value: 'inactive', label: t('products.statusInactive') },
             ]}
           />
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-neutral-800">
             <Button variant="outline" type="button" onClick={() => setIsTemplateModalOpen(false)}>
-              انصراف
+              {t('common.cancel')}
             </Button>
             <Button type="submit" isLoading={isSavingTpl}>
-              {editingTemplate ? 'ذخیره تغییرات' : 'ایجاد قالب'}
+              {editingTemplate ? t('common.save') : t('common.create')}
             </Button>
           </div>
         </form>
@@ -769,61 +769,61 @@ export const SizeGuidesView: React.FC = () => {
       <Modal
         isOpen={isMeasModalOpen}
         onClose={() => setIsMeasModalOpen(false)}
-        title={editingMeas ? 'ویرایش پارامتر اندازه' : 'افزودن پارامتر اندازه جدید'}
+        title={editingMeas ? t('sizeguides.editMeasurement') : t('sizeguides.newMeasurementModalTitle')}
       >
         <form onSubmit={handleSaveMeasurement} className="space-y-4">
           <Input
-            label="نام پارامتر"
-            placeholder="مثلا: دور سینه، قد آستین، طول کفی"
+            label={t('sizeguides.paramNameLabel')}
+            placeholder={t('sizeguides.paramNamePlaceholder')}
             value={measName}
             onChange={(e) => setMeasName(e.target.value)}
             required
           />
 
           <Input
-            label="کد یکتا (تگ انگلیسی)"
-            placeholder="مثلا: chest, length, insole_length"
+            label={t('sizeguides.paramCodeLabel')}
+            placeholder={t('sizeguides.paramCodePlaceholder')}
             value={measCode}
             onChange={(e) => setMeasCode(e.target.value)}
           />
 
           <div className="grid grid-cols-2 gap-4">
             <Select
-              label="نوع اندازه"
+              label={t('sizeguides.dimensionType')}
               value={measType}
               onChange={(e) => setMeasType(e.target.value as MeasurementType)}
               options={[
-                { value: 'length', label: 'طول / قد' },
-                { value: 'width', label: 'عرض' },
-                { value: 'height', label: 'ارتفاع' },
-                { value: 'depth', label: 'عمق' },
-                { value: 'circumference', label: 'محیط / دور' },
-                { value: 'weight', label: 'وزن' },
-                { value: 'diameter', label: 'قطر' },
-                { value: 'custom', label: 'سفارشی' },
+                { value: 'length', label: t('sizeguides.typeLength') },
+                { value: 'width', label: t('sizeguides.typeWidth') },
+                { value: 'height', label: t('sizeguides.typeHeight') },
+                { value: 'depth', label: t('sizeguides.typeDepth') },
+                { value: 'circumference', label: t('sizeguides.typeCircumference') },
+                { value: 'weight', label: t('sizeguides.typeWeight') },
+                { value: 'diameter', label: t('sizeguides.typeDiameter') },
+                { value: 'custom', label: t('sizeguides.typeCustomBadge') },
               ]}
             />
 
             <Select
-              label="واحد اندازه"
+              label={t('sizeguides.dimensionUnit')}
               value={measUnit}
               onChange={(e) => setMeasUnit(e.target.value as MeasurementUnit)}
               options={[
-                { value: 'cm', label: 'سانتی‌متر (cm)' },
-                { value: 'in', label: 'اینچ (in)' },
-                { value: 'mm', label: 'میلی‌متر (mm)' },
-                { value: 'g', label: 'گرم (g)' },
-                { value: 'kg', label: 'کیلوگرم (kg)' },
+                { value: 'cm', label: t('sizeguides.unitCm') },
+                { value: 'in', label: t('sizeguides.unitInch') },
+                { value: 'mm', label: t('sizeguides.unitMm') },
+                { value: 'g', label: t('sizeguides.unitGram') },
+                { value: 'kg', label: t('sizeguides.unitKg') },
               ]}
             />
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-neutral-800">
             <Button variant="outline" type="button" onClick={() => setIsMeasModalOpen(false)}>
-              انصراف
+              {t('common.cancel')}
             </Button>
             <Button type="submit">
-              {editingMeas ? 'ویرایش' : 'افزودن پارامتر'}
+              {editingMeas ? t('common.save') : t('sizeguides.addMeasurementParam')}
             </Button>
           </div>
         </form>

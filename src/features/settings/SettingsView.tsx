@@ -19,7 +19,7 @@ import { getCurrentAppVersion, APP_VERSION } from '../../utils/version';
 import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck, Building2, Edit3, Plus, ShieldAlert, Globe, Clock, CheckCircle2, Users, Sparkles, Lock, ArrowUpCircle, Sun, Moon, Monitor, Palette } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, isPersian } = useTranslation();
   const { activeOrganization, isOwner, userRole, refreshOrganizations } = useOrganization();
   const { theme, setTheme } = useTheme();
   const {
@@ -143,25 +143,25 @@ export const SettingsView: React.FC = () => {
   };
 
   const getUserRoleName = () => {
-    if (!user) return 'کاربر سیستم';
+    if (!user) return t('settings.roleViewer');
     if (typeof user.role === 'object' && user.role?.name) {
       return user.role.name;
     }
     if (typeof user.role === 'string') {
       return user.role;
     }
-    return isCloudAuthenticated ? 'کاربر سرور ابری' : 'مدیر کل (آفلاین)';
+    return isCloudAuthenticated ? t('settings.roleManager') : t('settings.roleOwner');
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('navigation.orgSettings', 'تنظیمات')}
-        subtitle="مدیریت اطلاعات سازمان، کاربران و دسترسی‌ها، پشتیبان‌گیری پایگاه داده و پیکربندی سیستم"
+        title={t('settings.title')}
+        subtitle={t('settings.subtitle')}
       />
 
       {/* Cloud Account Status Banner */}
-      <Card title="وضعیت حساب و احراز هویت" subtitle="مشخصات کاربر فعال و سطح دسترسی سیستم">
+      <Card title={t('settings.userRoleInOrg')} subtitle={t('settings.membersTitle')}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-[#181a20] border border-neutral-200/80 dark:border-neutral-800">
           <div className="flex items-center gap-3.5">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg text-white shadow-xs ${isCloudAuthenticated ? 'bg-blue-600' : 'bg-neutral-800 dark:bg-neutral-700'}`}>
@@ -173,12 +173,12 @@ export const SettingsView: React.FC = () => {
                   {user?.first_name} {user?.last_name}
                 </h3>
                 <Badge variant={isCloudAuthenticated ? 'info' : 'neutral'}>
-                  {isCloudAuthenticated ? 'حساب ابری متصل' : 'آفلاین محلی'}
+                  {isCloudAuthenticated ? t('settings.cloudModeDesc') : t('settings.localOfflineMode')}
                 </Badge>
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono mt-0.5">{user?.email}</p>
               <p className="text-[11px] text-neutral-600 dark:text-neutral-400 mt-1">
-                نقش سیستم: <strong className="text-neutral-900 dark:text-neutral-100">{getUserRoleName()}</strong>
+                {t('settings.memberRole')}: <strong className="text-neutral-900 dark:text-neutral-100">{getUserRoleName()}</strong>
               </p>
             </div>
           </div>
@@ -191,7 +191,7 @@ export const SettingsView: React.FC = () => {
                 icon={<LogIn className="w-4 h-4" />}
                 className="text-xs font-bold"
               >
-                ورود به حساب کاربری
+                {t('auth.login')}
               </Button>
             ) : (
               <Button
@@ -200,7 +200,7 @@ export const SettingsView: React.FC = () => {
                 icon={<LogOut className="w-4 h-4 text-red-500" />}
                 className="text-xs font-bold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 border-red-200 dark:border-red-900/60"
               >
-                خروج از حساب کاربری
+                {t('auth.logout')}
               </Button>
             )}
           </div>
@@ -209,8 +209,8 @@ export const SettingsView: React.FC = () => {
 
       {/* Active Org Profile & Owner Edit Section */}
       <Card
-        title="اطلاعات سازمان فعال"
-        subtitle="مشخصات، واحد پول، منطقه زمانی و مدیریت تنظیمات کسب‌وکار"
+        title={t('settings.orgDetailsCard')}
+        subtitle={t('settings.orgDetailsSubtitle')}
         action={
           <div className="flex items-center gap-2">
             <Button
@@ -220,7 +220,7 @@ export const SettingsView: React.FC = () => {
               icon={<Plus className="w-3.5 h-3.5" />}
               className="text-xs font-medium"
             >
-              سازمان جدید
+              {t('settings.inviteMember')}
             </Button>
             {isOwner ? (
               <Button
@@ -230,10 +230,10 @@ export const SettingsView: React.FC = () => {
                 icon={<Edit3 className="w-3.5 h-3.5" />}
                 className="text-xs font-bold bg-blue-600 hover:bg-blue-700"
               >
-                ویرایش اطلاعات سازمان
+                {t('settings.editOrgDetailsBtn')}
               </Button>
             ) : (
-              <Badge variant="neutral">نقش: {userRole} (فقط مشاهده)</Badge>
+              <Badge variant="neutral">{t('settings.memberRole')}: {userRole}</Badge>
             )}
           </div>
         }
@@ -243,36 +243,36 @@ export const SettingsView: React.FC = () => {
             <div className="flex items-center gap-2.5 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs rounded-xl">
               <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
               <span>
-                شما به عنوان <strong>{userRole}</strong> در این سازمان عضو هستید. ویرایش اطلاعات سازمان فقط برای <strong>مالک (Owner)</strong> مجاز است.
+                {t('settings.roleViewer')} ({userRole})
               </span>
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-neutral-50/70 dark:bg-[#181a20] border border-neutral-200/80 dark:border-neutral-800">
             <div className="space-y-1">
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">نام سازمان / برند</span>
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('settings.orgName')}</span>
               <p className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
                 <Building2 className="w-4 h-4 text-neutral-500 dark:text-neutral-400 shrink-0" />
-                <span>{activeOrganization?.name || 'سازمان اصلی'}</span>
+                <span>{activeOrganization?.name || '-'}</span>
               </p>
             </div>
 
             <div className="space-y-1">
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">شناسه یکتا (Slug)</span>
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('settings.orgSlug')}</span>
               <p className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200 dir-ltr text-start">
                 {activeOrganization?.slug || '-'}
               </p>
             </div>
 
             <div className="space-y-1">
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">واحد پول پیش‌فرض</span>
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('settings.orgCurrency')}</span>
               <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                {activeOrganization?.currency === 'TOMAN' ? 'تومان (TOMAN)' : (activeOrganization?.currency || 'TOMAN')}
+                {activeOrganization?.currency === 'TOMAN' ? t('settings.currencyToman') : (activeOrganization?.currency || 'TOMAN')}
               </p>
             </div>
 
             <div className="space-y-1">
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">منطقه زمانی</span>
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('settings.mainTimezone')}</span>
               <p className="text-xs font-mono text-neutral-800 dark:text-neutral-200 flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
                 <span>{activeOrganization?.timezone || 'Asia/Tehran'}</span>
@@ -282,18 +282,18 @@ export const SettingsView: React.FC = () => {
 
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-500 dark:text-neutral-400 pt-2 border-t border-neutral-100 dark:border-neutral-800">
             <div className="flex items-center gap-2">
-              <span>وضعیت سازمان:</span>
+              <span>{t('settings.statusActive')}:</span>
               <Badge variant={activeOrganization?.status === 'active' ? 'success' : 'neutral'}>
-                {activeOrganization?.status === 'active' ? 'فعال' : (activeOrganization?.status || 'نامشخص')}
+                {activeOrganization?.status === 'active' ? t('settings.statusActive') : (activeOrganization?.status || '-')}
               </Badge>
-              <span className="ms-2">پلن:</span>
+              <span className="ms-2">{t('settings.activePlanBadge')}:</span>
               <Badge variant={activeOrganization?.plan === 'pro' ? 'info' : 'neutral'}>
-                {activeOrganization?.plan === 'pro' ? 'حرفه‌ای (Pro)' : 'رایگان (Free)'}
+                {activeOrganization?.plan === 'pro' ? t('settings.planPro') : t('settings.planFree')}
               </Badge>
             </div>
             {activeOrganization?.date_created && (
               <span className="font-mono text-[11px]">
-                تاریخ ایجاد: {new Date(activeOrganization.date_created).toLocaleDateString('fa-IR')}
+                {new Date(activeOrganization.date_created).toLocaleDateString(isPersian ? 'fa-IR' : 'en-US')}
               </span>
             )}
           </div>
@@ -305,8 +305,8 @@ export const SettingsView: React.FC = () => {
 
       {/* Appearance & Theme Selection Card */}
       <Card
-        title="پوسته و ظاهر برنامه (Appearance)"
-        subtitle="انتخاب حالت نمایش روشن، تیره یا هماهنگ با سیستم‌عامل با کنتراست استاندارد و بهینه"
+        title={t('settings.appearanceTitle')}
+        subtitle={t('settings.appearanceSubtitle')}
       >
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Light Theme Option */}
@@ -321,13 +321,13 @@ export const SettingsView: React.FC = () => {
             <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3">
               <Sun className="w-6 h-6" />
             </div>
-            <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">پوسته روشن (Light)</h4>
+            <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.themeLight')}</h4>
             <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
-              پس‌زمینه سفید با کنتراست بالا و مناسب فضاهای پرنور
+              {t('settings.themeLightDesc')}
             </p>
             {theme === 'light' && (
               <Badge variant="warning" className="mt-3 text-[10px]">
-                فعال
+                {t('settings.themeActive')}
               </Badge>
             )}
           </div>
@@ -344,13 +344,13 @@ export const SettingsView: React.FC = () => {
             <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3">
               <Moon className="w-6 h-6" />
             </div>
-            <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">پوسته تیره (Dark)</h4>
+            <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.themeDark')}</h4>
             <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
-              طراحی مهندسی‌شده با رنگ‌های آرامش‌بخش و بدون خستگی چشم
+              {t('settings.themeDarkDesc')}
             </p>
             {theme === 'dark' && (
               <Badge variant="info" className="mt-3 text-[10px]">
-                فعال
+                {t('settings.themeActive')}
               </Badge>
             )}
           </div>
@@ -367,13 +367,13 @@ export const SettingsView: React.FC = () => {
             <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
               <Monitor className="w-6 h-6" />
             </div>
-            <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">خودکار با سیستم (System)</h4>
+            <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.themeSystem')}</h4>
             <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
-              تغییر خودکار رنگ‌ها بر اساس تنظیمات ویندوز، مک یا موبایل
+              {t('settings.themeSystemDesc')}
             </p>
             {theme === 'system' && (
               <Badge variant="neutral" className="mt-3 text-[10px]">
-                فعال
+                {t('settings.themeActive')}
               </Badge>
             )}
           </div>
@@ -403,16 +403,16 @@ export const SettingsView: React.FC = () => {
               ) : (
                 <Badge variant="neutral">Local Storage</Badge>
               )}
-              {mode === 'local_offline' && <Badge variant="success">فعال</Badge>}
+              {mode === 'local_offline' && <Badge variant="success">{t('settings.themeActive')}</Badge>}
             </div>
           </div>
           <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
-            حالت آفلاین محلی {isTauriEnvironment() ? '(پایگاه داده SQLite)' : '(حافظه مرورگر)'}
+            {t('settings.localOfflineMode')} {isTauriEnvironment() ? t('settings.localOfflineSQLite') : t('settings.localOfflineBrowser')}
           </h3>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
             {isTauriEnvironment()
-              ? 'داده‌ها در دیتابیس مستقل و فوق‌سریع SQLite (فایل tankhor.db در حافظه دسکتاپ) ذخیره می‌شوند. بدون محدودیت حجم و پایدار در برابر ریست ویندوز.'
-              : 'داده‌ها روی حافظه محلی دستگاه ذخیره می‌شوند. کاملاً رایگان، بدون نیاز به اینترنت و بسیار سریع.'}
+              ? t('settings.localOfflineSQLiteDesc')
+              : t('settings.localOfflineBrowserDesc')}
           </p>
         </div>
 
@@ -432,37 +432,37 @@ export const SettingsView: React.FC = () => {
               {activeOrganization?.plan !== 'pro' && (
                 <Badge variant="warning" className="flex items-center gap-1 text-[10px]">
                   <Sparkles className="w-3 h-3 text-amber-500" />
-                  پلن Pro
+                  {t('settings.planPro')}
                 </Badge>
               )}
-              {mode === 'cloud_synced' && <Badge variant="info">فعال است</Badge>}
+              {mode === 'cloud_synced' && <Badge variant="info">{t('settings.themeActive')}</Badge>}
             </div>
           </div>
           <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center justify-between">
-            <span>همگام‌سازی ابری (نسخه پیشرفته)</span>
+            <span>{t('settings.cloudSyncMode')}</span>
             {activeOrganization?.plan !== 'pro' && (
               <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline">
-                ارتقا به Pro
+                {t('settings.upgradeToPro')}
               </span>
             )}
           </h3>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
-            اتصال به سرور ابری جهت اشتراک‌گذاری هم‌زمان داده‌ها بین شعبه‌ها و دستگاه‌های مختلف.
+            {t('settings.cloudSyncModeDesc')}
           </p>
         </div>
       </div>
 
       {/* Desktop App Updater Card */}
       {isTauriEnvironment() && (
-        <Card title="بروزرسانی نسخه دسکتاپ" subtitle="بررسی انتشار نسخه‌های جدید برنامه تن‌خور از طریق GitHub Releases">
+        <Card title={t('settings.desktopUpdaterTitle')} subtitle={t('settings.desktopUpdaterSubtitle')}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/80 dark:border-neutral-700/70">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
                 <ArrowUpCircle className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">نسخه نصب‌شده دسکتاپ: v{desktopVersion}</p>
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">ارتقای خودکار بدون از دست رفتن اطلاعات SQLite و تنظیمات سازمان</p>
+                <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.installedDesktopVersion')}: v{desktopVersion}</p>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">{t('settings.desktopUpdateSafeDesc')}</p>
               </div>
             </div>
             <Button
@@ -473,7 +473,7 @@ export const SettingsView: React.FC = () => {
               icon={<RefreshCw className="w-3.5 h-3.5" />}
               className="text-xs font-bold shrink-0"
             >
-              بررسی بروزرسانی نسخه جدید
+              {t('settings.checkNewVersionBtn')}
             </Button>
           </div>
 
@@ -499,10 +499,10 @@ export const SettingsView: React.FC = () => {
       )}
 
       {/* Cloud Sync Manual Trigger Card */}
-      <Card title="وضعیت همگام‌سازی ابری" subtitle="ارسال تغییرات محلی به پایگاه داده ابری تن‌خور">
+      <Card title={t('settings.cloudSyncStatusTitle')} subtitle={t('settings.cloudSyncStatusSubtitle')}>
         <div className="space-y-4 max-w-xl">
           <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
-            در صورت ثبت اطلاعات جدید در حالت آفلاین، با فشردن دکمه زیر اطلاعات شما با پایگاه داده همگام می‌شود.
+            {t('settings.cloudSyncStatusDesc')}
           </p>
 
           <div className="flex items-center gap-3 pt-1">
@@ -512,7 +512,7 @@ export const SettingsView: React.FC = () => {
               isLoading={isSyncing}
               icon={<RefreshCw className="w-4 h-4" />}
             >
-              همگام‌سازی دستی اطلاعات
+              {t('settings.manualSyncBtn')}
             </Button>
           </div>
 

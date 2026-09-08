@@ -93,7 +93,7 @@ export const ColorsView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (await confirmAction('آیا از حذف این رنگ مطمئن هستید؟')) {
+    if (await confirmAction(t('products.confirmDeleteColor'))) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteColor(id);
       await loadColors();
@@ -112,7 +112,7 @@ export const ColorsView: React.FC = () => {
   const columns: Column<Color>[] = [
     {
       key: 'name',
-      header: 'نام و نمونه رنگ',
+      header: t('products.colorSampleHeader'),
       render: (color) => (
         <div className="flex items-center gap-3">
           <span
@@ -121,14 +121,14 @@ export const ColorsView: React.FC = () => {
           />
           <div>
             <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{color.name}</p>
-            {color.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">کد: {color.code}</p>}
+            {color.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">{t('products.colorCode')}: {color.code}</p>}
           </div>
         </div>
       ),
     },
     {
       key: 'hex',
-      header: 'کد هگز (HEX)',
+      header: t('products.hexCodeHeader'),
       render: (color) => (
         <span className="font-mono text-xs font-bold text-slate-700 dark:text-neutral-300 bg-slate-100 dark:bg-neutral-800 px-2 py-1 rounded-md border border-slate-200 dark:border-neutral-700">
           {color.hex || '-'}
@@ -137,10 +137,10 @@ export const ColorsView: React.FC = () => {
     },
     {
       key: 'status',
-      header: 'وضعیت',
+      header: t('products.productStatus'),
       render: (color) => (
         <Badge variant={color.status === 'active' ? 'success' : 'neutral'}>
-          {color.status === 'active' ? 'فعال' : 'غیرفعال'}
+          {color.status === 'active' ? t('products.statusActive') : t('products.statusInactive')}
         </Badge>
       ),
     },
@@ -149,11 +149,11 @@ export const ColorsView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="مدیریت رنگ‌ها (Colors)"
-        subtitle="تعریف و کدگذاری پالت رنگ‌های کالا با امکان تعیین کد Hex دقیق"
+        title={t('products.colorsTitle')}
+        subtitle={t('products.colorsSubtitle')}
         actions={
           <Button onClick={() => handleOpenModal()} icon={<Plus className="w-4 h-4" />}>
-            افزودن رنگ جدید
+            {t('products.createColor')}
           </Button>
         }
       />
@@ -162,7 +162,7 @@ export const ColorsView: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="جستجو در رنگ‌ها..."
+              placeholder={t('products.searchColors')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search className="w-4 h-4" />}
@@ -198,7 +198,7 @@ export const ColorsView: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingColor ? 'ویرایش رنگ' : 'افزودن رنگ جدید'}
+        title={editingColor ? t('products.editColor') : t('products.createColor')}
         maxWidth="md"
         footer={
           <>
@@ -213,8 +213,8 @@ export const ColorsView: React.FC = () => {
       >
         <form id="color-form" onSubmit={handleSave} className="space-y-4">
           <Input
-            label="نام رنگ *"
-            placeholder="مثال: مشکی مات، سرمه‌ای سیر، سفید صدفی"
+            label={`${t('products.colorName')} *`}
+            placeholder="Black, Navy, White..."
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -222,24 +222,24 @@ export const ColorsView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="کد رنگ (Color Code)"
+              label={t('products.colorCode')}
               placeholder="BLK"
               value={code}
               onChange={(e) => setCode(e.target.value)}
             />
             <Select
-              label="وضعیت"
+              label={t('products.productStatus')}
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
               options={[
-                { value: 'active', label: 'فعال' },
-                { value: 'inactive', label: 'غیرفعال' },
+                { value: 'active', label: t('products.statusActive') },
+                { value: 'inactive', label: t('products.statusInactive') },
               ]}
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">انتخاب کد رنگ دقیق (HEX Color)</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">{t('products.chooseHex')}</label>
             <div className="flex items-center gap-3">
               <input
                 type="color"

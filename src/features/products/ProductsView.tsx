@@ -182,7 +182,7 @@ export const ProductsView: React.FC = () => {
   const columns: Column<Product>[] = [
     {
       key: 'title',
-      header: 'نام محصول / کالا',
+      header: t('products.productName'),
       render: (p) => (
         <div className="flex items-center gap-3">
           <ProductImage
@@ -199,7 +199,7 @@ export const ProductsView: React.FC = () => {
               {p.title}
             </p>
             <p className="text-[11px] font-mono text-neutral-400 mt-0.5">
-              {p.brand || 'تن‌خور'} | اسلاگ: {p.slug || '-'}
+              {p.brand || t('products.defaultBrand')} | Slug: {p.slug || '-'}
             </p>
           </div>
         </div>
@@ -247,7 +247,7 @@ export const ProductsView: React.FC = () => {
           className="font-mono text-xs font-semibold text-neutral-800 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 px-2.5 py-0.5 rounded-full border border-neutral-200/80 dark:border-neutral-700 cursor-pointer transition-colors inline-flex items-center gap-1"
         >
           <Layers className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
-          <span>{toPersianDigits(p.variants_count || 0)}</span>
+          <span>{isPersian ? toPersianDigits(p.variants_count || 0) : (p.variants_count || 0)}</span>
         </button>
       ),
     },
@@ -256,7 +256,7 @@ export const ProductsView: React.FC = () => {
       header: t('products.totalStock'),
       render: (p) => (
         <span className="font-mono text-xs font-semibold text-amber-900 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 px-2.5 py-0.5 rounded-full">
-          {toPersianDigits(p.total_stock || 0)}
+          {isPersian ? toPersianDigits(p.total_stock || 0) : (p.total_stock || 0)}
         </span>
       ),
     },
@@ -334,7 +334,7 @@ export const ProductsView: React.FC = () => {
                 onChange={(e) => setSelectedCategoryFilter(e.target.value ? Number(e.target.value) : '')}
                 className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-200 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
-                <option value="">{t('products.categoriesTitle')}: {t('common.all')}</option>
+                <option value="">{t('products.allCategories')}</option>
                 {getCategoryFilterOptions().map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -350,7 +350,7 @@ export const ProductsView: React.FC = () => {
                 onChange={(e) => setSelectedBrandFilter(e.target.value)}
                 className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-200 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
-                <option value="">{t('products.brandsTitle')}: {t('common.all')}</option>
+                <option value="">{t('products.allBrands')}</option>
                 {brands.map((b, bIdx) => (
                   <option key={`prod_brand_${b.id || b.name}_${bIdx}`} value={b.name}>
                     {b.name}
@@ -366,7 +366,7 @@ export const ProductsView: React.FC = () => {
                 onChange={(e) => setSelectedCollectionFilter(e.target.value ? Number(e.target.value) : '')}
                 className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-200 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
-                <option value="">{t('products.collectionsTitle')}: {t('common.all')}</option>
+                <option value="">{t('products.allCollections')}</option>
                 {collections.map((col, colIdx) => (
                   <option key={`prod_col_${col.id}_${colIdx}`} value={col.id}>
                     {col.name}
@@ -382,7 +382,7 @@ export const ProductsView: React.FC = () => {
                 onChange={(e) => setSelectedSeasonFilter(e.target.value ? Number(e.target.value) : '')}
                 className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-200 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
-                <option value="">همه فصل‌ها</option>
+                <option value="">{t('products.allSeasons')}</option>
                 {seasons.map((s, sIdx) => (
                   <option key={`prod_season_${s.id}_${sIdx}`} value={s.id}>
                     {s.name}
@@ -397,14 +397,14 @@ export const ProductsView: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-600 dark:text-neutral-300 flex items-center gap-1">
                 <Filter className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span>فیلتر رنگ:</span>
+                <span>{t('products.filterColor')}</span>
               </span>
               <select
                 value={selectedColorFilter}
                 onChange={(e) => setSelectedColorFilter(e.target.value ? Number(e.target.value) : '')}
                 className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-800 dark:text-neutral-200 text-xs px-3 py-1.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
-                <option value="">همه رنگ‌ها</option>
+                <option value="">{t('products.allColors')}</option>
                 {colors.map((c, cIdx) => (
                   <option key={`prod_color_${c.id}_${cIdx}`} value={c.id}>
                     {c.name}
@@ -421,7 +421,7 @@ export const ProductsView: React.FC = () => {
                 className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs"
                 icon={<X className="w-3.5 h-3.5" />}
               >
-                پاک کردن همه فیلترها
+                {t('products.clearAllFilters')}
               </Button>
             )}
           </div>
@@ -439,10 +439,10 @@ export const ProductsView: React.FC = () => {
                 size="sm"
                 className="text-indigo-600 hover:bg-indigo-50 font-bold"
                 onClick={() => handleOpenVariantsModal(p)}
-                title="نمایش تنوع‌های کالا"
+                title={t('products.showProductVariants')}
                 icon={<Layers className="w-3.5 h-3.5" />}
               >
-                تنوع‌ها
+                {t('products.variants')}
               </Button>
               <Button
                 variant="ghost"

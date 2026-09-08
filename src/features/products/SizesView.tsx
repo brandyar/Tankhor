@@ -16,7 +16,7 @@ import { toPersianDigits } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
 
 export const SizesView: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, isPersian } = useTranslation();
   const { activeOrganization } = useOrganization();
 
   const [sizes, setSizes] = useState<Size[]>([]);
@@ -106,7 +106,7 @@ export const SizesView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (await confirmAction('آیا از حذف این سایز مطمئن هستید؟')) {
+    if (await confirmAction(t('products.confirmDeleteSize'))) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteSize(id);
       await loadData();
@@ -131,7 +131,7 @@ export const SizesView: React.FC = () => {
   const columns: Column<Size>[] = [
     {
       key: 'name',
-      header: 'عنوان سایز',
+      header: t('products.sizeNameHeader'),
       render: (size) => (
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-neutral-300 flex items-center justify-center font-bold text-xs">
@@ -139,14 +139,14 @@ export const SizesView: React.FC = () => {
           </div>
           <div>
             <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{size.name}</p>
-            {size.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">کد: {size.code}</p>}
+            {size.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">{t('products.sizeCode')}: {size.code}</p>}
           </div>
         </div>
       ),
     },
     {
       key: 'size_group_id',
-      header: 'گروه سایز مرتبط',
+      header: t('products.sizeGroupHeader'),
       render: (size) => {
         const sgId = typeof size.size_group_id === 'number' ? size.size_group_id : size.size_group_id?.id;
         const group = sizeGroups.find((g) => g.id === sgId);
@@ -159,19 +159,19 @@ export const SizesView: React.FC = () => {
     },
     {
       key: 'sort',
-      header: 'ترتیب نمایش',
+      header: t('products.sizeOrder'),
       render: (size) => (
         <span className="font-mono text-xs font-bold text-slate-600 dark:text-neutral-300">
-          {toPersianDigits(size.sort || 0)}
+          {isPersian ? toPersianDigits(size.sort || 0) : size.sort || 0}
         </span>
       ),
     },
     {
       key: 'status',
-      header: 'وضعیت',
+      header: t('products.productStatus'),
       render: (size) => (
         <Badge variant={size.status === 'active' ? 'success' : 'neutral'}>
-          {size.status === 'active' ? 'فعال' : 'غیرفعال'}
+          {size.status === 'active' ? t('products.statusActive') : t('products.statusInactive')}
         </Badge>
       ),
     },
@@ -180,11 +180,11 @@ export const SizesView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="مدیریت مقادیر سایز (Sizes)"
-        subtitle="تعریف سایزهای انفرادی نظیر S, M, L, XL یا ۴۰، ۴۱، ۴۲ و تخصیص به گروه‌های سایز"
+        title={t('products.sizesTitle')}
+        subtitle={t('products.sizesSubtitle')}
         actions={
           <Button onClick={() => handleOpenModal()} icon={<Plus className="w-4 h-4" />}>
-            افزودن سایز جدید
+            {t('products.createSize')}
           </Button>
         }
       />
@@ -193,7 +193,7 @@ export const SizesView: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="جستجو در سایزها..."
+              placeholder={t('products.searchSizes')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search className="w-4 h-4" />}
@@ -205,7 +205,7 @@ export const SizesView: React.FC = () => {
               value={selectedGroupFilter}
               onChange={(e) => setSelectedGroupFilter(e.target.value ? Number(e.target.value) : '')}
               options={[
-                { value: '', label: 'همه گروه‌های سایز' },
+                { value: '', label: t('products.allSizeGroups') },
                 ...sizeGroups.map((g) => ({ value: g.id, label: g.name })),
               ]}
             />
@@ -240,7 +240,7 @@ export const SizesView: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingSize ? 'ویرایش سایز' : 'افزودن سایز جدید'}
+        title={editingSize ? t('products.editSize') : t('products.createSize')}
         maxWidth="md"
         footer={
           <>
@@ -256,14 +256,14 @@ export const SizesView: React.FC = () => {
         <form id="size-form" onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="عنوان سایز *"
-              placeholder="مثال: Medium یا 42"
+              label={`${t('products.sizeName')} *`}
+              placeholder="Medium, 42, XL..."
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
             />
             <Input
-              label="کد سایز (Short Code)"
+              label={t('products.sizeCode')}
               placeholder="M"
               value={code}
               onChange={(e) => setCode(e.target.value)}
@@ -271,11 +271,11 @@ export const SizesView: React.FC = () => {
           </div>
 
           <Select
-            label="گروه سایز مرتبط *"
+            label={`${t('products.sizeGroupHeader')} *`}
             value={sizeGroupId}
             onChange={(e) => setSizeGroupId(e.target.value ? Number(e.target.value) : '')}
             options={[
-              { value: '', label: 'انتخاب گروه سایز...' },
+              { value: '', label: t('products.selectSizeGroup') },
               ...sizeGroups.map((g) => ({ value: g.id, label: g.name })),
             ]}
             required
@@ -283,18 +283,18 @@ export const SizesView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="ترتیب نمایش (Sort)"
+              label={t('products.sizeOrder')}
               type="number"
               value={sort}
               onChange={(e) => setSort(e.target.value ? Number(e.target.value) : '')}
             />
             <Select
-              label="وضعیت"
+              label={t('products.productStatus')}
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
               options={[
-                { value: 'active', label: 'فعال' },
-                { value: 'inactive', label: 'غیرفعال' },
+                { value: 'active', label: t('products.statusActive') },
+                { value: 'inactive', label: t('products.statusInactive') },
               ]}
             />
           </div>

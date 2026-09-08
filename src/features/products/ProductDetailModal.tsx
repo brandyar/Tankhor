@@ -141,7 +141,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   };
 
   const handleDeleteVariant = async (variantId: number) => {
-    if (await confirmAction('آیا از حذف این تنوع مطمئن هستید؟')) {
+    if (await confirmAction(t('common.confirmDeleteMessage'))) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteVariant(variantId);
       if (product) {
@@ -180,7 +180,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={product ? 'ویرایش و مدیریت محصول' : 'تعریف محصول جدید'}
+      title={product ? t('products.editProduct') : t('products.createProduct')}
       maxWidth="xl"
       footer={
         <>
@@ -200,14 +200,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       <form id="product-detail-form" onSubmit={handleSave} className="space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="نام محصول / عنوان کالا *"
-            placeholder="مثال: کت چرم مردانه VIP"
+            label={`${t('products.productName')} *`}
+            placeholder={isPersian ? "مثال: کت چرم مردانه VIP" : "e.g. Men's Leather Jacket VIP"}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
           />
           <Input
-            label="اسلاگ (Slug)"
+            label={t('products.categorySlug')}
             placeholder="men-leather-jacket-vip"
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
@@ -216,29 +216,29 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Select
-            label="دسته‌بندی اصلی"
+            label={t('products.category')}
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
             options={[
-              { value: '', label: 'انتخاب کنید...' },
+              { value: '', label: t('products.selectCategory') },
               ...getCategoryOptions(),
             ]}
           />
           <Select
-            label="مجموعه (Collection)"
+            label={t('products.collection')}
             value={collectionId}
             onChange={(e) => setCollectionId(e.target.value ? Number(e.target.value) : '')}
             options={[
-              { value: '', label: 'بدون مجموعه' },
+              { value: '', label: t('products.noCollection') },
               ...collections.map((col) => ({ value: col.id, label: col.name })),
             ]}
           />
           <Select
-            label="فصل (Season)"
+            label={t('products.season')}
             value={seasonId}
             onChange={(e) => setSeasonId(e.target.value ? Number(e.target.value) : '')}
             options={[
-              { value: '', label: 'چهارفصل' },
+              { value: '', label: t('products.allSeasonsLabel') },
               ...seasons.map((s) => ({ value: s.id, label: s.name })),
             ]}
           />
@@ -246,25 +246,25 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Select
-            label="برند / مارک تجاری"
+            label={t('products.brand')}
             value={brandId}
             onChange={(e) => setBrandId(e.target.value ? Number(e.target.value) : '')}
             options={[
-              { value: '', label: 'بدون برند' },
+              { value: '', label: t('products.noBrand') },
               ...brands.map((b) => ({ value: b.id, label: b.name })),
             ]}
           />
           <Select
-            label="جدول راهنمای سایز مرتبط"
+            label={t('products.sizeGuide')}
             value={sizeGuideTemplateId}
             onChange={(e) => setSizeGuideTemplateId(e.target.value ? Number(e.target.value) : '')}
             options={[
-              { value: '', label: 'بدون جدول سایز' },
+              { value: '', label: t('products.noSizeGuide') },
               ...sizeGuides.map((sg) => ({ value: sg.id, label: sg.name })),
             ]}
           />
           <Input
-            label="ترتیب نمایش (Sort)"
+            label={t('products.sizeOrder')}
             type="number"
             value={sort}
             onChange={(e) => setSort(e.target.value ? Number(e.target.value) : '')}
@@ -272,50 +272,50 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         </div>
 
         <ImageUpload
-          label="تصویر اصلی محصول *"
+          label={`${t('products.image')} *`}
           value={mainImage}
           onChange={setMainImage}
-          helperText="تصویر کاتالوگ باکیفیت برای نمایش محصول"
+          helperText={t('products.mainImageCatalogHelper')}
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="برچسب‌ها / تگ‌ها"
-            placeholder="مردانه, چرم, زمستانه, VIP"
+            label={isPersian ? "برچسب‌ها / تگ‌ها" : "Tags / Labels"}
+            placeholder={isPersian ? "مردانه, چرم, زمستانه, VIP" : "men, leather, winter, VIP"}
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             icon={<Tag className="w-4 h-4" />}
           />
           <Select
-            label="وضعیت انتشار"
+            label={t('products.productStatus')}
             value={status}
             onChange={(e) => setStatus(e.target.value as any)}
             options={[
-              { value: 'published', label: 'منتشر شده' },
-              { value: 'draft', label: 'پیش‌نویس' },
-              { value: 'archived', label: 'بایگانی شده' },
+              { value: 'published', label: t('products.statusPublished') },
+              { value: 'draft', label: t('products.statusDraft') },
+              { value: 'archived', label: t('products.statusArchived') },
             ]}
           />
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs font-semibold text-slate-700">توضیحات و مشخصات فنی لباس</label>
+          <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">{t('products.description')}</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="w-full bg-white border border-slate-300 rounded-xl text-slate-900 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="جنس پارچه، درصد پنبه، نحوه شستشو..."
+            className="w-full bg-white dark:bg-[#14161d] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-neutral-100 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder={t('products.descriptionPlaceholder')}
           />
         </div>
 
         {/* Existing Variants list for this product if editing */}
         {product && (
-          <div className="pt-4 border-t border-slate-200">
+          <div className="pt-4 border-t border-slate-200 dark:border-neutral-800">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-xs font-bold text-slate-800 flex items-center gap-2">
+              <h4 className="text-xs font-bold text-slate-800 dark:text-neutral-200 flex items-center gap-2">
                 <Shirt className="w-4 h-4 text-indigo-600" />
-                <span>تنوع‌های فعال کالا ({toPersianDigits(variants.length)})</span>
+                <span>{t('products.variantsCount')} ({isPersian ? toPersianDigits(variants.length) : variants.length})</span>
               </h4>
               <Button
                 type="button"
@@ -327,29 +327,29 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 }}
                 icon={<Plus className="w-3.5 h-3.5 text-indigo-600" />}
               >
-                ایجاد تنوع با ماتریس
+                {t('products.generateVariants')}
               </Button>
             </div>
 
             {variants.length === 0 ? (
-              <p className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl">
-                هیچ تنوعی (رنگ/سایز) برای این محصول ثبت نشده است. دکمه ساخت با ماتریس را بفشارید.
+              <p className="text-xs text-slate-400 dark:text-neutral-500 italic bg-slate-50 dark:bg-neutral-800/50 p-3 rounded-xl">
+                {t('products.emptyVariants')}
               </p>
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
                 {variants.map((v, vIdx) => (
                   <div
                     key={`pdm_var_${v.id || 'temp'}_${vIdx}`}
-                    className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs"
+                    className="p-2.5 bg-slate-50 dark:bg-neutral-800/50 border border-slate-200 dark:border-neutral-700 rounded-xl flex items-center justify-between text-xs"
                   >
                     <div>
-                      <p className="font-bold text-slate-900">{v.sku}</p>
-                      <p className="text-slate-500 text-[11px]">
-                        رنگ: {v.color_name || 'اصلی'} | سایز: {v.size_name || 'استاندارد'} | بارکد: {v.barcode || '-'}
+                      <p className="font-bold text-slate-900 dark:text-neutral-100">{v.sku}</p>
+                      <p className="text-slate-500 dark:text-neutral-400 text-[11px]">
+                        {t('products.variantColor')}: {v.color_name || '-'} | {t('products.variantSize')}: {v.size_name || '-'} | {t('products.variantBarcode')}: {v.barcode || '-'}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-bold text-slate-900">
+                      <span className="font-bold text-slate-900 dark:text-neutral-100">
                         {formatCurrency(v.price, activeOrganization?.currency, isPersian)}
                       </span>
                       <button

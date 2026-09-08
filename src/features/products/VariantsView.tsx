@@ -117,7 +117,7 @@ export const VariantsView: React.FC = () => {
       await loadVariants();
     } catch (err) {
       console.error('[VariantsView] Error saving variant:', err);
-      alert('خطا در ذخیره‌سازی تنوع کالا');
+      alert(t('products.errorSavingProductAndVariants'));
     } finally {
       setIsSaving(false);
     }
@@ -134,7 +134,7 @@ export const VariantsView: React.FC = () => {
   const columns: Column<ProductVariant>[] = [
     {
       key: 'image',
-      header: 'تصویر',
+      header: t('products.variantRowImage'),
       className: 'w-14 text-center',
       render: (v) => (
         <ProductImage
@@ -146,7 +146,7 @@ export const VariantsView: React.FC = () => {
     },
     {
       key: 'sku',
-      header: 'شناسه اختصاصی کالا (SKU)',
+      header: t('products.skuHeader'),
       render: (v) => (
         <div>
           <p className="font-extrabold text-neutral-900 dark:text-neutral-100 font-mono text-xs tracking-wider">{v.sku}</p>
@@ -156,7 +156,7 @@ export const VariantsView: React.FC = () => {
     },
     {
       key: 'color_id',
-      header: 'رنگ و سایز',
+      header: t('products.colorAndSizeHeader'),
       render: (v) => {
         const color = colors.find((c) => c.id === (typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id));
         const size = sizes.find((s) => s.id === (typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id));
@@ -178,17 +178,17 @@ export const VariantsView: React.FC = () => {
     },
     {
       key: 'barcode',
-      header: 'بارکد کالا',
+      header: t('products.barcodeHeader'),
       render: (v) => (
         <span className="inline-flex items-center gap-1 font-mono text-xs text-neutral-600 dark:text-neutral-300 bg-neutral-100/80 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 px-2 py-0.5 rounded-md">
           <BarcodeIcon className="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
-          {toPersianDigits(v.barcode || '-')}
+          {isPersian ? toPersianDigits(v.barcode || '-') : (v.barcode || '-')}
         </span>
       ),
     },
     {
       key: 'price',
-      header: 'قیمت فروش',
+      header: t('products.sellingPrice'),
       render: (v) => (
         <span className="font-extrabold text-slate-900 dark:text-neutral-100">
           {formatCurrency(v.price, activeOrganization?.currency, isPersian)}
@@ -197,7 +197,7 @@ export const VariantsView: React.FC = () => {
     },
     {
       key: 'cost',
-      header: 'بهای تمام شده',
+      header: t('products.costPrice'),
       render: (v) => (
         <span className="text-slate-500 dark:text-neutral-400 font-medium">
           {formatCurrency(v.cost !== undefined ? v.cost : (v as any).cost_price, activeOrganization?.currency, isPersian)}
@@ -206,10 +206,10 @@ export const VariantsView: React.FC = () => {
     },
     {
       key: 'stock_quantity',
-      header: 'موجودی کل',
+      header: t('products.stockHeader'),
       render: (v) => (
         <Badge variant={(v.stock_quantity || 0) > 0 ? 'success' : 'danger'}>
-          {toPersianDigits(v.stock_quantity || 0)} عدد
+          {isPersian ? toPersianDigits(v.stock_quantity || 0) : (v.stock_quantity || 0)} {t('products.unitItems')}
         </Badge>
       ),
     },
@@ -218,15 +218,15 @@ export const VariantsView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('navigation.variants')}
-        subtitle="مدیریت مستقیم تمام تنوع‌های کالا، بارکدها، قیمت فروش و بهای تمام شده"
+        title={t('products.variantsTitle')}
+        subtitle={t('products.variantsSubtitle')}
       />
 
       <Card>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="جستجو با SKU، بارکد یا نام محصول..."
+              placeholder={t('products.searchVariants')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search className="w-4 h-4" />}
@@ -246,7 +246,7 @@ export const VariantsView: React.FC = () => {
                 size="sm"
                 className="text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
                 onClick={() => handleOpenEdit(v)}
-                title="ویرایش تنوع"
+                title={t('products.editVariantTitle')}
               >
                 <Edit className="w-4 h-4" />
               </Button>
@@ -255,7 +255,7 @@ export const VariantsView: React.FC = () => {
                 size="sm"
                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                 onClick={() => handleDeleteVariant(v.id)}
-                title="حذف تنوع"
+                title={t('common.delete')}
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
@@ -268,13 +268,13 @@ export const VariantsView: React.FC = () => {
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title={`ویرایش تنوع: ${editingVariant?.sku || ''}`}
+        title={`${t('products.editVariantTitle')}: ${editingVariant?.sku || ''}`}
         maxWidth="lg"
       >
         <form onSubmit={handleSaveVariant} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">شناسه کالا (SKU)</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">{t('products.variantSku')}</label>
               <Input
                 value={editSku}
                 onChange={(e) => setEditSku(e.target.value)}
@@ -283,44 +283,44 @@ export const VariantsView: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">بارکد</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">{t('products.variantBarcode')}</label>
               <Input
                 value={editBarcode}
                 onChange={(e) => setEditBarcode(e.target.value)}
-                placeholder="کد میله‌ای یا EAN..."
+                placeholder="EAN / Barcode..."
               />
             </div>
           </div>
 
           <div>
             <ImageUpload
-              label="تصویر اختصاصی این تنوع"
+              label={t('products.variantImage')}
               value={editImage}
               onChange={setEditImage}
               productId={editingVariant?.product_id ? Number(editingVariant.product_id) : undefined}
-              helperText="در صورت عدم انتخاب تصویر، تصویر اصلی محصول نمایش داده می‌شود."
+              helperText={t('products.variantImageHelper')}
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">رنگ</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">{t('products.variantColor')}</label>
               <Select
                 value={editColorId}
                 onChange={(e) => setEditColorId(e.target.value ? Number(e.target.value) : '')}
                 options={[
-                  { value: '', label: 'بدون رنگ مشخص' },
+                  { value: '', label: t('products.noColorSelected') },
                   ...colors.map((c) => ({ value: c.id, label: c.name })),
                 ]}
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">سایز</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">{t('products.variantSize')}</label>
               <Select
                 value={editSizeId}
                 onChange={(e) => setEditSizeId(e.target.value ? Number(e.target.value) : '')}
                 options={[
-                  { value: '', label: 'بدون سایز مشخص' },
+                  { value: '', label: t('products.noSizeSelected') },
                   ...sizes.map((s) => ({ value: s.id, label: s.name })),
                 ]}
               />
@@ -329,7 +329,7 @@ export const VariantsView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">قیمت فروش (تومان)</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">{t('products.sellingPriceLabel')}</label>
               <Input
                 type="number"
                 value={editPrice}
@@ -338,7 +338,7 @@ export const VariantsView: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">بهای تمام شده (تومان)</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">{t('products.costPriceLabel')}</label>
               <Input
                 type="number"
                 value={editCost}
@@ -347,7 +347,7 @@ export const VariantsView: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">موجودی انبار (عدد)</label>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">{t('products.stockQuantityLabel')}</label>
               <Input
                 type="number"
                 value={editStock}
@@ -359,10 +359,10 @@ export const VariantsView: React.FC = () => {
 
           <div className="flex justify-end gap-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
             <Button type="button" variant="outline" size="sm" onClick={() => setIsEditModalOpen(false)}>
-              انصراف
+              {t('common.cancel')}
             </Button>
             <Button type="submit" size="sm" isLoading={isSaving} icon={<Save className="w-4 h-4" />}>
-              ذخیره تغییرات
+              {t('products.saveChanges')}
             </Button>
           </div>
         </form>

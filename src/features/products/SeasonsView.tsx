@@ -16,7 +16,7 @@ import { toPersianDigits } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
 
 export const SeasonsView: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, isPersian } = useTranslation();
   const { activeOrganization } = useOrganization();
 
   const [seasons, setSeasons] = useState<Season[]>([]);
@@ -98,7 +98,7 @@ export const SeasonsView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (await confirmAction('آیا از حذف این فصل مطمئن هستید؟')) {
+    if (await confirmAction(t('products.confirmDeleteSeason'))) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteSeason(id);
       await loadSeasons();
@@ -116,7 +116,7 @@ export const SeasonsView: React.FC = () => {
   const columns: Column<Season>[] = [
     {
       key: 'name',
-      header: 'نام فصل (Season)',
+      header: t('products.seasonNameHeader'),
       render: (season) => (
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
@@ -124,29 +124,29 @@ export const SeasonsView: React.FC = () => {
           </div>
           <div>
             <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{season.name}</p>
-            {season.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">کد: {season.code}</p>}
+            {season.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">{t('products.seasonCode')}: {season.code}</p>}
           </div>
         </div>
       ),
     },
     {
       key: 'start_date',
-      header: 'بازه زمانی فصل',
+      header: t('products.seasonDateRange'),
       render: (season) => (
         <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-neutral-300 font-mono">
           <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-500" />
-          <span>{toPersianDigits(season.start_date || 'تعریف‌نشده')}</span>
-          <span className="text-slate-300 dark:text-neutral-600">تا</span>
-          <span>{toPersianDigits(season.end_date || 'تعریف‌نشده')}</span>
+          <span>{isPersian ? toPersianDigits(season.start_date || t('products.undefinedDate')) : season.start_date || t('products.undefinedDate')}</span>
+          <span className="text-slate-300 dark:text-neutral-600">{t('products.dateTo')}</span>
+          <span>{isPersian ? toPersianDigits(season.end_date || t('products.undefinedDate')) : season.end_date || t('products.undefinedDate')}</span>
         </div>
       ),
     },
     {
       key: 'status',
-      header: 'وضعیت',
+      header: t('products.productStatus'),
       render: (season) => (
         <Badge variant={season.status === 'active' ? 'success' : 'neutral'}>
-          {season.status === 'active' ? 'فعال' : 'غیرفعال'}
+          {season.status === 'active' ? t('products.statusActive') : t('products.statusInactive')}
         </Badge>
       ),
     },
@@ -155,11 +155,11 @@ export const SeasonsView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="مدیریت فصل‌ها (Seasons)"
-        subtitle="تعریف و دسته‌بندی پوشاک فصلی (بهاره، تابستانه، پاییزه، زمستانه و چهارفصل)"
+        title={t('products.seasonsTitle')}
+        subtitle={t('products.seasonsSubtitle')}
         actions={
           <Button onClick={() => handleOpenModal()} icon={<Plus className="w-4 h-4" />}>
-            افزودن فصل جدید
+            {t('products.createSeason')}
           </Button>
         }
       />
@@ -168,7 +168,7 @@ export const SeasonsView: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="جستجو در فصل‌ها..."
+              placeholder={t('products.searchSeasons')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search className="w-4 h-4" />}
@@ -204,7 +204,7 @@ export const SeasonsView: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingSeason ? 'ویرایش فصل' : 'افزودن فصل جدید'}
+        title={editingSeason ? t('products.editSeason') : t('products.createSeason')}
         maxWidth="md"
         footer={
           <>
@@ -219,8 +219,8 @@ export const SeasonsView: React.FC = () => {
       >
         <form id="season-form" onSubmit={handleSave} className="space-y-4">
           <Input
-            label="نام فصل *"
-            placeholder="مثال: پاییز و زمستان ۱۴۰۳"
+            label={`${t('products.seasonName')} *`}
+            placeholder="FW24, Spring 2025..."
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -228,31 +228,31 @@ export const SeasonsView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="کد فصل (Season Code)"
+              label={t('products.seasonCode')}
               placeholder="FW24"
               value={code}
               onChange={(e) => setCode(e.target.value)}
             />
             <Select
-              label="وضعیت"
+              label={t('products.productStatus')}
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
               options={[
-                { value: 'active', label: 'فعال' },
-                { value: 'inactive', label: 'غیرفعال' },
+                { value: 'active', label: t('products.statusActive') },
+                { value: 'inactive', label: t('products.statusInactive') },
               ]}
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="تاریخ شروع"
+              label={t('products.startDate')}
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
             />
             <Input
-              label="تاریخ پایان"
+              label={t('products.endDate')}
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}

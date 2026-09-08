@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '../../i18n';
 import { Organization } from '../../types';
 import { useOrganization } from '../../context/OrganizationContext';
 import { Button } from '../../components/ui/Button';
@@ -17,6 +18,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   organization,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const { updateActiveOrganization, isOwner } = useOrganization();
 
   const [name, setName] = useState('');
@@ -49,13 +51,13 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isOwner) {
-      setError('شما دسترسی لازم برای ویرایش اطلاعات این سازمان را ندارید (فقط مالک سازمان مجاز است).');
+      setError(t('settings.ownerOnlyEdit'));
       return;
     }
 
     const cleanName = name.trim();
     if (!cleanName) {
-      setError('وارد کردن نام سازمان الزامی است.');
+      setError(t('settings.orgNameRequired'));
       return;
     }
 
@@ -74,13 +76,13 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         logo: logo.trim() || null,
       });
 
-      setSuccessMsg('اطلاعات سازمان با موفقیت به‌روزرسانی شد.');
+      setSuccessMsg(t('settings.editOrgSuccess'));
       setTimeout(() => {
         onClose();
         if (onSuccess) onSuccess();
       }, 700);
     } catch (err: any) {
-      setError(err?.message || 'خطا در ذخیره تغییرات سازمان.');
+      setError(err?.message || t('common.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -105,8 +107,8 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
               <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">ویرایش مشخصات سازمان</h2>
-              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">شناسه سازمان: #{organization.id}</p>
+              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">{t('settings.editOrgTitle')}</h2>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{t('settings.orgIdLabel')}: #{organization.id}</p>
             </div>
           </div>
           <button
@@ -123,7 +125,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
           {!isOwner && (
             <div className="flex items-center gap-2.5 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-300 text-xs rounded-xl">
               <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <span>ویرایش مشخصات سازمان منحصراً توسط مالک (Owner) سازمان امکان‌پذیر است.</span>
+              <span>{t('settings.ownerOnlyEdit')}</span>
             </div>
           )}
 
@@ -145,7 +147,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
-                نام سازمان یا فروشگاه <span className="text-red-500">*</span>
+                {t('settings.orgName')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -153,14 +155,14 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                 disabled={!isOwner || isSubmitting}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="نام سازمان..."
+                placeholder={t('settings.orgName')}
                 className="w-full px-3.5 py-2.5 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-400 focus:border-transparent disabled:bg-neutral-100 dark:disabled:bg-neutral-900/60 disabled:text-neutral-400 dark:disabled:text-neutral-600 disabled:cursor-not-allowed transition-all"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
-                شناسه یکتا (Slug)
+                {t('settings.orgSlug')}
               </label>
               <input
                 type="text"
@@ -177,33 +179,32 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
           {/* Currency & Timezone Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">واحد پول اصلی</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">{t('settings.orgCurrency')}</label>
               <select
                 disabled={!isOwner || isSubmitting}
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
                 className="w-full px-3 py-2.5 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-400 focus:border-transparent disabled:bg-neutral-100 dark:disabled:bg-neutral-900/60 disabled:text-neutral-400 dark:disabled:text-neutral-600 disabled:cursor-not-allowed cursor-pointer"
               >
-                <option value="TOMAN" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">تومان (TOMAN)</option>
-                <option value="IRR" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">ریال (IRR)</option>
-                <option value="USD" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">دلار (USD)</option>
-                <option value="EUR" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">یورو (EUR)</option>
-                <option value="AED" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">درهم (AED)</option>
+                <option value="TOMAN" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('settings.currencyToman')}</option>
+                <option value="IRR" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('settings.currencyRial')}</option>
+                <option value="USD" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('settings.currencyUsd')}</option>
+                <option value="EUR" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('settings.currencyEur')}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">منطقه زمانی</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">{t('settings.mainTimezone')}</label>
               <select
                 disabled={!isOwner || isSubmitting}
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
                 className="w-full px-3 py-2.5 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 font-mono text-[11px] focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-400 focus:border-transparent disabled:bg-neutral-100 dark:disabled:bg-neutral-900/60 disabled:text-neutral-400 dark:disabled:text-neutral-600 disabled:cursor-not-allowed cursor-pointer"
               >
-                <option value="Asia/Tehran" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Asia/Tehran (تهران)</option>
-                <option value="UTC" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">UTC (جهانی)</option>
-                <option value="Asia/Dubai" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Asia/Dubai (دبی)</option>
-                <option value="Europe/Istanbul" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Europe/Istanbul (استانبول)</option>
+                <option value="Asia/Tehran" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Asia/Tehran</option>
+                <option value="UTC" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">UTC</option>
+                <option value="Asia/Dubai" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Asia/Dubai</option>
+                <option value="Europe/Istanbul" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Europe/Istanbul</option>
               </select>
             </div>
           </div>
@@ -211,29 +212,27 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
           {/* Plan & Status Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">نوع اشتراک (Plan)</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">{t('settings.activePlanBadge')}</label>
               <select
                 disabled={!isOwner || isSubmitting}
                 value={plan}
                 onChange={(e) => setPlan(e.target.value)}
                 className="w-full px-3 py-2.5 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-400 focus:border-transparent disabled:bg-neutral-100 dark:disabled:bg-neutral-900/60 disabled:text-neutral-400 dark:disabled:text-neutral-600 disabled:cursor-not-allowed cursor-pointer"
               >
-                <option value="free" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">رایگان (Free)</option>
-                <option value="pro" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">حرفه‌ای (Pro)</option>
+                <option value="free" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('settings.planFree')}</option>
+                <option value="pro" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('settings.planPro')}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">وضعیت سازمان</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">{t('settings.statusActive')}</label>
               <select
                 disabled={!isOwner || isSubmitting}
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 className="w-full px-3 py-2.5 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-400 focus:border-transparent disabled:bg-neutral-100 dark:disabled:bg-neutral-900/60 disabled:text-neutral-400 dark:disabled:text-neutral-600 disabled:cursor-not-allowed cursor-pointer"
               >
-                <option value="active" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">فعال (Active)</option>
-                <option value="draft" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">پیش‌نویس (Draft)</option>
-                <option value="archived" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">بایگانی شده (Archived)</option>
+                <option value="active" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('settings.statusActive')}</option>
               </select>
             </div>
           </div>
@@ -241,7 +240,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
           {/* Logo URL */}
           <div>
             <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
-              آدرس لوگو یا نشان تجاری <span className="text-neutral-400 dark:text-neutral-500 font-normal">(اختیاری)</span>
+              {t('settings.logoUrlLabel')} <span className="text-neutral-400 dark:text-neutral-500 font-normal">{t('settings.slugOptional')}</span>
             </label>
             <input
               type="text"
@@ -263,7 +262,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
               disabled={isSubmitting}
               className="text-xs"
             >
-              انصراف
+              {t('common.cancel')}
             </Button>
             {isOwner && (
               <Button
@@ -273,7 +272,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                 icon={<Save className="w-4 h-4" />}
                 className="text-xs font-bold bg-blue-600 hover:bg-blue-700"
               >
-                ذخیره تغییرات سازمان
+                {t('settings.saveOrgChanges')}
               </Button>
             )}
           </div>

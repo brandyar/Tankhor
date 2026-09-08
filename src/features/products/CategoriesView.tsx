@@ -127,7 +127,7 @@ export const CategoriesView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (await confirmAction('آیا از حذف این دسته‌بندی مطمئن هستید؟')) {
+    if (await confirmAction(t('products.confirmDeleteCategory'))) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteCategory(id);
       await loadCategories();
@@ -179,7 +179,7 @@ export const CategoriesView: React.FC = () => {
               ? 'bg-slate-50/80 dark:bg-[#181a20] border-slate-200/80 dark:border-neutral-800 hover:border-slate-300 dark:hover:border-neutral-700'
               : 'bg-white dark:bg-[#13151a] border-slate-100 dark:border-neutral-800 hover:border-slate-200 dark:hover:border-neutral-700 hover:shadow-2xs'
           }`}
-          style={{ marginRight: `${depth * 1.75}rem` }}
+          style={{ marginInlineStart: `${depth * 1.75}rem` }}
         >
           <div className="flex items-center gap-3">
             {hasChildren ? (
@@ -191,7 +191,7 @@ export const CategoriesView: React.FC = () => {
                 {isExpanded ? (
                   <ChevronDown className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 ) : (
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-4 h-4 rtl:rotate-180" />
                 )}
               </button>
             ) : (
@@ -233,7 +233,7 @@ export const CategoriesView: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <Badge variant={node.status === 'active' ? 'success' : 'neutral'}>
-              {node.status === 'active' ? 'فعال' : 'غیرفعال'}
+              {node.status === 'active' ? t('products.statusActive') : t('products.statusInactive')}
             </Badge>
 
             <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100">
@@ -255,7 +255,7 @@ export const CategoriesView: React.FC = () => {
         </div>
 
         {hasChildren && isExpanded && (
-          <div className="space-y-1 relative pr-3 border-r-2 border-indigo-100 dark:border-indigo-900/50 mr-4">
+          <div className="space-y-1 relative ps-3 border-s-2 border-indigo-100 dark:border-indigo-900/50 ms-4">
             {children.map((child, cIdx) => renderTreeNode(child, depth + 1, cIdx))}
           </div>
         )}
@@ -276,14 +276,14 @@ export const CategoriesView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="مدیریت دسته‌بندی‌ها"
-        subtitle="تعریف و سازماندهی دسته‌بندی‌های کالا در ساختار درختی چندسطحی"
+        title={t('products.categoriesTitle')}
+        subtitle={t('products.categoriesSubtitle')}
         actions={
           <Button
             onClick={() => handleOpenModal()}
             icon={<Plus className="w-4 h-4" />}
           >
-            افزودن دسته‌بندی جدید
+            {t('products.createCategory')}
           </Button>
         }
       />
@@ -292,7 +292,7 @@ export const CategoriesView: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-5">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="جستجو در دسته‌بندی‌ها..."
+              placeholder={t('products.searchCategories')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search className="w-4 h-4" />}
@@ -301,18 +301,18 @@ export const CategoriesView: React.FC = () => {
         </div>
 
         {isLoading ? (
-          <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">در حال دریافت لیست دسته‌بندی‌ها...</div>
+          <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">{t('products.loadingCategories')}</div>
         ) : filteredCategories ? (
           <div className="space-y-2">
             {filteredCategories.length === 0 ? (
-              <p className="py-8 text-center text-slate-400 dark:text-neutral-500 text-sm">هیچ دسته‌بندی با این مشخصات یافت نشد.</p>
+              <p className="py-8 text-center text-slate-400 dark:text-neutral-500 text-sm">{t('products.noCategoriesFound')}</p>
             ) : (
               filteredCategories.map((c, cIdx) => renderTreeNode(c, 0, cIdx))
             )}
           </div>
         ) : rootNodes.length === 0 ? (
           <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
-            هیچ دسته‌بندی تاکنون ثبت نشده است. از دکمه «افزودن دسته‌بندی جدید» استفاده کنید.
+            {t('products.emptyCategories')}
           </div>
         ) : (
           <div className="space-y-3">
@@ -325,7 +325,7 @@ export const CategoriesView: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingCategory ? 'ویرایش دسته‌بندی' : 'افزودن دسته‌بندی جدید'}
+        title={editingCategory ? t('products.editCategory') : t('products.createCategory')}
         maxWidth="md"
         footer={
           <>
@@ -340,7 +340,7 @@ export const CategoriesView: React.FC = () => {
       >
         <form id="category-form" onSubmit={handleSave} className="space-y-4">
           <Input
-            label="نام دسته‌بندی *"
+            label={`${t('products.categoryName')} *`}
             placeholder="مثال: کت و کاپشن مردانه"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -349,55 +349,55 @@ export const CategoriesView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="نام انگلیسی / اسلاگ (Slug)"
+              label={t('products.categorySlug')}
               placeholder="men-jackets"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
             />
             <Select
-              label="دسته‌بندی مادر (Parent)"
+              label={t('products.parentCategory')}
               value={parentId}
               onChange={(e) => setParentId(e.target.value ? Number(e.target.value) : '')}
               options={[
-                { value: '', label: 'دسته‌بندی اصلی (سطح اول)' },
+                { value: '', label: t('products.rootCategory') },
                 ...getParentSelectOptions(),
               ]}
             />
           </div>
 
           <ImageUpload
-            label="تصویر کاور دسته‌بندی"
+            label={t('products.categoryImage')}
             value={image}
             onChange={setImage}
-            helperText="تصویر آیکون یا بنر نمایش دسته‌بندی"
+            helperText={t('products.categoryImageHelper')}
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="ترتیب نمایش (Sort)"
+              label={t('products.sizeOrder')}
               type="number"
               value={sort}
               onChange={(e) => setSort(e.target.value ? Number(e.target.value) : '')}
             />
             <Select
-              label="وضعیت"
+              label={t('products.productStatus')}
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
               options={[
-                { value: 'active', label: 'فعال' },
-                { value: 'inactive', label: 'غیرفعال' },
+                { value: 'active', label: t('products.statusActive') },
+                { value: 'inactive', label: t('products.statusInactive') },
               ]}
             />
           </div>
 
           <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">توضیحات</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">{t('products.description')}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="توضیحات تکمیلی دسته‌بندی..."
+              placeholder="..."
             />
           </div>
         </form>

@@ -99,7 +99,7 @@ export const BrandsView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (await confirmAction('آیا از حذف این برند مطمئن هستید؟')) {
+    if (await confirmAction(t('products.confirmDeleteBrand'))) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteBrand(id);
       await loadBrands();
@@ -117,7 +117,7 @@ export const BrandsView: React.FC = () => {
   const columns: Column<Brand>[] = [
     {
       key: 'name',
-      header: 'نام برند / مارک تجاری',
+      header: t('products.brandNameHeader'),
       render: (brand) => (
         <div className="flex items-center gap-3">
           {brand.logo ? (
@@ -133,24 +133,24 @@ export const BrandsView: React.FC = () => {
           )}
           <div>
             <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{brand.name}</p>
-            {brand.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">کد: {brand.code}</p>}
+            {brand.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">{t('products.brandCode')}: {brand.code}</p>}
           </div>
         </div>
       ),
     },
     {
       key: 'description',
-      header: 'توضیحات برند',
+      header: t('products.brandDescHeader'),
       render: (brand) => (
         <span className="text-xs text-slate-600 dark:text-neutral-300 line-clamp-1 max-w-xs">{brand.description || '-'}</span>
       ),
     },
     {
       key: 'status',
-      header: 'وضعیت',
+      header: t('products.productStatus'),
       render: (brand) => (
         <Badge variant={brand.status === 'active' ? 'success' : 'neutral'}>
-          {brand.status === 'active' ? 'فعال' : 'غیرفعال'}
+          {brand.status === 'active' ? t('products.statusActive') : t('products.statusInactive')}
         </Badge>
       ),
     },
@@ -159,11 +159,11 @@ export const BrandsView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="مدیریت برندها و مارک‌ها (Brands)"
-        subtitle="ثبت و مدیریت برندهای خارجی و داخلی تولیدی و تجاری پوشاک"
+        title={t('products.brandsTitle')}
+        subtitle={t('products.brandsSubtitle')}
         actions={
           <Button onClick={() => handleOpenModal()} icon={<Plus className="w-4 h-4" />}>
-            افزودن برند جدید
+            {t('products.createBrand')}
           </Button>
         }
       />
@@ -172,7 +172,7 @@ export const BrandsView: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="جستجو در برندها..."
+              placeholder={t('products.searchBrands')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search className="w-4 h-4" />}
@@ -208,7 +208,7 @@ export const BrandsView: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingBrand ? 'ویرایش برند' : 'افزودن برند جدید'}
+        title={editingBrand ? t('products.editBrand') : t('products.createBrand')}
         maxWidth="md"
         footer={
           <>
@@ -223,8 +223,8 @@ export const BrandsView: React.FC = () => {
       >
         <form id="brand-form" onSubmit={handleSave} className="space-y-4">
           <Input
-            label="نام برند *"
-            placeholder="مثال: تن‌خور (TANKHOR) یا Zara"
+            label={`${t('products.brandName')} *`}
+            placeholder="مثال: Zara"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -232,37 +232,37 @@ export const BrandsView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="کد برند (Brand Code)"
+              label={t('products.brandCode')}
               placeholder="TNK"
               value={code}
               onChange={(e) => setCode(e.target.value)}
             />
             <Select
-              label="وضعیت"
+              label={t('products.productStatus')}
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
               options={[
-                { value: 'active', label: 'فعال' },
-                { value: 'inactive', label: 'غیرفعال' },
+                { value: 'active', label: t('products.statusActive') },
+                { value: 'inactive', label: t('products.statusInactive') },
               ]}
             />
           </div>
 
           <ImageUpload
-            label="لوگو / آیکون برند"
+            label={t('products.brandLogo')}
             value={logo}
             onChange={setLogo}
-            helperText="تصویر لوگوی تجاری برند"
+            helperText={t('products.brandLogoHelper')}
           />
 
           <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">توضیحات و اصالت برند</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">{t('products.brandDescLabel')}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="کشور سازنده، تاریخچه یا توضیحات برند..."
+              placeholder="..."
             />
           </div>
         </form>

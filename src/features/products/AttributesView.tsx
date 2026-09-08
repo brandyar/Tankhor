@@ -202,7 +202,7 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
   };
 
   const handleDeleteItem = async (id: number) => {
-    if (!(await confirmAction('آیا از حذف این آیتم اطمینان دارید؟'))) return;
+    if (!(await confirmAction(t('products.confirmDeleteAttribute')))) return;
     const adapter = storageManager.getAdapter();
 
     if (activeTab === 'categories') await adapter.deleteCategory(id);
@@ -239,18 +239,18 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
     { key: 'collections', label: t('navigation.collections'), icon: Bookmark },
     { key: 'seasons', label: t('navigation.seasons'), icon: Sun },
     { key: 'colors', label: t('navigation.colors'), icon: Palette },
-    { key: 'size_groups', label: 'گروه‌های سایزبندی', icon: Folder },
+    { key: 'size_groups', label: t('navigation.sizeGroups') || 'گروه‌های سایزبندی', icon: Folder },
     { key: 'sizes', label: t('navigation.sizes'), icon: Tag },
   ] as const;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="دسته‌بندی‌ها و ویژگی‌های کاتالوگ"
-        subtitle="مدیریت ساختار درختی دسته‌بندی‌ها، مجموعه‌ها، فصل‌ها، رنگ‌ها و گروه‌های سایزبندی"
+        title={t('products.attributesTitle')}
+        subtitle={t('products.attributesSubtitle')}
         action={
           <Button onClick={() => handleOpenModal()} icon={<Plus className="w-4 h-4" />}>
-            تعریف آیتم جدید
+            {t('products.newItem')}
           </Button>
         }
       />
@@ -284,18 +284,18 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
             <table className="w-full text-right text-xs">
               <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                 <tr>
-                  <th className="p-3">عنوان و درخت دسته‌بندی</th>
-                  <th className="p-3">اسلاگ (Slug)</th>
-                  <th className="p-3">دسته والد (Parent)</th>
-                  <th className="p-3">وضعیت</th>
-                  <th className="p-3 text-left">عملیات</th>
+                  <th className="p-3">{t('products.categoryTreeHeader')}</th>
+                  <th className="p-3">{t('products.slugHeader')}</th>
+                  <th className="p-3">{t('products.parentCategoryHeader')}</th>
+                  <th className="p-3">{t('common.status')}</th>
+                  <th className="p-3 text-left">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {categoryTreeData.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="text-center p-8 text-slate-400">
-                      هیچ دسته‌بندی تعریف نشده است.
+                      {t('products.noCategoriesDefined')}
                     </td>
                   </tr>
                 ) : (
@@ -304,7 +304,7 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
                       <td className="p-3">
                         <div
                           className="flex items-center gap-2"
-                          style={{ paddingRight: `${level * 24}px` }}
+                          style={{ paddingInlineStart: `${level * 24}px` }}
                         >
                           {level > 0 ? (
                             <CornerDownLeft className="w-4 h-4 text-indigo-400 shrink-0" />
@@ -329,12 +329,12 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
                         {parentName ? (
                           <Badge variant="neutral">{parentName}</Badge>
                         ) : (
-                          <span className="text-slate-400 font-medium">ریشه اصلی (Root)</span>
+                          <span className="text-slate-400 font-medium">{t('products.rootCategory')}</span>
                         )}
                       </td>
                       <td className="p-3">
                         <Badge variant={item.status === 'active' ? 'success' : 'danger'}>
-                          {item.status === 'active' ? 'فعال' : 'غیرفعال'}
+                          {item.status === 'active' ? t('common.active') : t('common.inactive')}
                         </Badge>
                       </td>
                       <td className="p-3 text-left">
@@ -368,21 +368,21 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
             columns={[
               {
                 key: 'name',
-                header: 'عنوان مجموعه',
+                header: t('products.collectionTitle'),
                 render: (col: Collection) => (
                   <div>
                     <p className="font-bold text-slate-900 text-sm">{col.name}</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">{col.description || 'بدون توضیح'}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{col.description || t('products.noDescription')}</p>
                   </div>
                 ),
               },
-              { key: 'slug', header: 'اسلاگ (Slug)', render: (col) => <span className="font-mono text-slate-500">{col.slug}</span> },
+              { key: 'slug', header: t('products.slugHeader'), render: (col) => <span className="font-mono text-slate-500">{col.slug}</span> },
               {
                 key: 'status',
-                header: 'وضعیت',
+                header: t('common.status'),
                 render: (col) => (
                   <Badge variant={col.status === 'active' ? 'success' : 'danger'}>
-                    {col.status === 'active' ? 'فعال' : 'غیرفعال'}
+                    {col.status === 'active' ? t('common.active') : t('common.inactive')}
                   </Badge>
                 ),
               },
@@ -407,17 +407,17 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
             columns={[
               {
                 key: 'name',
-                header: 'نام فصل',
+                header: t('products.seasonTitle'),
                 render: (s: Season) => (
                   <div>
                     <p className="font-bold text-slate-900 text-sm">{s.name}</p>
-                    <p className="text-[11px] font-mono text-slate-400 mt-0.5">کد: {s.code || '-'}</p>
+                    <p className="text-[11px] font-mono text-slate-400 mt-0.5">{t('products.seasonCodePrefix')} {s.code || '-'}</p>
                   </div>
                 ),
               },
               {
                 key: 'start_date',
-                header: 'تاریخ شروع',
+                header: t('common.startDate'),
                 render: (s) => (
                   <span className="text-slate-600 text-xs">
                     {s.start_date ? formatDate(s.start_date, isPersian) : '-'}
@@ -426,7 +426,7 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
               },
               {
                 key: 'end_date',
-                header: 'تاریخ پایان',
+                header: t('common.endDate'),
                 render: (s) => (
                   <span className="text-slate-600 text-xs">
                     {s.end_date ? formatDate(s.end_date, isPersian) : '-'}
@@ -435,10 +435,10 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
               },
               {
                 key: 'status',
-                header: 'وضعیت',
+                header: t('common.status'),
                 render: (s) => (
                   <Badge variant={s.status === 'active' ? 'success' : 'danger'}>
-                    {s.status === 'active' ? 'فعال' : 'غیرفعال'}
+                    {s.status === 'active' ? t('common.active') : t('common.inactive')}
                   </Badge>
                 ),
               },
@@ -463,7 +463,7 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
             columns={[
               {
                 key: 'name',
-                header: 'نام رنگ',
+                header: t('products.colorTitle'),
                 render: (col: Color) => (
                   <div className="flex items-center gap-3">
                     <span
@@ -474,14 +474,14 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
                   </div>
                 ),
               },
-              { key: 'code', header: 'کد اختصاری', render: (col) => <span className="font-mono text-slate-600">{col.code || '-'}</span> },
-              { key: 'hex', header: 'کد HEX', render: (col) => <span className="font-mono text-slate-500">{col.hex || '#000000'}</span> },
+              { key: 'code', header: t('products.colorCode'), render: (col) => <span className="font-mono text-slate-600">{col.code || '-'}</span> },
+              { key: 'hex', header: 'HEX', render: (col) => <span className="font-mono text-slate-500">{col.hex || '#000000'}</span> },
               {
                 key: 'status',
-                header: 'وضعیت',
+                header: t('common.status'),
                 render: (col) => (
                   <Badge variant={col.status === 'active' ? 'success' : 'danger'}>
-                    {col.status === 'active' ? 'فعال' : 'غیرفعال'}
+                    {col.status === 'active' ? t('common.active') : t('common.inactive')}
                   </Badge>
                 ),
               },
@@ -506,28 +506,28 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
             columns={[
               {
                 key: 'name',
-                header: 'عنوان گروه سایز',
+                header: t('products.sizeGroupTitle'),
                 render: (grp: SizeGroup) => <span className="font-bold text-slate-900 text-sm">{grp.name}</span>,
               },
               {
                 key: 'category',
-                header: 'دسته‌بندی سایز',
+                header: t('products.sizeCategoryType'),
                 render: (grp) => {
                   const labels: Record<SizeCategory, string> = {
-                    apparel: 'پوشاک (Apparel)',
-                    shoes: 'کفش (Footwear)',
-                    accessories: 'اکسسوری و کیف',
-                    other: 'سایر',
+                    apparel: isPersian ? 'پوشاک (Apparel)' : 'Apparel',
+                    shoes: isPersian ? 'کفش (Footwear)' : 'Footwear',
+                    accessories: isPersian ? 'اکسسوری و کیف' : 'Accessories & Bags',
+                    other: isPersian ? 'سایر' : 'Other',
                   };
                   return <Badge variant="info">{labels[grp.category] || grp.category}</Badge>;
                 },
               },
               {
                 key: 'status',
-                header: 'وضعیت',
+                header: t('common.status'),
                 render: (grp) => (
                   <Badge variant={grp.status === 'active' ? 'success' : 'danger'}>
-                    {grp.status === 'active' ? 'فعال' : 'غیرفعال'}
+                    {grp.status === 'active' ? t('common.active') : t('common.inactive')}
                   </Badge>
                 ),
               },
@@ -552,23 +552,23 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
             columns={[
               {
                 key: 'name',
-                header: 'عنوان سایز',
+                header: t('products.sizeTitle'),
                 render: (s: Size) => <span className="font-bold text-slate-900 text-sm">{s.name}</span>,
               },
-              { key: 'code', header: 'کد اختصاری', render: (s) => <span className="font-mono text-slate-600">{s.code || '-'}</span> },
+              { key: 'code', header: t('products.sizeCode'), render: (s) => <span className="font-mono text-slate-600">{s.code || '-'}</span> },
               {
                 key: 'size_group_id',
-                header: 'گروه سایزبندی',
+                header: t('products.sizeGroup'),
                 render: (s: Size) => {
                   const gId = typeof s.size_group_id === 'number' ? s.size_group_id : s.size_group_id?.id;
                   const grp = sizeGroups.find((g) => g.id === gId);
-                  return <span className="font-medium text-slate-700">{grp?.name || 'استاندارد'}</span>;
+                  return <span className="font-medium text-slate-700">{grp?.name || t('products.standardSizeGroup')}</span>;
                 },
               },
               {
                 key: 'sort',
-                header: 'ترتیب نمایش',
-                render: (s) => <span className="font-mono text-slate-500">{toPersianDigits(s.sort ?? 0)}</span>,
+                header: t('products.sortOrderLabel'),
+                render: (s) => <span className="font-mono text-slate-500">{isPersian ? toPersianDigits(s.sort ?? 0) : (s.sort ?? 0)}</span>,
               },
             ]}
             data={sizes}
@@ -592,18 +592,18 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
         onClose={() => setIsModalOpen(false)}
         title={
           editingId
-            ? 'ویرایش ویژگی'
+            ? t('products.editAttribute')
             : activeTab === 'categories'
-            ? 'تعریف دسته‌بندی جدید'
+            ? t('products.createCategory')
             : activeTab === 'collections'
-            ? 'تعریف مجموعه جدید'
+            ? t('products.createCollection')
             : activeTab === 'seasons'
-            ? 'تعریف فصل جدید'
+            ? t('products.createSeason')
             : activeTab === 'colors'
-            ? 'تعریف رنگ جدید'
+            ? t('products.createColor')
             : activeTab === 'size_groups'
-            ? 'تعریف گروه سایز جدید'
-            : 'تعریف سایز جدید'
+            ? (t('products.createSizeGroup') || 'تعریف گروه سایز جدید')
+            : t('products.createSize')
         }
         footer={
           <>
@@ -618,7 +618,7 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
       >
         <form id="attribute-modal-form" onSubmit={handleSaveItem} className="space-y-4">
           <Input
-            label="عنوان / نام *"
+            label={t('products.titleOrName')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -628,17 +628,17 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
           {activeTab === 'categories' && (
             <>
               <Input
-                label="اسلاگ (Slug)"
+                label={t('products.slugHeader')}
                 placeholder="men-jackets"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
               />
               <Select
-                label="دسته والد (Parent Category)"
+                label={t('products.parentCategoryHeader')}
                 value={selectedParentId}
                 onChange={(e) => setSelectedParentId(e.target.value ? Number(e.target.value) : '')}
                 options={[
-                  { value: '', label: 'ریشه اصلی (بدون دسته والد)' },
+                  { value: '', label: t('products.rootCategoryNoParent') },
                   ...categories
                     .filter((c) => c.id !== editingId)
                     .map((c) => ({ value: c.id, label: c.name })),
@@ -651,13 +651,13 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
           {activeTab === 'collections' && (
             <>
               <Input
-                label="اسلاگ (Slug)"
+                label={t('products.slugHeader')}
                 placeholder="summer-vibes"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
               />
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-slate-700">توضیحات مجموعه</label>
+                <label className="block text-xs font-semibold text-slate-700">{t('products.collectionDescLabel')}</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -673,20 +673,20 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
           {activeTab === 'seasons' && (
             <>
               <Input
-                label="کد فصل"
+                label={t('products.seasonCode')}
                 placeholder="SS26"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
               />
               <div className="grid grid-cols-2 gap-4">
                 <Input
-                  label="تاریخ شروع"
+                  label={t('common.startDate')}
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                 />
                 <Input
-                  label="تاریخ پایان"
+                  label={t('common.endDate')}
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
@@ -699,13 +699,13 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
           {activeTab === 'colors' && (
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label="کد اختصاری (کد سه‌حرفی)"
+                label={t('products.colorCode')}
                 placeholder="BLK"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
               />
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">انتخاب رنگ (Hex)</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">{t('products.chooseHexLabel')}</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -722,14 +722,14 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
           {/* Size Groups Modal Options */}
           {activeTab === 'size_groups' && (
             <Select
-              label="نوع و دسته‌بندی سایز *"
+              label={t('products.sizeCategoryType')}
               value={sizeCategory}
               onChange={(e) => setSizeCategory(e.target.value as SizeCategory)}
               options={[
-                { value: 'apparel', label: 'پوشاک (Apparel)' },
-                { value: 'shoes', label: 'کفش (Footwear)' },
-                { value: 'accessories', label: 'اکسسوری و کیف' },
-                { value: 'other', label: 'سایر' },
+                { value: 'apparel', label: isPersian ? 'پوشاک (Apparel)' : 'Apparel' },
+                { value: 'shoes', label: isPersian ? 'کفش (Footwear)' : 'Footwear' },
+                { value: 'accessories', label: isPersian ? 'اکسسوری و کیف' : 'Accessories & Bags' },
+                { value: 'other', label: isPersian ? 'سایر' : 'Other' },
               ]}
             />
           )}
@@ -739,19 +739,19 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <Input
-                  label="کد اختصاری (مثال: XL یا 42)"
+                  label={t('products.sizeCodePlaceholder')}
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                 />
                 <Input
-                  label="ترتیب نمایش (Sort Order)"
+                  label={t('products.sortOrderLabel')}
                   type="number"
                   value={sort}
                   onChange={(e) => setSort(e.target.value ? Number(e.target.value) : '')}
                 />
               </div>
               <Select
-                label="گروه سایزبندی *"
+                label={t('products.sizeGroup')}
                 value={selectedGroupId}
                 onChange={(e) => setSelectedGroupId(e.target.value ? Number(e.target.value) : '')}
                 options={sizeGroups.map((g) => ({ value: g.id, label: g.name }))}
@@ -761,12 +761,12 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
           )}
 
           <Select
-            label="وضعیت فعالیت *"
+            label={t('products.activityStatus')}
             value={status}
             onChange={(e) => setStatus(e.target.value as Status)}
             options={[
-              { value: 'active', label: 'فعال' },
-              { value: 'inactive', label: 'غیرفعال' },
+              { value: 'active', label: t('common.active') },
+              { value: 'inactive', label: t('common.inactive') },
             ]}
           />
         </form>

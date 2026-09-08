@@ -104,7 +104,7 @@ export const CollectionsView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (await confirmAction('آیا از حذف این مجموعه مطمئن هستید؟')) {
+    if (await confirmAction(t('products.confirmDeleteCollection'))) {
       const adapter = storageManager.getAdapter();
       await adapter.deleteCollection(id);
       await loadCollections();
@@ -122,7 +122,7 @@ export const CollectionsView: React.FC = () => {
   const columns: Column<Collection>[] = [
     {
       key: 'name',
-      header: 'نام مجموعه (Collection)',
+      header: t('products.collectionNameHeader'),
       render: (col) => (
         <div className="flex items-center gap-3">
           {col.image ? (
@@ -145,17 +145,17 @@ export const CollectionsView: React.FC = () => {
     },
     {
       key: 'description',
-      header: 'توضیحات',
+      header: t('products.description'),
       render: (col) => (
         <span className="text-xs text-slate-600 dark:text-neutral-300 line-clamp-1 max-w-xs">{col.description || '-'}</span>
       ),
     },
     {
       key: 'status',
-      header: 'وضعیت',
+      header: t('products.productStatus'),
       render: (col) => (
         <Badge variant={col.status === 'active' ? 'success' : 'neutral'}>
-          {col.status === 'active' ? 'فعال' : 'غیرفعال'}
+          {col.status === 'active' ? t('products.statusActive') : t('products.statusInactive')}
         </Badge>
       ),
     },
@@ -164,11 +164,11 @@ export const CollectionsView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="مدیریت مجموعه‌ها (Collections)"
-        subtitle="تعریف کالکشن‌های خاص پوشاک مانند «کالکشن زمستانه VIP»، «کالکشن عیدانه» و..."
+        title={t('products.collectionsTitle')}
+        subtitle={t('products.collectionsSubtitle')}
         actions={
           <Button onClick={() => handleOpenModal()} icon={<Plus className="w-4 h-4" />}>
-            افزودن مجموعه جدید
+            {t('products.createCollection')}
           </Button>
         }
       />
@@ -177,7 +177,7 @@ export const CollectionsView: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="جستجو در مجموعه‌ها..."
+              placeholder={t('products.searchCollections')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search className="w-4 h-4" />}
@@ -213,7 +213,7 @@ export const CollectionsView: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingCol ? 'ویرایش مجموعه' : 'افزودن مجموعه جدید'}
+        title={editingCol ? t('products.editCollection') : t('products.createCollection')}
         maxWidth="md"
         footer={
           <>
@@ -228,8 +228,8 @@ export const CollectionsView: React.FC = () => {
       >
         <form id="collection-form" onSubmit={handleSave} className="space-y-4">
           <Input
-            label="عنوان مجموعه *"
-            placeholder="مثال: کالکشن بهاره ۱۴۰۳"
+            label={`${t('products.collectionName')} *`}
+            placeholder="Spring/Summer"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -237,13 +237,13 @@ export const CollectionsView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="اسلاگ (Slug)"
+              label={t('products.collectionSlug')}
               placeholder="spring-collection-2024"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
             />
             <Input
-              label="ترتیب نمایش (Sort)"
+              label={t('products.sizeOrder')}
               type="number"
               value={sort}
               onChange={(e) => setSort(e.target.value ? Number(e.target.value) : '')}
@@ -251,30 +251,30 @@ export const CollectionsView: React.FC = () => {
           </div>
 
           <ImageUpload
-            label="تصویر کاور مجموعه"
+            label={t('products.collectionCover')}
             value={image}
             onChange={setImage}
-            helperText="تصویر بنر یا کاور اختصاصی این مجموعه"
+            helperText={t('products.collectionCoverHelper')}
           />
 
           <Select
-            label="وضعیت"
+            label={t('products.productStatus')}
             value={status}
             onChange={(e) => setStatus(e.target.value as any)}
             options={[
-              { value: 'active', label: 'فعال' },
-              { value: 'inactive', label: 'غیرفعال' },
+              { value: 'active', label: t('products.statusActive') },
+              { value: 'inactive', label: t('products.statusInactive') },
             ]}
           />
 
           <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">توضیحات</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">{t('products.description')}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="توضیحات درباره مفهوم و سبک کالکشن..."
+              placeholder="..."
             />
           </div>
         </form>

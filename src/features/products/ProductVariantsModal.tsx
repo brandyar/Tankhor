@@ -81,7 +81,7 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`تنوع‌های کالا: ${product.title}`}
+      title={`${t('products.variantsOf')}: ${product.title}`}
       maxWidth="4xl"
     >
       <div className="space-y-5">
@@ -98,24 +98,24 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
               <h4 className="font-bold text-slate-900 dark:text-neutral-100 text-sm flex items-center gap-2">
                 <span>{product.title}</span>
                 <Badge variant={product.status === 'published' ? 'success' : 'warning'}>
-                  {product.status === 'published' ? 'منتشر شده' : 'پیش‌نویس'}
+                  {product.status === 'published' ? t('products.statusPublished') : t('products.statusDraft')}
                 </Badge>
               </h4>
               <p className="text-xs text-slate-500 mt-0.5">
-                برند: <span className="font-semibold text-slate-700">{product.brand || 'تن‌خور'}</span> | کد اسلاگ: {product.slug || '-'}
+                {t('products.brand')}: <span className="font-semibold text-slate-700 dark:text-neutral-300">{product.brand || t('products.defaultBrand')}</span> | Slug: {product.slug || '-'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 self-end sm:self-center">
             <div className="text-left font-mono">
-              <span className="text-xs text-slate-500 block">تعداد SKU</span>
-              <span className="text-sm font-bold text-slate-900">{toPersianDigits(variants.length)} تنوع</span>
+              <span className="text-xs text-slate-500 block">{t('products.skuCount')}</span>
+              <span className="text-sm font-bold text-slate-900 dark:text-neutral-100">{isPersian ? toPersianDigits(variants.length) : variants.length} {t('products.variantUnit')}</span>
             </div>
-            <div className="h-8 w-px bg-slate-200" />
+            <div className="h-8 w-px bg-slate-200 dark:bg-neutral-700" />
             <div className="text-left font-mono">
-              <span className="text-xs text-slate-500 block">موجودی انبار</span>
-              <span className="text-sm font-bold text-amber-700">{toPersianDigits(totalStockSum)} عدد</span>
+              <span className="text-xs text-slate-500 block">{t('products.inventoryStock')}</span>
+              <span className="text-sm font-bold text-amber-700 dark:text-amber-400">{isPersian ? toPersianDigits(totalStockSum) : totalStockSum} {t('products.unitItems')}</span>
             </div>
             {onEditProduct && (
               <Button
@@ -128,7 +128,7 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
                 icon={<Edit className="w-3.5 h-3.5" />}
                 className="ms-2"
               >
-                ویرایش محصول
+                {t('products.editProduct')}
               </Button>
             )}
           </div>
@@ -137,12 +137,12 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
         {/* Variants List Table */}
         {isLoading ? (
           <div className="text-center py-12 text-slate-500 text-xs font-medium">
-            در حال بارگذاری لیست تنوع‌ها...
+            {t('products.loadingVariants')}
           </div>
         ) : variants.length === 0 ? (
-          <div className="text-center py-10 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 space-y-3">
+          <div className="text-center py-10 bg-slate-50/50 dark:bg-neutral-900/30 rounded-xl border border-dashed border-slate-200 dark:border-neutral-800 space-y-3">
             <Layers className="w-8 h-8 text-slate-400 mx-auto" />
-            <p className="text-xs font-bold text-slate-700">هیچ تنوعی (رنگ و سایز) برای این محصول ثبت نشده است.</p>
+            <p className="text-xs font-bold text-slate-700 dark:text-neutral-300">{t('products.noVariantsRegistered')}</p>
             {onEditProduct && (
               <Button
                 size="sm"
@@ -152,27 +152,27 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
                 }}
                 icon={<Edit className="w-3.5 h-3.5" />}
               >
-                ایجاد تنوع در صفحه ویرایش
+                {t('products.createVariantsInEdit')}
               </Button>
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
-            <table className="w-full text-right text-xs">
-              <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-neutral-700">
+            <table className="w-full text-start text-xs">
+              <thead className="bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 font-bold border-b border-slate-200 dark:border-neutral-700">
                 <tr>
-                  <th className="px-2 py-2.5 text-center">تصویر</th>
-                  <th className="px-3 py-2.5">رنگ</th>
-                  <th className="px-3 py-2.5">سایز</th>
-                  <th className="px-3 py-2.5">کد SKU</th>
-                  <th className="px-3 py-2.5">بارکد</th>
-                  <th className="px-3 py-2.5">قیمت فروش</th>
-                  <th className="px-3 py-2.5">قیمت خرید</th>
-                  <th className="px-3 py-2.5">موجودی انبار</th>
-                  <th className="px-3 py-2.5">وضعیت</th>
+                  <th className="px-2 py-2.5 text-center">{t('products.image')}</th>
+                  <th className="px-3 py-2.5">{t('products.variantColor')}</th>
+                  <th className="px-3 py-2.5">{t('products.variantSize')}</th>
+                  <th className="px-3 py-2.5">{t('products.variantSku')}</th>
+                  <th className="px-3 py-2.5">{t('products.variantBarcode')}</th>
+                  <th className="px-3 py-2.5">{t('products.sellingPrice')}</th>
+                  <th className="px-3 py-2.5">{t('products.costPrice')}</th>
+                  <th className="px-3 py-2.5">{t('products.inventoryStock')}</th>
+                  <th className="px-3 py-2.5">{t('products.productStatus')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="divide-y divide-slate-100 dark:divide-neutral-800 bg-white dark:bg-[#14161d]">
                 {variants.map((v, index) => {
                   const vNormId = normalizeId(v.id);
                   const colorObj = colors.find((c) => c.id === normalizeId(v.color_id));
@@ -186,15 +186,15 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
                     .reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
 
                   return (
-                    <tr key={`pvm_var_${v.id || 'temp'}_${index}`} className="hover:bg-slate-50 transition-colors">
+                    <tr key={`pvm_var_${v.id || 'temp'}_${index}`} className="hover:bg-slate-50 dark:hover:bg-neutral-800/40 transition-colors">
                       <td className="px-2 py-2 text-center">
                         <ProductImage
                           src={v.image || product.main_image}
                           alt={v.sku}
-                          containerClassName="w-8 h-8 rounded-lg overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200 mx-auto"
+                          containerClassName="w-8 h-8 rounded-lg overflow-hidden bg-slate-100 dark:bg-neutral-800 flex items-center justify-center shrink-0 border border-slate-200 dark:border-neutral-700 mx-auto"
                         />
                       </td>
-                      <td className="px-3 py-2.5 font-medium text-slate-900">
+                      <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-neutral-100">
                         <div className="flex items-center gap-1.5">
                           <span
                             className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0"
@@ -203,40 +203,40 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
                           <span>{colorObj?.name || '-'}</span>
                         </div>
                       </td>
-                      <td className="px-3 py-2.5 font-bold font-mono text-slate-800">
+                      <td className="px-3 py-2.5 font-bold font-mono text-slate-800 dark:text-neutral-200">
                         {sizeObj?.name || '-'}
                       </td>
-                      <td className="px-3 py-2.5 font-mono text-slate-600 text-[11px]">
+                      <td className="px-3 py-2.5 font-mono text-slate-600 dark:text-neutral-400 text-[11px]">
                         {v.sku || '-'}
                       </td>
-                      <td className="px-3 py-2.5 font-mono text-slate-500 text-[11px]">
+                      <td className="px-3 py-2.5 font-mono text-slate-500 dark:text-neutral-400 text-[11px]">
                         {v.barcode || '-'}
                       </td>
-                      <td className="px-3 py-2.5 font-mono font-bold text-slate-900">
-                        {v.price ? formatCurrency(v.price, 'TOMAN', isPersian) : '-'}
+                      <td className="px-3 py-2.5 font-mono font-bold text-slate-900 dark:text-neutral-100">
+                        {v.price ? formatCurrency(v.price, activeOrganization?.currency, isPersian) : '-'}
                       </td>
-                      <td className="px-3 py-2.5 font-mono text-slate-500">
-                        {v.cost_price ? formatCurrency(v.cost_price, 'TOMAN', isPersian) : '-'}
+                      <td className="px-3 py-2.5 font-mono text-slate-500 dark:text-neutral-400">
+                        {v.cost_price ? formatCurrency(v.cost_price, activeOrganization?.currency, isPersian) : '-'}
                       </td>
                       <td className="px-3 py-2.5 font-mono font-bold">
                         <span className={`px-2 py-0.5 rounded-full text-[11px] ${
                           stockQty > 0
-                            ? 'bg-amber-50 text-amber-900 border border-amber-200'
-                            : 'bg-red-50 text-red-700 border border-red-200'
+                            ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                            : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
                         }`}>
-                          {toPersianDigits(stockQty)} عدد
+                          {isPersian ? toPersianDigits(stockQty) : stockQty} {t('products.unitItems')}
                         </span>
                       </td>
                       <td className="px-3 py-2.5">
                         {stockQty > 0 ? (
-                          <span className="text-emerald-600 font-semibold text-[11px] inline-flex items-center gap-1">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[11px] inline-flex items-center gap-1">
                             <CheckCircle className="w-3 h-3" />
-                            <span>موجود</span>
+                            <span>{t('products.inStock')}</span>
                           </span>
                         ) : (
-                          <span className="text-rose-500 font-semibold text-[11px] inline-flex items-center gap-1">
+                          <span className="text-rose-500 dark:text-rose-400 font-semibold text-[11px] inline-flex items-center gap-1">
                             <AlertCircle className="w-3 h-3" />
-                            <span>ناموجود</span>
+                            <span>{t('products.outOfStock')}</span>
                           </span>
                         )}
                       </td>
@@ -248,9 +248,9 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
           </div>
         )}
 
-        <div className="flex justify-end pt-2 border-t border-slate-100">
+        <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-neutral-800">
           <Button variant="outline" size="sm" onClick={onClose}>
-            بستن
+            {t('common.close')}
           </Button>
         </div>
       </div>

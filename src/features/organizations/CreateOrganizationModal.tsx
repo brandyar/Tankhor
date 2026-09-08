@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
 import { Button } from '../../components/ui/Button';
-import { Building2, X, Plus, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Building2, X, Plus, AlertCircle } from 'lucide-react';
 
 interface CreateOrganizationModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   onClose,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const { createOrganization } = useOrganization();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -28,7 +30,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     e.preventDefault();
     const cleanName = name.trim();
     if (!cleanName) {
-      setError('وارد کردن نام سازمان الزامی است.');
+      setError(t('settings.orgNameRequired'));
       return;
     }
 
@@ -57,7 +59,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         onSuccess();
       }
     } catch (err: any) {
-      setError(err?.message || 'خطا در ایجاد سازمان جدید. لطفاً مجدداً تلاش کنید.');
+      setError(err?.message || t('common.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -82,8 +84,8 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
               <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">ایجاد سازمان / فروشگاه جدید</h2>
-              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">تعریف یک فضای کاری مستقل برای مدیریت محصولات و انبار</p>
+              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">{t('settings.createOrgTitle')}</h2>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{t('settings.createOrgSubtitle')}</p>
             </div>
           </div>
           <button
@@ -107,7 +109,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
           {/* Org Name */}
           <div>
             <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
-              نام سازمان یا فروشگاه <span className="text-red-500">*</span>
+              {t('settings.orgName')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -115,11 +117,8 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
-                if (!slug) {
-                  // Auto suggest simple transliterated or ascii slug
-                }
               }}
-              placeholder="مثال: شعبه مرکزی تن‌خور، پوشاک آسمان..."
+              placeholder={t('settings.orgName')}
               className="w-full px-3.5 py-2.5 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-400 focus:border-transparent transition-all"
             />
           </div>
@@ -127,49 +126,48 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
           {/* Slug */}
           <div>
             <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
-              شناسه یکتا (Slug) <span className="text-neutral-400 dark:text-neutral-500 font-normal">(اختیاری)</span>
+              {t('settings.orgSlug')} <span className="text-neutral-400 dark:text-neutral-500 font-normal">{t('settings.slugOptional')}</span>
             </label>
             <input
               type="text"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              placeholder="مثال: boutique-shikpooshan"
+              placeholder="boutique-slug"
               dir="ltr"
               className="w-full px-3.5 py-2.5 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 font-mono placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-400 focus:border-transparent transition-all text-start"
             />
             <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">
-              در صورت خالی بودن، شناسه یکتا به صورت خودکار ایجاد می‌گردد.
+              {t('settings.slugAutoHelp')}
             </p>
           </div>
 
           {/* Currency & Timezone Grid */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">واحد پول اصلی</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">{t('settings.orgCurrency')}</label>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
                 className="w-full px-3 py-2.5 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-400 focus:border-transparent cursor-pointer"
               >
-                <option value="TOMAN" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">تومان (TOMAN)</option>
-                <option value="IRR" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">ریال (IRR)</option>
-                <option value="USD" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">دلار (USD)</option>
-                <option value="EUR" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">یورو (EUR)</option>
-                <option value="AED" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">درهم (AED)</option>
+                <option value="TOMAN" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('settings.currencyToman')}</option>
+                <option value="IRR" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('settings.currencyRial')}</option>
+                <option value="USD" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('settings.currencyUsd')}</option>
+                <option value="EUR" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('settings.currencyEur')}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">منطقه زمانی</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">{t('settings.mainTimezone')}</label>
               <select
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
                 className="w-full px-3 py-2.5 bg-white dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-400 focus:border-transparent cursor-pointer font-mono text-[11px]"
               >
-                <option value="Asia/Tehran" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Asia/Tehran (تهران)</option>
-                <option value="UTC" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">UTC (جهانی)</option>
-                <option value="Asia/Dubai" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Asia/Dubai (دبی)</option>
-                <option value="Europe/Istanbul" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Europe/Istanbul (استانبول)</option>
+                <option value="Asia/Tehran" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Asia/Tehran</option>
+                <option value="UTC" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">UTC</option>
+                <option value="Asia/Dubai" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Asia/Dubai</option>
+                <option value="Europe/Istanbul" className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">Europe/Istanbul</option>
               </select>
             </div>
           </div>
@@ -183,7 +181,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
               disabled={isSubmitting}
               className="text-xs"
             >
-              انصراف
+              {t('common.cancel')}
             </Button>
             <Button
               type="submit"
@@ -192,7 +190,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
               icon={<Plus className="w-4 h-4" />}
               className="text-xs font-bold"
             >
-              ایجاد و فعال‌سازی سازمان
+              {t('settings.createAndActivateOrg')}
             </Button>
           </div>
         </form>

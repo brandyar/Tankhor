@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from '../../i18n';
 import { SizeGuideTemplate, SizeGuideMeasurement, SizeGuideValue, Size } from '../../types';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -33,6 +34,7 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
   sizes,
   productTitle,
 }) => {
+  const { t, isPersian } = useTranslation();
   const [isCopied, setIsCopied] = useState(false);
 
   if (!isOpen) return null;
@@ -57,11 +59,11 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
   };
 
   const handleCopyText = () => {
-    let text = `📏 جدول راهنمای سایز: ${productTitle ? productTitle + ' - ' : ''}${template.name}\n`;
-    text += `واحد اندازه‌گیری: ${template.unit === 'in' ? 'اینچ' : 'سانتی‌متر'}\n\n`;
+    let text = `📏 ${t('sizeguides.title')}: ${productTitle ? productTitle + ' - ' : ''}${template.name}\n`;
+    text += `${t('sizeguides.unit')}: ${template.unit === 'in' ? t('sizeguides.unitInch') : t('sizeguides.unitCm')}\n\n`;
 
     displaySizes.forEach((sz) => {
-      text += `• سایز ${sz.name}:\n`;
+      text += `• ${t('sizeguides.sizeLabel')} ${sz.name}:\n`;
       measurements.forEach((m) => {
         const val = matrixMap[`${sz.id}_${m.id}`] || '-';
         text += `   - ${m.name}: ${val} ${m.unit}\n`;
@@ -69,9 +71,9 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
     });
 
     if (template.description) {
-      text += `\nنکته: ${template.description}\n`;
+      text += `\n${t('sizeguides.fitmentAdvice')} ${template.description}\n`;
     }
-    text += `\nتهیه شده توسط سیستم هوشمند تن‌خور (TANKHOR)`;
+    text += `\n${t('sizeguides.generatedByTag')}`;
 
     navigator.clipboard.writeText(text);
     setIsCopied(true);
@@ -104,7 +106,7 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
               <Ruler className="w-4 h-4" />
             </div>
             <span className="text-[11px] font-bold tracking-wide uppercase text-indigo-300 bg-indigo-400/10 px-2.5 py-0.5 rounded-full border border-indigo-400/20">
-              کارت راهنمای سایز و مشخصات
+              {t('sizeguides.cardBadgeTitle')}
             </span>
           </div>
 
@@ -112,9 +114,9 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
             {productTitle ? `${productTitle} - ` : ''}{template.name}
           </h2>
           <p className="text-xs text-neutral-300 print:text-neutral-600 mt-1 flex items-center gap-2">
-            <span>واحد اندازه‌گیری: <strong>{template.unit === 'in' ? 'اینچ (Inches)' : 'سانتی‌متر (cm)'}</strong></span>
+            <span>{t('sizeguides.unit')}: <strong>{template.unit === 'in' ? t('sizeguides.unitInch') : t('sizeguides.unitCm')}</strong></span>
             <span>•</span>
-            <span>نوع قالب: <strong>{template.type}</strong></span>
+            <span>{t('sizeguides.templateType')}: <strong>{template.type}</strong></span>
           </p>
         </div>
 
@@ -122,10 +124,10 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
         <div className="p-6 space-y-5 print:p-2">
           {/* Visual Matrix Table */}
           <div className="overflow-x-auto custom-scrollbar border border-neutral-200 dark:border-neutral-800 rounded-2xl print:border-neutral-400">
-            <table className="w-full text-right text-xs">
+            <table className="w-full text-start text-xs">
               <thead>
                 <tr className="bg-neutral-100 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 font-bold">
-                  <th className="p-3.5 text-center font-bold">سایز</th>
+                  <th className="p-3.5 text-center font-bold">{t('sizeguides.sizeLabel')}</th>
                   {measurements.map((m) => (
                     <th key={m.id} className="p-3.5 text-center font-bold">
                       <div>{m.name}</div>
@@ -169,7 +171,7 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
             <div className="p-4 bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 rounded-2xl text-xs text-amber-900 dark:text-amber-300 flex items-start gap-2.5">
               <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <strong className="block mb-0.5 font-bold">راهنما و نکات اندازه‌گیری:</strong>
+                <strong className="block mb-0.5 font-bold">{t('sizeguides.fitmentAdvice')}</strong>
                 <p className="leading-relaxed">{template.description}</p>
               </div>
             </div>
@@ -185,7 +187,7 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
                 icon={isCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                 className="text-xs font-bold"
               >
-                {isCopied ? 'متن کپی شد' : 'کپی متن برای شبکه‌های اجتماعی'}
+                {isCopied ? t('sizeguides.copySuccess') : t('sizeguides.copyForSocial')}
               </Button>
               <Button
                 variant="outline"
@@ -194,12 +196,12 @@ export const SizeChartModal: React.FC<SizeChartModalProps> = ({
                 icon={<Printer className="w-3.5 h-3.5" />}
                 className="text-xs font-bold"
               >
-                چاپ راهنمای سایز
+                {t('sizeguides.printGuide')}
               </Button>
             </div>
 
             <Button variant="primary" size="sm" onClick={onClose}>
-              بستن
+              {t('common.close')}
             </Button>
           </div>
         </div>
