@@ -1,16 +1,22 @@
 import { Router, Response } from 'express';
 import { DirectusAdminClient } from './directusAdmin';
 import { requireAuth, AuthenticatedRequest, getUserOrganizations, generateToken } from './auth';
+import { generateLicenseTokenString } from '../src/utils/license';
 
 export const paymentRouter = Router();
 
 // In-memory cache for pending payment sessions
 interface PendingPayment {
   orderId: string;
+  type: 'subscription' | 'module';
   organizationId: number;
   userId: string;
   userEmail: string;
-  durationMonths: number;
+  durationMonths?: number;
+  moduleSlug?: string;
+  moduleId?: number;
+  moduleName?: string;
+  hardwareId?: string;
   amountInTomans: number;
   amountInRials: number;
   trackId?: number;
@@ -131,6 +137,7 @@ paymentRouter.post('/request', requireAuth, async (req: AuthenticatedRequest, re
     // Cache pending payment
     const pendingData: PendingPayment = {
       orderId,
+      type: 'subscription',
       organizationId: orgIdNum,
       userId,
       userEmail: email,
@@ -222,6 +229,146 @@ paymentRouter.post('/request', requireAuth, async (req: AuthenticatedRequest, re
 });
 
 /**
+ * Initiate Payment Request for Standalone Module via Zibal Gateway
+ * POST /api/payment/request-module
+ */
+paymentRouter.post('/request-module', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { organizationId, moduleSlug, hardwareId, simulate, mobile } = req.body;
+    const { userId, email } = req.user!;
+
+    const orgIdNum = Number(organizationId || req.user!.organizationId);
+    if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
+      return res.status(400).json({ error: 'شناسه سازمان نامعتبر است.' });
+    }
+
+    if (!moduleSlug) {
+      return res.status(400).json({ error: 'شناسه ماژول (moduleSlug) الزامی است.' });
+    }
+
+    // Verify organization exists
+    const org = await DirectusAdminClient.getItemById('organizations', orgIdNum);
+    if (!org) {
+      return res.status(404).json({ error: 'سازمان مورد نظر یافت نشد.' });
+    }
+
+    // Fetch system module metadata from Directus
+    const sysModules = await DirectusAdminClient.getItems('system_modules', {
+      filter: { slug: { _eq: moduleSlug } },
+      limit: 1,
+    }).catch(() => []);
+
+    const matchedModule = sysModules && sysModules.length > 0 ? sysModules[0] : null;
+    const moduleName = matchedModule?.name || (moduleSlug === 'barcode' ? 'تولید و چاپ بارکد' : moduleSlug);
+    const rawPrice = matchedModule?.price_ir || '490000';
+    const amountInTomans = Number(String(rawPrice).replace(/[^0-9]/g, '')) || 490000;
+    const amountInRials = amountInTomans * 10;
+
+    const orderId = `mod_${orgIdNum}_${moduleSlug}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+
+    // Resolve base origin for callback
+    const forwardedProto = req.get('x-forwarded-proto') || req.protocol;
+    const host = req.get('x-forwarded-host') || req.get('host');
+    const appOrigin = `${forwardedProto}://${host}`;
+    const callbackUrl = `${appOrigin}/api/payment/callback`;
+
+    const merchant = await getZibalMerchantKey();
+
+    // Cache pending payment
+    const pendingData: PendingPayment = {
+      orderId,
+      type: 'module',
+      organizationId: orgIdNum,
+      userId,
+      userEmail: email,
+      moduleSlug,
+      moduleId: matchedModule?.id,
+      moduleName,
+      hardwareId: hardwareId ? String(hardwareId).trim() : undefined,
+      amountInTomans,
+      amountInRials,
+      createdAt: Date.now(),
+    };
+    pendingPayments.set(orderId, pendingData);
+
+    // If simulate requested (e.g. testing in dev / preview or offline)
+    if (simulate === true) {
+      const simulatedTrackId = Math.floor(100000000 + Math.random() * 900000000);
+      pendingData.trackId = simulatedTrackId;
+      trackIdToOrderId.set(simulatedTrackId, orderId);
+
+      return res.json({
+        success: true,
+        isSimulated: true,
+        trackId: simulatedTrackId,
+        orderId,
+        amountTomans: amountInTomans,
+        amountRials: amountInRials,
+        paymentUrl: `/api/payment/simulate-gateway?trackId=${simulatedTrackId}`,
+        message: 'درخواست درگاه برای خرید ماژول در حالت آزمایشی (Sandbox) با موفقیت ایجاد شد.',
+      });
+    }
+
+    // Real Zibal Payment Request
+    try {
+      const zibalRequestPayload = {
+        merchant,
+        amount: amountInRials,
+        callbackUrl,
+        description: `خرید لایسنس دائمی ماژول ${moduleName} تن‌خور - سازمان ${org.name || 'مشتری'}`,
+        orderId,
+        mobile: mobile || undefined,
+      };
+
+      console.log(`[payment] Requesting Zibal payment for module ${moduleSlug} with merchant: ${merchant.slice(0, 5)}***, amount: ${amountInRials} Rials`);
+
+      const zibalResp = await fetch('https://gateway.zibal.ir/v1/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(zibalRequestPayload),
+      });
+
+      const zibalData: any = await zibalResp.json();
+      console.log('[payment] Zibal module response:', JSON.stringify(zibalData));
+
+      if (zibalData.result === 100 && zibalData.trackId) {
+        const trackId = Number(zibalData.trackId);
+        pendingData.trackId = trackId;
+        trackIdToOrderId.set(trackId, orderId);
+
+        const paymentGatewayUrl = `https://gateway.zibal.ir/start/${trackId}`;
+        return res.json({
+          success: true,
+          trackId,
+          orderId,
+          amountTomans: amountInTomans,
+          amountRials: amountInRials,
+          paymentUrl: paymentGatewayUrl,
+        });
+      } else {
+        console.warn(`[payment] Zibal module request returned result code ${zibalData.result}: ${zibalData.message}`);
+        return res.status(400).json({
+          error: `خطا از درگاه زیبال (کد ${zibalData.result}): ${zibalData.message || 'خطا در اتصال به درگاه'}`,
+          resultCode: zibalData.result,
+          canSimulate: true,
+          orderId,
+        });
+      }
+    } catch (networkErr: any) {
+      console.error('[payment] Network error contacting Zibal for module payment:', networkErr?.message);
+      return res.status(502).json({
+        error: 'خطا در ارتباط با سرور درگاه پرداخت زیبال. لطفاً اتصال اینترنت را بررسی نمایید.',
+        canSimulate: true,
+        orderId,
+      });
+    }
+  } catch (error: any) {
+    console.error('[payment /request-module Error]:', error);
+    return res.status(500).json({ error: error.message || 'خطا در ایجاد درخواست پرداخت ماژول' });
+  }
+});
+
+/**
  * Simulated Gateway Interface (for preview testing without bank card)
  * GET /api/payment/simulate-gateway?trackId=...
  */
@@ -229,6 +376,17 @@ paymentRouter.get('/simulate-gateway', (req, res) => {
   const trackId = Number(req.query.trackId);
   const orderId = trackIdToOrderId.get(trackId);
   const pending = orderId ? pendingPayments.get(orderId) : null;
+
+  const isModule = pending?.type === 'module';
+  const title = isModule
+    ? `خرید لایسنس دائمی ماژول ${pending?.moduleName || pending?.moduleSlug || ''}`
+    : 'خرید اشتراک Pro تن‌خور';
+  const subtitle = isModule
+    ? 'محیط آزمایشی (Sandbox) فعال‌سازی آنی ماژول'
+    : 'محیط آزمایشی (Sandbox) سامانه تن‌خور';
+  const confirmBtnText = isModule
+    ? 'تأیید پرداخت و فعال‌سازی آنی ماژول'
+    : 'تأیید پرداخت و فعال‌سازی اشتراک Pro';
 
   const html = `
   <!DOCTYPE html>
@@ -297,14 +455,26 @@ paymentRouter.get('/simulate-gateway', (req, res) => {
   <body>
     <div class="card">
       <div class="header">
-        <h2>درگاه پرداخت امن زیبال</h2>
-        <p>محیط آزمایشی (Sandbox) سامانه تن‌خور</p>
+        <h2>${title}</h2>
+        <p>${subtitle}</p>
       </div>
       <div class="body">
         <div class="info-row">
           <span class="info-label">مبلغ قابل پرداخت:</span>
           <span class="info-value">${(pending?.amountInTomans || 490000).toLocaleString('fa-IR')} تومان</span>
         </div>
+        ${isModule && pending?.moduleName ? `
+        <div class="info-row">
+          <span class="info-label">ماژول انتخابی:</span>
+          <span class="info-value font-bold text-blue-600">${pending.moduleName}</span>
+        </div>
+        ` : ''}
+        ${isModule && pending?.hardwareId ? `
+        <div class="info-row">
+          <span class="info-label">شناسه سخت‌افزار:</span>
+          <span class="info-value font-mono text-xs">${pending.hardwareId}</span>
+        </div>
+        ` : ''}
         <div class="info-row">
           <span class="info-label">شماره تراکنش (Track ID):</span>
           <span class="info-value font-mono">${trackId}</span>
@@ -320,7 +490,7 @@ paymentRouter.get('/simulate-gateway', (req, res) => {
 
         <div class="actions">
           <a href="/api/payment/callback?trackId=${trackId}&success=1&status=2" class="btn btn-success">
-            تأیید پرداخت و فعال‌سازی اشتراک Pro
+            ${confirmBtnText}
           </a>
           <a href="/api/payment/callback?trackId=${trackId}&success=0&status=3" class="btn btn-cancel">
             انصراف از پرداخت
@@ -417,6 +587,87 @@ async function handlePaymentCallback(req: any, res: Response) {
 
     if (!targetOrgId) {
       return res.redirect('/?payment=failed&message=' + encodeURIComponent('شناسه سازمان در تراکنش مشخص نیست.'));
+    }
+
+    // Check if this payment is for an individual module purchase
+    const isModulePayment = pending?.type === 'module' || (orderId && orderId.startsWith('mod_'));
+
+    if (isModulePayment) {
+      const moduleSlug = pending?.moduleSlug || (orderId ? orderId.split('_')[2] : 'barcode') || 'barcode';
+      const moduleName = pending?.moduleName || (moduleSlug === 'barcode' ? 'تولید و چاپ بارکد' : moduleSlug);
+      const hardwareId = pending?.hardwareId ? String(pending.hardwareId).trim() : null;
+
+      // 1. Generate cryptographic license token
+      const licenseToken = await generateLicenseTokenString({
+        organization_id: targetOrgId,
+        slug: moduleSlug,
+        license_type: 'lifetime',
+        hardware_id: hardwareId,
+        issued_at: new Date().toISOString(),
+        expires_at: null,
+      });
+
+      // 2. Fetch or create organization_modules in Directus
+      try {
+        const existingRecords = await DirectusAdminClient.getItems('organization_modules', {
+          filter: {
+            _and: [
+              { organization_id: { _eq: targetOrgId } },
+              { slug: { _eq: moduleSlug } },
+            ],
+          },
+          limit: 1,
+        }).catch(() => []);
+
+        if (existingRecords && existingRecords.length > 0) {
+          await DirectusAdminClient.updateItem('organization_modules', existingRecords[0].id, {
+            status: 'active',
+            license_type: 'lifetime',
+            license_token: licenseToken,
+            hardware_id: hardwareId,
+            starts_at: new Date().toISOString().replace('Z', ''),
+            expires_at: null,
+          });
+          console.log(`[payment callback] Activated existing organization_modules #${existingRecords[0].id} for org #${targetOrgId}`);
+        } else {
+          // Find module_id from system_modules
+          let moduleId = pending?.moduleId;
+          if (!moduleId) {
+            const sysMods = await DirectusAdminClient.getItems('system_modules', {
+              filter: { slug: { _eq: moduleSlug } },
+              limit: 1,
+            }).catch(() => []);
+            if (sysMods && sysMods.length > 0) {
+              moduleId = sysMods[0].id;
+            }
+          }
+
+          const created = await DirectusAdminClient.createItem('organization_modules', {
+            organization_id: targetOrgId,
+            module_id: moduleId || 1,
+            slug: moduleSlug,
+            license_type: 'lifetime',
+            status: 'active',
+            license_token: licenseToken,
+            hardware_id: hardwareId,
+            starts_at: new Date().toISOString().replace('Z', ''),
+            expires_at: null,
+          });
+          console.log(`[payment callback] Created organization_modules record #${created?.id} for org #${targetOrgId}`);
+        }
+      } catch (modErr: any) {
+        console.error('[payment callback] Error saving organization_modules to Directus:', modErr?.message);
+      }
+
+      // 3. Clean pending cache
+      if (orderId) {
+        pendingPayments.delete(orderId);
+        trackIdToOrderId.delete(trackId);
+      }
+
+      // 4. Redirect to frontend with module_success parameters
+      const redirectUrl = `/?payment=module_success&module=${encodeURIComponent(moduleSlug)}&module_name=${encodeURIComponent(moduleName)}&track_id=${trackId}&ref_number=${refNumber || ''}&org_id=${targetOrgId}`;
+      return res.redirect(redirectUrl);
     }
 
     // 1. Fetch current organization to check existing subscription expiry
@@ -564,6 +815,91 @@ paymentRouter.post('/test-activate', requireAuth, async (req: AuthenticatedReque
   } catch (error: any) {
     console.error('[payment /test-activate Error]:', error);
     return res.status(500).json({ error: error.message || 'خطا در فعال‌سازی اشتراک تستی' });
+  }
+});
+
+/**
+ * 1-Click Test Module Activation (for instant preview testing)
+ * POST /api/payment/test-activate-module
+ */
+paymentRouter.post('/test-activate-module', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { organizationId, moduleSlug, hardwareId } = req.body;
+    const orgIdNum = Number(organizationId || req.user!.organizationId);
+
+    if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
+      return res.status(400).json({ error: 'شناسه سازمان نامعتبر است.' });
+    }
+
+    if (!moduleSlug) {
+      return res.status(400).json({ error: 'شناسه ماژول الزامی است.' });
+    }
+
+    const org = await DirectusAdminClient.getItemById('organizations', orgIdNum);
+    if (!org) {
+      return res.status(404).json({ error: 'سازمان مورد نظر یافت نشد.' });
+    }
+
+    const hwid = hardwareId ? String(hardwareId).trim() : null;
+
+    const licenseToken = await generateLicenseTokenString({
+      organization_id: orgIdNum,
+      slug: moduleSlug,
+      license_type: 'lifetime',
+      hardware_id: hwid,
+      issued_at: new Date().toISOString(),
+      expires_at: null,
+    });
+
+    const existingRecords = await DirectusAdminClient.getItems('organization_modules', {
+      filter: {
+        _and: [
+          { organization_id: { _eq: orgIdNum } },
+          { slug: { _eq: moduleSlug } },
+        ],
+      },
+      limit: 1,
+    }).catch(() => []);
+
+    let savedItem: any = null;
+    if (existingRecords && existingRecords.length > 0) {
+      savedItem = await DirectusAdminClient.updateItem('organization_modules', existingRecords[0].id, {
+        status: 'active',
+        license_type: 'lifetime',
+        license_token: licenseToken,
+        hardware_id: hwid,
+        starts_at: new Date().toISOString().replace('Z', ''),
+        expires_at: null,
+      });
+    } else {
+      const sysMods = await DirectusAdminClient.getItems('system_modules', {
+        filter: { slug: { _eq: moduleSlug } },
+        limit: 1,
+      }).catch(() => []);
+      const moduleId = sysMods && sysMods.length > 0 ? sysMods[0].id : 1;
+
+      savedItem = await DirectusAdminClient.createItem('organization_modules', {
+        organization_id: orgIdNum,
+        module_id: moduleId,
+        slug: moduleSlug,
+        license_type: 'lifetime',
+        status: 'active',
+        license_token: licenseToken,
+        hardware_id: hwid,
+        starts_at: new Date().toISOString().replace('Z', ''),
+        expires_at: null,
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'ماژول با موفقیت فعال شد.',
+      token: licenseToken,
+      module: savedItem,
+    });
+  } catch (error: any) {
+    console.error('[payment /test-activate-module Error]:', error);
+    return res.status(500).json({ error: error.message || 'خطا در فعال‌سازی تستی ماژول' });
   }
 });
 

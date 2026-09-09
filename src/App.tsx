@@ -106,7 +106,12 @@ const AuthenticatedApp: React.FC = () => {
         return permissions.canViewOrders || permissions.canViewFinancials;
       case 'settings':
       case 'settings/org':
+      case 'settings/general':
+      case 'settings/members':
+      case 'settings/modules':
       case 'settings/sync':
+      case 'settings/appearance':
+      case 'settings/updater':
         return permissions.canManageOrgSettings || permissions.canManageUsers;
       default:
         return true;
@@ -168,8 +173,13 @@ const AuthenticatedApp: React.FC = () => {
         return <ReportsView />;
       case 'settings':
       case 'settings/org':
+      case 'settings/general':
+      case 'settings/members':
+      case 'settings/modules':
       case 'settings/sync':
-        return <SettingsView />;
+      case 'settings/appearance':
+      case 'settings/updater':
+        return <SettingsView activeSubRoute={currentRoute} onNavigate={setCurrentRoute} />;
       default:
         return <DashboardView onNavigate={setCurrentRoute} />;
     }

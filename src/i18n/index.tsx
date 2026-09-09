@@ -11,6 +11,7 @@ import { sizeguidesFa } from './locales/fa/sizeguides';
 import { settingsFa } from './locales/fa/settings';
 import { authFa } from './locales/fa/auth';
 import { reportsFa } from './locales/fa/reports';
+import { modulesFa } from './locales/fa/modules';
 
 import { commonEn } from './locales/en/common';
 import { navigationEn } from './locales/en/navigation';
@@ -24,6 +25,7 @@ import { sizeguidesEn } from './locales/en/sizeguides';
 import { settingsEn } from './locales/en/settings';
 import { authEn } from './locales/en/auth';
 import { reportsEn } from './locales/en/reports';
+import { modulesEn } from './locales/en/modules';
 
 export type Locale = 'fa' | 'en';
 export type Direction = 'rtl' | 'ltr';
@@ -42,6 +44,7 @@ const translations = {
     settings: settingsFa,
     auth: authFa,
     reports: reportsFa,
+    modules: modulesFa,
   },
   en: {
     common: commonEn,
@@ -56,6 +59,7 @@ const translations = {
     settings: settingsEn,
     auth: authEn,
     reports: reportsEn,
+    modules: modulesEn,
   },
 };
 

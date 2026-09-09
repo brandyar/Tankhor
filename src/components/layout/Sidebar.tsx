@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
+import { useModuleAccess } from '../../hooks/useModuleAccess';
+import { isTauriEnvironment } from '../../storage';
+import { APP_VERSION } from '../../utils/version';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -30,6 +33,10 @@ import {
   Boxes,
   SlidersHorizontal,
   BarChart3,
+  HardDrive,
+  Building2,
+  ArrowUpCircle,
+  Lock,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -46,6 +53,8 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   visible?: boolean;
+  badge?: string;
+  isLocked?: boolean;
 }
 
 interface NavSubmenu {
@@ -72,14 +81,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse,
 }) => {
   const { t, locale } = useTranslation();
-  const { permissions } = useOrganization();
+  const { permissions, isOwner } = useOrganization();
+  const { hasAccess } = useModuleAccess();
   const isRtl = locale === 'fa';
+  const hasBarcodeAccess = hasAccess('barcode');
+  const isDesktop = isTauriEnvironment();
 
   // State to track open submenus
   const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
     catalogAttributes: false,
     warehouseManagement: false,
     stockOperations: false,
+    settingsManagement: false,
   });
 
   const toggleSubmenu = (key: string) => {
@@ -92,10 +105,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Build the reordered navigation tree:
   // 1. Dashboard
   // 2. Orders & Sales (Create Order, All Orders, Customers)
-  // 3. Inventory & Warehouses (Overview, Barcodes, Stock Logs & Transfers submenu, Warehouses & Locations submenu)
+  // 3. Inventory & Warehouses (Overview, Barcodes (if unlocked), Stock Logs & Transfers submenu, Warehouses & Locations submenu)
   // 4. Products & Catalog (All Products, Variants, Size Guides, Catalog Attributes submenu)
   // 5. Purchasing & Procurement (Purchase Orders, Suppliers)
-  // 6. Settings (Org Settings, Storage Sync)
+  // 6. Reports & Analytics
+  // 7. Settings (General/Org Profile, Members & Permissions, Modules & Licenses, Database & Sync, Appearance, Updater)
+  // 8. Locked Modules (if any module is locked/unpurchased, it sits at the bottom of the sidebar)
   const navGroups: NavGroup[] = [
     {
       title: null,
@@ -115,7 +130,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       title: t('navigation.inventoryGroup'),
       entries: [
         { type: 'item', route: 'inventory/overview', label: t('navigation.inventoryOverview'), icon: ClipboardList, visible: permissions.canViewInventory },
-        { type: 'item', route: 'inventory/barcodes', label: t('navigation.barcodePrint'), icon: Barcode, visible: permissions.canViewInventory },
+        // If Barcode module is ACTIVE/PURCHASED, it is placed right here in its natural place under Inventory
+        ...(hasBarcodeAccess
+          ? [
+              {
+                type: 'item' as const,
+                route: 'inventory/barcodes',
+                label: t('navigation.barcodePrint'),
+                icon: Barcode,
+                visible: permissions.canViewInventory,
+              },
+            ]
+          : []),
         {
           type: 'submenu',
           key: 'stockOperations',
@@ -181,15 +207,78 @@ export const Sidebar: React.FC<SidebarProps> = ({
       title: t('navigation.settingsGroup'),
       entries: [
         {
-          type: 'item',
-          route: 'settings/org',
-          label: t('navigation.orgSettings'),
+          type: 'submenu',
+          key: 'settingsManagement',
+          label: t('navigation.settingsGroup'),
           icon: Settings,
           visible: permissions.canManageOrgSettings || permissions.canManageUsers,
+          items: [
+            {
+              route: 'settings/org',
+              label: t('navigation.settingsGeneral', 'پروفایل و اطلاعات سازمان'),
+              icon: Building2,
+              visible: true,
+            },
+            {
+              route: 'settings/members',
+              label: t('navigation.settingsMembers', 'اعضا و سطوح دسترسی'),
+              icon: Users,
+              visible: permissions.canManageUsers || isOwner,
+            },
+            {
+              route: 'settings/modules',
+              label: t('navigation.settingsModules', 'مدیریت ماژول‌ها و لایسنس‌ها'),
+              icon: Boxes,
+              visible: true,
+            },
+            {
+              route: 'settings/sync',
+              label: t('navigation.settingsSync', 'پایگاه‌داده و پشتیبان‌گیری'),
+              icon: HardDrive,
+              visible: true,
+            },
+            {
+              route: 'settings/appearance',
+              label: t('navigation.settingsAppearance', 'ظاهر و تم سامانه'),
+              icon: Palette,
+              visible: true,
+            },
+            ...(isDesktop
+              ? [
+                  {
+                    route: 'settings/updater',
+                    label: t('navigation.settingsUpdater', 'بروزرسانی نرم‌افزار'),
+                    icon: ArrowUpCircle,
+                    visible: true,
+                  },
+                ]
+              : []),
+          ].filter((i) => i.visible !== false),
         },
       ],
     },
   ];
+
+  // If any module is LOCKED (unpurchased), append it at the bottom of the sidebar in a dedicated group
+  const lockedEntries: NavEntry[] = [];
+  if (!hasBarcodeAccess && permissions.canViewInventory) {
+    lockedEntries.push({
+      type: 'item',
+      route: 'inventory/barcodes',
+      label: t('navigation.barcodePrint'),
+      icon: Barcode,
+      badge: t('navigation.lockedBadge', 'قفل / خرید'),
+      isLocked: true,
+      visible: true,
+    });
+  }
+
+  if (lockedEntries.length > 0) {
+    navGroups.push({
+      title: t('navigation.lockedModulesGroup', 'ماژول‌ها و افزونه‌ها'),
+      entries: lockedEntries,
+    });
+  }
 
   const isEntryVisible = (entry: NavEntry): boolean => {
     if (entry.visible === false) return false;
@@ -204,7 +293,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     navGroups.forEach((group) => {
       group.entries.forEach((entry) => {
         if (entry.type === 'submenu' && isEntryVisible(entry)) {
-          const hasActive = entry.items.some((i) => i.visible !== false && i.route === currentRoute);
+          const hasActive = entry.items.some((i) => i.visible !== false && (i.route === currentRoute || (entry.key === 'settingsManagement' && currentRoute.startsWith('settings'))));
           if (hasActive) {
             setOpenSubmenus((prev) => ({ ...prev, [entry.key]: true }));
           }
@@ -321,7 +410,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   )
                 )}
 
-                {visibleEntries.map((entry, eIdx) => {
+                {visibleEntries.map((entry) => {
                   if (entry.type === 'item') {
                     const Icon = entry.icon;
                     const isActive = currentRoute === entry.route;
@@ -331,18 +420,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         key={entry.route}
                         onClick={() => handleNavClick(entry.route)}
                         title={entry.label}
-                        className={`w-full flex items-center transition-all cursor-pointer rounded-lg text-xs ${
+                        className={`w-full flex items-center transition-all cursor-pointer rounded-lg text-xs relative ${
                           isCollapsed
                             ? 'justify-center p-2.5 my-0.5'
                             : 'gap-3 px-3 py-2'
                         } ${
                           isActive
                             ? 'bg-white text-neutral-900 font-bold shadow-sm'
+                            : entry.isLocked
+                            ? 'text-amber-400/90 hover:text-amber-200 hover:bg-amber-950/20 font-medium border border-amber-500/20'
                             : 'text-neutral-400 hover:text-neutral-100 hover:bg-[#1a1a1a] font-medium'
                         }`}
                       >
-                        <Icon className={`shrink-0 ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'} ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`} />
-                        {!isCollapsed && <span className="truncate">{entry.label}</span>}
+                        <div className="relative shrink-0">
+                          <Icon className={`${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'} ${isActive ? 'text-neutral-900' : entry.isLocked ? 'text-amber-400' : 'text-neutral-400'}`} />
+                          {entry.isLocked && (
+                            <span className="absolute -top-1 -right-1 flex items-center justify-center">
+                              <Lock className="w-2.5 h-2.5 text-amber-500" />
+                            </span>
+                          )}
+                        </div>
+                        {!isCollapsed && (
+                          <div className="flex-1 flex items-center justify-between overflow-hidden gap-1">
+                            <span className="truncate">{entry.label}</span>
+                            {entry.badge && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium shrink-0 flex items-center gap-1">
+                                <Lock className="w-2.5 h-2.5" />
+                                <span>{entry.badge}</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </button>
                     );
                   }
@@ -353,7 +461,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     const isOpen = !!openSubmenus[entry.key];
                     const visibleSubItems = entry.items.filter((i) => i.visible !== false);
                     if (visibleSubItems.length === 0) return null;
-                    const hasActiveChild = visibleSubItems.some((i) => i.route === currentRoute);
+                    const hasActiveChild = visibleSubItems.some((i) => i.route === currentRoute || (entry.key === 'settingsManagement' && currentRoute.startsWith('settings')));
 
                     if (isCollapsed) {
                       // In collapsed mode, render primary icon or trigger
@@ -405,7 +513,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           <div className="ms-4 ps-2 border-s border-neutral-800 space-y-1 py-1">
                             {visibleSubItems.map((subItem) => {
                               const SubIcon = subItem.icon;
-                              const isSubActive = currentRoute === subItem.route;
+                              const isSubActive = currentRoute === subItem.route || (subItem.route === 'settings/org' && currentRoute === 'settings');
 
                               return (
                                 <button
@@ -438,9 +546,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Footer Version */}
         <div className={`p-3 border-t border-neutral-800/80 bg-[#000000]/60 text-center transition-all ${isCollapsed ? 'px-1' : 'px-4'}`}>
           {!isCollapsed ? (
-            <p className="text-[11px] font-mono text-neutral-500 truncate">TANKHOR Platform · v1.0</p>
+            <p className="text-[11px] font-mono text-neutral-500 truncate">TANKHOR Platform · v{APP_VERSION}</p>
           ) : (
-            <p className="text-[9px] font-mono text-neutral-500">v1.0</p>
+            <p className="text-[9px] font-mono text-neutral-500">v{APP_VERSION}</p>
           )}
         </div>
       </aside>

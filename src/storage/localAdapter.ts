@@ -5,8 +5,9 @@ import {
   Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
   InventoryMovement, Customer, Order, OrderItem, Supplier, PurchaseOrder,
   PurchaseOrderItem, StockTransfer, StockTransferItem, SizeGuideTemplate,
-  SizeGuideMeasurement, SizeGuideValue, Subscription
+  SizeGuideMeasurement, SizeGuideValue, Subscription, SystemModule, OrganizationModule
 } from '../types';
+import { DEFAULT_SYSTEM_MODULES } from '../utils/license';
 
 export class LocalOfflineAdapter implements IStorageProvider {
   public mode: StorageMode = 'local_offline';
@@ -24,7 +25,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
     }
   }
 
-  private setItem<T>(key: string, data: T[]) {
+  setItem<T>(key: string, data: T[]) {
     localStorage.setItem(`tankhor_db_${key}`, JSON.stringify(data));
   }
 
@@ -1680,5 +1681,85 @@ export class LocalOfflineAdapter implements IStorageProvider {
     list.unshift(newSub);
     this.setItem('subscriptions', list);
     return newSub;
+  }
+
+  // System & Organization Modules
+  async getSystemModules(params?: QueryParams): Promise<SystemModule[]> {
+    let list = this.getItem<SystemModule>('system_modules', []);
+    if (!list || list.length === 0 || list.some((m) => m.slug === 'accounting' || m.price_ir?.includes('۱,۴۹۰,۰۰۰'))) {
+      list = [...DEFAULT_SYSTEM_MODULES];
+      this.setItem('system_modules', list);
+    }
+    if (params?.status) {
+      list = list.filter((m) => m.status === params.status);
+    }
+    return list;
+  }
+
+  async getOrganizationModules(params?: QueryParams): Promise<OrganizationModule[]> {
+    const list = this.getItem<OrganizationModule>('organization_modules', []);
+    const orgId = this.getActiveOrgId(params);
+    let filtered = list;
+    if (orgId) {
+      filtered = filtered.filter((m) => normalizeId(m.organization_id) === orgId);
+    }
+    if (params?.status) {
+      filtered = filtered.filter((m) => m.status === params.status);
+    }
+    return filtered;
+  }
+
+  async saveOrganizationModule(mod: Partial<OrganizationModule>): Promise<OrganizationModule> {
+    const list = this.getItem<OrganizationModule>('organization_modules', []);
+    const orgId = this.getActiveOrgId({ organization_id: normalizeId(mod.organization_id) });
+
+    if (mod.id) {
+      const idx = list.findIndex((m) => m.id === mod.id);
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], ...mod };
+        this.setItem('organization_modules', list);
+        return list[idx];
+      }
+    }
+
+    // Check if duplicate active license exists for this org and slug
+    const existingIdx = list.findIndex(
+      (m) => normalizeId(m.organization_id) === (orgId || 1) && m.slug === mod.slug
+    );
+
+    if (existingIdx !== -1) {
+      list[existingIdx] = {
+        ...list[existingIdx],
+        ...mod,
+        status: mod.status || 'active',
+      };
+      this.setItem('organization_modules', list);
+      return list[existingIdx];
+    }
+
+    const newMod: OrganizationModule = {
+      id: this.generateUniqueId(list),
+      slug: mod.slug || 'barcode',
+      organization_id: orgId || 1,
+      module_id: mod.module_id || 1,
+      license_type: mod.license_type || 'lifetime',
+      status: mod.status || 'active',
+      license_token: mod.license_token || null,
+      hardware_id: mod.hardware_id || null,
+      starts_at: mod.starts_at || new Date().toISOString(),
+      expires_at: mod.expires_at || null,
+      ...mod,
+    };
+
+    list.unshift(newMod);
+    this.setItem('organization_modules', list);
+    return newMod;
+  }
+
+  async deleteOrganizationModule(id: number): Promise<boolean> {
+    const list = this.getItem<OrganizationModule>('organization_modules', []);
+    const updated = list.filter((m) => m.id !== id);
+    this.setItem('organization_modules', updated);
+    return true;
   }
 }

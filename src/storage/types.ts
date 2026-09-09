@@ -4,7 +4,7 @@ import {
   InventoryItem, InventoryMovement, Customer, Order, OrderItem,
   Supplier, PurchaseOrder, PurchaseOrderItem, StockTransfer, StockTransferItem,
   SizeGuideTemplate, SizeGuideMeasurement, SizeGuideValue,
-  Subscription
+  Subscription, SystemModule, OrganizationModule
 } from '../types';
 
 export type StorageMode = 'local_offline' | 'cloud_synced';
@@ -143,4 +143,10 @@ export interface IStorageProvider {
   getSubscriptions?(params?: QueryParams): Promise<Subscription[]>;
   getActiveSubscription?(organizationId: number): Promise<Subscription | null>;
   saveSubscription?(sub: Partial<Subscription>): Promise<Subscription>;
+
+  // System & Organization Modules
+  getSystemModules?(params?: QueryParams): Promise<SystemModule[]>;
+  getOrganizationModules?(params?: QueryParams): Promise<OrganizationModule[]>;
+  saveOrganizationModule?(mod: Partial<OrganizationModule>): Promise<OrganizationModule>;
+  deleteOrganizationModule?(id: number): Promise<boolean>;
 }

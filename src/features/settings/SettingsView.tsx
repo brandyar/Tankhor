@@ -13,14 +13,43 @@ import { EditOrganizationModal } from '../organizations/EditOrganizationModal';
 import { CreateOrganizationModal } from '../organizations/CreateOrganizationModal';
 import { OrganizationMembersSection } from '../organizations/OrganizationMembersSection';
 import { LocalBackupRestoreCard } from './LocalBackupRestoreCard';
+import { ModulesManagementCard } from './ModulesManagementCard';
 import { UpgradeToProModal } from '../../components/modals/UpgradeToProModal';
 import { checkDesktopUpdate } from '../../utils/updater';
 import { getCurrentAppVersion, APP_VERSION } from '../../utils/version';
-import { Database, Cloud, RefreshCw, LogIn, LogOut, ShieldCheck, Building2, Edit3, Plus, ShieldAlert, Globe, Clock, CheckCircle2, Users, Sparkles, Lock, ArrowUpCircle, Sun, Moon, Monitor, Palette } from 'lucide-react';
+import {
+  Database,
+  Cloud,
+  RefreshCw,
+  LogIn,
+  LogOut,
+  ShieldCheck,
+  Building2,
+  Edit3,
+  Plus,
+  ShieldAlert,
+  Clock,
+  Boxes,
+  Users,
+  Sparkles,
+  ArrowUpCircle,
+  Sun,
+  Moon,
+  Monitor,
+  Palette,
+  SlidersHorizontal,
+  HardDrive,
+  UserCheck,
+} from 'lucide-react';
 
-export const SettingsView: React.FC = () => {
+interface SettingsViewProps {
+  activeSubRoute?: string;
+  onNavigate?: (route: string) => void;
+}
+
+export const SettingsView: React.FC<SettingsViewProps> = ({ activeSubRoute = 'settings/org', onNavigate }) => {
   const { t, isPersian } = useTranslation();
-  const { activeOrganization, isOwner, userRole, refreshOrganizations } = useOrganization();
+  const { activeOrganization, isOwner, userRole, refreshOrganizations, permissions } = useOrganization();
   const { theme, setTheme } = useTheme();
   const {
     user,
@@ -29,6 +58,32 @@ export const SettingsView: React.FC = () => {
     logout,
   } = useAuth();
 
+  // Resolve current active tab from prop or sub-route
+  const getTabFromRoute = (route: string): 'org' | 'members' | 'modules' | 'sync' | 'appearance' | 'updater' => {
+    if (route.includes('members') || route.includes('users')) return 'members';
+    if (route.includes('modules') || route.includes('license')) return 'modules';
+    if (route.includes('sync') || route.includes('storage') || route.includes('backup')) return 'sync';
+    if (route.includes('appearance') || route.includes('theme')) return 'appearance';
+    if (route.includes('updater') || route.includes('version')) return 'updater';
+    return 'org';
+  };
+
+  const [activeTab, setActiveTab] = useState<'org' | 'members' | 'modules' | 'sync' | 'appearance' | 'updater'>(
+    getTabFromRoute(activeSubRoute)
+  );
+
+  useEffect(() => {
+    setActiveTab(getTabFromRoute(activeSubRoute));
+  }, [activeSubRoute]);
+
+  const handleTabChange = (tab: 'org' | 'members' | 'modules' | 'sync' | 'appearance' | 'updater') => {
+    setActiveTab(tab);
+    if (onNavigate) {
+      const targetRoute = tab === 'org' ? 'settings/org' : `settings/${tab}`;
+      onNavigate(targetRoute);
+    }
+  };
+
   const [mode, setMode] = useState(storageManager.getMode());
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
@@ -36,6 +91,10 @@ export const SettingsView: React.FC = () => {
   const [isEditOrgOpen, setIsEditOrgOpen] = useState(false);
   const [desktopVersion, setDesktopVersion] = useState<string>(APP_VERSION);
   const [updateStatusMsg, setUpdateStatusMsg] = useState<{ type: 'info' | 'success' | 'error'; text: string } | null>(null);
+  const [isCreateOrgOpen, setIsCreateOrgOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
+  const isDesktop = isTauriEnvironment();
 
   useEffect(() => {
     getCurrentAppVersion().then(setDesktopVersion);
@@ -91,8 +150,6 @@ export const SettingsView: React.FC = () => {
       });
     }
   };
-  const [isCreateOrgOpen, setIsCreateOrgOpen] = useState(false);
-  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   useEffect(() => {
     const handleModeListener = () => {
@@ -153,376 +210,476 @@ export const SettingsView: React.FC = () => {
     return isCloudAuthenticated ? t('settings.roleManager') : t('settings.roleOwner');
   };
 
+  // Tabs definitions
+  const tabs = [
+    {
+      id: 'org',
+      label: t('navigation.settingsGeneral', 'پروفایل و اطلاعات سازمان'),
+      icon: Building2,
+      visible: true,
+    },
+    {
+      id: 'members',
+      label: t('navigation.settingsMembers', 'اعضا و سطوح دسترسی'),
+      icon: Users,
+      visible: permissions.canManageUsers || isOwner,
+    },
+    {
+      id: 'modules',
+      label: t('navigation.settingsModules', 'مدیریت ماژول‌ها و لایسنس‌ها'),
+      icon: Boxes,
+      visible: true,
+    },
+    {
+      id: 'sync',
+      label: t('navigation.settingsSync', 'پایگاه‌داده و پشتیبان‌گیری'),
+      icon: HardDrive,
+      visible: true,
+    },
+    {
+      id: 'appearance',
+      label: t('navigation.settingsAppearance', 'ظاهر و تم سامانه'),
+      icon: Palette,
+      visible: true,
+    },
+    ...(isDesktop
+      ? [
+          {
+            id: 'updater',
+            label: t('navigation.settingsUpdater', 'بروزرسانی نرم‌افزار'),
+            icon: ArrowUpCircle,
+            visible: true,
+          },
+        ]
+      : []),
+  ].filter((t) => t.visible);
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('settings.title')}
-        subtitle={t('settings.subtitle')}
+        title={t('settings.title', 'تنظیمات')}
+        subtitle={t('settings.subtitle', 'مدیریت حساب کاربری، سازمان، اعضا، ماژول‌ها، همگام‌سازی و تم سامانه')}
       />
 
-      {/* Cloud Account Status Banner */}
-      <Card title={t('settings.userRoleInOrg')} subtitle={t('settings.membersTitle')}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-[#181a20] border border-neutral-200/80 dark:border-neutral-800">
-          <div className="flex items-center gap-3.5">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg text-white shadow-xs ${isCloudAuthenticated ? 'bg-blue-600' : 'bg-neutral-800 dark:bg-neutral-700'}`}>
-              {user?.first_name ? user.first_name[0] : 'T'}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
-                  {user?.first_name} {user?.last_name}
-                </h3>
-                <Badge variant={isCloudAuthenticated ? 'info' : 'neutral'}>
-                  {isCloudAuthenticated ? t('settings.cloudModeDesc') : t('settings.localOfflineMode')}
-                </Badge>
-              </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono mt-0.5">{user?.email}</p>
-              <p className="text-[11px] text-neutral-600 dark:text-neutral-400 mt-1">
-                {t('settings.memberRole')}: <strong className="text-neutral-900 dark:text-neutral-100">{getUserRoleName()}</strong>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {!isCloudAuthenticated ? (
-              <Button
-                variant="primary"
-                onClick={openLoginModal}
-                icon={<LogIn className="w-4 h-4" />}
-                className="text-xs font-bold"
-              >
-                {t('auth.login')}
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => logout()}
-                icon={<LogOut className="w-4 h-4 text-red-500" />}
-                className="text-xs font-bold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 border-red-200 dark:border-red-900/60"
-              >
-                {t('auth.logout')}
-              </Button>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {/* Active Org Profile & Owner Edit Section */}
-      <Card
-        title={t('settings.orgDetailsCard')}
-        subtitle={t('settings.orgDetailsSubtitle')}
-        action={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsCreateOrgOpen(true)}
-              icon={<Plus className="w-3.5 h-3.5" />}
-              className="text-xs font-medium"
+      {/* Settings Submenu Navigation Tabs */}
+      <div className="flex items-center gap-1.5 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 overflow-x-auto custom-scrollbar">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id as any)}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                isActive
+                  ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/40'
+              }`}
             >
-              {t('settings.inviteMember')}
-            </Button>
-            {isOwner ? (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setIsEditOrgOpen(true)}
-                icon={<Edit3 className="w-3.5 h-3.5" />}
-                className="text-xs font-bold bg-blue-600 hover:bg-blue-700"
-              >
-                {t('settings.editOrgDetailsBtn')}
-              </Button>
-            ) : (
-              <Badge variant="neutral">{t('settings.memberRole')}: {userRole}</Badge>
-            )}
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          {!isOwner && (
-            <div className="flex items-center gap-2.5 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs rounded-xl">
-              <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <span>
-                {t('settings.roleViewer')} ({userRole})
-              </span>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-neutral-50/70 dark:bg-[#181a20] border border-neutral-200/80 dark:border-neutral-800">
-            <div className="space-y-1">
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('settings.orgName')}</span>
-              <p className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
-                <Building2 className="w-4 h-4 text-neutral-500 dark:text-neutral-400 shrink-0" />
-                <span>{activeOrganization?.name || '-'}</span>
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('settings.orgSlug')}</span>
-              <p className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200 dir-ltr text-start">
-                {activeOrganization?.slug || '-'}
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('settings.orgCurrency')}</span>
-              <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                {activeOrganization?.currency === 'TOMAN' ? t('settings.currencyToman') : (activeOrganization?.currency || 'TOMAN')}
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('settings.mainTimezone')}</span>
-              <p className="text-xs font-mono text-neutral-800 dark:text-neutral-200 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
-                <span>{activeOrganization?.timezone || 'Asia/Tehran'}</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-500 dark:text-neutral-400 pt-2 border-t border-neutral-100 dark:border-neutral-800">
-            <div className="flex items-center gap-2">
-              <span>{t('settings.statusActive')}:</span>
-              <Badge variant={activeOrganization?.status === 'active' ? 'success' : 'neutral'}>
-                {activeOrganization?.status === 'active' ? t('settings.statusActive') : (activeOrganization?.status || '-')}
-              </Badge>
-              <span className="ms-2">{t('settings.activePlanBadge')}:</span>
-              <Badge variant={activeOrganization?.plan === 'pro' ? 'info' : 'neutral'}>
-                {activeOrganization?.plan === 'pro' ? t('settings.planPro') : t('settings.planFree')}
-              </Badge>
-            </div>
-            {activeOrganization?.date_created && (
-              <span className="font-mono text-[11px]">
-                {new Date(activeOrganization.date_created).toLocaleDateString(isPersian ? 'fa-IR' : 'en-US')}
-              </span>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {/* Organization Members & Roles Section */}
-      <OrganizationMembersSection />
-
-      {/* Appearance & Theme Selection Card */}
-      <Card
-        title={t('settings.appearanceTitle')}
-        subtitle={t('settings.appearanceSubtitle')}
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Light Theme Option */}
-          <div
-            onClick={() => setTheme('light')}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center ${
-              theme === 'light'
-                ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-500 ring-2 ring-amber-500/20 shadow-md'
-                : 'bg-white dark:bg-[#14161c] border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-            }`}
-          >
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3">
-              <Sun className="w-6 h-6" />
-            </div>
-            <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.themeLight')}</h4>
-            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
-              {t('settings.themeLightDesc')}
-            </p>
-            {theme === 'light' && (
-              <Badge variant="warning" className="mt-3 text-[10px]">
-                {t('settings.themeActive')}
-              </Badge>
-            )}
-          </div>
-
-          {/* Dark Theme Option */}
-          <div
-            onClick={() => setTheme('dark')}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center ${
-              theme === 'dark'
-                ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
-                : 'bg-white dark:bg-[#14161c] border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-            }`}
-          >
-            <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3">
-              <Moon className="w-6 h-6" />
-            </div>
-            <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.themeDark')}</h4>
-            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
-              {t('settings.themeDarkDesc')}
-            </p>
-            {theme === 'dark' && (
-              <Badge variant="info" className="mt-3 text-[10px]">
-                {t('settings.themeActive')}
-              </Badge>
-            )}
-          </div>
-
-          {/* System Theme Option */}
-          <div
-            onClick={() => setTheme('system')}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center ${
-              theme === 'system'
-                ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-500 ring-2 ring-blue-500/20 shadow-md'
-                : 'bg-white dark:bg-[#14161c] border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-            }`}
-          >
-            <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
-              <Monitor className="w-6 h-6" />
-            </div>
-            <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.themeSystem')}</h4>
-            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
-              {t('settings.themeSystemDesc')}
-            </p>
-            {theme === 'system' && (
-              <Badge variant="neutral" className="mt-3 text-[10px]">
-                {t('settings.themeActive')}
-              </Badge>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {/* Local Backup, Restore & Demo Data Management */}
-      <LocalBackupRestoreCard />
-
-      {/* Storage Mode Selector */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div
-          onClick={() => handleModeChange('local_offline')}
-          className={`p-6 bg-white dark:bg-[#13151a] border rounded-2xl cursor-pointer transition-all ${
-            mode === 'local_offline'
-              ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-md'
-              : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center">
-              <Database className="w-5 h-5" />
-            </div>
-            <div className="flex items-center gap-1.5">
-              {isTauriEnvironment() ? (
-                <Badge variant="success">SQLite Desktop</Badge>
-              ) : (
-                <Badge variant="neutral">Local Storage</Badge>
-              )}
-              {mode === 'local_offline' && <Badge variant="success">{t('settings.themeActive')}</Badge>}
-            </div>
-          </div>
-          <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
-            {t('settings.localOfflineMode')} {isTauriEnvironment() ? t('settings.localOfflineSQLite') : t('settings.localOfflineBrowser')}
-          </h3>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
-            {isTauriEnvironment()
-              ? t('settings.localOfflineSQLiteDesc')
-              : t('settings.localOfflineBrowserDesc')}
-          </p>
-        </div>
-
-        <div
-          onClick={() => handleModeChange('cloud_synced')}
-          className={`p-6 bg-white dark:bg-[#13151a] border rounded-2xl cursor-pointer transition-all ${
-            mode === 'cloud_synced'
-              ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20 dark:bg-blue-950/10 shadow-md'
-              : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center">
-              <Cloud className="w-5 h-5" />
-            </div>
-            <div className="flex items-center gap-1.5">
-              {activeOrganization?.plan !== 'pro' && (
-                <Badge variant="warning" className="flex items-center gap-1 text-[10px]">
-                  <Sparkles className="w-3 h-3 text-amber-500" />
-                  {t('settings.planPro')}
-                </Badge>
-              )}
-              {mode === 'cloud_synced' && <Badge variant="info">{t('settings.themeActive')}</Badge>}
-            </div>
-          </div>
-          <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center justify-between">
-            <span>{t('settings.cloudSyncMode')}</span>
-            {activeOrganization?.plan !== 'pro' && (
-              <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline">
-                {t('settings.upgradeToPro')}
-              </span>
-            )}
-          </h3>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
-            {t('settings.cloudSyncModeDesc')}
-          </p>
-        </div>
+              <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400'}`} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Desktop App Updater Card */}
-      {isTauriEnvironment() && (
-        <Card title={t('settings.desktopUpdaterTitle')} subtitle={t('settings.desktopUpdaterSubtitle')}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/80 dark:border-neutral-700/70">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                <ArrowUpCircle className="w-5 h-5" />
+      {/* TAB 1: General & Org Profile */}
+      {activeTab === 'org' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Cloud Account Status Banner */}
+          <Card title={t('settings.userRoleInOrg')} subtitle={t('settings.membersTitle')}>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-[#181a20] border border-neutral-200/80 dark:border-neutral-800">
+              <div className="flex items-center gap-3.5">
+                <div
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg text-white shadow-xs ${
+                    isCloudAuthenticated ? 'bg-blue-600' : 'bg-neutral-800 dark:bg-neutral-700'
+                  }`}
+                >
+                  {user?.first_name ? user.first_name[0] : 'T'}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                      {user?.first_name} {user?.last_name}
+                    </h3>
+                    <Badge variant={isCloudAuthenticated ? 'info' : 'neutral'}>
+                      {isCloudAuthenticated ? t('settings.cloudModeDesc') : t('settings.localOfflineMode')}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono mt-0.5">{user?.email}</p>
+                  <p className="text-[11px] text-neutral-600 dark:text-neutral-400 mt-1">
+                    {t('settings.memberRole')}: <strong className="text-neutral-900 dark:text-neutral-100">{getUserRoleName()}</strong>
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.installedDesktopVersion')}: v{desktopVersion}</p>
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">{t('settings.desktopUpdateSafeDesc')}</p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleManualCheckUpdate}
-              isLoading={isCheckingUpdate}
-              icon={<RefreshCw className="w-3.5 h-3.5" />}
-              className="text-xs font-bold shrink-0"
-            >
-              {t('settings.checkNewVersionBtn')}
-            </Button>
-          </div>
 
-          {updateStatusMsg && (
-            <div className={`mt-3 p-3 rounded-xl border text-xs leading-relaxed flex items-center justify-between gap-2 ${
-              updateStatusMsg.type === 'error'
-                ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
-                : updateStatusMsg.type === 'success'
-                ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-                : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300'
-            }`}>
-              <span>{updateStatusMsg.text}</span>
-              <button
-                type="button"
-                onClick={() => setUpdateStatusMsg(null)}
-                className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 font-bold px-1"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                {!isCloudAuthenticated ? (
+                  <Button
+                    variant="primary"
+                    onClick={openLoginModal}
+                    icon={<LogIn className="w-4 h-4" />}
+                    className="text-xs font-bold"
+                  >
+                    {t('auth.login')}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => logout()}
+                    icon={<LogOut className="w-4 h-4 text-red-500" />}
+                    className="text-xs font-bold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 border-red-200 dark:border-red-900/60"
+                  >
+                    {t('auth.logout')}
+                  </Button>
+                )}
+              </div>
             </div>
-          )}
-        </Card>
+          </Card>
+
+          {/* Active Org Profile & Owner Edit Section */}
+          <Card
+            title={t('settings.orgDetailsCard')}
+            subtitle={t('settings.orgDetailsSubtitle')}
+            action={
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsCreateOrgOpen(true)}
+                  icon={<Plus className="w-3.5 h-3.5" />}
+                  className="text-xs font-medium"
+                >
+                  {t('settings.inviteMember', 'ایجاد سازمان جدید')}
+                </Button>
+                {isOwner ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setIsEditOrgOpen(true)}
+                    icon={<Edit3 className="w-3.5 h-3.5" />}
+                    className="text-xs font-bold bg-blue-600 hover:bg-blue-700"
+                  >
+                    {t('settings.editOrgDetailsBtn')}
+                  </Button>
+                ) : (
+                  <Badge variant="neutral">
+                    {t('settings.memberRole')}: {userRole}
+                  </Badge>
+                )}
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              {!isOwner && (
+                <div className="flex items-center gap-2.5 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs rounded-xl">
+                  <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span>
+                    {t('settings.roleViewer')} ({userRole})
+                  </span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-neutral-50/70 dark:bg-[#181a20] border border-neutral-200/80 dark:border-neutral-800">
+                <div className="space-y-1">
+                  <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('settings.orgName')}</span>
+                  <p className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4 text-neutral-500 dark:text-neutral-400 shrink-0" />
+                    <span>{activeOrganization?.name || '-'}</span>
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('settings.orgSlug')}</span>
+                  <p className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200 dir-ltr text-start">
+                    {activeOrganization?.slug || '-'}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('settings.orgCurrency')}</span>
+                  <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                    {activeOrganization?.currency === 'TOMAN' ? t('settings.currencyToman') : activeOrganization?.currency || 'TOMAN'}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('settings.mainTimezone')}</span>
+                  <p className="text-xs font-mono text-neutral-800 dark:text-neutral-200 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
+                    <span>{activeOrganization?.timezone || 'Asia/Tehran'}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-500 dark:text-neutral-400 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                <div className="flex items-center gap-2">
+                  <span>{t('settings.statusActive')}:</span>
+                  <Badge variant={activeOrganization?.status === 'active' ? 'success' : 'neutral'}>
+                    {activeOrganization?.status === 'active' ? t('settings.statusActive') : activeOrganization?.status || '-'}
+                  </Badge>
+                  <span className="ms-2">{t('settings.activePlanBadge')}:</span>
+                  <Badge variant={activeOrganization?.plan === 'pro' ? 'info' : 'neutral'}>
+                    {activeOrganization?.plan === 'pro' ? t('settings.planPro') : t('settings.planFree')}
+                  </Badge>
+                </div>
+                {activeOrganization?.date_created && (
+                  <span className="font-mono text-[11px]">
+                    {new Date(activeOrganization.date_created).toLocaleDateString(isPersian ? 'fa-IR' : 'en-US')}
+                  </span>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
       )}
 
-      {/* Cloud Sync Manual Trigger Card */}
-      <Card title={t('settings.cloudSyncStatusTitle')} subtitle={t('settings.cloudSyncStatusSubtitle')}>
-        <div className="space-y-4 max-w-xl">
-          <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
-            {t('settings.cloudSyncStatusDesc')}
-          </p>
+      {/* TAB 2: Members & Permissions */}
+      {activeTab === 'members' && (
+        <div className="space-y-6 animate-fade-in">
+          <OrganizationMembersSection />
+        </div>
+      )}
 
-          <div className="flex items-center gap-3 pt-1">
-            <Button
-              variant="outline"
-              onClick={handleManualSync}
-              isLoading={isSyncing}
-              icon={<RefreshCw className="w-4 h-4" />}
+      {/* TAB 3: Modules & Licenses */}
+      {activeTab === 'modules' && (
+        <div className="space-y-6 animate-fade-in">
+          <ModulesManagementCard />
+        </div>
+      )}
+
+      {/* TAB 4: Database & Sync */}
+      {activeTab === 'sync' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Storage Mode Selector */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div
+              onClick={() => handleModeChange('local_offline')}
+              className={`p-6 bg-white dark:bg-[#13151a] border rounded-2xl cursor-pointer transition-all ${
+                mode === 'local_offline'
+                  ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-md'
+                  : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+              }`}
             >
-              {t('settings.manualSyncBtn')}
-            </Button>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center">
+                  <Database className="w-5 h-5" />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {isTauriEnvironment() ? (
+                    <Badge variant="success">SQLite Desktop</Badge>
+                  ) : (
+                    <Badge variant="neutral">Local Storage</Badge>
+                  )}
+                  {mode === 'local_offline' && <Badge variant="success">{t('settings.themeActive')}</Badge>}
+                </div>
+              </div>
+              <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
+                {t('settings.localOfflineMode')}{' '}
+                {isTauriEnvironment() ? t('settings.localOfflineSQLite') : t('settings.localOfflineBrowser')}
+              </h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
+                {isTauriEnvironment()
+                  ? t('settings.localOfflineSQLiteDesc')
+                  : t('settings.localOfflineBrowserDesc')}
+              </p>
+            </div>
+
+            <div
+              onClick={() => handleModeChange('cloud_synced')}
+              className={`p-6 bg-white dark:bg-[#13151a] border rounded-2xl cursor-pointer transition-all ${
+                mode === 'cloud_synced'
+                  ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20 dark:bg-blue-950/10 shadow-md'
+                  : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center">
+                  <Cloud className="w-5 h-5" />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {activeOrganization?.plan !== 'pro' && (
+                    <Badge variant="warning" className="flex items-center gap-1 text-[10px]">
+                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      {t('settings.planPro')}
+                    </Badge>
+                  )}
+                  {mode === 'cloud_synced' && <Badge variant="info">{t('settings.themeActive')}</Badge>}
+                </div>
+              </div>
+              <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center justify-between">
+                <span>{t('settings.cloudSyncMode')}</span>
+                {activeOrganization?.plan !== 'pro' && (
+                  <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                    {t('settings.upgradeToPro')}
+                  </span>
+                )}
+              </h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
+                {t('settings.cloudSyncModeDesc')}
+              </p>
+            </div>
           </div>
 
-          {syncStatusMsg && (
-            <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/30 p-3 rounded-xl border border-blue-100 dark:border-blue-900/40">
-              {syncStatusMsg}
-            </p>
-          )}
+          {/* Cloud Sync Manual Trigger Card */}
+          <Card title={t('settings.cloudSyncStatusTitle')} subtitle={t('settings.cloudSyncStatusSubtitle')}>
+            <div className="space-y-4 max-w-xl">
+              <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                {t('settings.cloudSyncStatusDesc')}
+              </p>
+
+              <div className="flex items-center gap-3 pt-1">
+                <Button
+                  variant="outline"
+                  onClick={handleManualSync}
+                  isLoading={isSyncing}
+                  icon={<RefreshCw className="w-4 h-4" />}
+                >
+                  {t('settings.manualSyncBtn')}
+                </Button>
+              </div>
+
+              {syncStatusMsg && (
+                <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/30 p-3 rounded-xl border border-blue-100 dark:border-blue-900/40">
+                  {syncStatusMsg}
+                </p>
+              )}
+            </div>
+          </Card>
+
+          {/* Local Backup, Restore & Demo Data Management */}
+          <LocalBackupRestoreCard />
         </div>
-      </Card>
+      )}
+
+      {/* TAB 5: Appearance & Theme */}
+      {activeTab === 'appearance' && (
+        <div className="space-y-6 animate-fade-in">
+          <Card
+            title={t('settings.appearanceTitle', 'ظاهر و تم سامانه')}
+            subtitle={t('settings.appearanceSubtitle', 'انتخاب حالت نمایشی روز (روشن)، شب (تاریک) یا هماهنگ با سیستم‌عامل')}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Light Theme Option */}
+              <div
+                onClick={() => setTheme('light')}
+                className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center ${
+                  theme === 'light'
+                    ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-500 ring-2 ring-amber-500/20 shadow-md'
+                    : 'bg-white dark:bg-[#14161c] border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                }`}
+              >
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3">
+                  <Sun className="w-6 h-6" />
+                </div>
+                <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.themeLight')}</h4>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{t('settings.themeLightDesc')}</p>
+                {theme === 'light' && (
+                  <Badge variant="warning" className="mt-3 text-[10px]">
+                    {t('settings.themeActive')}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Dark Theme Option */}
+              <div
+                onClick={() => setTheme('dark')}
+                className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center ${
+                  theme === 'dark'
+                    ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
+                    : 'bg-white dark:bg-[#14161c] border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                }`}
+              >
+                <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3">
+                  <Moon className="w-6 h-6" />
+                </div>
+                <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.themeDark')}</h4>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{t('settings.themeDarkDesc')}</p>
+                {theme === 'dark' && (
+                  <Badge variant="info" className="mt-3 text-[10px]">
+                    {t('settings.themeActive')}
+                  </Badge>
+                )}
+              </div>
+
+              {/* System Theme Option */}
+              <div
+                onClick={() => setTheme('system')}
+                className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center ${
+                  theme === 'system'
+                    ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-500 ring-2 ring-blue-500/20 shadow-md'
+                    : 'bg-white dark:bg-[#14161c] border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                }`}
+              >
+                <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
+                  <Monitor className="w-6 h-6" />
+                </div>
+                <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.themeSystem')}</h4>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{t('settings.themeSystemDesc')}</p>
+                {theme === 'system' && (
+                  <Badge variant="neutral" className="mt-3 text-[10px]">
+                    {t('settings.themeActive')}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* TAB 6: App Updater (Tauri Desktop) */}
+      {activeTab === 'updater' && isDesktop && (
+        <div className="space-y-6 animate-fade-in">
+          <Card title={t('settings.desktopUpdaterTitle')} subtitle={t('settings.desktopUpdaterSubtitle')}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/80 dark:border-neutral-700/70">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                  <ArrowUpCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
+                    {t('settings.installedDesktopVersion')}: v{desktopVersion}
+                  </p>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    {t('settings.desktopUpdateSafeDesc')}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManualCheckUpdate}
+                isLoading={isCheckingUpdate}
+                icon={<RefreshCw className="w-3.5 h-3.5" />}
+                className="text-xs font-bold shrink-0"
+              >
+                {t('settings.checkNewVersionBtn')}
+              </Button>
+            </div>
+
+            {updateStatusMsg && (
+              <div
+                className={`mt-3 p-3 rounded-xl border text-xs leading-relaxed flex items-center justify-between gap-2 ${
+                  updateStatusMsg.type === 'error'
+                    ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
+                    : updateStatusMsg.type === 'success'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+                    : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300'
+                }`}
+              >
+                <span>{updateStatusMsg.text}</span>
+                <button
+                  type="button"
+                  onClick={() => setUpdateStatusMsg(null)}
+                  className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 font-bold px-1"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
       {/* Upgrade to Pro Modal */}
       <UpgradeToProModal
@@ -551,4 +708,3 @@ export const SettingsView: React.FC = () => {
     </div>
   );
 };
-

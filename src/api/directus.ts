@@ -654,6 +654,40 @@ class DirectusClient {
     });
   }
 
+  public async requestModulePayment(data: {
+    organizationId: number;
+    moduleSlug: string;
+    hardwareId?: string;
+    simulate?: boolean;
+    mobile?: string;
+  }): Promise<{
+    success: boolean;
+    trackId?: number;
+    orderId?: string;
+    amountTomans?: number;
+    amountRials?: number;
+    paymentUrl: string;
+    isSimulated?: boolean;
+    canSimulate?: boolean;
+    error?: string;
+  }> {
+    return await this.request('/payment/request-module', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  public async testActivateModule(data: {
+    organizationId: number;
+    moduleSlug: string;
+    hardwareId?: string;
+  }): Promise<any> {
+    return await this.request('/payment/test-activate-module', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   public async testActivateSubscription(data: {
     organizationId: number;
     durationMonths: number;

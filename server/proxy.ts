@@ -86,6 +86,16 @@ proxyRouter.get('/project-settings', async (req, res) => {
   }
 });
 
+// Public System Modules Catalog (for module pricing, metadata, and licensing info)
+proxyRouter.get('/system-modules', async (req, res) => {
+  try {
+    const items = await DirectusAdminClient.getItems('system_modules', req.query).catch(() => []);
+    return res.json({ data: items });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || 'Failed to fetch system modules' });
+  }
+});
+
 // Profile / Current user endpoints (available at both /api/users/me and /api/auth/me)
 const handleMeRequest = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -181,6 +191,7 @@ const TENANT_SCOPED_COLLECTIONS = new Set([
   'size_guide_values',
   'organization_users',
   'subscriptions',
+  'organization_modules',
 ]);
 
 // Generic List items with injected Tenant Scope
@@ -194,6 +205,11 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
       return res.json({ data: items });
     }
 
+    if (collection === 'system_modules') {
+      const items = await DirectusAdminClient.getItems('system_modules', req.query).catch(() => []);
+      return res.json({ data: items });
+    }
+
     if (collection === 'organizations') {
       const { organizations } = await getUserOrganizations(userId, organizationId);
       return res.json({ data: organizations });
@@ -204,9 +220,9 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
       return res.status(403).json({ error: 'دسترسی غیرمجاز: سازمان فعال یافت نشد.' });
     }
 
-    // Check Plan Gate for Web Clients (exempt subscriptions and project_settings)
+    // Check Plan Gate for Web Clients (exempt subscriptions, organization_modules, and project_settings)
     const isDesktop = req.headers['x-tankhor-platform'] === 'desktop';
-    if (!isDesktop && TENANT_SCOPED_COLLECTIONS.has(collection) && collection !== 'subscriptions') {
+    if (!isDesktop && TENANT_SCOPED_COLLECTIONS.has(collection) && collection !== 'subscriptions' && collection !== 'organization_modules') {
       const { activeOrganization } = await getUserOrganizations(userId, organizationId);
       if (activeOrganization && activeOrganization.plan === 'free') {
         return res.status(403).json({

@@ -6,8 +6,9 @@ import {
   Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
   InventoryMovement, Customer, Order, OrderItem, Supplier, PurchaseOrder,
   PurchaseOrderItem, StockTransfer, StockTransferItem, SizeGuideTemplate,
-  SizeGuideMeasurement, SizeGuideValue, Subscription
+  SizeGuideMeasurement, SizeGuideValue, Subscription, SystemModule, OrganizationModule
 } from '../types';
+import { DEFAULT_SYSTEM_MODULES } from '../utils/license';
 
 export function isTauriEnvironment(): boolean {
   if (typeof window === 'undefined') return false;
@@ -47,6 +48,8 @@ export const SQLITE_COLLECTIONS = [
   'size_guide_measurements',
   'size_guide_values',
   'subscriptions',
+  'system_modules',
+  'organization_modules',
 ] as const;
 
 export class SqliteStorageAdapter implements IStorageProvider {
@@ -1351,5 +1354,61 @@ export class SqliteStorageAdapter implements IStorageProvider {
     };
     await this.saveItem('subscriptions', saved);
     return saved;
+  }
+
+  // System & Organization Modules
+  async getSystemModules(params?: QueryParams): Promise<SystemModule[]> {
+    let list = await this.getItems<SystemModule>('system_modules');
+    if (!list || list.length === 0 || list.some((m) => m.slug === 'accounting' || m.price_ir?.includes('۱,۴۹۰,۰۰۰'))) {
+      list = [...DEFAULT_SYSTEM_MODULES];
+      for (const m of list) {
+        await this.saveItem('system_modules', m);
+      }
+    }
+    if (params?.status) {
+      list = list.filter((m) => m.status === params.status);
+    }
+    return list;
+  }
+
+  async getOrganizationModules(params?: QueryParams): Promise<OrganizationModule[]> {
+    const orgId = this.getActiveOrgId(params);
+    let list = await this.getItems<OrganizationModule>('organization_modules', orgId);
+    if (params?.status) {
+      list = list.filter((m) => m.status === params.status);
+    }
+    return list;
+  }
+
+  async saveOrganizationModule(mod: Partial<OrganizationModule>): Promise<OrganizationModule> {
+    const list = await this.getItems<OrganizationModule>('organization_modules');
+    const validId = typeof mod.id === 'number' && mod.id > 0 ? mod.id : this.generateUniqueId(list);
+    const orgId = this.getActiveOrgId({ organization_id: normalizeId(mod.organization_id) });
+
+    const existing = list.find(
+      (m) => normalizeId(m.organization_id) === (orgId || 1) && m.slug === mod.slug
+    );
+
+    const saved: OrganizationModule = {
+      organization_id: orgId || 1,
+      slug: mod.slug || 'barcode',
+      module_id: mod.module_id || 1,
+      license_type: mod.license_type || 'lifetime',
+      status: mod.status || 'active',
+      license_token: mod.license_token || null,
+      hardware_id: mod.hardware_id || null,
+      starts_at: mod.starts_at || new Date().toISOString(),
+      expires_at: mod.expires_at || null,
+      ...existing,
+      ...mod,
+      id: existing ? existing.id : validId,
+    };
+
+    await this.saveItem('organization_modules', saved);
+    return saved;
+  }
+
+  async deleteOrganizationModule(id: number): Promise<boolean> {
+    return this.deleteItem('organization_modules', id);
   }
 }

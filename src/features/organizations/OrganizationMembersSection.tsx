@@ -301,49 +301,49 @@ export const OrganizationMembersSection: React.FC = () => {
 
       {/* Role Matrix Helper Table */}
       <Card
-        title="ماتریس دسترسی نقش‌های سیستم"
-        subtitle="جدول مقایسه‌ای سطح اختیارات انواع کارمندان در پلتفرم تن‌خور"
+        title={t('settings.roleMatrixTitle')}
+        subtitle={t('settings.roleMatrixSubtitle')}
       >
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-start">
             <thead>
               <tr className="border-b border-neutral-200 dark:border-neutral-700/80 bg-neutral-100/70 dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100 font-bold">
-                <th className="p-3 text-start">قابلیت / منو</th>
+                <th className="p-3 text-start">{t('settings.capabilityOrMenu')}</th>
                 <th className="p-3 text-center">
                   <span className="inline-flex items-center gap-1.5 justify-center">
                     <Crown className="w-3.5 h-3.5 text-amber-500" />
-                    <span>مالک</span>
+                    <span>{t('settings.roleOwnerShort')}</span>
                   </span>
                 </th>
                 <th className="p-3 text-center">
                   <span className="inline-flex items-center gap-1.5 justify-center">
                     <Briefcase className="w-3.5 h-3.5 text-blue-500" />
-                    <span>مدیر</span>
+                    <span>{t('settings.roleManagerShort')}</span>
                   </span>
                 </th>
                 <th className="p-3 text-center">
                   <span className="inline-flex items-center gap-1.5 justify-center">
                     <Warehouse className="w-3.5 h-3.5 text-purple-500" />
-                    <span>انباردار</span>
+                    <span>{t('settings.roleWarehouseShort')}</span>
                   </span>
                 </th>
                 <th className="p-3 text-center">
                   <span className="inline-flex items-center gap-1.5 justify-center">
                     <ShoppingBag className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>فروشنده</span>
+                    <span>{t('settings.roleSalesShort')}</span>
                   </span>
                 </th>
                 <th className="p-3 text-center">
                   <span className="inline-flex items-center gap-1.5 justify-center">
                     <Eye className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
-                    <span>مشاهده‌گر</span>
+                    <span>{t('settings.roleViewerShort')}</span>
                   </span>
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/80 text-neutral-800 dark:text-neutral-200">
               <tr>
-                <td className="p-3 font-medium">تنظیمات سازمان & برند</td>
+                <td className="p-3 font-medium">{t('settings.matrixOrgSettings')}</td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
                 <td className="p-3 text-center"><X className="w-4 h-4 text-neutral-300 dark:text-neutral-600 inline" /></td>
                 <td className="p-3 text-center"><X className="w-4 h-4 text-neutral-300 dark:text-neutral-600 inline" /></td>
@@ -351,7 +351,7 @@ export const OrganizationMembersSection: React.FC = () => {
                 <td className="p-3 text-center"><X className="w-4 h-4 text-neutral-300 dark:text-neutral-600 inline" /></td>
               </tr>
               <tr>
-                <td className="p-3 font-medium">مدیر اعضا و دعوت کارمندان</td>
+                <td className="p-3 font-medium">{t('settings.matrixMemberManagement')}</td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
                 <td className="p-3 text-center"><X className="w-4 h-4 text-neutral-300 dark:text-neutral-600 inline" /></td>
@@ -359,7 +359,7 @@ export const OrganizationMembersSection: React.FC = () => {
                 <td className="p-3 text-center"><X className="w-4 h-4 text-neutral-300 dark:text-neutral-600 inline" /></td>
               </tr>
               <tr>
-                <td className="p-3 font-medium">تعریف و ویرایش محصولات</td>
+                <td className="p-3 font-medium">{t('settings.matrixProductManagement')}</td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
                 <td className="p-3 text-center"><X className="w-4 h-4 text-neutral-300 dark:text-neutral-600 inline" /></td>
@@ -367,7 +367,7 @@ export const OrganizationMembersSection: React.FC = () => {
                 <td className="p-3 text-center"><X className="w-4 h-4 text-neutral-300 dark:text-neutral-600 inline" /></td>
               </tr>
               <tr>
-                <td className="p-3 font-medium">مدیریت انبار، قفسه‌ها و اصلاح موجودی</td>
+                <td className="p-3 font-medium">{t('settings.matrixInventoryManagement')}</td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
@@ -375,7 +375,7 @@ export const OrganizationMembersSection: React.FC = () => {
                 <td className="p-3 text-center"><X className="w-4 h-4 text-neutral-300 dark:text-neutral-600 inline" /></td>
               </tr>
               <tr>
-                <td className="p-3 font-medium">ثبت سفارشات فروش مشتریان</td>
+                <td className="p-3 font-medium">{t('settings.matrixSalesOrders')}</td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
                 <td className="p-3 text-center"><X className="w-4 h-4 text-neutral-300 dark:text-neutral-600 inline" /></td>
@@ -383,7 +383,7 @@ export const OrganizationMembersSection: React.FC = () => {
                 <td className="p-3 text-center"><X className="w-4 h-4 text-neutral-300 dark:text-neutral-600 inline" /></td>
               </tr>
               <tr>
-                <td className="p-3 font-medium">سفارشات خرید و مدیریت تامین‌کنندگان</td>
+                <td className="p-3 font-medium">{t('settings.matrixPurchasing')}</td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
@@ -391,7 +391,7 @@ export const OrganizationMembersSection: React.FC = () => {
                 <td className="p-3 text-center"><X className="w-4 h-4 text-neutral-300 dark:text-neutral-600 inline" /></td>
               </tr>
               <tr>
-                <td className="p-3 font-medium">مشاهده قیمت خرید و حاشیه سود مالی</td>
+                <td className="p-3 font-medium">{t('settings.matrixFinancialProfit')}</td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
                 <td className="p-3 text-center"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 inline" /></td>
                 <td className="p-3 text-center"><X className="w-4 h-4 text-neutral-300 dark:text-neutral-600 inline" /></td>
@@ -407,7 +407,7 @@ export const OrganizationMembersSection: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingMember ? 'ویرایش سطح دسترسی عضو' : 'افزودن یا دعوت عضو جدید به سازمان'}
+        title={editingMember ? (isPersian ? 'ویرایش سطح دسترسی عضو' : 'Edit Member Access') : (isPersian ? 'افزودن یا دعوت عضو جدید به سازمان' : 'Add or Invite New Member')}
         maxWidth="lg"
       >
         <form onSubmit={handleSaveMember} className="space-y-4">

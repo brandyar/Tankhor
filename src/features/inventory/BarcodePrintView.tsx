@@ -12,6 +12,8 @@ import { Badge } from '../../components/ui/Badge';
 import { formatCurrency, toPersianDigits } from '../../utils/formatters';
 import { printElement } from '../../utils/print';
 import { generateBarcodeSvg, generateRandomBarcode } from '../../utils/barcode';
+import { useModuleAccess } from '../../hooks/useModuleAccess';
+import { ModuleLockedCard } from '../../components/modules/ModuleLockedCard';
 import {
   Printer,
   Barcode as BarcodeIcon,
@@ -42,7 +44,9 @@ type LabelTemplate = 'thermal_50x30' | 'thermal_40x25' | 'hangtag_60x40' | 'a4_s
 export const BarcodePrintView: React.FC = () => {
   const { t, locale } = useTranslation();
   const { activeOrganization } = useOrganization();
+  const { hasAccess, loading: moduleLoading } = useModuleAccess();
   const isPersian = locale === 'fa';
+  const hasBarcodeAccess = hasAccess('barcode');
 
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -283,6 +287,21 @@ export const BarcodePrintView: React.FC = () => {
     }
     return null;
   }, [printQueue, variants, colors, sizes]);
+
+  if (!moduleLoading && !hasBarcodeAccess) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={t('inventory.barcodePrintTitle')}
+          subtitle={t('inventory.barcodePrintSubtitle')}
+        />
+        <ModuleLockedCard
+          moduleSlug="barcode"
+          moduleName={t('inventory.barcodePrintTitle')}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

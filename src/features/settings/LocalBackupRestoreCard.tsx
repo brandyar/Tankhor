@@ -30,8 +30,10 @@ import {
 } from 'lucide-react';
 
 export const LocalBackupRestoreCard: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { activeOrganization, refreshOrganizations } = useOrganization();
+  const isPersian = locale === 'fa';
+  const formatNum = (val: number | string) => (isPersian ? toPersianDigits(val) : String(val));
 
   // Local storage statistics
   const [stats, setStats] = useState<Record<string, number>>({});
@@ -258,8 +260,8 @@ export const LocalBackupRestoreCard: React.FC = () => {
 
       {/* Main Backup & Restore Card */}
       <Card
-        title="پشتیبان‌گیری و بازیابی پایگاه داده محلی"
-        subtitle="حفاظت از اطلاعات کسب‌وکار، انتقال به سایر سیستم‌ها و بازیابی فوری بدون وابستگی به اینترنت"
+        title={t('settings.backupRestoreTitle')}
+        subtitle={t('settings.backupRestoreSubtitle')}
       >
         <div className="space-y-6">
           {/* Current Local Database Metrics */}
@@ -267,11 +269,11 @@ export const LocalBackupRestoreCard: React.FC = () => {
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
                 <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                آمار رکوردهای ذخیره شده در سیستم محلی
+                {t('settings.localRecordsStats')}
               </span>
               {lastBackupTime && (
                 <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-mono">
-                  آخرین نسخه پشتیبان: {formatDate(lastBackupTime, true)}
+                  {t('settings.lastBackupTime')} {formatDate(lastBackupTime, true)}
                 </span>
               )}
             </div>
@@ -280,60 +282,60 @@ export const LocalBackupRestoreCard: React.FC = () => {
               <div className="p-3 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/70 dark:border-neutral-700/60 rounded-xl">
                 <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 text-[11px]">
                   <Package className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
-                  محصولات
+                  {t('settings.backupProducts')}
                 </div>
                 <div className="text-base font-bold text-neutral-900 dark:text-neutral-100 mt-1">
-                  {toPersianDigits(totalProducts)}
+                  {formatNum(totalProducts)}
                 </div>
               </div>
 
               <div className="p-3 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/70 dark:border-neutral-700/60 rounded-xl">
                 <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 text-[11px]">
                   <Layers className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
-                  تنوع کالاها
+                  {t('settings.backupVariants')}
                 </div>
                 <div className="text-base font-bold text-neutral-900 dark:text-neutral-100 mt-1">
-                  {toPersianDigits(totalVariants)}
+                  {formatNum(totalVariants)}
                 </div>
               </div>
 
               <div className="p-3 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/70 dark:border-neutral-700/60 rounded-xl">
                 <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 text-[11px]">
                   <ShoppingBag className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
-                  فاکتورها
+                  {t('settings.backupOrders')}
                 </div>
                 <div className="text-base font-bold text-neutral-900 dark:text-neutral-100 mt-1">
-                  {toPersianDigits(totalOrders)}
+                  {formatNum(totalOrders)}
                 </div>
               </div>
 
               <div className="p-3 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/70 dark:border-neutral-700/60 rounded-xl">
                 <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 text-[11px]">
                   <Warehouse className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
-                  انبارها
+                  {t('settings.backupWarehouses')}
                 </div>
                 <div className="text-base font-bold text-neutral-900 dark:text-neutral-100 mt-1">
-                  {toPersianDigits(totalWarehouses)}
+                  {formatNum(totalWarehouses)}
                 </div>
               </div>
 
               <div className="p-3 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/70 dark:border-neutral-700/60 rounded-xl">
                 <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 text-[11px]">
                   <Ruler className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
-                  راهنمای سایز
+                  {t('settings.backupSizeGuides')}
                 </div>
                 <div className="text-base font-bold text-neutral-900 dark:text-neutral-100 mt-1">
-                  {toPersianDigits(totalSizeGuides)}
+                  {formatNum(totalSizeGuides)}
                 </div>
               </div>
 
               <div className="p-3 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/70 dark:border-neutral-700/60 rounded-xl">
                 <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 text-[11px]">
                   <Users className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
-                  مشتریان
+                  {t('settings.backupCustomers')}
                 </div>
                 <div className="text-base font-bold text-neutral-900 dark:text-neutral-100 mt-1">
-                  {toPersianDigits(totalCustomers)}
+                  {formatNum(totalCustomers)}
                 </div>
               </div>
             </div>
@@ -349,12 +351,12 @@ export const LocalBackupRestoreCard: React.FC = () => {
                     <HardDriveDownload className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">تهیه فایل پشتیبان (Backup)</h4>
-                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">خروجی کامل از تمام بخش‌ها در یک فایل با فرمت JSON</p>
+                    <h4 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">{t('settings.exportBackupTitle')}</h4>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{t('settings.exportBackupDesc')}</p>
                   </div>
                 </div>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed mt-2">
-                  با فشردن دکمه زیر، یک فایل جامع شامل تمام اطلاعات محصولات، موجودی، فاکتورها و قالب‌های سایز دانلود می‌شود. می‌توانید این فایل را روی فلش‌مموری، سیستم دیگر یا فضای ابری شخصی خود ذخیره کنید.
+                  {t('settings.exportBackupHelp')}
                 </p>
               </div>
 
@@ -366,33 +368,33 @@ export const LocalBackupRestoreCard: React.FC = () => {
                   icon={<Download className="w-4 h-4" />}
                   className="w-full bg-emerald-600 hover:bg-emerald-700 font-bold text-xs py-2.5"
                 >
-                  دانلود فایل پشتیبان کامل دیتابیس (JSON)
+                  {t('settings.downloadBackupBtn')}
                 </Button>
 
                 {/* Quick CSV Exports */}
                 <div className="flex items-center gap-2 pt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
-                  <span className="shrink-0">خروجی اکسل سریع:</span>
+                  <span className="shrink-0">{t('settings.quickExcelExport')}</span>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <button
-                      onClick={() => handleExportCsv('products', 'محصولات')}
+                      onClick={() => handleExportCsv('products', t('settings.backupProducts'))}
                       className="px-2 py-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 font-medium text-neutral-700 dark:text-neutral-200 transition-colors flex items-center gap-1"
                     >
                       <FileSpreadsheet className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                      محصولات
+                      {t('settings.backupProducts')}
                     </button>
                     <button
-                      onClick={() => handleExportCsv('orders', 'فاکتورها')}
+                      onClick={() => handleExportCsv('orders', t('settings.backupOrders'))}
                       className="px-2 py-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 font-medium text-neutral-700 dark:text-neutral-200 transition-colors flex items-center gap-1"
                     >
                       <FileSpreadsheet className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                      فاکتورها
+                      {t('settings.backupOrders')}
                     </button>
                     <button
-                      onClick={() => handleExportCsv('inventory_items', 'موجودی انبار')}
+                      onClick={() => handleExportCsv('inventory_items', t('settings.backupInventory'))}
                       className="px-2 py-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 font-medium text-neutral-700 dark:text-neutral-200 transition-colors flex items-center gap-1"
                     >
                       <FileSpreadsheet className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                      موجودی
+                      {t('settings.backupInventory')}
                     </button>
                   </div>
                 </div>
@@ -407,12 +409,12 @@ export const LocalBackupRestoreCard: React.FC = () => {
                     <HardDriveUpload className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">بازیابی اطلاعات (Restore)</h4>
-                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">بارگذاری فایل پشتیبان قبلی روی این سیستم یا مرورگر</p>
+                    <h4 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">{t('settings.restoreBackupTitle')}</h4>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{t('settings.restoreBackupDesc')}</p>
                   </div>
                 </div>
                 <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed mt-2">
-                  اگر ویندوز سیستم خود را تعویض کرده‌اید، کش مرورگر پاک شده یا می‌خواهید اطلاعات خود را از سیستم دیگری منتقل کنید، فایل پشتیبان (JSON) را بارگذاری نمایید.
+                  {t('settings.restoreBackupHelp')}
                 </p>
               </div>
 
@@ -423,7 +425,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
                   icon={<Upload className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
                   className="w-full font-bold text-xs py-2.5 border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40"
                 >
-                  انتخاب و بارگذاری فایل پشتیبان (JSON)
+                  {t('settings.uploadBackupBtn')}
                 </Button>
               </div>
             </div>
@@ -434,10 +436,10 @@ export const LocalBackupRestoreCard: React.FC = () => {
             <div className="space-y-0.5">
               <h5 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-amber-500" />
-                داده‌های آماده تستی و مدیریت شروع به کار
+                {t('settings.demoDataTitle')}
               </h5>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                جهت آشنایی و بررسی محیط نرم‌افزار یا پاکسازی کامل و شروع کار با داده‌های تمیز
+                {t('settings.demoDataSubtitle')}
               </p>
             </div>
 
@@ -450,7 +452,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
                 icon={<Sparkles className="w-3.5 h-3.5 text-amber-500" />}
                 className="text-xs font-medium hover:bg-amber-50 dark:hover:bg-amber-950/30 border-amber-300 dark:border-amber-800/80 text-amber-800 dark:text-amber-300"
               >
-                بارگذاری نمونه اطلاعات پوشاک
+                {t('settings.seedDemoBtn')}
               </Button>
 
               <Button
@@ -460,7 +462,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
                 icon={<Trash2 className="w-3.5 h-3.5 text-red-500" />}
                 className="text-xs font-medium hover:bg-red-50 dark:hover:bg-red-950/30 border-red-300 dark:border-red-800/80 text-red-700 dark:text-red-400"
               >
-                پاکسازی داده‌های محلی
+                {t('settings.clearLocalDataBtn')}
               </Button>
             </div>
           </div>
@@ -474,65 +476,65 @@ export const LocalBackupRestoreCard: React.FC = () => {
           setInspectionModalOpen(false);
           setInspectedData(null);
         }}
-        title="بررسی و تأیید بازیابی فایل پشتیبان"
+        title={t('settings.restoreModalTitle')}
         maxWidth="xl"
       >
         <div className="p-5 space-y-4">
           <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 rounded-xl text-blue-900 dark:text-blue-200 text-xs">
             <FileJson className="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
             <div>
-              <p className="font-bold">فایل پشتیبان تن‌خور با موفقیت خوانده و اعتبارسنجی شد.</p>
+              <p className="font-bold">{t('settings.restoreValidatedMsg')}</p>
               <p className="text-neutral-600 dark:text-neutral-300 text-[11px] mt-0.5">
-                تاریخ ایجاد فایل: {inspectedData?.metadata?.exported_at_jalali || '-'}
-                {inspectedData?.metadata?.organization?.name && ` | سازمان: ${inspectedData.metadata.organization.name}`}
+                {t('settings.backupCreatedDate')} {inspectedData?.metadata?.exported_at_jalali || '-'}
+                {inspectedData?.metadata?.organization?.name && ` | ${t('settings.backupOrgLabel')} ${inspectedData.metadata.organization.name}`}
               </p>
             </div>
           </div>
 
           <div>
-            <h5 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-2">محتوای موجود در این فایل پشتیبان:</h5>
+            <h5 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 mb-2">{t('settings.backupContentsTitle')}</h5>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
               <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] rounded-lg border border-neutral-200/80 dark:border-neutral-800 flex justify-between items-center">
-                <span className="text-neutral-600 dark:text-neutral-300">کالاها:</span>
+                <span className="text-neutral-600 dark:text-neutral-300">{t('settings.restoreProductsCount')}</span>
                 <span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">
-                  {toPersianDigits(inspectedData?.collections?.products || 0)}
+                  {formatNum(inspectedData?.collections?.products || 0)}
                 </span>
               </div>
               <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] rounded-lg border border-neutral-200/80 dark:border-neutral-800 flex justify-between items-center">
-                <span className="text-neutral-600 dark:text-neutral-300">تنوع کالاها:</span>
+                <span className="text-neutral-600 dark:text-neutral-300">{t('settings.restoreVariantsCount')}</span>
                 <span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">
-                  {toPersianDigits(inspectedData?.collections?.product_variants || 0)}
+                  {formatNum(inspectedData?.collections?.product_variants || 0)}
                 </span>
               </div>
               <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] rounded-lg border border-neutral-200/80 dark:border-neutral-800 flex justify-between items-center">
-                <span className="text-neutral-600 dark:text-neutral-300">فاکتورها:</span>
+                <span className="text-neutral-600 dark:text-neutral-300">{t('settings.restoreOrdersCount')}</span>
                 <span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">
-                  {toPersianDigits(inspectedData?.collections?.orders || 0)}
+                  {formatNum(inspectedData?.collections?.orders || 0)}
                 </span>
               </div>
               <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] rounded-lg border border-neutral-200/80 dark:border-neutral-800 flex justify-between items-center">
-                <span className="text-neutral-600 dark:text-neutral-300">انبارها:</span>
+                <span className="text-neutral-600 dark:text-neutral-300">{t('settings.restoreWarehousesCount')}</span>
                 <span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">
-                  {toPersianDigits(inspectedData?.collections?.warehouses || 0)}
+                  {formatNum(inspectedData?.collections?.warehouses || 0)}
                 </span>
               </div>
               <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] rounded-lg border border-neutral-200/80 dark:border-neutral-800 flex justify-between items-center">
-                <span className="text-neutral-600 dark:text-neutral-300">موجودی اقلام:</span>
+                <span className="text-neutral-600 dark:text-neutral-300">{t('settings.restoreInventoryCount')}</span>
                 <span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">
-                  {toPersianDigits(inspectedData?.collections?.inventory_items || 0)}
+                  {formatNum(inspectedData?.collections?.inventory_items || 0)}
                 </span>
               </div>
               <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] rounded-lg border border-neutral-200/80 dark:border-neutral-800 flex justify-between items-center">
-                <span className="text-neutral-600 dark:text-neutral-300">راهنماهای سایز:</span>
+                <span className="text-neutral-600 dark:text-neutral-300">{t('settings.restoreSizeGuidesCount')}</span>
                 <span className="font-bold font-mono text-neutral-900 dark:text-neutral-100">
-                  {toPersianDigits(inspectedData?.collections?.size_guide_templates || 0)}
+                  {formatNum(inspectedData?.collections?.size_guide_templates || 0)}
                 </span>
               </div>
             </div>
           </div>
 
           <div className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
-            <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 block">روش بازیابی را انتخاب کنید:</label>
+            <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 block">{t('settings.chooseRestoreMode')}</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div
                 onClick={() => setRestoreMode('replace')}
@@ -543,11 +545,11 @@ export const LocalBackupRestoreCard: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">جایگزینی کامل (Replace)</span>
+                  <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.restoreModeReplace')}</span>
                   {restoreMode === 'replace' && <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
                 </div>
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                  داده‌های محلی فعلی پاک شده و محتوای فایل جایگزین آنها می‌شود (توصیه شده برای تعویض سیستم).
+                  {t('settings.restoreModeReplaceDesc')}
                 </p>
               </div>
 
@@ -560,11 +562,11 @@ export const LocalBackupRestoreCard: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">ادغام اطلاعات (Merge)</span>
+                  <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.restoreModeMerge')}</span>
                   {restoreMode === 'merge' && <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
                 </div>
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                  رکوردهای جدید اضافه شده و رکوردهای موجود با شناسه یکسان به‌روزرسانی می‌گردند.
+                  {t('settings.restoreModeMergeDesc')}
                 </p>
               </div>
             </div>
@@ -579,7 +581,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
                 setInspectedData(null);
               }}
             >
-              انصراف
+              {t('common.cancel')}
             </Button>
             <Button
               variant="primary"
@@ -589,7 +591,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
               icon={<CheckCircle2 className="w-4 h-4" />}
               className="bg-blue-600 hover:bg-blue-700 font-bold"
             >
-              تأیید و اجرای بازیابی
+              {t('settings.confirmRestoreBtn')}
             </Button>
           </div>
         </div>
@@ -599,16 +601,16 @@ export const LocalBackupRestoreCard: React.FC = () => {
       <Modal
         isOpen={clearConfirmModalOpen}
         onClose={() => setClearConfirmModalOpen(false)}
-        title="تأیید پاکسازی پایگاه داده محلی"
+        title={t('settings.clearModalTitle')}
         maxWidth="md"
       >
         <div className="p-5 space-y-4">
           <div className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 rounded-xl text-red-900 dark:text-red-200 text-xs">
             <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold">هشدار: این عمل تمام اطلاعات محلی شما را حذف می‌کند!</p>
+              <p className="font-bold">{t('settings.clearModalWarning')}</p>
               <p className="text-neutral-700 dark:text-neutral-300 text-[11px] mt-1 leading-relaxed">
-                تمام کالاها، تنوع‌ها، فاکتورها، انبارها و جداول سایز ثبت‌شده در این مرورگر پاک خواهند شد. قبل از این کار حتماً یک نسخه پشتیبان دانلود نمایید.
+                {t('settings.clearModalDesc')}
               </p>
             </div>
           </div>
@@ -619,7 +621,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
               size="sm"
               onClick={() => setClearConfirmModalOpen(false)}
             >
-              انصراف
+              {t('common.cancel')}
             </Button>
             <Button
               variant="danger"
@@ -628,7 +630,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
               icon={<Trash2 className="w-4 h-4" />}
               className="font-bold"
             >
-              بله، تمام اطلاعات محلی پاک شود
+              {t('settings.confirmClearBtn')}
             </Button>
           </div>
         </div>

@@ -174,7 +174,7 @@ export const MovementsView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('navigation.movements')}
+        title={t('navigation.stockMovements')}
         subtitle={t('inventory.movementsViewSubtitle')}
       />
 

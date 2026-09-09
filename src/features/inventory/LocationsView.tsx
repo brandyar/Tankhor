@@ -187,7 +187,7 @@ export const LocationsView: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('navigation.locations')}
+        title={t('inventory.locationsTitle')}
         subtitle={t('inventory.locationsManagementSubtitle')}
         action={
           <Button onClick={() => handleOpenModal()} icon={<Plus className="w-4 h-4" />}>

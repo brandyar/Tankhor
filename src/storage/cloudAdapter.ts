@@ -8,7 +8,7 @@ import {
   Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
   InventoryMovement, Customer, Order, OrderItem, Supplier, PurchaseOrder,
   PurchaseOrderItem, StockTransfer, StockTransferItem, SizeGuideTemplate,
-  SizeGuideMeasurement, SizeGuideValue, Subscription
+  SizeGuideMeasurement, SizeGuideValue, Subscription, SystemModule, OrganizationModule
 } from '../types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1376,6 +1376,70 @@ export class CloudDirectusAdapter implements IStorageProvider {
       const saved = await this.localAdapter.saveSubscription(sub);
       StorageSyncManager.enqueue({ action: sub.id ? 'UPDATE' : 'CREATE', collection: 'subscriptions', payload: saved });
       return saved;
+    }
+  }
+
+  // System & Organization Modules
+  async getSystemModules(params?: QueryParams): Promise<SystemModule[]> {
+    try {
+      const filter: any = {};
+      if (params?.status) {
+        filter.status = { _eq: params.status };
+      }
+      const items = await directusClient.getItems<SystemModule>('system_modules', {
+        filter,
+        sort: 'id',
+      });
+      if (items && items.length > 0) {
+        this.localAdapter.setItem('system_modules', items);
+        return items;
+      }
+      return await this.localAdapter.getSystemModules(params);
+    } catch {
+      return await this.localAdapter.getSystemModules(params);
+    }
+  }
+
+  async getOrganizationModules(params?: QueryParams): Promise<OrganizationModule[]> {
+    try {
+      const filter: any = {};
+      if (params?.organization_id) {
+        filter.organization_id = { _eq: params.organization_id };
+      }
+      if (params?.status) {
+        filter.status = { _eq: params.status };
+      }
+      const items = await directusClient.getItems<OrganizationModule>('organization_modules', {
+        filter,
+        sort: '-id',
+      });
+      return items;
+    } catch {
+      return await this.localAdapter.getOrganizationModules(params);
+    }
+  }
+
+  async saveOrganizationModule(mod: Partial<OrganizationModule>): Promise<OrganizationModule> {
+    try {
+      if (mod.id) {
+        return await directusClient.updateItem<OrganizationModule>('organization_modules', mod.id, mod);
+      }
+      return await directusClient.createItem<OrganizationModule>('organization_modules', mod);
+    } catch {
+      const saved = await this.localAdapter.saveOrganizationModule(mod);
+      StorageSyncManager.enqueue({ action: mod.id ? 'UPDATE' : 'CREATE', collection: 'organization_modules', payload: saved });
+      return saved;
+    }
+  }
+
+  async deleteOrganizationModule(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('organization_modules', id);
+      return true;
+    } catch {
+      const deleted = await this.localAdapter.deleteOrganizationModule(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'organization_modules', payload: { id } });
+      return deleted;
     }
   }
 }

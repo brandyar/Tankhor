@@ -424,3 +424,40 @@ export interface Subscription {
   date_updated?: string;
 }
 
+export type ModuleLicenseType = 'lifetime' | 'subscription' | 'pro_bundle';
+export type ModuleStatus = 'active' | 'expired' | 'revoked';
+export type SystemModuleStatus = 'published' | 'draft' | 'deprecated';
+
+export interface SystemModule {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  icon?: string | null;
+  price_ir?: string | null;
+  price_usd?: string | null;
+  is_standalone_purchasable?: boolean;
+  included_in_pro?: boolean;
+  required_permissions?: any;
+  status: SystemModuleStatus;
+}
+
+export interface OrganizationModule {
+  id: number;
+  slug: string;
+  organization_id: number | Organization;
+  module_id?: number | SystemModule;
+  license_type: ModuleLicenseType;
+  status: ModuleStatus;
+  license_token?: string | null;
+  hardware_id?: string | null;
+  starts_at?: string | null;
+  expires_at?: string | null;
+  // Optional joined / catalog fields
+  name?: string;
+  description?: string | null;
+  price_ir?: string | null;
+  price_usd?: string | null;
+  included_in_pro?: boolean;
+}
+

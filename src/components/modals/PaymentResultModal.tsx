@@ -7,12 +7,14 @@ import { CheckCircle2, XCircle, Sparkles, ShieldCheck, ArrowLeft, RefreshCw } fr
 
 interface PaymentResultState {
   isOpen: boolean;
-  status: 'success' | 'failed';
+  status: 'success' | 'module_success' | 'failed';
   trackId?: string | null;
   refNumber?: string | null;
   orgId?: string | null;
   plan?: string | null;
   message?: string | null;
+  moduleSlug?: string | null;
+  moduleName?: string | null;
 }
 
 export const PaymentResultModal: React.FC<{ onRetryPayment?: () => void }> = ({ onRetryPayment }) => {
@@ -29,27 +31,36 @@ export const PaymentResultModal: React.FC<{ onRetryPayment?: () => void }> = ({ 
       const urlParams = new URLSearchParams(window.location.search);
       const paymentStatus = urlParams.get('payment');
 
-      if (paymentStatus === 'success' || paymentStatus === 'failed') {
+      if (paymentStatus === 'success' || paymentStatus === 'module_success' || paymentStatus === 'failed') {
         const trackId = urlParams.get('track_id');
         const refNumber = urlParams.get('ref_number');
         const orgId = urlParams.get('org_id');
         const plan = urlParams.get('plan');
         const message = urlParams.get('message');
+        const moduleSlug = urlParams.get('module');
+        const moduleName = urlParams.get('module_name');
 
         setResult({
           isOpen: true,
-          status: paymentStatus,
+          status: paymentStatus as any,
           trackId,
           refNumber,
           orgId,
           plan,
           message,
+          moduleSlug,
+          moduleName,
         });
 
-        // If success, refresh organization and unlock cloud mode
+        // If subscription success, refresh organization and unlock cloud mode
         if (paymentStatus === 'success') {
           refreshOrganizations().catch(console.error);
           storageManager.setMode('cloud_synced');
+        }
+
+        // If module success, dispatch an event so all useModuleAccess hooks re-fetch
+        if (paymentStatus === 'module_success') {
+          window.dispatchEvent(new CustomEvent('tankhor_module_activated', { detail: { slug: moduleSlug } }));
         }
 
         // Clean query parameters from URL without reloading
@@ -65,6 +76,10 @@ export const PaymentResultModal: React.FC<{ onRetryPayment?: () => void }> = ({ 
 
   const handleClose = () => {
     setResult((prev) => ({ ...prev, isOpen: false }));
+    // If it was a module purchase, reload or refresh route to show the unlocked screen
+    if (result.status === 'module_success') {
+      window.dispatchEvent(new CustomEvent('tankhor_module_activated', { detail: { slug: result.moduleSlug } }));
+    }
   };
 
   const handleRetry = () => {
@@ -73,6 +88,8 @@ export const PaymentResultModal: React.FC<{ onRetryPayment?: () => void }> = ({ 
       onRetryPayment();
     }
   };
+
+  const isModule = result.status === 'module_success';
 
   return (
     <div
@@ -83,7 +100,7 @@ export const PaymentResultModal: React.FC<{ onRetryPayment?: () => void }> = ({ 
         id="payment-result-card"
         className="w-full max-w-md bg-white dark:bg-[#15171e] rounded-3xl shadow-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden animate-scale-up"
       >
-        {result.status === 'success' ? (
+        {result.status === 'success' || result.status === 'module_success' ? (
           <>
             {/* Header Success Banner */}
             <div className="bg-gradient-to-br from-emerald-600 to-teal-700 p-6 text-white text-center relative overflow-hidden">
@@ -93,7 +110,9 @@ export const PaymentResultModal: React.FC<{ onRetryPayment?: () => void }> = ({ 
               </div>
               <h2 className="text-lg font-black tracking-tight text-white">پرداخت با موفقیت انجام شد</h2>
               <p className="text-xs text-emerald-100 mt-1">
-                اشتراک سازمان شما با موفقیت به پلن حرفه‌ای (Pro) ارتقا یافت.
+                {isModule
+                  ? `لایسنس دائمی ماژول «${result.moduleName || result.moduleSlug || 'تخصصی'}» با موفقیت فعال گردید.`
+                  : 'اشتراک سازمان شما با موفقیت به پلن حرفه‌ای (Pro) ارتقا یافت.'}
               </p>
             </div>
 
@@ -101,12 +120,23 @@ export const PaymentResultModal: React.FC<{ onRetryPayment?: () => void }> = ({ 
             <div className="p-6 space-y-4">
               <div className="bg-neutral-50 dark:bg-neutral-900/60 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-800 space-y-3">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-neutral-500 dark:text-neutral-400">پلن فعال شده:</span>
+                  <span className="text-neutral-500 dark:text-neutral-400">
+                    {isModule ? 'ماژول فعال شده:' : 'پلن فعال شده:'}
+                  </span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    حرفه‌ای (Pro Plan)
+                    {isModule ? (result.moduleName || 'تولید و چاپ بارکد') : 'حرفه‌ای (Pro Plan)'}
                   </span>
                 </div>
+
+                {isModule && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-neutral-500 dark:text-neutral-400">نوع لایسنس:</span>
+                    <span className="font-bold text-neutral-800 dark:text-neutral-200">
+                      لایسنس دائمی (Lifetime)
+                    </span>
+                  </div>
+                )}
 
                 {result.trackId && (
                   <div className="flex items-center justify-between text-xs">
@@ -137,13 +167,15 @@ export const PaymentResultModal: React.FC<{ onRetryPayment?: () => void }> = ({ 
                   <span className="text-neutral-500 dark:text-neutral-400">وضعیت دسترسی:</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    فعال و نامحدود ابری
+                    {isModule ? 'فعال آفلاین و آنلاین دائمی' : 'فعال و نامحدود ابری'}
                   </span>
                 </div>
               </div>
 
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400 text-center leading-relaxed">
-                تمام امکانات ابری، پنل تحت وب و همگام‌سازی چند شعبه‌ای برای سازمان شما فعال گردید.
+                {isModule
+                  ? 'کلید امضا شده لایسنس ماژول روی سازمان شما ثبت شد و هم‌اکنون آماده استفاده است.'
+                  : 'تمام امکانات ابری، پنل تحت وب و همگام‌سازی چند شعبه‌ای برای سازمان شما فعال گردید.'}
               </p>
 
               <div className="pt-2">
@@ -153,7 +185,7 @@ export const PaymentResultModal: React.FC<{ onRetryPayment?: () => void }> = ({ 
                   className="w-full justify-center text-xs font-bold py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md cursor-pointer"
                   icon={<ArrowLeft className="w-4 h-4" />}
                 >
-                  ورود به سامانه
+                  {isModule ? 'ورود به ماژول' : 'ورود به سامانه'}
                 </Button>
               </div>
             </div>
