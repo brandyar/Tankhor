@@ -14,15 +14,8 @@ ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 # Copy dependency manifests and npm network configs
 COPY package.json package-lock.json .npmrc* ./
 
-# Configure robust network parameters for environments with unstable/throttled connection
-RUN npm config set fetch-retries 6 && \
-    npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000 && \
-    npm config set fetch-timeout 300000 && \
-    npm config set maxsockets 6
-
-# Install dependencies with retry fallback
-RUN npm ci --no-audit --no-fund || (sleep 3 && npm install --no-audit --no-fund)
+# Fast, clean dependency installation
+RUN npm ci --no-audit --no-fund
 
 # Copy all source files
 COPY . .

@@ -143,7 +143,7 @@ export const PurchaseModuleModal: React.FC<PurchaseModuleModalProps> = ({
   /**
    * Real Online Payment via Zibal Gateway
    */
-  const handleInitiatePayment = async (simulate = false) => {
+  const handleInitiatePayment = async () => {
     if (!activeOrganization?.id) return;
     setError(null);
     setIsProcessing(true);
@@ -159,7 +159,7 @@ export const PurchaseModuleModal: React.FC<PurchaseModuleModalProps> = ({
         organizationId: activeOrganization.id,
         moduleSlug,
         hardwareId,
-        simulate,
+        simulate: false,
       });
 
       if (res && res.paymentUrl) {
@@ -439,34 +439,13 @@ export const PurchaseModuleModal: React.FC<PurchaseModuleModalProps> = ({
               <div className="space-y-2.5 pt-1">
                 <Button
                   variant="primary"
-                  onClick={() => handleInitiatePayment(false)}
-                  disabled={isProcessing || isTestActivating}
+                  onClick={() => handleInitiatePayment()}
+                  disabled={isProcessing}
                   className="w-full justify-center text-xs font-bold py-3 bg-amber-600 hover:bg-amber-700 text-white shadow-md cursor-pointer"
                   icon={<CreditCard className="w-4 h-4" />}
                 >
                   {isProcessing ? 'در حال اتصال به درگاه زیبال...' : `پرداخت آنلاین با زیبال (${formattedPrice})`}
                 </Button>
-
-                {/* Sandbox / Test Instant Payment */}
-                <Button
-                  variant="outline"
-                  onClick={() => handleInitiatePayment(true)}
-                  disabled={isProcessing || isTestActivating}
-                  className="w-full justify-center text-xs font-semibold py-2.5 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900 cursor-pointer"
-                  icon={<Sparkles className="w-3.5 h-3.5 text-amber-500" />}
-                >
-                  تست پرداخت درگاه (محیط شبیه‌ساز زیبال - Sandbox)
-                </Button>
-
-                {/* 1-Click Instant Activation for Dev/Test */}
-                <button
-                  type="button"
-                  onClick={handleTestActivate}
-                  disabled={isProcessing || isTestActivating}
-                  className="w-full text-center text-[11px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 pt-1 cursor-pointer"
-                >
-                  {isTestActivating ? 'در حال فعال‌سازی فوری...' : 'فعال‌سازی فوری تستی (بدون ورود به درگاه)'}
-                </button>
               </div>
 
               {/* Manual Key Activation Collapsible */}

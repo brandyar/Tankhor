@@ -148,22 +148,9 @@ paymentRouter.post('/request', requireAuth, async (req: AuthenticatedRequest, re
     };
     pendingPayments.set(orderId, pendingData);
 
-    // If simulate requested (e.g. testing in dev / preview or offline)
+    // If simulate requested, reject in production
     if (simulate === true) {
-      const simulatedTrackId = Math.floor(100000000 + Math.random() * 900000000);
-      pendingData.trackId = simulatedTrackId;
-      trackIdToOrderId.set(simulatedTrackId, orderId);
-
-      return res.json({
-        success: true,
-        isSimulated: true,
-        trackId: simulatedTrackId,
-        orderId,
-        amountTomans: amountInTomans,
-        amountRials: amountInRials,
-        paymentUrl: `/api/payment/simulate-gateway?trackId=${simulatedTrackId}`,
-        message: 'درخواست درگاه در حالت شبیه‌ساز با موفقیت ایجاد شد.',
-      });
+      return res.status(400).json({ error: 'حالت آزمایشی (Sandbox) در محیط پروداکشن غیرفعال است. لطفاً از طریق درگاه واقعی اقدام کنید.' });
     }
 
     // Real Zibal Payment Request
@@ -291,22 +278,9 @@ paymentRouter.post('/request-module', requireAuth, async (req: AuthenticatedRequ
     };
     pendingPayments.set(orderId, pendingData);
 
-    // If simulate requested (e.g. testing in dev / preview or offline)
+    // If simulate requested, reject in production
     if (simulate === true) {
-      const simulatedTrackId = Math.floor(100000000 + Math.random() * 900000000);
-      pendingData.trackId = simulatedTrackId;
-      trackIdToOrderId.set(simulatedTrackId, orderId);
-
-      return res.json({
-        success: true,
-        isSimulated: true,
-        trackId: simulatedTrackId,
-        orderId,
-        amountTomans: amountInTomans,
-        amountRials: amountInRials,
-        paymentUrl: `/api/payment/simulate-gateway?trackId=${simulatedTrackId}`,
-        message: 'درخواست درگاه برای خرید ماژول در حالت آزمایشی (Sandbox) با موفقیت ایجاد شد.',
-      });
+      return res.status(400).json({ error: 'حالت آزمایشی (Sandbox) در محیط پروداکشن غیرفعال است. لطفاً از طریق درگاه واقعی اقدام کنید.' });
     }
 
     // Real Zibal Payment Request
@@ -369,139 +343,11 @@ paymentRouter.post('/request-module', requireAuth, async (req: AuthenticatedRequ
 });
 
 /**
- * Simulated Gateway Interface (for preview testing without bank card)
+ * Simulated Gateway Interface (disabled in production)
  * GET /api/payment/simulate-gateway?trackId=...
  */
 paymentRouter.get('/simulate-gateway', (req, res) => {
-  const trackId = Number(req.query.trackId);
-  const orderId = trackIdToOrderId.get(trackId);
-  const pending = orderId ? pendingPayments.get(orderId) : null;
-
-  const isModule = pending?.type === 'module';
-  const title = isModule
-    ? `خرید لایسنس دائمی ماژول ${pending?.moduleName || pending?.moduleSlug || ''}`
-    : 'خرید اشتراک Pro تن‌خور';
-  const subtitle = isModule
-    ? 'محیط آزمایشی (Sandbox) فعال‌سازی آنی ماژول'
-    : 'محیط آزمایشی (Sandbox) سامانه تن‌خور';
-  const confirmBtnText = isModule
-    ? 'تأیید پرداخت و فعال‌سازی آنی ماژول'
-    : 'تأیید پرداخت و فعال‌سازی اشتراک Pro';
-
-  const html = `
-  <!DOCTYPE html>
-  <html lang="fa" dir="rtl">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>درگاه پرداخت زیبال (محیط آزمایشی تن‌خور)</title>
-    <style>
-      body {
-        font-family: system-ui, -apple-system, sans-serif;
-        background-color: #f1f5f9;
-        margin: 0;
-        padding: 24px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        color: #1e293b;
-      }
-      .card {
-        background: #ffffff;
-        border-radius: 24px;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-        max-width: 440px;
-        width: 100%;
-        overflow: hidden;
-        border: 1px solid #e2e8f0;
-      }
-      .header {
-        background: linear-gradient(135deg, #1e40af, #3b82f6);
-        color: white;
-        padding: 24px;
-        text-align: center;
-      }
-      .header h2 { margin: 0; font-size: 18px; }
-      .header p { margin: 6px 0 0; font-size: 13px; opacity: 0.9; }
-      .body { padding: 24px; }
-      .info-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px 0;
-        border-bottom: 1px solid #f1f5f9;
-        font-size: 13px;
-      }
-      .info-label { color: #64748b; }
-      .info-value { font-weight: bold; }
-      .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
-      .btn {
-        padding: 14px;
-        border-radius: 14px;
-        font-size: 14px;
-        font-weight: bold;
-        cursor: pointer;
-        border: none;
-        text-align: center;
-        text-decoration: none;
-        transition: all 0.2s;
-      }
-      .btn-success { background: #10b981; color: white; }
-      .btn-success:hover { background: #059669; }
-      .btn-cancel { background: #f1f5f9; color: #64748b; }
-      .btn-cancel:hover { background: #e2e8f0; }
-    </style>
-  </head>
-  <body>
-    <div class="card">
-      <div class="header">
-        <h2>${title}</h2>
-        <p>${subtitle}</p>
-      </div>
-      <div class="body">
-        <div class="info-row">
-          <span class="info-label">مبلغ قابل پرداخت:</span>
-          <span class="info-value">${(pending?.amountInTomans || 490000).toLocaleString('fa-IR')} تومان</span>
-        </div>
-        ${isModule && pending?.moduleName ? `
-        <div class="info-row">
-          <span class="info-label">ماژول انتخابی:</span>
-          <span class="info-value font-bold text-blue-600">${pending.moduleName}</span>
-        </div>
-        ` : ''}
-        ${isModule && pending?.hardwareId ? `
-        <div class="info-row">
-          <span class="info-label">شناسه سخت‌افزار:</span>
-          <span class="info-value font-mono text-xs">${pending.hardwareId}</span>
-        </div>
-        ` : ''}
-        <div class="info-row">
-          <span class="info-label">شماره تراکنش (Track ID):</span>
-          <span class="info-value font-mono">${trackId}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">شماره سفارش:</span>
-          <span class="info-value font-mono">${pending?.orderId || '-'}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">پذیرنده:</span>
-          <span class="info-value">تن‌خور (پلتفرم مدیریت زنجیره پوشاک)</span>
-        </div>
-
-        <div class="actions">
-          <a href="/api/payment/callback?trackId=${trackId}&success=1&status=2" class="btn btn-success">
-            ${confirmBtnText}
-          </a>
-          <a href="/api/payment/callback?trackId=${trackId}&success=0&status=3" class="btn btn-cancel">
-            انصراف از پرداخت
-          </a>
-        </div>
-      </div>
-    </div>
-  </body>
-  </html>
-  `;
-  return res.send(html);
+  return res.status(403).send('درگاه آزمایشی در محیط پروداکشن غیرفعال است.');
 });
 
 /**
@@ -757,150 +603,15 @@ paymentRouter.post('/callback', handlePaymentCallback);
  * POST /api/payment/test-activate
  */
 paymentRouter.post('/test-activate', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { organizationId, durationMonths } = req.body;
-    const { userId } = req.user!;
-
-    const orgIdNum = Number(organizationId || req.user!.organizationId);
-    if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
-      return res.status(400).json({ error: 'شناسه سازمان نامعتبر است.' });
-    }
-
-    const months = Number(durationMonths) || 1;
-    const planInfo = SUBSCRIPTION_PLANS[months] || {
-      title: `اشتراک ${months} ماهه`,
-      priceTomans: months * 490000,
-      discountPercent: 0,
-    };
-
-    const org = await DirectusAdminClient.getItemById('organizations', orgIdNum);
-    if (!org) {
-      return res.status(404).json({ error: 'سازمان مورد نظر یافت نشد.' });
-    }
-
-    const startDate = new Date();
-    const endDate = new Date(startDate.getTime() + months * 30 * 24 * 60 * 60 * 1000);
-    const mockRefNumber = Math.floor(100000000000 + Math.random() * 900000000000);
-
-    // 1. Create subscription record in Directus
-    const newSub = await DirectusAdminClient.createItem('subscriptions', {
-      organization_id: orgIdNum,
-      start_date: startDate.toISOString(),
-      end_date: endDate.toISOString(),
-      transaction_amount: `${planInfo.priceTomans.toLocaleString('fa-IR')} تومان`,
-      Transaction_id: String(mockRefNumber),
-      user_created: userId,
-      date_created: new Date().toISOString(),
-    });
-
-    // 2. Update organization plan to pro
-    await DirectusAdminClient.updateItem('organizations', orgIdNum, {
-      plan: 'pro',
-      status: 'active',
-      date_updated: new Date().toISOString(),
-    });
-
-    // 3. Return updated organization state
-    const { activeOrganization, organizations } = await getUserOrganizations(userId, orgIdNum);
-
-    return res.json({
-      success: true,
-      message: 'اشتراک نسخه حرفه‌ای (Pro) با موفقیت فعال شد.',
-      subscription: newSub,
-      refNumber: mockRefNumber,
-      organization: activeOrganization,
-      activeOrganization,
-      organizations,
-    });
-  } catch (error: any) {
-    console.error('[payment /test-activate Error]:', error);
-    return res.status(500).json({ error: error.message || 'خطا در فعال‌سازی اشتراک تستی' });
-  }
+  return res.status(403).json({ error: 'فعال‌سازی تستی اشتراک در محیط پروداکشن مسدود است.' });
 });
 
 /**
- * 1-Click Test Module Activation (for instant preview testing)
+ * 1-Click Test Module Activation (disabled in production)
  * POST /api/payment/test-activate-module
  */
 paymentRouter.post('/test-activate-module', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { organizationId, moduleSlug, hardwareId } = req.body;
-    const orgIdNum = Number(organizationId || req.user!.organizationId);
-
-    if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
-      return res.status(400).json({ error: 'شناسه سازمان نامعتبر است.' });
-    }
-
-    if (!moduleSlug) {
-      return res.status(400).json({ error: 'شناسه ماژول الزامی است.' });
-    }
-
-    const org = await DirectusAdminClient.getItemById('organizations', orgIdNum);
-    if (!org) {
-      return res.status(404).json({ error: 'سازمان مورد نظر یافت نشد.' });
-    }
-
-    const hwid = hardwareId ? String(hardwareId).trim() : null;
-
-    const licenseToken = await generateLicenseTokenString({
-      organization_id: orgIdNum,
-      slug: moduleSlug,
-      license_type: 'lifetime',
-      hardware_id: hwid,
-      issued_at: new Date().toISOString(),
-      expires_at: null,
-    });
-
-    const existingRecords = await DirectusAdminClient.getItems('organization_modules', {
-      filter: {
-        _and: [
-          { organization_id: { _eq: orgIdNum } },
-          { slug: { _eq: moduleSlug } },
-        ],
-      },
-      limit: 1,
-    }).catch(() => []);
-
-    let savedItem: any = null;
-    if (existingRecords && existingRecords.length > 0) {
-      savedItem = await DirectusAdminClient.updateItem('organization_modules', existingRecords[0].id, {
-        status: 'active',
-        license_type: 'lifetime',
-        license_token: licenseToken,
-        hardware_id: hwid,
-        starts_at: new Date().toISOString().replace('Z', ''),
-        expires_at: null,
-      });
-    } else {
-      const sysMods = await DirectusAdminClient.getItems('system_modules', {
-        filter: { slug: { _eq: moduleSlug } },
-        limit: 1,
-      }).catch(() => []);
-      const moduleId = sysMods && sysMods.length > 0 ? sysMods[0].id : 1;
-
-      savedItem = await DirectusAdminClient.createItem('organization_modules', {
-        organization_id: orgIdNum,
-        module_id: moduleId,
-        slug: moduleSlug,
-        license_type: 'lifetime',
-        status: 'active',
-        license_token: licenseToken,
-        hardware_id: hwid,
-        starts_at: new Date().toISOString().replace('Z', ''),
-        expires_at: null,
-      });
-    }
-
-    return res.json({
-      success: true,
-      message: 'ماژول با موفقیت فعال شد.',
-      token: licenseToken,
-      module: savedItem,
-    });
-  } catch (error: any) {
-    console.error('[payment /test-activate-module Error]:', error);
-    return res.status(500).json({ error: error.message || 'خطا در فعال‌سازی تستی ماژول' });
-  }
+  return res.status(403).json({ error: 'فعال‌سازی تستی ماژول در محیط پروداکشن مسدود است.' });
 });
 
 /**

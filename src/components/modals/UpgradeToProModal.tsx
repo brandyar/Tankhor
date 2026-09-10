@@ -146,7 +146,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
   /**
    * Real Online Payment via Zibal Gateway
    */
-  const handleInitiatePayment = async (simulate = false) => {
+  const handleInitiatePayment = async () => {
     if (!activeOrganization?.id) return;
     setError(null);
     setIsProcessingPayment(true);
@@ -161,7 +161,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
       const res = await directusClient.requestPayment({
         organizationId: activeOrganization.id,
         durationMonths: selectedMonths,
-        simulate,
+        simulate: false,
       });
 
       if (res && res.paymentUrl) {
@@ -609,7 +609,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
                 <Button
                   type="button"
                   variant="primary"
-                  onClick={() => handleInitiatePayment(false)}
+                  onClick={() => handleInitiatePayment()}
                   isLoading={isProcessingPayment}
                   icon={<CreditCard className="w-4 h-4" />}
                   className="w-full justify-center text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md py-3 cursor-pointer"
@@ -617,7 +617,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
                   پرداخت آنلاین با درگاه زیبال (مبلغ: {toPersianDigits(currentPlan.priceTomans.toLocaleString('fa-IR'))} تومان)
                 </Button>
 
-                <div className="flex items-center justify-between gap-2 pt-1">
+                <div className="flex items-center justify-center pt-1">
                   <Button
                     type="button"
                     variant="outline"
@@ -625,21 +625,9 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
                     onClick={handleCheckPlanOnline}
                     isLoading={isChecking}
                     icon={<RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin' : ''}`} />}
-                    className="text-[11px]"
+                    className="text-[11px] w-full justify-center"
                   >
                     استعلام وضعیت اشتراک از سرور
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleTestActivate}
-                    isLoading={isTestActivating}
-                    icon={<Sparkles className="w-3.5 h-3.5 text-amber-500" />}
-                    className="text-[11px] text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800/80 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-                  >
-                    فعال‌سازی آزمایشی فوری (Sandbox)
                   </Button>
                 </div>
               </div>

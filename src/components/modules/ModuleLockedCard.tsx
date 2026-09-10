@@ -24,13 +24,12 @@ export const ModuleLockedCard: React.FC<ModuleLockedCardProps> = ({
   id,
 }) => {
   const { t, locale } = useTranslation();
-  const { systemModules, orgModules, hardwareId, activateLicense, createDemoLicenseToken, refreshModules } = useModuleAccess();
+  const { systemModules, orgModules, hardwareId, activateLicense, refreshModules } = useModuleAccess();
 
   const [licenseKey, setLicenseKey] = useState('');
   const [isActivating, setIsActivating] = useState(false);
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const [copiedHwId, setCopiedHwId] = useState(false);
-  const [generatedDemoKey, setGeneratedDemoKey] = useState<string | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
   const matchedModule = systemModules.find((m) => m.slug === moduleSlug);
@@ -72,30 +71,6 @@ export const ModuleLockedCard: React.FC<ModuleLockedCardProps> = ({
       }
     } catch (err: any) {
       setMessage({ text: err?.message || 'خطا در اعتبارسنجی لایسنس', isError: true });
-    } finally {
-      setIsActivating(false);
-    }
-  };
-
-  const handleGenerateAndApplyDemoKey = async () => {
-    try {
-      setIsActivating(true);
-      const token = await createDemoLicenseToken(moduleSlug);
-      setGeneratedDemoKey(token);
-      setLicenseKey(token);
-
-      const res = await activateLicense(token);
-      if (res.success) {
-        setMessage({ text: 'لایسنس آفلاین تستی با موفقیت ایجاد و اعمال شد!', isError: false });
-        await refreshModules();
-        if (onUnlocked) {
-          setTimeout(() => onUnlocked(), 1200);
-        }
-      } else {
-        setMessage({ text: res.message, isError: true });
-      }
-    } catch (err: any) {
-      setMessage({ text: 'خطا در صدور لایسنس تستی', isError: true });
     } finally {
       setIsActivating(false);
     }
@@ -230,22 +205,6 @@ export const ModuleLockedCard: React.FC<ModuleLockedCardProps> = ({
               >
                 {isActivating ? t('common.loading', 'در حال بررسی...') : t('modules.activateButton', 'فعال‌سازی لایسنس')}
               </Button>
-            </div>
-
-            {/* Test & Demo Quick Unlock Button */}
-            <div className="flex items-center justify-between pt-1">
-              <p className="text-xs text-neutral-400 dark:text-neutral-500">
-                {t('modules.demoNote', 'برای تست عملکرد در محیط دمو و آفلاین می‌توانید لایسنس آزمایشی بسازید:')}
-              </p>
-              <button
-                type="button"
-                onClick={handleGenerateAndApplyDemoKey}
-                disabled={isActivating}
-                className="text-xs font-medium text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{t('modules.quickDemoActivate', 'فعال‌سازی فوری تستی')}</span>
-              </button>
             </div>
 
             {/* Status Message Banner */}
