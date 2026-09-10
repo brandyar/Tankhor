@@ -1,18 +1,19 @@
 import React from 'react';
 
-interface Option {
+export interface Option {
   value: string | number;
   label: string;
 }
 
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
-  options: Option[];
+  options?: Option[];
   error?: string;
+  children?: React.ReactNode;
 }
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, options, error, className = '', id, ...props }, ref) => {
+  ({ label, options, error, className = '', id, children, ...props }, ref) => {
     const selectId = id || (label ? `select-${label.replace(/\s+/g, '-')}` : undefined);
 
     return (
@@ -30,15 +31,17 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           } ${className}`}
           {...props}
         >
-          {options.map((opt, idx) => (
-            <option
-              key={`${opt.value}_${idx}`}
-              value={opt.value}
-              className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100"
-            >
-              {opt.label}
-            </option>
-          ))}
+          {options
+            ? options.map((opt, idx) => (
+                <option
+                  key={`${opt.value}_${idx}`}
+                  value={opt.value}
+                  className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100"
+                >
+                  {opt.label}
+                </option>
+              ))
+            : children}
         </select>
         {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
       </div>

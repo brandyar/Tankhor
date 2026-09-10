@@ -27,8 +27,10 @@ import { CreateOrderView } from './features/orders/CreateOrderView';
 import { CustomersView } from './features/customers/CustomersView';
 import { SuppliersView } from './features/purchasing/SuppliersView';
 import { PurchaseOrdersView } from './features/purchasing/PurchaseOrdersView';
+import { AccountingView } from './features/accounting/AccountingView';
 import { SettingsView } from './features/settings/SettingsView';
 import { ReportsView } from './features/reports/ReportsView';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { isTauriEnvironment } from './storage';
 import { WebFreePlanGuardModal } from './components/modals/WebFreePlanGuardModal';
 import { ConfirmModalHost } from './components/ui/ConfirmModal';
@@ -102,6 +104,16 @@ const AuthenticatedApp: React.FC = () => {
       case 'purchasing/suppliers':
       case 'purchasing/orders':
         return permissions.canViewPurchasing;
+      case 'accounting':
+      case 'accounting/dashboard':
+      case 'accounting/expenses':
+      case 'accounting/persons':
+      case 'accounting/accounts':
+      case 'accounting/cheques':
+      case 'accounting/landed-costs':
+      case 'accounting/tax':
+      case 'accounting/export':
+        return permissions.canViewFinancials;
       case 'reports/apparel':
         return permissions.canViewOrders || permissions.canViewFinancials;
       case 'settings':
@@ -169,6 +181,16 @@ const AuthenticatedApp: React.FC = () => {
         return <SuppliersView />;
       case 'purchasing/orders':
         return <PurchaseOrdersView />;
+      case 'accounting':
+      case 'accounting/dashboard':
+      case 'accounting/expenses':
+      case 'accounting/persons':
+      case 'accounting/accounts':
+      case 'accounting/cheques':
+      case 'accounting/landed-costs':
+      case 'accounting/tax':
+      case 'accounting/export':
+        return <AccountingView activeSubRoute={currentRoute} onNavigate={setCurrentRoute} />;
       case 'reports/apparel':
         return <ReportsView />;
       case 'settings':
@@ -193,7 +215,9 @@ const AuthenticatedApp: React.FC = () => {
 
   return (
     <AppShell currentRoute={currentRoute} onNavigate={setCurrentRoute}>
-      {renderCurrentView()}
+      <ErrorBoundary key={currentRoute} onReset={() => setCurrentRoute('dashboard')}>
+        {renderCurrentView()}
+      </ErrorBoundary>
     </AppShell>
   );
 };

@@ -37,6 +37,14 @@ import {
   Building2,
   ArrowUpCircle,
   Lock,
+  Calculator,
+  Receipt,
+  CircleDollarSign,
+  Wallet,
+  CheckSquare,
+  Scale,
+  FileText,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -85,6 +93,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { hasAccess } = useModuleAccess();
   const isRtl = locale === 'fa';
   const hasBarcodeAccess = hasAccess('barcode');
+  const hasAccountingAccess = hasAccess('accounting');
   const isDesktop = isTauriEnvironment();
 
   // State to track open submenus
@@ -92,6 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     catalogAttributes: false,
     warehouseManagement: false,
     stockOperations: false,
+    accountingOperations: false,
     settingsManagement: false,
   });
 
@@ -197,6 +207,71 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { type: 'item', route: 'purchasing/suppliers', label: t('navigation.suppliers'), icon: Boxes, visible: permissions.canViewPurchasing },
       ],
     },
+    ...(hasAccountingAccess
+      ? [
+          {
+            title: t('navigation.accountingGroup', 'حسابداری و مالی'),
+            entries: [
+              {
+                type: 'item' as const,
+                route: 'accounting/dashboard',
+                label: t('navigation.accountingDashboard', 'سود و زیان و عملکرد'),
+                icon: BarChart3,
+                visible: permissions.canViewFinancials,
+              },
+              {
+                type: 'item' as const,
+                route: 'accounting/expenses',
+                label: t('navigation.expenses', 'هزینه‌ها و سرفصل‌ها'),
+                icon: Receipt,
+                visible: permissions.canViewFinancials,
+              },
+              {
+                type: 'item' as const,
+                route: 'accounting/persons',
+                label: t('navigation.personAccounts', 'طرف‌حساب‌ها و معین اشخاص'),
+                icon: Users,
+                visible: permissions.canViewFinancials,
+              },
+              {
+                type: 'item' as const,
+                route: 'accounting/accounts',
+                label: t('navigation.financialAccounts', 'صندوق‌ها و بانک‌ها'),
+                icon: Wallet,
+                visible: permissions.canViewFinancials,
+              },
+              {
+                type: 'item' as const,
+                route: 'accounting/cheques',
+                label: t('navigation.cheques', 'مدیریت چک‌های صیادی'),
+                icon: CheckSquare,
+                visible: permissions.canViewFinancials,
+              },
+              {
+                type: 'item' as const,
+                route: 'accounting/landed-costs',
+                label: t('navigation.landedCosts', 'بهای تمام‌شده و سربار خرید'),
+                icon: Scale,
+                visible: permissions.canViewFinancials,
+              },
+              {
+                type: 'item' as const,
+                route: 'accounting/tax',
+                label: t('navigation.taxReports', 'مالیات و ارزش افزوده'),
+                icon: FileText,
+                visible: permissions.canViewFinancials,
+              },
+              {
+                type: 'item' as const,
+                route: 'accounting/export',
+                label: t('navigation.accountingExport', 'خروجی اسناد و مودیان'),
+                icon: FileSpreadsheet,
+                visible: permissions.canViewFinancials,
+              },
+            ],
+          },
+        ]
+      : []),
     {
       title: t('navigation.reportsGroup'),
       entries: [
@@ -267,7 +342,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
       route: 'inventory/barcodes',
       label: t('navigation.barcodePrint'),
       icon: Barcode,
-      badge: t('navigation.lockedBadge', 'قفل / خرید'),
+      badge: t('navigation.moduleBadge', 'ماژول'),
+      isLocked: true,
+      visible: true,
+    });
+  }
+
+  if (!hasAccountingAccess && permissions.canViewFinancials) {
+    lockedEntries.push({
+      type: 'item',
+      route: 'accounting/dashboard',
+      label: t('navigation.accountingGroup', 'حسابداری و مالی'),
+      icon: Calculator,
+      badge: t('navigation.moduleBadge', 'ماژول'),
       isLocked: true,
       visible: true,
     });
@@ -428,15 +515,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           isActive
                             ? 'bg-white text-neutral-900 font-bold shadow-sm'
                             : entry.isLocked
-                            ? 'text-amber-400/90 hover:text-amber-200 hover:bg-amber-950/20 font-medium border border-amber-500/20'
+                            ? 'text-neutral-500 hover:text-neutral-300 hover:bg-[#151515] opacity-80 hover:opacity-100 font-normal'
                             : 'text-neutral-400 hover:text-neutral-100 hover:bg-[#1a1a1a] font-medium'
                         }`}
                       >
                         <div className="relative shrink-0">
-                          <Icon className={`${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'} ${isActive ? 'text-neutral-900' : entry.isLocked ? 'text-amber-400' : 'text-neutral-400'}`} />
-                          {entry.isLocked && (
+                          <Icon className={`${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'} ${isActive ? 'text-neutral-900' : entry.isLocked ? 'text-neutral-500' : 'text-neutral-400'}`} />
+                          {entry.isLocked && isCollapsed && (
                             <span className="absolute -top-1 -right-1 flex items-center justify-center">
-                              <Lock className="w-2.5 h-2.5 text-amber-500" />
+                              <Lock className="w-2.5 h-2.5 text-neutral-500" />
                             </span>
                           )}
                         </div>
@@ -444,8 +531,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           <div className="flex-1 flex items-center justify-between overflow-hidden gap-1">
                             <span className="truncate">{entry.label}</span>
                             {entry.badge && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium shrink-0 flex items-center gap-1">
-                                <Lock className="w-2.5 h-2.5" />
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-neutral-800/80 text-neutral-400 border border-neutral-700/50 font-medium shrink-0 flex items-center gap-1">
+                                <Lock className="w-2.5 h-2.5 text-neutral-400 shrink-0" />
                                 <span>{entry.badge}</span>
                               </span>
                             )}

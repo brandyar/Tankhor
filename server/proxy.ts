@@ -192,6 +192,14 @@ const TENANT_SCOPED_COLLECTIONS = new Set([
   'organization_users',
   'subscriptions',
   'organization_modules',
+  'expense_categories',
+  'expenses',
+  'person_transactions',
+  'financial_accounts',
+  'treasury_transactions',
+  'cheques',
+  'landed_costs',
+  'landed_cost_allocations',
 ]);
 
 // Generic List items with injected Tenant Scope
@@ -250,6 +258,8 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
         tenantFilter = { warehouse_id: { organization_id: { _eq: orgIdNum } } };
       } else if (collection === 'size_guide_measurements' || collection === 'size_guide_values') {
         tenantFilter = { template_id: { organization_id: { _eq: orgIdNum } } };
+      } else if (collection === 'landed_cost_allocations') {
+        tenantFilter = { purchase_order_item_id: { organization_id: { _eq: orgIdNum } } };
       }
 
       if (Object.keys(clientFilter).length > 0) {
@@ -464,7 +474,12 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
 
     // Automatically enforce tenant ID
     if (TENANT_SCOPED_COLLECTIONS.has(collection)) {
-      if (collection !== 'warehouse_locations' && collection !== 'size_guide_measurements' && collection !== 'size_guide_values') {
+      if (
+        collection !== 'warehouse_locations' &&
+        collection !== 'size_guide_measurements' &&
+        collection !== 'size_guide_values' &&
+        collection !== 'landed_cost_allocations'
+      ) {
         payload.organization_id = orgIdNum;
       }
     }

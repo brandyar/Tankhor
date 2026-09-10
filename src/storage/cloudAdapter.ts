@@ -8,7 +8,11 @@ import {
   Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
   InventoryMovement, Customer, Order, OrderItem, Supplier, PurchaseOrder,
   PurchaseOrderItem, StockTransfer, StockTransferItem, SizeGuideTemplate,
-  SizeGuideMeasurement, SizeGuideValue, Subscription, SystemModule, OrganizationModule
+  SizeGuideMeasurement, SizeGuideValue, Subscription, SystemModule, OrganizationModule,
+  ExpenseCategory, Expense, PersonTransaction, ProfitLossSummary,
+  FinancialAccount, FinancialAccountType, TreasuryTransaction, TreasuryTransactionType,
+  Cheque, ChequeType, ChequeStatus,
+  LandedCost, LandedCostAllocation, VatReportSummary
 } from '../types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1185,6 +1189,18 @@ export class CloudDirectusAdapter implements IStorageProvider {
     }
   }
 
+  async getPurchaseOrderItems(purchaseOrderId?: number): Promise<PurchaseOrderItem[]> {
+    try {
+      const filter = purchaseOrderId ? { purchase_order_id: { _eq: purchaseOrderId } } : undefined;
+      return await directusClient.getItems<PurchaseOrderItem>('purchase_order_items', {
+        filter,
+        limit: -1,
+      });
+    } catch {
+      return this.localAdapter.getPurchaseOrderItems(purchaseOrderId);
+    }
+  }
+
   async savePurchaseOrder(po: Partial<PurchaseOrder>, items?: Partial<PurchaseOrderItem>[]): Promise<PurchaseOrder> {
     try {
       const payload: any = { ...po };
@@ -1382,17 +1398,14 @@ export class CloudDirectusAdapter implements IStorageProvider {
   // System & Organization Modules
   async getSystemModules(params?: QueryParams): Promise<SystemModule[]> {
     try {
-      const filter: any = {};
-      if (params?.status) {
-        filter.status = { _eq: params.status };
-      }
-      const items = await directusClient.getItems<SystemModule>('system_modules', {
-        filter,
-        sort: 'id',
-      });
+      const items = await directusClient.getSystemModules(params);
       if (items && items.length > 0) {
         this.localAdapter.setItem('system_modules', items);
-        return items;
+        let filtered = items;
+        if (params?.status) {
+          filtered = filtered.filter((m) => m.status === params.status);
+        }
+        return filtered;
       }
       return await this.localAdapter.getSystemModules(params);
     } catch {
@@ -1441,5 +1454,495 @@ export class CloudDirectusAdapter implements IStorageProvider {
       StorageSyncManager.enqueue({ action: 'DELETE', collection: 'organization_modules', payload: { id } });
       return deleted;
     }
+  }
+
+  // ==========================================
+  // Accounting & Financials (Phase 1)
+  // ==========================================
+
+  async getExpenseCategories(params?: QueryParams): Promise<ExpenseCategory[]> {
+    try {
+      const query: Record<string, any> = {
+        sort: ['id'],
+      };
+      if (params?.status) query['filter[status][_eq]'] = params.status;
+      if (params?.search) query['filter[title][_icontains]'] = params.search;
+
+      const items = await directusClient.getItems<ExpenseCategory>('expense_categories', query);
+      if (items.length === 0) {
+        return await this.localAdapter.getExpenseCategories(params);
+      }
+      return items;
+    } catch {
+      return await this.localAdapter.getExpenseCategories(params);
+    }
+  }
+
+  async saveExpenseCategory(cat: Partial<ExpenseCategory>): Promise<ExpenseCategory> {
+    try {
+      if (cat.id) {
+        return await directusClient.updateItem<ExpenseCategory>('expense_categories', cat.id, cat);
+      }
+      return await directusClient.createItem<ExpenseCategory>('expense_categories', cat);
+    } catch {
+      const saved = await this.localAdapter.saveExpenseCategory(cat);
+      StorageSyncManager.enqueue({ action: cat.id ? 'UPDATE' : 'CREATE', collection: 'expense_categories', payload: saved });
+      return saved;
+    }
+  }
+
+  async deleteExpenseCategory(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('expense_categories', id);
+      return true;
+    } catch {
+      const deleted = await this.localAdapter.deleteExpenseCategory(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'expense_categories', payload: { id } });
+      return deleted;
+    }
+  }
+
+  async getExpenses(params?: QueryParams): Promise<Expense[]> {
+    try {
+      const query: Record<string, any> = {
+        sort: ['-expense_date', '-id'],
+        fields: ['*', 'category_id.*'],
+      };
+      if (params?.category_id) query['filter[category_id][_eq]'] = params.category_id;
+      if (params?.search) query['filter[title][_icontains]'] = params.search;
+
+      const items = await directusClient.getItems<Expense>('expenses', query);
+      return items.map((exp) => {
+        const cat = typeof exp.category_id === 'object' ? (exp.category_id as any) : null;
+        return {
+          ...exp,
+          category_title: cat?.title || exp.category_title || 'سایر هزینه‌ها',
+          category_code: cat?.code || exp.category_code,
+          category_icon: cat?.icon || exp.category_icon || 'Receipt',
+        };
+      });
+    } catch {
+      return await this.localAdapter.getExpenses(params);
+    }
+  }
+
+  async saveExpense(exp: Partial<Expense>): Promise<Expense> {
+    try {
+      if (exp.id) {
+        return await directusClient.updateItem<Expense>('expenses', exp.id, exp);
+      }
+      return await directusClient.createItem<Expense>('expenses', exp);
+    } catch {
+      const saved = await this.localAdapter.saveExpense(exp);
+      StorageSyncManager.enqueue({ action: exp.id ? 'UPDATE' : 'CREATE', collection: 'expenses', payload: saved });
+      return saved;
+    }
+  }
+
+  async deleteExpense(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('expenses', id);
+      return true;
+    } catch {
+      const deleted = await this.localAdapter.deleteExpense(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'expenses', payload: { id } });
+      return deleted;
+    }
+  }
+
+  async getPersonTransactions(params?: QueryParams): Promise<PersonTransaction[]> {
+    try {
+      const query: Record<string, any> = {
+        sort: ['-transaction_date', '-id'],
+        fields: ['*', 'customer_id.*', 'supplier_id.*', 'order_id.*', 'purchase_order_id.*'],
+      };
+      if (params?.type) query['filter[party_type][_eq]'] = params.type;
+      if (params?.search) query['filter[description][_icontains]'] = params.search;
+
+      const items = await directusClient.getItems<PersonTransaction>('person_transactions', query);
+      return items.map((tx) => {
+        const cust = typeof tx.customer_id === 'object' ? (tx.customer_id as any) : null;
+        const sup = typeof tx.supplier_id === 'object' ? (tx.supplier_id as any) : null;
+        const ord = typeof tx.order_id === 'object' ? (tx.order_id as any) : null;
+        const po = typeof tx.purchase_order_id === 'object' ? (tx.purchase_order_id as any) : null;
+        return {
+          ...tx,
+          party_name: cust?.name || sup?.name || tx.party_name || '',
+          order_number: ord?.order_number || tx.order_number,
+          purchase_number: po?.purchase_number || tx.purchase_number,
+        };
+      });
+    } catch {
+      return await this.localAdapter.getPersonTransactions(params);
+    }
+  }
+
+  async savePersonTransaction(tx: Partial<PersonTransaction>): Promise<PersonTransaction> {
+    try {
+      if (tx.id) {
+        return await directusClient.updateItem<PersonTransaction>('person_transactions', tx.id, tx);
+      }
+      return await directusClient.createItem<PersonTransaction>('person_transactions', tx);
+    } catch {
+      const saved = await this.localAdapter.savePersonTransaction(tx);
+      StorageSyncManager.enqueue({ action: tx.id ? 'UPDATE' : 'CREATE', collection: 'person_transactions', payload: saved });
+      return saved;
+    }
+  }
+
+  async deletePersonTransaction(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('person_transactions', id);
+      return true;
+    } catch {
+      const deleted = await this.localAdapter.deletePersonTransaction(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'person_transactions', payload: { id } });
+      return deleted;
+    }
+  }
+
+  async getProfitLossSummary(params?: QueryParams): Promise<ProfitLossSummary> {
+    return await this.localAdapter.getProfitLossSummary(params);
+  }
+
+  // ==========================================
+  // Accounting & Treasury (Phase 2)
+  // ==========================================
+
+  async getFinancialAccounts(params?: QueryParams): Promise<FinancialAccount[]> {
+    try {
+      const query: Record<string, any> = {
+        sort: ['id'],
+      };
+      if (params?.status) query['filter[status][_eq]'] = params.status;
+      if (params?.type) query['filter[type][_eq]'] = params.type;
+      if (params?.search) query['filter[name][_icontains]'] = params.search;
+
+      const items = await directusClient.getItems<FinancialAccount>('financial_accounts', query);
+      if (items.length === 0) {
+        return await this.localAdapter.getFinancialAccounts(params);
+      }
+      return items;
+    } catch {
+      return await this.localAdapter.getFinancialAccounts(params);
+    }
+  }
+
+  async getFinancialAccountById(id: number): Promise<FinancialAccount | null> {
+    try {
+      return await directusClient.getItemById<FinancialAccount>('financial_accounts', id);
+    } catch {
+      return await this.localAdapter.getFinancialAccountById(id);
+    }
+  }
+
+  async saveFinancialAccount(account: Partial<FinancialAccount>): Promise<FinancialAccount> {
+    try {
+      if (account.id) {
+        return await directusClient.updateItem<FinancialAccount>('financial_accounts', account.id, account);
+      }
+      return await directusClient.createItem<FinancialAccount>('financial_accounts', account);
+    } catch {
+      const saved = await this.localAdapter.saveFinancialAccount(account);
+      StorageSyncManager.enqueue({ action: account.id ? 'UPDATE' : 'CREATE', collection: 'financial_accounts', payload: saved });
+      return saved;
+    }
+  }
+
+  async deleteFinancialAccount(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('financial_accounts', id);
+      return true;
+    } catch {
+      const deleted = await this.localAdapter.deleteFinancialAccount(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'financial_accounts', payload: { id } });
+      return deleted;
+    }
+  }
+
+  async getTreasuryTransactions(params?: QueryParams): Promise<TreasuryTransaction[]> {
+    try {
+      const query: Record<string, any> = {
+        sort: ['-transaction_date', '-id'],
+        fields: ['*', 'source_account_id.*', 'destination_account_id.*'],
+      };
+      if (params?.type) query['filter[type][_eq]'] = params.type;
+      if (params?.search) query['filter[description][_icontains]'] = params.search;
+
+      const items = await directusClient.getItems<TreasuryTransaction>('treasury_transactions', query);
+      return items.map((tx) => {
+        const src = typeof tx.source_account_id === 'object' ? (tx.source_account_id as any) : null;
+        const dst = typeof tx.destination_account_id === 'object' ? (tx.destination_account_id as any) : null;
+        return {
+          ...tx,
+          source_account_name: src?.name || tx.source_account_name,
+          destination_account_name: dst?.name || tx.destination_account_name,
+        };
+      });
+    } catch {
+      return await this.localAdapter.getTreasuryTransactions(params);
+    }
+  }
+
+  async saveTreasuryTransaction(tx: Partial<TreasuryTransaction>): Promise<TreasuryTransaction> {
+    try {
+      if (tx.id) {
+        return await directusClient.updateItem<TreasuryTransaction>('treasury_transactions', tx.id, tx);
+      }
+      return await directusClient.createItem<TreasuryTransaction>('treasury_transactions', tx);
+    } catch {
+      const saved = await this.localAdapter.saveTreasuryTransaction(tx);
+      StorageSyncManager.enqueue({ action: tx.id ? 'UPDATE' : 'CREATE', collection: 'treasury_transactions', payload: saved });
+      return saved;
+    }
+  }
+
+  async deleteTreasuryTransaction(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('treasury_transactions', id);
+      return true;
+    } catch {
+      const deleted = await this.localAdapter.deleteTreasuryTransaction(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'treasury_transactions', payload: { id } });
+      return deleted;
+    }
+  }
+
+  async getCheques(params?: QueryParams): Promise<Cheque[]> {
+    try {
+      const query: Record<string, any> = {
+        sort: ['due_date', 'id'],
+        fields: ['*', 'customer_id.*', 'supplier_id.*', 'target_account_id.*'],
+      };
+      if (params?.status) query['filter[status][_eq]'] = params.status;
+      if (params?.type) query['filter[type][_eq]'] = params.type;
+      if (params?.search) query['filter[sayad_id][_icontains]'] = params.search;
+
+      const items = await directusClient.getItems<Cheque>('cheques', query);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      return items.map((chk) => {
+        const cust = typeof chk.customer_id === 'object' ? (chk.customer_id as any) : null;
+        const sup = typeof chk.supplier_id === 'object' ? (chk.supplier_id as any) : null;
+        const acc = typeof chk.target_account_id === 'object' ? (chk.target_account_id as any) : null;
+
+        let daysUntilDue = 0;
+        let isOverdue = false;
+        if (chk.due_date) {
+          const dueDate = new Date(chk.due_date);
+          dueDate.setHours(0, 0, 0, 0);
+          daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          isOverdue = daysUntilDue < 0 && chk.status !== 'cleared' && chk.status !== 'cancelled';
+        }
+
+        return {
+          ...chk,
+          customer_name: cust?.name || chk.customer_name,
+          supplier_name: sup?.name || chk.supplier_name,
+          target_account_name: acc?.name || chk.target_account_name,
+          days_until_due: daysUntilDue,
+          is_overdue: isOverdue,
+        };
+      });
+    } catch {
+      return await this.localAdapter.getCheques(params);
+    }
+  }
+
+  async getChequeById(id: number): Promise<Cheque | null> {
+    try {
+      return await directusClient.getItemById<Cheque>('cheques', id);
+    } catch {
+      return await this.localAdapter.getChequeById(id);
+    }
+  }
+
+  async saveCheque(cheque: Partial<Cheque>): Promise<Cheque> {
+    try {
+      if (cheque.id) {
+        return await directusClient.updateItem<Cheque>('cheques', cheque.id, cheque);
+      }
+      return await directusClient.createItem<Cheque>('cheques', cheque);
+    } catch {
+      const saved = await this.localAdapter.saveCheque(cheque);
+      StorageSyncManager.enqueue({ action: cheque.id ? 'UPDATE' : 'CREATE', collection: 'cheques', payload: saved });
+      return saved;
+    }
+  }
+
+  async deleteCheque(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('cheques', id);
+      return true;
+    } catch {
+      const deleted = await this.localAdapter.deleteCheque(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'cheques', payload: { id } });
+      return deleted;
+    }
+  }
+
+  async updateChequeStatus(id: number, status: ChequeStatus, targetAccountId?: number): Promise<Cheque> {
+    try {
+      const payload: Partial<Cheque> = { status };
+      if (targetAccountId) payload.target_account_id = targetAccountId;
+      return await directusClient.updateItem<Cheque>('cheques', id, payload);
+    } catch {
+      return await this.localAdapter.updateChequeStatus(id, status, targetAccountId);
+    }
+  }
+
+  // ==========================================
+  // Phase 3: Landed Cost & Tax / VAT Reports
+  // ==========================================
+
+  async getLandedCosts(params?: QueryParams): Promise<LandedCost[]> {
+    try {
+      const costs = await directusClient.getItems<LandedCost>('landed_costs', {
+        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+        search: params?.search,
+      });
+
+      // Enrich with local joined data
+      const purchaseOrders = await this.getPurchaseOrders();
+      const suppliers = await this.getSuppliers();
+      const allocations = await this.getLandedCostAllocations();
+
+      return costs.map((cost) => {
+        const poId = typeof cost.purchase_order_id === 'object' ? (cost.purchase_order_id as any)?.id : cost.purchase_order_id;
+        const po = purchaseOrders.find((p) => p.id === Number(poId));
+        let supName = '';
+        if (po) {
+          const supId = typeof po.supplier_id === 'object' ? (po.supplier_id as any)?.id : po.supplier_id;
+          const sup = suppliers.find((s) => s.id === Number(supId));
+          supName = sup?.name || po.supplier_name || '';
+        }
+
+        const costAllocations = allocations.filter((a) => {
+          const cId = typeof a.landed_cost_id === 'object' ? (a.landed_cost_id as any)?.id : a.landed_cost_id;
+          return Number(cId) === cost.id;
+        });
+
+        return {
+          ...cost,
+          purchase_number: po?.purchase_number || '',
+          supplier_name: supName,
+          purchase_total: po?.total || 0,
+          allocations_count: costAllocations.length,
+        };
+      });
+    } catch {
+      return await this.localAdapter.getLandedCosts(params);
+    }
+  }
+
+  async getLandedCostById(id: number): Promise<LandedCost | null> {
+    try {
+      const cost = await directusClient.getItemById<LandedCost>('landed_costs', id);
+      if (!cost) return null;
+      return cost;
+    } catch {
+      return await this.localAdapter.getLandedCostById(id);
+    }
+  }
+
+  async saveLandedCost(cost: Partial<LandedCost>, allocations?: Partial<LandedCostAllocation>[]): Promise<LandedCost> {
+    try {
+      let saved: LandedCost;
+      if (cost.id) {
+        saved = await directusClient.updateItem<LandedCost>('landed_costs', cost.id, cost);
+      } else {
+        saved = await directusClient.createItem<LandedCost>('landed_costs', cost);
+      }
+
+      if (allocations && allocations.length > 0) {
+        for (const alloc of allocations) {
+          const payload = {
+            ...alloc,
+            landed_cost_id: saved.id,
+          };
+          if (alloc.id) {
+            await directusClient.updateItem<LandedCostAllocation>('landed_cost_allocations', alloc.id, payload);
+          } else {
+            await directusClient.createItem<LandedCostAllocation>('landed_cost_allocations', payload);
+          }
+        }
+      }
+
+      return saved;
+    } catch {
+      const saved = await this.localAdapter.saveLandedCost(cost, allocations);
+      StorageSyncManager.enqueue({ action: cost.id ? 'UPDATE' : 'CREATE', collection: 'landed_costs', payload: saved });
+      return saved;
+    }
+  }
+
+  async deleteLandedCost(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('landed_costs', id);
+      return true;
+    } catch {
+      const deleted = await this.localAdapter.deleteLandedCost(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'landed_costs', payload: { id } });
+      return deleted;
+    }
+  }
+
+  async getLandedCostAllocations(landedCostId?: number, purchaseOrderId?: number): Promise<LandedCostAllocation[]> {
+    try {
+      let allocations = await directusClient.getItems<LandedCostAllocation>('landed_cost_allocations', {
+        filter: landedCostId ? { landed_cost_id: { _eq: landedCostId } } : undefined,
+      });
+
+      const poItems = await this.getPurchaseOrderItems();
+      const variants = await this.getVariants();
+      const products = await this.getProducts();
+
+      return allocations.map((alloc) => {
+        const item = poItems.find((pi) => pi.id === alloc.purchase_order_item_id);
+        let variant: ProductVariant | undefined;
+        let product: Product | undefined;
+        if (item) {
+          const vId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
+          variant = variants.find((v) => v.id === Number(vId));
+          if (variant) {
+            const pId = typeof variant.product_id === 'object' ? (variant.product_id as any)?.id : variant.product_id;
+            product = products.find((p) => p.id === Number(pId));
+          }
+        }
+
+        return {
+          ...alloc,
+          variant_id: variant?.id,
+          sku: variant?.sku || '',
+          product_title: product?.title || '',
+          variant_name: variant ? `${product?.title || ''} - ${variant.sku || ''}` : '',
+          quantity: item?.quantity_ordered || item?.quantity_received || 1,
+          base_unit_cost: item?.unit_cost || 0,
+          base_total: item?.total || 0,
+        };
+      });
+    } catch {
+      return await this.localAdapter.getLandedCostAllocations(landedCostId, purchaseOrderId);
+    }
+  }
+
+  async saveLandedCostAllocation(allocation: Partial<LandedCostAllocation>): Promise<LandedCostAllocation> {
+    try {
+      if (allocation.id) {
+        return await directusClient.updateItem<LandedCostAllocation>('landed_cost_allocations', allocation.id, allocation);
+      }
+      return await directusClient.createItem<LandedCostAllocation>('landed_cost_allocations', allocation);
+    } catch {
+      return await this.localAdapter.saveLandedCostAllocation(allocation);
+    }
+  }
+
+  async applyLandedCostToVariants(landedCostId: number): Promise<{ updatedVariantsCount: number }> {
+    return await this.localAdapter.applyLandedCostToVariants(landedCostId);
+  }
+
+  async getVatReport(params?: { organizationId?: number; year?: number; quarter?: 1 | 2 | 3 | 4 }): Promise<VatReportSummary> {
+    return await this.localAdapter.getVatReport(params);
   }
 }

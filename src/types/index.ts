@@ -151,6 +151,7 @@ export interface ProductVariant {
   barcode?: string;
   price?: number;
   cost?: number;
+  buy_price?: number;
   image?: string;
   status: 'published' | 'draft' | 'archived';
   sort?: number;
@@ -242,6 +243,8 @@ export interface Customer {
   email?: string;
   address?: string;
   notes?: string;
+  balance?: number; // Instant account balance: positive = debtor (بدهکار), negative = creditor (بستانکار)
+  credit_limit?: number; // Maximum credit limit allowed for credit sales
   status: Status;
   date_created?: string;
   date_updated?: string;
@@ -293,6 +296,7 @@ export interface Supplier {
   email?: string;
   address?: string;
   notes?: string;
+  balance?: number; // Instant account balance: positive = creditor (ما بدهکاریم به تامین‌کننده)
   status: Status;
   date_created?: string;
 }
@@ -461,3 +465,4 @@ export interface OrganizationModule {
   included_in_pro?: boolean;
 }
 
+export * from './accounting';

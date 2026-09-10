@@ -377,6 +377,35 @@ export class CloudMigrationManager {
       }
       emitProgress('موجودی انبارها', invItems.length, invItems.length, 'completed');
 
+      // Phase 6.1: Inventory Movements
+      const movItems = collections['inventory_movements'] || [];
+      if (movItems.length > 0) {
+        emitProgress('گردش کالا و اسناد انبار', 0, movItems.length, 'in_progress');
+        for (let i = 0; i < movItems.length; i++) {
+          const item = { ...movItems[i] };
+          delete item.id;
+          item.organization_id = orgId;
+
+          if (item.variant_id) {
+            const localVId = Number(item.variant_id?.id || item.variant_id);
+            item.variant_id = idMap['product_variants']?.get(localVId) || item.variant_id;
+          }
+          if (item.warehouse_id) {
+            const localWId = Number(item.warehouse_id?.id || item.warehouse_id);
+            item.warehouse_id = idMap['warehouses']?.get(localWId) || item.warehouse_id;
+          }
+
+          try {
+            await directusClient.createItem<any>('inventory_movements', item);
+            totalMigrated++;
+          } catch (err: any) {
+            // non-critical movement log
+          }
+          emitProgress('گردش کالا و اسناد انبار', i + 1, movItems.length, 'in_progress');
+        }
+        emitProgress('گردش کالا و اسناد انبار', movItems.length, movItems.length, 'completed');
+      }
+
       // Phase 7: Orders and Order Items
       const orderItemsList = collections['order_items'] || [];
       const orderList = collections['orders'] || [];

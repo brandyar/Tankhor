@@ -80,7 +80,8 @@ export const PurchaseModuleModal: React.FC<PurchaseModuleModalProps> = ({
     ? Boolean(matchedOrgMod.included_in_pro)
     : Boolean(matchedSystemMod?.included_in_pro);
 
-  const formattedPrice = formatModulePrice(matchedSystemMod || matchedOrgMod, locale) || '۴۹۰,۰۰۰ تومان';
+  const rawPriceFormatted = formatModulePrice(matchedSystemMod || matchedOrgMod, locale);
+  const formattedPrice = rawPriceFormatted || (locale === 'en' ? 'Contact Support' : 'تماس با پشتیبانی');
 
   // Copy hardware id
   const handleCopyHw = () => {
@@ -166,10 +167,11 @@ export const PurchaseModuleModal: React.FC<PurchaseModuleModalProps> = ({
         if (isDesktop) {
           // Open in default system browser for desktop app
           await openExternalUrl(res.paymentUrl);
+          const parsedPrice = matchedSystemMod?.price_ir ? Number(String(matchedSystemMod.price_ir).replace(/[^0-9]/g, '')) : 0;
           setWaitingPayment({
             trackId: res.trackId || '-',
             paymentUrl: res.paymentUrl,
-            amountTomans: res.amountTomans || 490000,
+            amountTomans: res.amountTomans || parsedPrice || 0,
           });
         } else {
           // Direct redirect for web app

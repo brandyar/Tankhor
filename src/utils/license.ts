@@ -309,4 +309,16 @@ export const DEFAULT_SYSTEM_MODULES: SystemModule[] = [
     included_in_pro: false,
     status: 'published',
   },
+  {
+    id: 2,
+    name: 'حسابداری و مالی',
+    slug: 'accounting',
+    description: 'داشبورد سود و زیان، ثبت هزینه‌ها، سرفصل‌ها، دفتر معین و صورت‌حساب اشخاص (بدهکار/بستانکار) و تسویه خودکار فاکتورها',
+    icon: 'calculator',
+    price_ir: '980000',
+    price_usd: '29',
+    is_standalone_purchasable: true,
+    included_in_pro: false,
+    status: 'published',
+  },
 ];

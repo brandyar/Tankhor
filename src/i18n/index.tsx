@@ -12,6 +12,7 @@ import { settingsFa } from './locales/fa/settings';
 import { authFa } from './locales/fa/auth';
 import { reportsFa } from './locales/fa/reports';
 import { modulesFa } from './locales/fa/modules';
+import { accountingFa } from './locales/fa/accounting';
 
 import { commonEn } from './locales/en/common';
 import { navigationEn } from './locales/en/navigation';
@@ -26,6 +27,7 @@ import { settingsEn } from './locales/en/settings';
 import { authEn } from './locales/en/auth';
 import { reportsEn } from './locales/en/reports';
 import { modulesEn } from './locales/en/modules';
+import { accountingEn } from './locales/en/accounting';
 
 export type Locale = 'fa' | 'en';
 export type Direction = 'rtl' | 'ltr';
@@ -45,6 +47,7 @@ const translations = {
     auth: authFa,
     reports: reportsFa,
     modules: modulesFa,
+    accounting: accountingFa,
   },
   en: {
     common: commonEn,
@@ -60,6 +63,7 @@ const translations = {
     auth: authEn,
     reports: reportsEn,
     modules: modulesEn,
+    accounting: accountingEn,
   },
 };
 

@@ -37,6 +37,14 @@ export const BACKUP_COLLECTIONS = [
   'subscriptions',
   'system_modules',
   'organization_modules',
+  'expense_categories',
+  'expenses',
+  'person_transactions',
+  'financial_accounts',
+  'treasury_transactions',
+  'cheques',
+  'landed_costs',
+  'landed_cost_allocations',
 ] as const;
 
 export type BackupCollectionKey = typeof BACKUP_COLLECTIONS[number];
@@ -485,6 +493,18 @@ export class BackupManager {
         }
       }
 
+      // Sync with Cloud Directus if in Cloud Mode or Directus session is active
+      try {
+        const { storageManager } = await import('./index');
+        const { directusClient } = await import('../api/directus');
+        if (storageManager.getMode() === 'cloud_synced' || Boolean(directusClient.getToken())) {
+          const { CloudMigrationManager } = await import('./cloudMigrationManager');
+          await CloudMigrationManager.migrateLocalToCloud(activeOrgId);
+        }
+      } catch (cloudErr) {
+        console.warn('[BackupManager] Cloud sync warning during restore:', cloudErr);
+      }
+
       // Notify the application
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('tankhor_data_restored', {
@@ -561,7 +581,7 @@ export class BackupManager {
           status: 'active',
           date_created: new Date().toISOString(),
         };
-        this.setRawCollection('organizations', [targetOrg]);
+        this.setRawCollection('organizations', [...orgs, targetOrg]);
         localStorage.setItem('tankhor_active_org_id', String(activeOrgId));
       }
 
@@ -820,6 +840,15 @@ export class BackupManager {
       ];
       this.setRawCollection('size_guide_values', values);
 
+      // 12. Inventory Movements
+      const movements = [
+        { id: 10001, organization_id: activeOrgId, variant_id: 2001, warehouse_id: 801, type: 'purchase', quantity: 20, reference_number: 'PO-1403-01', created_at: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString() },
+        { id: 10002, organization_id: activeOrgId, variant_id: 2001, warehouse_id: 801, type: 'sale', quantity: -2, reference_number: 'ORD-1403-1001', created_at: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString() },
+        { id: 10003, organization_id: activeOrgId, variant_id: 2004, warehouse_id: 801, type: 'sale', quantity: -1, reference_number: 'ORD-1403-1001', created_at: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString() },
+        { id: 10004, organization_id: activeOrgId, variant_id: 2007, warehouse_id: 801, type: 'sale', quantity: -1, reference_number: 'ORD-1403-1002', created_at: new Date(Date.now() - 5 * 3600 * 1000).toISOString() },
+      ];
+      this.setRawCollection('inventory_movements', movements);
+
       // If in desktop Tauri environment, write directly to SQLite
       if (isTauriEnvironment()) {
         try {
@@ -839,6 +868,7 @@ export class BackupManager {
             ['products', products],
             ['product_variants', variants],
             ['inventory_items', inventory],
+            ['inventory_movements', movements],
             ['customers', customers],
             ['orders', orders],
             ['order_items', orderItems],
@@ -859,6 +889,18 @@ export class BackupManager {
         } catch (dbErr) {
           console.warn('[BackupManager] SQLite sync warning during demo seed:', dbErr);
         }
+      }
+
+      // Sync with Cloud Directus if in Cloud Mode or Directus session is active
+      try {
+        const { storageManager } = await import('./index');
+        const { directusClient } = await import('../api/directus');
+        if (storageManager.getMode() === 'cloud_synced' || Boolean(directusClient.getToken())) {
+          const { CloudMigrationManager } = await import('./cloudMigrationManager');
+          await CloudMigrationManager.migrateLocalToCloud(activeOrgId);
+        }
+      } catch (cloudErr) {
+        console.warn('[BackupManager] Cloud sync warning during demo seed:', cloudErr);
       }
 
       // Trigger data restored event

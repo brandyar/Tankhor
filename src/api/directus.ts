@@ -3,6 +3,8 @@
  * Connects securely to the Node.js API Gateway which handles Directus Admin and Tenant Isolation.
  */
 
+import { SystemModule } from '../types';
+
 export interface DirectusConfig {
   baseUrl: string;
   token?: string | null;
@@ -630,6 +632,33 @@ class DirectusClient {
 
   public async getSubscriptionPlans(): Promise<any> {
     return await this.request('/payment/plans', { skipAuth: true });
+  }
+
+  public async getSystemModules(query?: Record<string, any>): Promise<SystemModule[]> {
+    try {
+      let qs = '';
+      if (query) {
+        const params = new URLSearchParams();
+        if (query.filter) params.append('filter', typeof query.filter === 'string' ? query.filter : JSON.stringify(query.filter));
+        if (query.sort) params.append('sort', query.sort);
+        if (query.limit) params.append('limit', String(query.limit));
+        qs = `?${params.toString()}`;
+      }
+      // 1. Try dedicated public proxy endpoint /system-modules
+      const res: any = await this.request(`/system-modules${qs}`, { skipAuth: true }).catch(() => null);
+      if (res) {
+        if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+        if (Array.isArray(res) && res.length > 0) return res;
+      }
+      // 2. Directus collection endpoint fallback
+      const items = await this.getItems<SystemModule>('system_modules', query).catch(() => []);
+      if (items && items.length > 0) {
+        return items;
+      }
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   public async requestPayment(data: {

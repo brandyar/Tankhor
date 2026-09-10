@@ -85,7 +85,7 @@ jobs:
           node -e '
           const fs = require("fs");
 
-          const tag = process.env.TAG_NAME || "v1.0.20";
+          const tag = process.env.TAG_NAME || "v1.0.21";
           const version = tag.replace(/^v/, "");
           const repo = process.env.REPO || "brandyar/Tankhor";
           const baseUrl = process.env.DOWNLOAD_BASE_URL || `https://dl.tankhor.com/${tag}`;

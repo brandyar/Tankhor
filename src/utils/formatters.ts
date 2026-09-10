@@ -2,6 +2,8 @@
  * Localization & Formatting Utilities for TANKHOR (تن‌خور)
  */
 
+import { isoToJalali, PERSIAN_MONTH_NAMES } from './dateUtils';
+
 const PERSIAN_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
 
 export function isCurrentLocalePersian(): boolean {
@@ -65,17 +67,24 @@ export function formatCurrency(
 export function formatDate(isoString?: string | null, isPersian?: boolean): string {
   if (!isoString) return '-';
   try {
-    const date = new Date(isoString);
-    if (isNaN(date.getTime())) return isoString;
-
     const persianMode = isPersian !== undefined ? isPersian : isCurrentLocalePersian();
 
+    // Check if it's pure YYYY-MM-DD
+    let date: Date;
+    const clean = String(isoString).trim().slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+      const [gy, gm, gd] = clean.split('-').map(Number);
+      date = new Date(gy, gm - 1, gd, 12, 0, 0);
+    } else {
+      date = new Date(isoString);
+    }
+
+    if (isNaN(date.getTime())) return String(isoString);
+
     if (persianMode) {
-      return new Intl.DateTimeFormat('fa-IR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }).format(date);
+      const j = isoToJalali(clean);
+      const monthName = PERSIAN_MONTH_NAMES[j.jm - 1] || '';
+      return `${toPersianDigits(j.jd, true)} ${monthName} ${toPersianDigits(j.jy, true)}`;
     }
 
     return new Intl.DateTimeFormat('en-US', {
@@ -84,7 +93,33 @@ export function formatDate(isoString?: string | null, isPersian?: boolean): stri
       day: 'numeric',
     }).format(date);
   } catch {
-    return isoString;
+    return String(isoString);
+  }
+}
+
+export const formatPersianDate = formatDate;
+
+/**
+ * Formats ISO date string to numeric format:
+ * Persian: ۱۴۰۵/۰۶/۱۹ (or 1405/06/19)
+ * English: 2026-09-10
+ */
+export function formatDateNumeric(isoString?: string | null, isPersian?: boolean): string {
+  if (!isoString) return '-';
+  try {
+    const persianMode = isPersian !== undefined ? isPersian : isCurrentLocalePersian();
+    const clean = String(isoString).trim().slice(0, 10);
+
+    if (persianMode) {
+      const j = isoToJalali(clean);
+      const m = String(j.jm).padStart(2, '0');
+      const d = String(j.jd).padStart(2, '0');
+      return toPersianDigits(`${j.jy}/${m}/${d}`, true);
+    }
+
+    return clean;
+  } catch {
+    return String(isoString);
   }
 }
 

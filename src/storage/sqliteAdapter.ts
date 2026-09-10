@@ -6,9 +6,14 @@ import {
   Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
   InventoryMovement, Customer, Order, OrderItem, Supplier, PurchaseOrder,
   PurchaseOrderItem, StockTransfer, StockTransferItem, SizeGuideTemplate,
-  SizeGuideMeasurement, SizeGuideValue, Subscription, SystemModule, OrganizationModule
+  SizeGuideMeasurement, SizeGuideValue, Subscription, SystemModule, OrganizationModule,
+  ExpenseCategory, Expense, PersonTransaction, ProfitLossSummary,
+  FinancialAccount, FinancialAccountType, TreasuryTransaction, TreasuryTransactionType,
+  Cheque, ChequeType, ChequeStatus,
+  LandedCost, LandedCostAllocation, VatReportSummary
 } from '../types';
 import { DEFAULT_SYSTEM_MODULES } from '../utils/license';
+import { directusClient } from '../api/directus';
 
 export function isTauriEnvironment(): boolean {
   if (typeof window === 'undefined') return false;
@@ -50,6 +55,14 @@ export const SQLITE_COLLECTIONS = [
   'subscriptions',
   'system_modules',
   'organization_modules',
+  'expense_categories',
+  'expenses',
+  'person_transactions',
+  'financial_accounts',
+  'treasury_transactions',
+  'cheques',
+  'landed_costs',
+  'landed_cost_allocations',
 ] as const;
 
 export class SqliteStorageAdapter implements IStorageProvider {
@@ -246,6 +259,25 @@ export class SqliteStorageAdapter implements IStorageProvider {
       });
     }
     return list;
+  }
+
+  private async getItemById<T extends { id: number }>(col: string, id: number): Promise<T | null> {
+    const db = await this.initDatabase();
+    if (db) {
+      try {
+        const rows = await db.select<{ data: string }[]>(
+          `SELECT data FROM ${col} WHERE id = $1`,
+          [id]
+        );
+        if (rows.length > 0) {
+          return JSON.parse(rows[0].data) as T;
+        }
+      } catch (err) {
+        console.error(`[SqliteStorageAdapter] Error querying ${col} by id ${id}:`, err);
+      }
+    }
+    const list = this.fallbackMemoryStore.get(col) || [];
+    return (list.find((x: any) => x.id === id) as T) || null;
   }
 
   private async saveItem<T extends { id: number; organization_id?: any }>(col: string, item: T): Promise<T> {
@@ -1152,6 +1184,16 @@ export class SqliteStorageAdapter implements IStorageProvider {
   async getPurchaseOrders(params?: QueryParams): Promise<PurchaseOrder[]> {
     return this.getItems<PurchaseOrder>('purchase_orders', this.getActiveOrgId(params));
   }
+  async getPurchaseOrderItems(purchaseOrderId?: number): Promise<PurchaseOrderItem[]> {
+    let items = await this.getItems<PurchaseOrderItem>('purchase_order_items');
+    if (purchaseOrderId) {
+      items = items.filter((it) => {
+        const poId = typeof it.purchase_order_id === 'object' ? (it.purchase_order_id as any)?.id : it.purchase_order_id;
+        return Number(poId) === Number(purchaseOrderId);
+      });
+    }
+    return items;
+  }
   async savePurchaseOrder(po: Partial<PurchaseOrder>, items?: Partial<PurchaseOrderItem>[]): Promise<PurchaseOrder> {
     const list = await this.getItems<PurchaseOrder>('purchase_orders');
     const validId = typeof po.id === 'number' && po.id > 0 ? po.id : this.generateUniqueId(list);
@@ -1346,7 +1388,7 @@ export class SqliteStorageAdapter implements IStorageProvider {
       organization_id: orgId || 1,
       start_date: sub.start_date || new Date().toISOString(),
       end_date: sub.end_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      transaction_amount: sub.transaction_amount || '۴۹۰,۰۰۰ تومان',
+      transaction_amount: sub.transaction_amount || '',
       Transaction_id: sub.Transaction_id || String(Date.now()),
       date_created: sub.date_created || new Date().toISOString(),
       ...sub,
@@ -1358,8 +1400,27 @@ export class SqliteStorageAdapter implements IStorageProvider {
 
   // System & Organization Modules
   async getSystemModules(params?: QueryParams): Promise<SystemModule[]> {
+    try {
+      // If network is available, fetch live dynamic prices & metadata from Directus
+      if (typeof window !== 'undefined' && window.navigator?.onLine !== false) {
+        const liveItems = await directusClient.getSystemModules(params).catch(() => []);
+        if (liveItems && liveItems.length > 0) {
+          for (const m of liveItems) {
+            await this.saveItem('system_modules', m);
+          }
+          let filtered = liveItems;
+          if (params?.status) {
+            filtered = filtered.filter((m) => m.status === params.status);
+          }
+          return filtered;
+        }
+      }
+    } catch {
+      // offline fallback to SQLite cache
+    }
+
     let list = await this.getItems<SystemModule>('system_modules');
-    if (!list || list.length === 0 || list.some((m) => m.slug === 'accounting' || m.price_ir?.includes('۱,۴۹۰,۰۰۰'))) {
+    if (!list || list.length === 0) {
       list = [...DEFAULT_SYSTEM_MODULES];
       for (const m of list) {
         await this.saveItem('system_modules', m);
@@ -1410,5 +1471,947 @@ export class SqliteStorageAdapter implements IStorageProvider {
 
   async deleteOrganizationModule(id: number): Promise<boolean> {
     return this.deleteItem('organization_modules', id);
+  }
+
+  // ==========================================
+  // Accounting & Financials (Phase 1)
+  // ==========================================
+
+  private getDefaultExpenseCategories(orgId: number): ExpenseCategory[] {
+    const defaults = [
+      { title: 'اجاره محل و دفتر', code: 'EXP-101', icon: 'Building' },
+      { title: 'حقوق و دستمزد پرسنل', code: 'EXP-102', icon: 'Users' },
+      { title: 'حمل، نقل و باربری', code: 'EXP-103', icon: 'Truck' },
+      { title: 'تبلیغات و بازاریابی', code: 'EXP-104', icon: 'Megaphone' },
+      { title: 'ملزومات، بسته بندی و کارتن', code: 'EXP-105', icon: 'Package' },
+      { title: 'قبوض آب، برق، گاز و اینترنت', code: 'EXP-106', icon: 'Zap' },
+      { title: 'پذیرایی و ملزومات مصرفی', code: 'EXP-107', icon: 'Coffee' },
+      { title: 'سایر هزینه‌های عمومی', code: 'EXP-199', icon: 'HelpCircle' },
+    ];
+    const now = new Date().toISOString();
+    return defaults.map((d, index) => ({
+      id: index + 1,
+      organization_id: orgId,
+      title: d.title,
+      code: d.code,
+      icon: d.icon,
+      status: 'active' as const,
+      date_created: now,
+    }));
+  }
+
+  async getExpenseCategories(params?: QueryParams): Promise<ExpenseCategory[]> {
+    const orgId = this.getActiveOrgId(params) || 1;
+    let items = await this.getItems<ExpenseCategory>('expense_categories', orgId);
+
+    if (items.length === 0) {
+      const defaults = this.getDefaultExpenseCategories(orgId);
+      for (const cat of defaults) {
+        await this.saveItem('expense_categories', cat);
+      }
+      items = defaults;
+    }
+
+    if (params?.status) {
+      items = items.filter((c) => c.status === params.status);
+    }
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      items = items.filter((c) => c.title.toLowerCase().includes(q) || (c.code && c.code.toLowerCase().includes(q)));
+    }
+    return items;
+  }
+
+  async saveExpenseCategory(cat: Partial<ExpenseCategory>): Promise<ExpenseCategory> {
+    const list = await this.getItems<ExpenseCategory>('expense_categories');
+    const validId = typeof cat.id === 'number' && cat.id > 0 ? cat.id : this.generateUniqueId(list);
+    const orgId = this.getActiveOrgId({ organization_id: normalizeId(cat.organization_id) }) || 1;
+
+    const saved: ExpenseCategory = {
+      id: validId,
+      organization_id: orgId,
+      title: cat.title || 'سرفصل جدید',
+      code: cat.code || `EXP-${Math.floor(100 + Math.random() * 900)}`,
+      icon: cat.icon || 'Tag',
+      status: cat.status || 'active',
+      date_created: new Date().toISOString(),
+      ...cat,
+    };
+
+    await this.saveItem('expense_categories', saved);
+    return saved;
+  }
+
+  async deleteExpenseCategory(id: number): Promise<boolean> {
+    return this.deleteItem('expense_categories', id);
+  }
+
+  async getExpenses(params?: QueryParams): Promise<Expense[]> {
+    const orgId = this.getActiveOrgId(params) || 1;
+    let items = await this.getItems<Expense>('expenses', orgId);
+    const categories = await this.getExpenseCategories({ organization_id: orgId });
+
+    const enriched = items.map((exp) => {
+      const catId = typeof exp.category_id === 'number' ? exp.category_id : (exp.category_id as any)?.id;
+      const cat = categories.find((c) => c.id === catId);
+      return {
+        ...exp,
+        category_title: cat?.title || exp.category_title || 'سایر هزینه‌ها',
+        category_code: cat?.code || exp.category_code,
+        category_icon: cat?.icon || exp.category_icon || 'Receipt',
+      };
+    });
+
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      return enriched.filter((e) => e.title.toLowerCase().includes(q) || (e.notes && e.notes.toLowerCase().includes(q)));
+    }
+    if (params?.category_id) {
+      return enriched.filter((e) => {
+        const catId = typeof e.category_id === 'number' ? e.category_id : (e.category_id as any)?.id;
+        return Number(catId) === Number(params.category_id);
+      });
+    }
+
+    return enriched;
+  }
+
+  async saveExpense(exp: Partial<Expense>): Promise<Expense> {
+    const list = await this.getItems<Expense>('expenses');
+    const validId = typeof exp.id === 'number' && exp.id > 0 ? exp.id : this.generateUniqueId(list);
+    const orgId = this.getActiveOrgId({ organization_id: normalizeId(exp.organization_id) }) || 1;
+
+    const saved: Expense = {
+      id: validId,
+      organization_id: orgId,
+      category_id: exp.category_id || 1,
+      title: exp.title || 'هزینه جدید',
+      amount: Math.max(0, Number(exp.amount) || 0),
+      expense_date: exp.expense_date || new Date().toISOString(),
+      payment_method: exp.payment_method || 'cash',
+      notes: exp.notes || '',
+      date_created: new Date().toISOString(),
+      ...exp,
+    };
+
+    await this.saveItem('expenses', saved);
+    return saved;
+  }
+
+  async deleteExpense(id: number): Promise<boolean> {
+    return this.deleteItem('expenses', id);
+  }
+
+  async getPersonTransactions(params?: QueryParams): Promise<PersonTransaction[]> {
+    const orgId = this.getActiveOrgId(params) || 1;
+    let items = await this.getItems<PersonTransaction>('person_transactions', orgId);
+
+    const customers = await this.getCustomers({ organization_id: orgId });
+    const suppliers = await this.getSuppliers({ organization_id: orgId });
+    const orders = await this.getOrders({ organization_id: orgId });
+    const purchaseOrders = await this.getPurchaseOrders({ organization_id: orgId });
+
+    const enriched = items.map((tx) => {
+      let partyName = tx.party_name || '';
+      if (!partyName) {
+        if (tx.party_type === 'customer' && tx.customer_id) {
+          const cId = typeof tx.customer_id === 'number' ? tx.customer_id : (tx.customer_id as any)?.id;
+          const cust = customers.find((c) => c.id === cId);
+          partyName = cust?.name || `مشتری #${cId}`;
+        } else if (tx.party_type === 'supplier' && tx.supplier_id) {
+          const sId = typeof tx.supplier_id === 'number' ? tx.supplier_id : (tx.supplier_id as any)?.id;
+          const sup = suppliers.find((s) => s.id === sId);
+          partyName = sup?.name || `تامین‌کننده #${sId}`;
+        }
+      }
+
+      let orderNumber = tx.order_number;
+      if (!orderNumber && tx.order_id) {
+        const oId = typeof tx.order_id === 'number' ? tx.order_id : (tx.order_id as any)?.id;
+        const ord = orders.find((o) => o.id === oId);
+        orderNumber = ord?.order_number;
+      }
+
+      let purchaseNumber = tx.purchase_number;
+      if (!purchaseNumber && tx.purchase_order_id) {
+        const pId = typeof tx.purchase_order_id === 'number' ? tx.purchase_order_id : (tx.purchase_order_id as any)?.id;
+        const po = purchaseOrders.find((p) => p.id === pId);
+        purchaseNumber = po?.purchase_number;
+      }
+
+      return {
+        ...tx,
+        party_name: partyName,
+        order_number: orderNumber,
+        purchase_number: purchaseNumber,
+      };
+    });
+
+    if (params?.type) {
+      return enriched.filter((tx) => tx.party_type === params.type || tx.type === params.type);
+    }
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      return enriched.filter((tx) => (tx.party_name && tx.party_name.toLowerCase().includes(q)) || (tx.description && tx.description.toLowerCase().includes(q)) || (tx.reference_number && tx.reference_number.toLowerCase().includes(q)));
+    }
+
+    return enriched;
+  }
+
+  async savePersonTransaction(tx: Partial<PersonTransaction>): Promise<PersonTransaction> {
+    const list = await this.getItems<PersonTransaction>('person_transactions');
+    const validId = typeof tx.id === 'number' && tx.id > 0 ? tx.id : this.generateUniqueId(list);
+    const orgId = this.getActiveOrgId({ organization_id: normalizeId(tx.organization_id) }) || 1;
+
+    const saved: PersonTransaction = {
+      id: validId,
+      organization_id: orgId,
+      party_type: tx.party_type || 'customer',
+      customer_id: tx.customer_id || null,
+      supplier_id: tx.supplier_id || null,
+      type: tx.type || 'debtor',
+      transaction_type: tx.transaction_type || 'cash_payment',
+      amount: Math.max(0, Number(tx.amount) || 0),
+      transaction_date: tx.transaction_date || new Date().toISOString(),
+      status: tx.status || 'cleared',
+      reference_number: tx.reference_number || `TX-${Math.floor(1000 + Math.random() * 9000)}`,
+      description: tx.description || '',
+      date_created: new Date().toISOString(),
+      ...tx,
+    };
+
+    await this.saveItem('person_transactions', saved);
+
+    // Auto-recalculate customer / supplier balance
+    if (saved.party_type === 'customer' && saved.customer_id) {
+      const cId = typeof saved.customer_id === 'number' ? saved.customer_id : (saved.customer_id as any)?.id;
+      const customers = await this.getCustomers();
+      const customer = customers.find((c) => c.id === cId);
+      if (customer) {
+        const allTxs = await this.getItems<PersonTransaction>('person_transactions');
+        const partyTxs = allTxs.filter((t) => {
+          const tCId = typeof t.customer_id === 'number' ? t.customer_id : (t.customer_id as any)?.id;
+          return t.party_type === 'customer' && tCId === cId && t.status !== 'cancelled';
+        });
+        const currentBalance = partyTxs.reduce((sum, t) => {
+          const amt = Number(t.amount) || 0;
+          return t.type === 'debtor' ? sum + amt : sum - amt;
+        }, 0);
+        customer.balance = currentBalance;
+        await this.saveCustomer(customer);
+      }
+    } else if (saved.party_type === 'supplier' && saved.supplier_id) {
+      const sId = typeof saved.supplier_id === 'number' ? saved.supplier_id : (saved.supplier_id as any)?.id;
+      const suppliers = await this.getSuppliers();
+      const supplier = suppliers.find((s) => s.id === sId);
+      if (supplier) {
+        const allTxs = await this.getItems<PersonTransaction>('person_transactions');
+        const partyTxs = allTxs.filter((t) => {
+          const tSId = typeof t.supplier_id === 'number' ? t.supplier_id : (t.supplier_id as any)?.id;
+          return t.party_type === 'supplier' && tSId === sId && t.status !== 'cancelled';
+        });
+        const currentBalance = partyTxs.reduce((sum, t) => {
+          const amt = Number(t.amount) || 0;
+          return t.type === 'creditor' ? sum + amt : sum - amt;
+        }, 0);
+        supplier.balance = currentBalance;
+        await this.saveSupplier(supplier);
+      }
+    }
+
+    return saved;
+  }
+
+  async deletePersonTransaction(id: number): Promise<boolean> {
+    return this.deleteItem('person_transactions', id);
+  }
+
+  async getProfitLossSummary(params?: QueryParams): Promise<ProfitLossSummary> {
+    const orgId = this.getActiveOrgId(params) || 1;
+    const orders = await this.getOrders({ organization_id: orgId });
+    const orderItems = await this.getItems<OrderItem>('order_items');
+    const variants = await this.getVariants({ organization_id: orgId });
+    const expenses = await this.getExpenses({ organization_id: orgId });
+    const categories = await this.getExpenseCategories({ organization_id: orgId });
+
+    const validOrders = orders.filter((o) => o.status !== 'cancelled');
+    const totalRevenue = validOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+
+    let totalCogs = 0;
+    validOrders.forEach((o) => {
+      const items = orderItems.filter((it) => {
+        const itOrderId = typeof it.order_id === 'object' ? (it.order_id as any)?.id : it.order_id;
+        return Number(itOrderId) === Number(o.id);
+      });
+      items.forEach((it) => {
+        const vId = typeof it.variant_id === 'object' ? (it.variant_id as any)?.id : it.variant_id;
+        const variant = variants.find((v) => v.id === Number(vId));
+        const unitCost = Number(variant?.cost) || 0;
+        const qty = Number(it.quantity) || 1;
+        totalCogs += unitCost * qty;
+      });
+    });
+
+    const grossProfit = totalRevenue - totalCogs;
+    const grossMarginPercent = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+    const totalExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+    const catMap = new Map<number, { title: string; amount: number }>();
+    categories.forEach((c) => {
+      catMap.set(c.id, { title: c.title, amount: 0 });
+    });
+    expenses.forEach((e) => {
+      const cId = typeof e.category_id === 'number' ? e.category_id : (e.category_id as any)?.id || 1;
+      const existing = catMap.get(cId) || { title: e.category_title || 'سایر', amount: 0 };
+      existing.amount += Number(e.amount) || 0;
+      catMap.set(cId, existing);
+    });
+
+    const expensesByCategory = Array.from(catMap.entries())
+      .map(([catId, data]) => ({
+        categoryId: catId,
+        title: data.title,
+        amount: data.amount,
+        percentage: totalExpenses > 0 ? (data.amount / totalExpenses) * 100 : 0,
+      }))
+      .filter((c) => c.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+
+    const netProfit = grossProfit - totalExpenses;
+    const netMarginPercent = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+    return {
+      period: params?.type || 'all',
+      totalRevenue,
+      totalCogs,
+      grossProfit,
+      grossMarginPercent,
+      totalExpenses,
+      expensesByCategory,
+      netProfit,
+      netMarginPercent,
+      ordersCount: validOrders.length,
+      expensesCount: expenses.length,
+    };
+  }
+
+  // ==========================================
+  // Phase 2: Financial Accounts & Treasury
+  // ==========================================
+
+  private getDefaultFinancialAccounts(orgId: number): FinancialAccount[] {
+    const now = new Date().toISOString();
+    return [
+      {
+        id: 1,
+        organization_id: orgId,
+        name: 'صندوق نقدی مرکزی',
+        type: 'cashbox',
+        initial_balance: 0,
+        current_balance: 0,
+        is_default: true,
+        status: 'active',
+        date_created: now,
+      },
+      {
+        id: 2,
+        organization_id: orgId,
+        name: 'حساب جاری بانک ملت',
+        type: 'bank',
+        bank_name: 'بانک ملت',
+        account_number: '1234567890',
+        card_number: '6104337890123456',
+        shaba_number: 'IR120120000000012345678901',
+        initial_balance: 0,
+        current_balance: 0,
+        is_default: false,
+        status: 'active',
+        date_created: now,
+      },
+      {
+        id: 3,
+        organization_id: orgId,
+        name: 'کارتخوان فروشگاه (POS)',
+        type: 'pos',
+        bank_name: 'به‌پرداخت ملت',
+        pos_terminal_id: '99887766',
+        initial_balance: 0,
+        current_balance: 0,
+        is_default: false,
+        status: 'active',
+        date_created: now,
+      },
+    ];
+  }
+
+  async getFinancialAccounts(params?: QueryParams): Promise<FinancialAccount[]> {
+    const orgId = this.getActiveOrgId(params) || 1;
+    let items = await this.getItems<FinancialAccount>('financial_accounts', orgId);
+
+    if (items.length === 0) {
+      const defaults = this.getDefaultFinancialAccounts(orgId);
+      for (const acc of defaults) {
+        await this.saveItem('financial_accounts', acc);
+      }
+      items = defaults;
+    }
+
+    if (params?.status) {
+      items = items.filter((a) => a.status === params.status);
+    }
+    if (params?.type) {
+      items = items.filter((a) => a.type === params.type);
+    }
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      items = items.filter((a) =>
+        a.name.toLowerCase().includes(q) ||
+        (a.bank_name && a.bank_name.toLowerCase().includes(q)) ||
+        (a.account_number && a.account_number.includes(q)) ||
+        (a.card_number && a.card_number.includes(q))
+      );
+    }
+    return items;
+  }
+
+  async getFinancialAccountById(id: number): Promise<FinancialAccount | null> {
+    const list = await this.getFinancialAccounts();
+    return list.find((a) => a.id === id) || null;
+  }
+
+  async saveFinancialAccount(account: Partial<FinancialAccount>): Promise<FinancialAccount> {
+    const list = await this.getItems<FinancialAccount>('financial_accounts');
+    const validId = typeof account.id === 'number' && account.id > 0 ? account.id : this.generateUniqueId(list);
+    const orgId = this.getActiveOrgId({ organization_id: normalizeId(account.organization_id) }) || 1;
+
+    if (account.is_default) {
+      for (const a of list) {
+        if (a.organization_id === orgId && a.is_default && a.id !== validId) {
+          a.is_default = false;
+          await this.saveItem('financial_accounts', a);
+        }
+      }
+    }
+
+    const saved: FinancialAccount = {
+      id: validId,
+      organization_id: orgId,
+      name: account.name || 'حساب جدید',
+      type: account.type || 'cashbox',
+      bank_name: account.bank_name || null,
+      account_number: account.account_number || null,
+      card_number: account.card_number || null,
+      shaba_number: account.shaba_number || null,
+      pos_terminal_id: account.pos_terminal_id || null,
+      initial_balance: Number(account.initial_balance) || 0,
+      current_balance: Number(account.current_balance ?? account.initial_balance) || 0,
+      is_default: Boolean(account.is_default),
+      status: account.status || 'active',
+      date_created: new Date().toISOString(),
+      ...account,
+    };
+
+    await this.saveItem('financial_accounts', saved);
+    return saved;
+  }
+
+  async deleteFinancialAccount(id: number): Promise<boolean> {
+    return this.deleteItem('financial_accounts', id);
+  }
+
+  async getTreasuryTransactions(params?: QueryParams): Promise<TreasuryTransaction[]> {
+    const orgId = this.getActiveOrgId(params) || 1;
+    let items = await this.getItems<TreasuryTransaction>('treasury_transactions', orgId);
+    const accounts = await this.getFinancialAccounts({ organization_id: orgId });
+
+    const enriched = items.map((tx) => {
+      const srcId = typeof tx.source_account_id === 'object' ? (tx.source_account_id as any)?.id : tx.source_account_id;
+      const dstId = typeof tx.destination_account_id === 'object' ? (tx.destination_account_id as any)?.id : tx.destination_account_id;
+      const src = accounts.find((a) => a.id === Number(srcId));
+      const dst = accounts.find((a) => a.id === Number(dstId));
+      return {
+        ...tx,
+        source_account_name: src?.name,
+        destination_account_name: dst?.name,
+      };
+    });
+
+    if (params?.type) {
+      return enriched.filter((t) => t.type === params.type);
+    }
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      return enriched.filter((t) =>
+        (t.description && t.description.toLowerCase().includes(q)) ||
+        (t.tracking_code && t.tracking_code.toLowerCase().includes(q))
+      );
+    }
+
+    return enriched.sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
+  }
+
+  async saveTreasuryTransaction(tx: Partial<TreasuryTransaction>): Promise<TreasuryTransaction> {
+    const list = await this.getItems<TreasuryTransaction>('treasury_transactions');
+    const validId = typeof tx.id === 'number' && tx.id > 0 ? tx.id : this.generateUniqueId(list);
+    const orgId = this.getActiveOrgId({ organization_id: normalizeId(tx.organization_id) }) || 1;
+    const amount = Math.max(0, Number(tx.amount) || 0);
+
+    const saved: TreasuryTransaction = {
+      id: validId,
+      organization_id: orgId,
+      source_account_id: tx.source_account_id || null,
+      destination_account_id: tx.destination_account_id || null,
+      type: tx.type || 'deposit',
+      amount,
+      tracking_code: tx.tracking_code || `TRX-${Date.now().toString().slice(-6)}`,
+      transaction_date: tx.transaction_date || new Date().toISOString(),
+      person_transaction_id: tx.person_transaction_id || null,
+      expense_id: tx.expense_id || null,
+      description: tx.description || '',
+      receipt_attachment: tx.receipt_attachment || null,
+      date_created: new Date().toISOString(),
+      ...tx,
+    };
+
+    // Update account balances
+    if (saved.type === 'deposit' && saved.destination_account_id) {
+      const dstId = typeof saved.destination_account_id === 'object' ? (saved.destination_account_id as any)?.id : saved.destination_account_id;
+      const acc = await this.getFinancialAccountById(Number(dstId));
+      if (acc) {
+        acc.current_balance = (Number(acc.current_balance) || 0) + amount;
+        await this.saveFinancialAccount(acc);
+      }
+    } else if (saved.type === 'withdrawal' && saved.source_account_id) {
+      const srcId = typeof saved.source_account_id === 'object' ? (saved.source_account_id as any)?.id : saved.source_account_id;
+      const acc = await this.getFinancialAccountById(Number(srcId));
+      if (acc) {
+        acc.current_balance = (Number(acc.current_balance) || 0) - amount;
+        await this.saveFinancialAccount(acc);
+      }
+    } else if (saved.type === 'transfer') {
+      if (saved.source_account_id) {
+        const srcId = typeof saved.source_account_id === 'object' ? (saved.source_account_id as any)?.id : saved.source_account_id;
+        const acc = await this.getFinancialAccountById(Number(srcId));
+        if (acc) {
+          acc.current_balance = (Number(acc.current_balance) || 0) - amount;
+          await this.saveFinancialAccount(acc);
+        }
+      }
+      if (saved.destination_account_id) {
+        const dstId = typeof saved.destination_account_id === 'object' ? (saved.destination_account_id as any)?.id : saved.destination_account_id;
+        const acc = await this.getFinancialAccountById(Number(dstId));
+        if (acc) {
+          acc.current_balance = (Number(acc.current_balance) || 0) + amount;
+          await this.saveFinancialAccount(acc);
+        }
+      }
+    }
+
+    await this.saveItem('treasury_transactions', saved);
+    return saved;
+  }
+
+  async deleteTreasuryTransaction(id: number): Promise<boolean> {
+    return this.deleteItem('treasury_transactions', id);
+  }
+
+  // ==========================================
+  // Phase 2: Cheques Management
+  // ==========================================
+
+  async getCheques(params?: QueryParams): Promise<Cheque[]> {
+    const orgId = this.getActiveOrgId(params) || 1;
+    let items = await this.getItems<Cheque>('cheques', orgId);
+    const customers = await this.getCustomers({ organization_id: orgId });
+    const suppliers = await this.getSuppliers({ organization_id: orgId });
+    const accounts = await this.getFinancialAccounts({ organization_id: orgId });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const enriched = items.map((chk) => {
+      const cId = typeof chk.customer_id === 'object' ? (chk.customer_id as any)?.id : chk.customer_id;
+      const sId = typeof chk.supplier_id === 'object' ? (chk.supplier_id as any)?.id : chk.supplier_id;
+      const tId = typeof chk.target_account_id === 'object' ? (chk.target_account_id as any)?.id : chk.target_account_id;
+
+      const cust = customers.find((c) => c.id === Number(cId));
+      const supp = suppliers.find((s) => s.id === Number(sId));
+      const acc = accounts.find((a) => a.id === Number(tId));
+
+      let daysUntilDue = 0;
+      let isOverdue = false;
+
+      if (chk.due_date) {
+        const dueDate = new Date(chk.due_date);
+        dueDate.setHours(0, 0, 0, 0);
+        const diffMs = dueDate.getTime() - today.getTime();
+        daysUntilDue = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        isOverdue = daysUntilDue < 0 && chk.status !== 'cleared' && chk.status !== 'cancelled';
+      }
+
+      return {
+        ...chk,
+        customer_name: cust?.name,
+        supplier_name: supp?.name,
+        target_account_name: acc?.name,
+        days_until_due: daysUntilDue,
+        is_overdue: isOverdue,
+      };
+    });
+
+    if (params?.status) {
+      return enriched.filter((c) => c.status === params.status);
+    }
+    if (params?.type) {
+      return enriched.filter((c) => c.type === params.type);
+    }
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      return enriched.filter((c) =>
+        c.sayad_id.includes(q) ||
+        c.cheque_number.includes(q) ||
+        c.drawer_name.toLowerCase().includes(q) ||
+        c.bank_name.toLowerCase().includes(q)
+      );
+    }
+
+    return enriched.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+  }
+
+  async getChequeById(id: number): Promise<Cheque | null> {
+    const list = await this.getCheques();
+    return list.find((c) => c.id === id) || null;
+  }
+
+  async saveCheque(cheque: Partial<Cheque>): Promise<Cheque> {
+    const list = await this.getItems<Cheque>('cheques');
+    const validId = typeof cheque.id === 'number' && cheque.id > 0 ? cheque.id : this.generateUniqueId(list);
+    const orgId = this.getActiveOrgId({ organization_id: normalizeId(cheque.organization_id) }) || 1;
+
+    const saved: Cheque = {
+      id: validId,
+      organization_id: orgId,
+      type: cheque.type || 'received',
+      sayad_id: cheque.sayad_id || '',
+      cheque_number: cheque.cheque_number || '',
+      bank_name: cheque.bank_name || 'بانک ملت',
+      branch_name: cheque.branch_name || null,
+      account_number: cheque.account_number || null,
+      drawer_name: cheque.drawer_name || '',
+      customer_id: cheque.customer_id ? Number(normalizeId(cheque.customer_id)) : null,
+      supplier_id: cheque.supplier_id ? Number(normalizeId(cheque.supplier_id)) : null,
+      amount: Math.max(0, Number(cheque.amount) || 0),
+      issue_date: cheque.issue_date || new Date().toISOString().split('T')[0],
+      due_date: cheque.due_date || new Date().toISOString().split('T')[0],
+      status: cheque.status || 'registered',
+      target_account_id: cheque.target_account_id ? Number(normalizeId(cheque.target_account_id)) : null,
+      alert_days_before: Number(cheque.alert_days_before) || 3,
+      image_front: cheque.image_front || null,
+      image_back: cheque.image_back || null,
+      notes: cheque.notes || '',
+      date_created: new Date().toISOString(),
+      ...cheque,
+    };
+
+    await this.saveItem('cheques', saved);
+    return saved;
+  }
+
+  async deleteCheque(id: number): Promise<boolean> {
+    return this.deleteItem('cheques', id);
+  }
+
+  async updateChequeStatus(id: number, status: ChequeStatus, targetAccountId?: number): Promise<Cheque> {
+    const chk = await this.getChequeById(id);
+    if (!chk) {
+      throw new Error(`Cheque with id ${id} not found`);
+    }
+
+    const prevStatus = chk.status;
+    chk.status = status;
+    if (targetAccountId) {
+      chk.target_account_id = targetAccountId;
+    }
+
+    if (status === 'cleared' && prevStatus !== 'cleared' && chk.target_account_id) {
+      const accId = typeof chk.target_account_id === 'object' ? (chk.target_account_id as any)?.id : chk.target_account_id;
+      const acc = await this.getFinancialAccountById(Number(accId));
+      if (acc) {
+        if (chk.type === 'received') {
+          acc.current_balance = (Number(acc.current_balance) || 0) + Number(chk.amount);
+        } else if (chk.type === 'issued') {
+          acc.current_balance = (Number(acc.current_balance) || 0) - Number(chk.amount);
+        }
+        await this.saveFinancialAccount(acc);
+      }
+    }
+
+    await this.saveItem('cheques', chk);
+    return chk;
+  }
+
+  // ==========================================
+  // Phase 3: Landed Cost & Tax / VAT Reports
+  // ==========================================
+
+  async getLandedCosts(params?: QueryParams): Promise<LandedCost[]> {
+    const orgId = this.getActiveOrgId(params) || 1;
+    let list = await this.getItems<LandedCost>('landed_costs', orgId);
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      list = list.filter((item) => item.title?.toLowerCase().includes(q) || item.cost_type?.toLowerCase().includes(q));
+    }
+
+    const purchaseOrders = await this.getItems<PurchaseOrder>('purchase_orders', orgId);
+    const suppliers = await this.getItems<Supplier>('suppliers', orgId);
+    const allocations = await this.getItems<LandedCostAllocation>('landed_cost_allocations');
+
+    return list.map((cost) => {
+      const poId = typeof cost.purchase_order_id === 'object' ? (cost.purchase_order_id as any)?.id : cost.purchase_order_id;
+      const po = purchaseOrders.find((p) => p.id === Number(poId));
+      let supName = '';
+      if (po) {
+        const supId = typeof po.supplier_id === 'object' ? (po.supplier_id as any)?.id : po.supplier_id;
+        const sup = suppliers.find((s) => s.id === Number(supId));
+        supName = sup?.name || po.supplier_name || '';
+      }
+
+      const costAllocations = allocations.filter((a) => {
+        const cId = typeof a.landed_cost_id === 'object' ? (a.landed_cost_id as any)?.id : a.landed_cost_id;
+        return Number(cId) === cost.id;
+      });
+
+      return {
+        ...cost,
+        purchase_number: po?.purchase_number || '',
+        supplier_name: supName,
+        purchase_total: po?.total || 0,
+        allocations_count: costAllocations.length,
+      };
+    });
+  }
+
+  async getLandedCostById(id: number): Promise<LandedCost | null> {
+    const list = await this.getLandedCosts();
+    return list.find((item) => item.id === id) || null;
+  }
+
+  async saveLandedCost(cost: Partial<LandedCost>, allocations?: Partial<LandedCostAllocation>[]): Promise<LandedCost> {
+    const isNew = !cost.id;
+    let savedCost: LandedCost;
+
+    if (isNew) {
+      const all = await this.getItems<LandedCost>('landed_costs');
+      const newId = this.generateUniqueId(all);
+      savedCost = {
+        id: newId,
+        organization_id: cost.organization_id || 1,
+        purchase_order_id: cost.purchase_order_id || 0,
+        cost_type: cost.cost_type || 'freight',
+        title: cost.title || '',
+        amount: Number(cost.amount) || 0,
+        allocation_method: cost.allocation_method || 'by_value',
+        expense_id: cost.expense_id || null,
+        date_applied: cost.date_applied || new Date().toISOString().slice(0, 10),
+        date_created: new Date().toISOString(),
+      };
+    } else {
+      const existing = await this.getItemById<LandedCost>('landed_costs', cost.id!);
+      if (!existing) throw new Error(`Landed cost with id ${cost.id} not found`);
+      savedCost = {
+        ...existing,
+        ...cost,
+        amount: Number(cost.amount !== undefined ? cost.amount : existing.amount),
+      };
+    }
+
+    await this.saveItem('landed_costs', savedCost);
+
+    if (allocations && allocations.length > 0) {
+      const allAllocations = await this.getItems<LandedCostAllocation>('landed_cost_allocations');
+      for (const alloc of allocations) {
+        const allocId = alloc.id || this.generateUniqueId(allAllocations);
+        const item: LandedCostAllocation = {
+          id: allocId,
+          landed_cost_id: savedCost.id,
+          purchase_order_item_id: alloc.purchase_order_item_id || 0,
+          allocated_amount: Number(alloc.allocated_amount) || 0,
+          effective_unit_cost: Number(alloc.effective_unit_cost) || 0,
+        };
+        await this.saveItem('landed_cost_allocations', item);
+      }
+    }
+
+    return savedCost;
+  }
+
+  async deleteLandedCost(id: number): Promise<boolean> {
+    await this.deleteItem('landed_costs', id);
+    const allocations = await this.getItems<LandedCostAllocation>('landed_cost_allocations');
+    for (const alloc of allocations) {
+      const cId = typeof alloc.landed_cost_id === 'object' ? (alloc.landed_cost_id as any)?.id : alloc.landed_cost_id;
+      if (Number(cId) === id) {
+        await this.deleteItem('landed_cost_allocations', alloc.id);
+      }
+    }
+    return true;
+  }
+
+  async getLandedCostAllocations(landedCostId?: number, purchaseOrderId?: number): Promise<LandedCostAllocation[]> {
+    let allocations = await this.getItems<LandedCostAllocation>('landed_cost_allocations');
+    if (landedCostId) {
+      allocations = allocations.filter((a) => {
+        const cId = typeof a.landed_cost_id === 'object' ? (a.landed_cost_id as any)?.id : a.landed_cost_id;
+        return Number(cId) === landedCostId;
+      });
+    }
+
+    const poItems = await this.getItems<PurchaseOrderItem>('purchase_order_items');
+    const variants = await this.getItems<ProductVariant>('product_variants');
+    const products = await this.getItems<Product>('products');
+
+    return allocations.map((alloc) => {
+      const item = poItems.find((pi) => pi.id === alloc.purchase_order_item_id);
+      let variant: ProductVariant | undefined;
+      let product: Product | undefined;
+      if (item) {
+        const vId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
+        variant = variants.find((v) => v.id === Number(vId));
+        if (variant) {
+          const pId = typeof variant.product_id === 'object' ? (variant.product_id as any)?.id : variant.product_id;
+          product = products.find((p) => p.id === Number(pId));
+        }
+      }
+
+      return {
+        ...alloc,
+        variant_id: variant?.id,
+        sku: variant?.sku || '',
+        product_title: product?.title || '',
+        variant_name: variant ? `${product?.title || ''} - ${variant.sku || ''}` : '',
+        quantity: item?.quantity_ordered || item?.quantity_received || 1,
+        base_unit_cost: item?.unit_cost || 0,
+        base_total: item?.total || 0,
+      };
+    });
+  }
+
+  async saveLandedCostAllocation(allocation: Partial<LandedCostAllocation>): Promise<LandedCostAllocation> {
+    const isNew = !allocation.id;
+    let saved: LandedCostAllocation;
+
+    if (isNew) {
+      const all = await this.getItems<LandedCostAllocation>('landed_cost_allocations');
+      saved = {
+        id: this.generateUniqueId(all),
+        landed_cost_id: allocation.landed_cost_id || 0,
+        purchase_order_item_id: allocation.purchase_order_item_id || 0,
+        allocated_amount: Number(allocation.allocated_amount) || 0,
+        effective_unit_cost: Number(allocation.effective_unit_cost) || 0,
+      };
+    } else {
+      const existing = await this.getItemById<LandedCostAllocation>('landed_cost_allocations', allocation.id!);
+      if (!existing) throw new Error(`Allocation with id ${allocation.id} not found`);
+      saved = { ...existing, ...allocation };
+    }
+
+    await this.saveItem('landed_cost_allocations', saved);
+    return saved;
+  }
+
+  async applyLandedCostToVariants(landedCostId: number): Promise<{ updatedVariantsCount: number }> {
+    const allocations = await this.getLandedCostAllocations(landedCostId);
+    if (!allocations || allocations.length === 0) {
+      return { updatedVariantsCount: 0 };
+    }
+
+    let updatedCount = 0;
+    for (const alloc of allocations) {
+      if (alloc.variant_id && alloc.effective_unit_cost > 0) {
+        const variant = await this.getItemById<ProductVariant>('product_variants', alloc.variant_id);
+        if (variant) {
+          variant.buy_price = Math.round(Number(alloc.effective_unit_cost));
+          await this.saveItem('product_variants', variant);
+          updatedCount++;
+        }
+      }
+    }
+
+    return { updatedVariantsCount: updatedCount };
+  }
+
+  async getVatReport(params?: { organizationId?: number; year?: number; quarter?: 1 | 2 | 3 | 4 }): Promise<VatReportSummary> {
+    const orgId = params?.organizationId || 1;
+    const year = params?.year || 1403;
+    const quarter = params?.quarter || 1;
+
+    let orders = await this.getItems<Order>('orders', orgId);
+    let purchaseOrders = await this.getItems<PurchaseOrder>('purchase_orders', orgId);
+    const customers = await this.getItems<Customer>('customers', orgId);
+    const suppliers = await this.getItems<Supplier>('suppliers', orgId);
+
+    orders = orders.filter((o) => o.status !== 'cancelled');
+    purchaseOrders = purchaseOrders.filter((p) => p.status !== 'cancelled');
+
+    const salesTaxable = orders.reduce((sum, o) => sum + (Number(o.subtotal) || Number(o.total) || 0), 0);
+    const salesVat = orders.reduce((sum, o) => sum + (Number(o.tax) || 0), 0);
+
+    const purchasesTaxable = purchaseOrders.reduce((sum, p) => sum + (Number(p.subtotal) || Number(p.total) || 0), 0);
+    const purchasesVat = purchaseOrders.reduce((sum, p) => sum + (Number(p.tax) || 0), 0);
+
+    const netVatPayable = salesVat - purchasesVat;
+
+    const quarterLabels: Record<number, string> = {
+      1: `بهار ${year}`,
+      2: `تابستان ${year}`,
+      3: `پاییز ${year}`,
+      4: `زمستان ${year}`,
+    };
+
+    const salesInvoices = orders.map((o) => {
+      const custId = typeof o.customer_id === 'object' ? (o.customer_id as any)?.id : o.customer_id;
+      const cust = customers.find((c) => c.id === Number(custId));
+      return {
+        id: o.id,
+        orderNumber: o.order_number,
+        customerName: cust?.name || o.customer_name || 'مشتری متفرقه',
+        nationalId: cust?.phone || '',
+        date: o.date_created || '',
+        subtotal: Number(o.subtotal) || Number(o.total) || 0,
+        vatAmount: Number(o.tax) || 0,
+        total: Number(o.total) || 0,
+      };
+    });
+
+    const purchaseInvoices = purchaseOrders.map((p) => {
+      const supId = typeof p.supplier_id === 'object' ? (p.supplier_id as any)?.id : p.supplier_id;
+      const sup = suppliers.find((s) => s.id === Number(supId));
+      return {
+        id: p.id,
+        purchaseNumber: p.purchase_number,
+        supplierName: sup?.name || p.supplier_name || 'تامین‌کننده',
+        economicCode: sup?.phone || '',
+        date: p.date_created || '',
+        subtotal: Number(p.subtotal) || Number(p.total) || 0,
+        vatAmount: Number(p.tax) || 0,
+        total: Number(p.total) || 0,
+      };
+    });
+
+    return {
+      year,
+      quarter,
+      periodLabel: quarterLabels[quarter] || `فصل ${quarter} سال ${year}`,
+      salesTaxableAmount: salesTaxable,
+      salesVatAmount: salesVat,
+      purchasesTaxableAmount: purchasesTaxable,
+      purchasesVatAmount: purchasesVat,
+      netVatPayable,
+      vatRate: 10,
+      ordersCount: orders.length,
+      purchasesCount: purchaseOrders.length,
+      salesInvoices,
+      purchaseInvoices,
+    };
   }
 }

@@ -4,7 +4,10 @@ import {
   InventoryItem, InventoryMovement, Customer, Order, OrderItem,
   Supplier, PurchaseOrder, PurchaseOrderItem, StockTransfer, StockTransferItem,
   SizeGuideTemplate, SizeGuideMeasurement, SizeGuideValue,
-  Subscription, SystemModule, OrganizationModule
+  Subscription, SystemModule, OrganizationModule,
+  ExpenseCategory, Expense, PersonTransaction, ProfitLossSummary,
+  FinancialAccount, TreasuryTransaction, Cheque, ChequeStatus,
+  LandedCost, LandedCostAllocation, VatReportSummary
 } from '../types';
 
 export type StorageMode = 'local_offline' | 'cloud_synced';
@@ -17,6 +20,7 @@ export interface QueryParams {
   warehouse_id?: number;
   variant_id?: number;
   type?: string;
+  period?: string;
   page?: number;
   limit?: number;
 }
@@ -118,6 +122,7 @@ export interface IStorageProvider {
   deleteSupplier?(id: number): Promise<boolean>;
 
   getPurchaseOrders(params?: QueryParams): Promise<PurchaseOrder[]>;
+  getPurchaseOrderItems(purchaseOrderId?: number): Promise<PurchaseOrderItem[]>;
   savePurchaseOrder(po: Partial<PurchaseOrder>, items?: Partial<PurchaseOrderItem>[]): Promise<PurchaseOrder>;
   deletePurchaseOrder?(id: number): Promise<boolean>;
 
@@ -149,4 +154,45 @@ export interface IStorageProvider {
   getOrganizationModules?(params?: QueryParams): Promise<OrganizationModule[]>;
   saveOrganizationModule?(mod: Partial<OrganizationModule>): Promise<OrganizationModule>;
   deleteOrganizationModule?(id: number): Promise<boolean>;
+
+  // Accounting & Financials (Phase 1)
+  getExpenseCategories(params?: QueryParams): Promise<ExpenseCategory[]>;
+  saveExpenseCategory(cat: Partial<ExpenseCategory>): Promise<ExpenseCategory>;
+  deleteExpenseCategory(id: number): Promise<boolean>;
+
+  getExpenses(params?: QueryParams): Promise<Expense[]>;
+  saveExpense(exp: Partial<Expense>): Promise<Expense>;
+  deleteExpense(id: number): Promise<boolean>;
+
+  getPersonTransactions(params?: QueryParams): Promise<PersonTransaction[]>;
+  savePersonTransaction(tx: Partial<PersonTransaction>): Promise<PersonTransaction>;
+  deletePersonTransaction?(id: number): Promise<boolean>;
+
+  getProfitLossSummary(params?: QueryParams): Promise<ProfitLossSummary>;
+
+  // Accounting & Treasury (Phase 2)
+  getFinancialAccounts(params?: QueryParams): Promise<FinancialAccount[]>;
+  getFinancialAccountById?(id: number): Promise<FinancialAccount | null>;
+  saveFinancialAccount(account: Partial<FinancialAccount>): Promise<FinancialAccount>;
+  deleteFinancialAccount(id: number): Promise<boolean>;
+
+  getTreasuryTransactions(params?: QueryParams): Promise<TreasuryTransaction[]>;
+  saveTreasuryTransaction(tx: Partial<TreasuryTransaction>): Promise<TreasuryTransaction>;
+  deleteTreasuryTransaction?(id: number): Promise<boolean>;
+
+  getCheques(params?: QueryParams): Promise<Cheque[]>;
+  getChequeById?(id: number): Promise<Cheque | null>;
+  saveCheque(cheque: Partial<Cheque>): Promise<Cheque>;
+  deleteCheque(id: number): Promise<boolean>;
+  updateChequeStatus?(id: number, status: ChequeStatus, targetAccountId?: number): Promise<Cheque>;
+
+  // Accounting & Landed Costs & Tax (Phase 3)
+  getLandedCosts(params?: QueryParams): Promise<LandedCost[]>;
+  getLandedCostById?(id: number): Promise<LandedCost | null>;
+  saveLandedCost(cost: Partial<LandedCost>, allocations?: Partial<LandedCostAllocation>[]): Promise<LandedCost>;
+  deleteLandedCost(id: number): Promise<boolean>;
+  getLandedCostAllocations?(landedCostId?: number, purchaseOrderId?: number): Promise<LandedCostAllocation[]>;
+  saveLandedCostAllocation?(allocation: Partial<LandedCostAllocation>): Promise<LandedCostAllocation>;
+  applyLandedCostToVariants?(landedCostId: number): Promise<{ updatedVariantsCount: number }>;
+  getVatReport?(params?: { organizationId?: number; year?: number; quarter?: 1 | 2 | 3 | 4 }): Promise<VatReportSummary>;
 }
