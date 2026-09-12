@@ -1,7 +1,7 @@
 import { isTauriEnvironment } from '../storage';
 import pkg from '../../package.json';
 
-export const APP_VERSION = pkg.version || '1.0.22';
+export const APP_VERSION = pkg.version || '1.0.23';
 
 export async function getCurrentAppVersion(): Promise<string> {
   if (isTauriEnvironment()) {

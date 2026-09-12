@@ -36,6 +36,7 @@ import { WebFreePlanGuardModal } from './components/modals/WebFreePlanGuardModal
 import { ConfirmModalHost } from './components/ui/ConfirmModal';
 import { UpdateNotificationModal } from './components/modals/UpdateNotificationModal';
 import { PaymentResultModal } from './components/modals/PaymentResultModal';
+import { ModuleAccessProvider } from './context/ModuleAccessContext';
 import { Card } from './components/ui/Card';
 import { Button } from './components/ui/Button';
 import { ShieldAlert, RefreshCw, Shirt, Home } from 'lucide-react';
@@ -247,8 +248,10 @@ const MainAppContent: React.FC = () => {
 
   return (
     <OrganizationProvider>
-      <AuthenticatedApp />
-      <PaymentResultModal />
+      <ModuleAccessProvider>
+        <AuthenticatedApp />
+        <PaymentResultModal />
+      </ModuleAccessProvider>
     </OrganizationProvider>
   );
 };

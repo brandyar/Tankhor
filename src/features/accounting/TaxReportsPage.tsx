@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { formatCurrency, formatPersianDate, toPersianDigits } from '../../utils/formatters';
+import { printElement } from '../../utils/print';
 import {
   FileText,
   Printer,
@@ -91,7 +92,7 @@ export const TaxReportsPage: React.FC = () => {
 
   // Handle Print Action
   const handlePrint = () => {
-    window.print();
+    printElement('tax-report-printable-area', { title: `${t('accounting.vatReport')}_${selectedYear}_Q${selectedQuarter}` });
   };
 
   const quarterNames = {
@@ -173,7 +174,7 @@ export const TaxReportsPage: React.FC = () => {
       </div>
 
       {/* Official Tax Summary Header for Print / Display */}
-      <Card className="p-6 border-neutral-200/80 dark:border-neutral-800 space-y-6">
+      <Card id="tax-report-printable-area" className="p-6 border-neutral-200/80 dark:border-neutral-800 space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-neutral-200/80 dark:border-neutral-800 gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">

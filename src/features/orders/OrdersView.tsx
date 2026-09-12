@@ -181,6 +181,49 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
     }
   };
 
+  const handleDirectPrintOrder = async (ord: Order) => {
+    setSelectedOrder(ord);
+    try {
+      const adapter = storageManager.getAdapter();
+      const rawItems = await adapter.getOrderItems(ord.id);
+
+      const itemsDisplay: OrderItemDisplay[] = rawItems.map((it) => {
+        const varId = typeof it.variant_id === 'object' ? (it.variant_id as any)?.id : it.variant_id;
+        const matchedVar = variants.find((v) => Number(v.id) === Number(varId));
+        let prodTitle = t('orders.orderedItem');
+        let sku = it.variant_sku || matchedVar?.sku || '-';
+        let colorName = matchedVar?.color_name;
+        let sizeName = matchedVar?.size_name;
+
+        if (matchedVar) {
+          const prodId = typeof matchedVar.product_id === 'object' ? (matchedVar.product_id as any)?.id : matchedVar.product_id;
+          const matchedProd = products.find((p) => Number(p.id) === Number(prodId));
+          if (matchedProd) prodTitle = matchedProd.title;
+        }
+
+        return {
+          id: it.id,
+          productTitle: prodTitle,
+          sku,
+          colorName,
+          sizeName,
+          quantity: it.quantity,
+          unitPrice: it.unit_price,
+          discount: it.discount || 0,
+          total: it.total || it.quantity * it.unit_price - (it.discount || 0) * it.quantity,
+        };
+      });
+
+      setSelectedOrderItems(itemsDisplay);
+
+      setTimeout(() => {
+        printElement('printable-order-invoice', { title: `${t('orders.invoice')}_${ord.order_number || ''}` });
+      }, 50);
+    } catch (err) {
+      console.error('[OrdersView] Error loading order for direct print:', err);
+    }
+  };
+
   const triggerPrint = () => {
     printElement('printable-order-invoice', { title: `${t('orders.invoice')}_${selectedOrder?.order_number || ''}` });
   };
@@ -190,13 +233,13 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
       case 'completed':
         return <Badge variant="success">{t('orders.statusCompleted')}</Badge>;
       case 'confirmed':
-        return <Badge variant="primary">{t('orders.statusPending')}</Badge>;
+        return <Badge variant="info">{t('orders.statusPending')}</Badge>;
       case 'processing':
         return <Badge variant="warning">{t('orders.statusProcessing')}</Badge>;
       case 'draft':
         return <Badge variant="neutral">{t('orders.statusDraft')}</Badge>;
       case 'cancelled':
-        return <Badge variant="error">{t('orders.statusCancelled')}</Badge>;
+        return <Badge variant="danger">{t('orders.statusCancelled')}</Badge>;
       default:
         return <Badge variant="neutral">{status}</Badge>;
     }
@@ -330,6 +373,15 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => handleDirectPrintOrder(ord)}
+                icon={<Printer className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                title={t('orders.printInvoice')}
+              >
+                {t('orders.print')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => handleOpenOrderDetails(ord)}
                 icon={<Eye className="w-3.5 h-3.5" />}
               >
@@ -366,7 +418,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
               </div>
               <div>
                 <span className="text-slate-500 dark:text-neutral-400 text-[10px] block">{t('orders.fulfillmentWarehouse')}</span>
-                <span className="font-bold text-slate-900 dark:text-neutral-100">{selectedOrder.warehouse_name || t('orders.defaultWarehouse')}</span>
+                <span className="font-bold text-slate-900 dark:text-neutral-100">{(selectedOrder as any).warehouse_name || t('orders.defaultWarehouse')}</span>
               </div>
               <div>
                 <span className="text-slate-500 dark:text-neutral-400 text-[10px] block">{t('orders.orderDate')}:</span>
@@ -532,7 +584,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
 
                 <div className="text-[11px] space-y-0.5">
                   <p>{t('orders.customer')}: {selectedOrder.customer_name || t('orders.generalCustomer')}</p>
-                  <p>{t('orders.warehouseExit')}: {selectedOrder.warehouse_name || t('orders.defaultWarehouse')}</p>
+                  <p>{t('orders.warehouseExit')}: {(selectedOrder as any).warehouse_name || t('orders.defaultWarehouse')}</p>
                 </div>
 
                 <table className="w-full text-start border-y border-black py-1">
@@ -608,7 +660,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
                   </div>
                   <div>
                     <p className="font-bold text-gray-700">{t('orders.warehouseExit')}:</p>
-                    <p className="text-sm text-black">{selectedOrder.warehouse_name || t('orders.defaultWarehouse')}</p>
+                    <p className="text-sm text-black">{(selectedOrder as any).warehouse_name || t('orders.defaultWarehouse')}</p>
                   </div>
                 </div>
 

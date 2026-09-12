@@ -288,7 +288,16 @@ export const BarcodePrintView: React.FC = () => {
     return null;
   }, [printQueue, variants, colors, sizes]);
 
-  if (!moduleLoading && !hasBarcodeAccess) {
+  if (moduleLoading) {
+    return (
+      <div className="py-24 flex flex-col items-center justify-center text-xs text-neutral-500">
+        <RefreshCw className="w-5 h-5 animate-spin mb-3 text-neutral-400" />
+        <span>در حال بررسی مجوزهای ماژول چاپ بارکد...</span>
+      </div>
+    );
+  }
+
+  if (!hasBarcodeAccess) {
     return (
       <div className="space-y-6">
         <PageHeader

@@ -9,6 +9,7 @@ import { DateInput } from '../../components/ui/DateInput';
 import { Modal } from '../../components/ui/Modal';
 import { Badge } from '../../components/ui/Badge';
 import { formatCurrency, formatPersianDate, toPersianDigits } from '../../utils/formatters';
+import { printElement } from '../../utils/print';
 import {
   Users,
   Search,
@@ -236,7 +237,8 @@ export const PersonLedgersPage: React.FC = () => {
   };
 
   const handlePrintLedger = () => {
-    window.print();
+    if (!selectedParty) return;
+    printElement('printable-party-ledger', { title: `صورت‌حساب_${selectedParty.name}` });
   };
 
   // Filtered parties list
@@ -417,7 +419,7 @@ export const PersonLedgersPage: React.FC = () => {
         </Card>
 
         {/* Right Side: Account Statement & Ledger (8 cols) */}
-        <Card className="lg:col-span-8 border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 space-y-5">
+        <Card id="printable-party-ledger" className="lg:col-span-8 border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 space-y-5">
           {selectedParty ? (
             <>
               {/* Selected Party Summary Bar */}
