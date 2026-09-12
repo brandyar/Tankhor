@@ -16,6 +16,46 @@ export interface CloudMigrationResult {
   errors: string[];
 }
 
+const DIRECTUS_ALLOWED_FIELDS: Record<string, Set<string>> = {
+  categories: new Set(['organization_id', 'name', 'slug', 'parent_id']),
+  brands: new Set(['organization_id', 'name', 'slug', 'logo_url', 'description']),
+  seasons: new Set(['organization_id', 'name', 'code', 'start_date', 'end_date', 'is_active']),
+  collections: new Set(['organization_id', 'name', 'slug', 'season_id', 'description']),
+  colors: new Set(['organization_id', 'name', 'hex_code', 'code']),
+  size_groups: new Set(['organization_id', 'name', 'code', 'description']),
+  sizes: new Set(['organization_id', 'size_group_id', 'name', 'code', 'sort_order']),
+  warehouses: new Set(['organization_id', 'name', 'code', 'address', 'phone', 'is_default']),
+  warehouse_locations: new Set(['warehouse_id', 'name', 'code', 'description']),
+  size_guide_templates: new Set(['organization_id', 'name', 'category_type', 'description']),
+  size_guide_measurements: new Set(['template_id', 'name', 'code', 'unit', 'sort_order']),
+  size_guide_values: new Set(['template_id', 'measurement_id', 'size_id', 'value']),
+  products: new Set(['organization_id', 'title', 'code', 'category_id', 'brand_id', 'collection_id', 'season_id', 'gender', 'material', 'care_instructions', 'size_guide_template_id', 'description', 'image_url', 'status']),
+  product_variants: new Set(['organization_id', 'product_id', 'color_id', 'size_id', 'sku', 'barcode', 'price', 'cost_price', 'wholesale_price', 'weight_grams', 'status']),
+  inventory_items: new Set(['organization_id', 'variant_id', 'warehouse_id', 'location_id', 'quantity', 'reserved_quantity', 'reorder_point', 'last_counted_at']),
+  inventory_movements: new Set(['organization_id', 'variant_id', 'warehouse_id', 'type', 'quantity', 'reference_type', 'reference_id', 'notes', 'created_by']),
+  suppliers: new Set(['organization_id', 'company_name', 'contact_name', 'phone', 'email', 'address', 'city', 'province', 'notes', 'status']),
+  customers: new Set(['organization_id', 'full_name', 'phone', 'mobile', 'email', 'address', 'postal_code', 'city', 'province', 'notes', 'status']),
+  orders: new Set(['organization_id', 'order_number', 'customer_id', 'warehouse_id', 'status', 'payment_status', 'fulfillment_status', 'subtotal', 'discount', 'tax', 'total', 'paid_amount', 'notes']),
+  order_items: new Set(['organization_id', 'order_id', 'variant_id', 'quantity', 'unit_price', 'discount', 'total']),
+  purchase_orders: new Set(['organization_id', 'po_number', 'supplier_id', 'warehouse_id', 'status', 'total_amount', 'paid_amount', 'notes', 'expected_date']),
+  purchase_order_items: new Set(['organization_id', 'purchase_order_id', 'variant_id', 'quantity', 'unit_cost', 'total_cost']),
+  stock_transfers: new Set(['organization_id', 'transfer_number', 'source_warehouse_id', 'destination_warehouse_id', 'status', 'notes']),
+  stock_transfer_items: new Set(['organization_id', 'transfer_id', 'variant_id', 'quantity']),
+};
+
+export function sanitizeForDirectus(collection: string, rawItem: Record<string, any>): Record<string, any> {
+  const allowed = DIRECTUS_ALLOWED_FIELDS[collection];
+  if (!allowed) return { ...rawItem };
+
+  const sanitized: Record<string, any> = {};
+  for (const [key, value] of Object.entries(rawItem)) {
+    if (allowed.has(key) && value !== undefined && value !== null) {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
 /**
  * CloudMigrationManager
  * Performs an automated, foreign-key-safe data onboarding / migration
@@ -95,7 +135,8 @@ export class CloudMigrationManager {
           item.organization_id = orgId;
 
           try {
-            const created = await directusClient.createItem<any>(col.key, item);
+            const payload = sanitizeForDirectus(col.key, item);
+            const created = await directusClient.createItem<any>(col.key, payload);
             if (created && created.id) {
               idMap[col.key]?.set(localId, Number(created.id));
               totalMigrated++;
@@ -124,7 +165,8 @@ export class CloudMigrationManager {
         }
 
         try {
-          const created = await directusClient.createItem<any>('collections', item);
+          const payload = sanitizeForDirectus('collections', item);
+          const created = await directusClient.createItem<any>('collections', payload);
           if (created?.id) {
             idMap['collections']?.set(localId, Number(created.id));
             totalMigrated++;
@@ -150,7 +192,8 @@ export class CloudMigrationManager {
         }
 
         try {
-          const created = await directusClient.createItem<any>('warehouse_locations', item);
+          const payload = sanitizeForDirectus('warehouse_locations', item);
+          const created = await directusClient.createItem<any>('warehouse_locations', payload);
           if (created?.id) {
             idMap['warehouse_locations']?.set(localId, Number(created.id));
             totalMigrated++;
@@ -176,7 +219,8 @@ export class CloudMigrationManager {
         }
 
         try {
-          const created = await directusClient.createItem<any>('sizes', item);
+          const payload = sanitizeForDirectus('sizes', item);
+          const created = await directusClient.createItem<any>('sizes', payload);
           if (created?.id) {
             idMap['sizes']?.set(localId, Number(created.id));
             totalMigrated++;
@@ -198,7 +242,8 @@ export class CloudMigrationManager {
         item.organization_id = orgId;
 
         try {
-          const created = await directusClient.createItem<any>('size_guide_templates', item);
+          const payload = sanitizeForDirectus('size_guide_templates', item);
+          const created = await directusClient.createItem<any>('size_guide_templates', payload);
           if (created?.id) {
             idMap['size_guide_templates']?.set(localId, Number(created.id));
             totalMigrated++;
@@ -224,7 +269,8 @@ export class CloudMigrationManager {
         }
 
         try {
-          const created = await directusClient.createItem<any>('size_guide_measurements', item);
+          const payload = sanitizeForDirectus('size_guide_measurements', item);
+          const created = await directusClient.createItem<any>('size_guide_measurements', payload);
           if (created?.id) {
             idMap['size_guide_measurements']?.set(localId, Number(created.id));
             totalMigrated++;
@@ -257,7 +303,8 @@ export class CloudMigrationManager {
         }
 
         try {
-          await directusClient.createItem<any>('size_guide_values', item);
+          const payload = sanitizeForDirectus('size_guide_values', item);
+          await directusClient.createItem<any>('size_guide_values', payload);
           totalMigrated++;
         } catch (err: any) {
           // ignore or log non-critical matrix cell errors
@@ -299,7 +346,8 @@ export class CloudMigrationManager {
         }
 
         try {
-          const created = await directusClient.createItem<any>('products', item);
+          const payload = sanitizeForDirectus('products', item);
+          const created = await directusClient.createItem<any>('products', payload);
           if (created?.id) {
             idMap['products']?.set(localId, Number(created.id));
             totalMigrated++;
@@ -334,7 +382,8 @@ export class CloudMigrationManager {
         }
 
         try {
-          const created = await directusClient.createItem<any>('product_variants', item);
+          const payload = sanitizeForDirectus('product_variants', item);
+          const created = await directusClient.createItem<any>('product_variants', payload);
           if (created?.id) {
             idMap['product_variants']?.set(localId, Number(created.id));
             totalMigrated++;
@@ -368,7 +417,8 @@ export class CloudMigrationManager {
         }
 
         try {
-          await directusClient.createItem<any>('inventory_items', item);
+          const payload = sanitizeForDirectus('inventory_items', item);
+          await directusClient.createItem<any>('inventory_items', payload);
           totalMigrated++;
         } catch (err: any) {
           errors.push(`خطا در ثبت موجودی انبار: ${err?.message || err}`);
@@ -396,7 +446,8 @@ export class CloudMigrationManager {
           }
 
           try {
-            await directusClient.createItem<any>('inventory_movements', item);
+            const payload = sanitizeForDirectus('inventory_movements', item);
+            await directusClient.createItem<any>('inventory_movements', payload);
             totalMigrated++;
           } catch (err: any) {
             // non-critical movement log
@@ -423,7 +474,8 @@ export class CloudMigrationManager {
         }
 
         try {
-          const created = await directusClient.createItem<any>('orders', item);
+          const payload = sanitizeForDirectus('orders', item);
+          const created = await directusClient.createItem<any>('orders', payload);
           if (created?.id) {
             idMap['orders']?.set(localId, Number(created.id));
             totalMigrated++;
@@ -443,7 +495,8 @@ export class CloudMigrationManager {
                 const localVId = Number(lineItem.variant_id?.id || lineItem.variant_id);
                 lineItem.variant_id = idMap['product_variants']?.get(localVId) || lineItem.variant_id;
               }
-              await directusClient.createItem<any>('order_items', lineItem).catch(() => {});
+              const linePayload = sanitizeForDirectus('order_items', lineItem);
+              await directusClient.createItem<any>('order_items', linePayload).catch(() => {});
               totalMigrated++;
             }
           }

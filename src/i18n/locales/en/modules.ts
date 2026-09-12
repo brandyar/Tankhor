@@ -38,4 +38,12 @@ export const modulesEn = {
   comingSoon: 'Coming Soon',
   locked: 'Locked',
   readyToUse: 'Ready to use',
+  syncWithServer: 'Sync & Verify Licenses with Server',
+  syncingWithServer: 'Verifying licenses with server...',
+  syncSuccess: 'License entitlements successfully verified and updated from server.',
+  syncOfflineNotice: 'Server unreachable; running with cached validated offline license.',
+  lastSyncLabel: 'Last online verification with server:',
+  licenseRevoked: 'Revoked by Server',
+  licenseExpired: 'Expired',
+  checkLicenses: 'Check Now',
 };

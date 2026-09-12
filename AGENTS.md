@@ -103,6 +103,14 @@
     - Universal RTL update notification modal (`UpdateNotificationModal.tsx`) showing release notes, real-time download progress, and zero-downtime relaunch via `@tauri-apps/plugin-process`.
     - Preservation of local SQLite database (`tankhor.db`) across desktop application updates.
 
+14. **Universal Iframe Printing Architecture (`printHtml`)**:
+    - Printing barcodes, orders, and receipts relies on an isolated, dynamic iframe in `/src/utils/print.ts` with explicit RTL, custom style inheritance, and font loading.
+    - Guarantees seamless print dialog triggering across macOS Tauri (WKWebView), Windows Tauri (WebView2), and Web Browsers.
+
+15. **Strict Directus Cloud Schema Sanitization (`sanitizeForDirectus`)**:
+    - All automated data migrations and demo data seeding (`CloudMigrationManager.migrateLocalToCloud`) strictly filter payload keys using `sanitizeForDirectus()` against canonical schema definitions.
+    - Prevents Directus 400 validation errors (such as unmapped `status` or `type` fields), ensuring onboarding demo data works smoothly in Cloud Mode.
+
 ---
 
 ## 📂 Key Code Structure

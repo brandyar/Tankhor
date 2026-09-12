@@ -38,4 +38,12 @@ export const modulesFa = {
   comingSoon: 'به‌زودی',
   locked: 'قفل',
   readyToUse: 'آماده استفاده',
+  syncWithServer: 'بررسی و همگام‌سازی لایسنس‌ها با سرور',
+  syncingWithServer: 'در حال بررسی لایسنس‌ها با سرور...',
+  syncSuccess: 'وضعیت لایسنس‌ها با موفقیت از سرور استعلام و به‌روز شد.',
+  syncOfflineNotice: 'سرور در دسترس نیست؛ لایسنس محلی معتبر روی دستگاه فعال است.',
+  lastSyncLabel: 'آخرین وضعیت بررسی آنلاین با سرور:',
+  licenseRevoked: 'غیرفعال / لغو شده توسط سرور',
+  licenseExpired: 'منقضی شده',
+  checkLicenses: 'بررسی مجدد',
 };

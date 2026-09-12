@@ -96,6 +96,102 @@ proxyRouter.get('/system-modules', async (req, res) => {
   }
 });
 
+// Endpoint for Desktop & Web module license validation & synchronization with Directus
+proxyRouter.all('/modules/sync-licenses', async (req: any, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    let targetOrgId: number | null = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const { verifyToken } = await import('./auth');
+        const decoded = verifyToken(token);
+        if (decoded) {
+          targetOrgId = decoded.organizationId;
+        }
+      } catch {}
+    }
+
+    if (!targetOrgId) {
+      targetOrgId = Number(
+        req.body?.organizationId ||
+        req.query?.organizationId ||
+        req.body?.organization_id ||
+        req.query?.organization_id
+      );
+    }
+
+    if (!targetOrgId || isNaN(targetOrgId) || targetOrgId <= 0) {
+      return res.status(400).json({ error: 'شناسه سازمان مشخص نیست.' });
+    }
+
+    // 1. Fetch organization to verify existence and Pro status
+    const org = await DirectusAdminClient.getItemById('organizations', targetOrgId).catch(() => null);
+    if (!org) {
+      return res.status(404).json({ error: 'سازمان مورد نظر در سرور یافت نشد.' });
+    }
+
+    const isPro = org.plan === 'pro';
+
+    // 2. Fetch all system modules from Directus
+    const systemModules = await DirectusAdminClient.getItems('system_modules', {
+      filter: { status: { _neq: 'deprecated' } },
+      limit: 100,
+    }).catch(() => []);
+
+    // 3. Fetch organization_modules records from Directus for this organization
+    const orgModules = await DirectusAdminClient.getItems('organization_modules', {
+      filter: { organization_id: { _eq: targetOrgId } },
+      limit: 100,
+    }).catch(() => []);
+
+    // 4. Normalize and evaluate status for each module
+    const now = Date.now();
+    const evaluatedModules = orgModules.map((m: any) => {
+      let effectiveStatus = m.status || 'active';
+      // If expires_at is set and passed
+      if (m.expires_at) {
+        const expiry = new Date(m.expires_at).getTime();
+        if (now > expiry) {
+          effectiveStatus = 'expired';
+        }
+      }
+
+      const matchedSys = systemModules.find((s: any) => s.slug === m.slug || s.id === m.module_id);
+
+      return {
+        id: m.id,
+        organization_id: targetOrgId,
+        slug: m.slug,
+        module_id: m.module_id || matchedSys?.id,
+        name: matchedSys?.name || m.name,
+        description: matchedSys?.description || m.description,
+        license_type: m.license_type || 'lifetime',
+        status: effectiveStatus,
+        license_token: m.license_token,
+        hardware_id: m.hardware_id,
+        starts_at: m.starts_at,
+        expires_at: m.expires_at,
+        included_in_pro: matchedSys?.included_in_pro ?? false,
+      };
+    });
+
+    return res.json({
+      success: true,
+      organizationId: targetOrgId,
+      isPro,
+      plan: org.plan || 'free',
+      systemModules,
+      modules: evaluatedModules,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error('[proxy] /modules/sync-licenses Error:', error);
+    return res.status(500).json({ error: error.message || 'خطا در استعلام وضعیت لایسنس‌ها از سرور' });
+  }
+});
+
 // Profile / Current user endpoints (available at both /api/users/me and /api/auth/me)
 const handleMeRequest = async (req: AuthenticatedRequest, res: Response) => {
   try {

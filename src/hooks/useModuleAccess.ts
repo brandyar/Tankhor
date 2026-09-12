@@ -9,6 +9,11 @@ import {
   generateLicenseTokenString,
   LicensePayload,
 } from '../utils/license';
+import {
+  syncOrganizationLicenses,
+  getLastLicenseSyncInfo,
+  LicenseSyncResult,
+} from '../utils/licenseSync';
 
 export interface UseModuleAccessReturn {
   hasAccess: (moduleSlug: string) => boolean;
@@ -17,8 +22,11 @@ export interface UseModuleAccessReturn {
   orgModules: OrganizationModule[];
   systemModules: SystemModule[];
   loading: boolean;
+  isSyncing: boolean;
+  lastSyncInfo: { timestamp: string; isPro?: boolean; activeCount?: number; revokedCount?: number; status: string } | null;
   hardwareId: string;
   refreshModules: () => Promise<void>;
+  syncWithServer: (force?: boolean) => Promise<LicenseSyncResult>;
   activateLicense: (tokenString: string) => Promise<{ success: boolean; message: string; module?: OrganizationModule }>;
   createDemoLicenseToken: (moduleSlug: string) => Promise<string>;
 }
@@ -28,6 +36,8 @@ export function useModuleAccess(): UseModuleAccessReturn {
   const [systemModules, setSystemModules] = useState<SystemModule[]>(DEFAULT_SYSTEM_MODULES);
   const [orgModules, setOrgModules] = useState<OrganizationModule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncInfo, setLastSyncInfo] = useState<{ timestamp: string; isPro?: boolean; activeCount?: number; revokedCount?: number; status: string } | null>(null);
   const hardwareId = useMemo(() => getMachineFingerprint(), []);
 
   const isPro = useMemo(() => {
@@ -55,7 +65,7 @@ export function useModuleAccess(): UseModuleAccessReturn {
       }
       setSystemModules(sysList);
 
-      // 2. Fetch organization's specific modules
+      // 2. Fetch organization's specific modules from local storage / SQLite
       let orgList: OrganizationModule[] = [];
       if (adapter.getOrganizationModules) {
         orgList = await adapter.getOrganizationModules({ organization_id: activeOrganization.id });
@@ -75,6 +85,10 @@ export function useModuleAccess(): UseModuleAccessReturn {
       });
 
       setOrgModules(enrichedOrgList);
+
+      // Read last sync info
+      const syncInfo = getLastLicenseSyncInfo(activeOrganization.id);
+      setLastSyncInfo(syncInfo);
     } catch (err) {
       console.warn('[useModuleAccess] Failed to load modules:', err);
     } finally {
@@ -82,9 +96,74 @@ export function useModuleAccess(): UseModuleAccessReturn {
     }
   }, [activeOrganization]);
 
+  /**
+   * Sync and validate licenses against Directus server
+   */
+  const syncWithServer = useCallback(
+    async (force: boolean = false): Promise<LicenseSyncResult> => {
+      if (!activeOrganization) {
+        return {
+          success: false,
+          error: 'سازمان فعالی انتخاب نشده است.',
+          activeCount: 0,
+          revokedCount: 0,
+          timestamp: new Date().toISOString(),
+          modules: [],
+        };
+      }
+
+      setIsSyncing(true);
+      try {
+        const res = await syncOrganizationLicenses(activeOrganization.id, { force });
+        if (res.success && res.modules) {
+          setOrgModules(res.modules);
+        }
+        const updatedInfo = getLastLicenseSyncInfo(activeOrganization.id);
+        setLastSyncInfo(updatedInfo);
+        return res;
+      } finally {
+        setIsSyncing(false);
+      }
+    },
+    [activeOrganization]
+  );
+
   useEffect(() => {
     loadModules();
-  }, [loadModules]);
+
+    // Trigger non-blocking background server sync on startup / org switch
+    if (activeOrganization?.id) {
+      syncWithServer(false).catch(() => {});
+    }
+  }, [loadModules, activeOrganization?.id, syncWithServer]);
+
+  // Periodic background check & auto-reconnect sync (every 15 minutes)
+  useEffect(() => {
+    if (!activeOrganization?.id) return;
+
+    const handleOnline = () => {
+      console.log('[useModuleAccess] Network restored, checking licenses with server...');
+      syncWithServer(false).catch(() => {});
+    };
+
+    const handleModulesUpdated = () => {
+      loadModules();
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('tankhor_modules_updated', handleModulesUpdated);
+
+    // Periodic heartbeat sync every 15 minutes
+    const interval = setInterval(() => {
+      syncWithServer(false).catch(() => {});
+    }, 15 * 60 * 1000);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('tankhor_modules_updated', handleModulesUpdated);
+      clearInterval(interval);
+    };
+  }, [activeOrganization?.id, syncWithServer, loadModules]);
 
   /**
    * Evaluates whether current organization has active entitlement to a module
@@ -109,6 +188,7 @@ export function useModuleAccess(): UseModuleAccessReturn {
       // 2. Check purchased standalone organization module
       if (!orgMod) return false;
 
+      // Module MUST be active. If revoked by server or expired, deny access
       if (orgMod.status !== 'active') return false;
 
       // Check date expiry if set
@@ -172,6 +252,9 @@ export function useModuleAccess(): UseModuleAccessReturn {
         expires_at: payload.expires_at || null,
       });
 
+      // Trigger server sync to verify with Directus if online
+      syncWithServer(true).catch(() => {});
+
       await loadModules();
       return {
         success: true,
@@ -179,7 +262,7 @@ export function useModuleAccess(): UseModuleAccessReturn {
         module: saved,
       };
     },
-    [activeOrganization, hardwareId, systemModules, loadModules]
+    [activeOrganization, hardwareId, systemModules, loadModules, syncWithServer]
   );
 
   /**
@@ -207,8 +290,11 @@ export function useModuleAccess(): UseModuleAccessReturn {
     orgModules,
     systemModules,
     loading,
+    isSyncing,
+    lastSyncInfo,
     hardwareId,
     refreshModules: loadModules,
+    syncWithServer,
     activateLicense,
     createDemoLicenseToken,
   };

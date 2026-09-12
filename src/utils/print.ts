@@ -4,30 +4,29 @@ export interface PrintOptions {
 }
 
 /**
- * Universal, production-ready print helper.
- * Engineered specifically to work reliably across:
- * 1. Native macOS Tauri (WebKit / WKWebView)
- * 2. Native Windows Tauri (WebView2)
- * 3. Standard Desktop & Mobile Web Browsers (Chrome, Safari, Firefox, Edge)
- *
- * It utilizes a dedicated #tankhor-global-print-portal on document.body,
- * coupled with .tankhor-printing state and @media print CSS rules, ensuring
- * that barcodes, receipts, and invoices are rendered with zero layout cuts.
+ * Universal, high-precision print helper.
+ * Uses a dynamic isolated hidden iframe to guarantee exact, lossless printing
+ * across native macOS Tauri (WKWebView), Windows Tauri (WebView2), and all Web Browsers.
  */
 export function printHtml(htmlContent: string, options?: PrintOptions): void {
   try {
     const originalTitle = document.title;
-    if (options?.title) {
-      document.title = options.title;
-    }
+    const printTitle = options?.title || originalTitle;
 
-    const fullStyles = `
+    // Collect all existing page styles & links (Tailwind, fonts, custom CSS)
+    let pageStyles = '';
+    const styleNodes = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'));
+    styleNodes.forEach((node) => {
+      pageStyles += node.outerHTML;
+    });
+
+    const customStyles = `
       @page {
         size: auto;
         margin: 0mm;
       }
       * {
-        box-sizing: border-box;
+        box-sizing: border-box !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
@@ -38,56 +37,82 @@ export function printHtml(htmlContent: string, options?: PrintOptions): void {
         color: #000000 !important;
         direction: rtl !important;
         font-family: Vazirmatn, system-ui, -apple-system, sans-serif !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .hidden {
+        display: block !important;
       }
       ${options?.extraStyles || ''}
     `;
 
-    // 1. Ensure the global print portal exists on document.body
-    let portal = document.getElementById('tankhor-global-print-portal');
-    if (!portal) {
-      portal = document.createElement('div');
-      portal.id = 'tankhor-global-print-portal';
-      document.body.appendChild(portal);
+    // Create a hidden printing iframe
+    const existingIframe = document.getElementById('tankhor-print-iframe');
+    if (existingIframe) {
+      existingIframe.remove();
     }
 
-    // 2. Inject printable content and scoped styles into portal
-    portal.innerHTML = `
-      <style>${fullStyles}</style>
-      <div class="tankhor-printable-content">
+    const iframe = document.createElement('iframe');
+    iframe.id = 'tankhor-print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden';
+    iframe.style.opacity = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) {
+      console.warn('[PrintHelper] Iframe doc unavailable, falling back to window.print()');
+      window.print();
+      return;
+    }
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html dir="rtl" lang="fa">
+      <head>
+        <meta charset="utf-8">
+        <title>${printTitle}</title>
+        ${pageStyles}
+        <style>${customStyles}</style>
+      </head>
+      <body>
         ${htmlContent}
-      </div>
-    `;
+      </body>
+      </html>
+    `);
+    doc.close();
 
-    // 3. Mark body as printing
-    document.body.classList.add('tankhor-printing');
-
-    const cleanup = () => {
-      document.body.classList.remove('tankhor-printing');
-      if (portal) {
-        portal.innerHTML = '';
+    const doPrint = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (err) {
+        console.error('[PrintHelper] Iframe print exception:', err);
+        window.print();
+      } finally {
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+        }, 1500);
       }
-      if (options?.title) {
-        document.title = originalTitle;
-      }
-      window.removeEventListener('afterprint', cleanup);
     };
 
-    window.addEventListener('afterprint', cleanup);
-
-    // 4. Allow browser layout & font engine to settle before invoking native print
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        try {
-          window.focus();
-          window.print();
-        } catch (err) {
-          console.error('[PrintHelper] window.print() failed:', err);
-        } finally {
-          // Safety cleanup fallback if 'afterprint' event isn't triggered by WebKit
-          setTimeout(cleanup, 2000);
-        }
-      }, 80);
-    });
+    // Give browser brief window to compute layout & load styles/fonts
+    setTimeout(doPrint, 120);
   } catch (err) {
     console.error('[PrintHelper] Error initiating print:', err);
     try {
@@ -110,6 +135,5 @@ export function printElement(elementOrId: HTMLElement | string, options?: PrintO
     return;
   }
 
-  // Extract innerHTML ensuring SVG barcodes, SVGs, tables, and inputs are accurately rendered
   printHtml(el.innerHTML, options);
 }
