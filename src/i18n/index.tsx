@@ -70,8 +70,10 @@ const translations = {
 interface I18nContextType {
   locale: Locale;
   direction: Direction;
+  isRtl: boolean;
+  isPersian: boolean;
   setLocale: (loc: Locale) => void;
-  t: (path: string, fallback?: string) => string;
+  t: (path: string, paramsOrFallback?: Record<string, any> | string, fallback?: string) => string;
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
@@ -82,6 +84,8 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const direction: Direction = locale === 'fa' ? 'rtl' : 'ltr';
+  const isRtl = direction === 'rtl';
+  const isPersian = locale === 'fa';
 
   useEffect(() => {
     localStorage.setItem('tankhor_locale', locale);
@@ -100,15 +104,22 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLocaleState(newLocale);
   };
 
-  const t = (path: string, fallback?: string): string => {
+  const t = (
+    path: string,
+    paramsOrFallback?: Record<string, any> | string,
+    explicitFallback?: string
+  ): string => {
     const parts = path.split('.');
     let current: any = translations[locale];
+    let resolvedString: string | null = null;
+    const fallbackStr = typeof paramsOrFallback === 'string' ? paramsOrFallback : explicitFallback;
+    const params = typeof paramsOrFallback === 'object' && paramsOrFallback !== null ? paramsOrFallback : undefined;
 
     for (const part of parts) {
       if (current && typeof current === 'object' && part in current) {
         current = current[part];
       } else {
-        // Try fallback to Persian or provided fallback
+        // Try fallback to Persian
         let fallbackCurrent: any = translations['fa'];
         for (const fPart of parts) {
           if (fallbackCurrent && typeof fallbackCurrent === 'object' && fPart in fallbackCurrent) {
@@ -118,16 +129,31 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
             break;
           }
         }
-        if (typeof fallbackCurrent === 'string') return fallbackCurrent;
-        return fallback || path;
+        if (typeof fallbackCurrent === 'string') {
+          resolvedString = fallbackCurrent;
+        } else {
+          resolvedString = fallbackStr || path;
+        }
+        break;
       }
     }
 
-    return typeof current === 'string' ? current : fallback || path;
+    if (resolvedString === null) {
+      resolvedString = typeof current === 'string' ? current : fallbackStr || path;
+    }
+
+    // Apply interpolation params if provided (e.g. {count}, {name}, {title})
+    if (params && typeof resolvedString === 'string') {
+      for (const [key, val] of Object.entries(params)) {
+        resolvedString = resolvedString.replace(new RegExp(`{${key}}`, 'g'), String(val));
+      }
+    }
+
+    return resolvedString;
   };
 
   return (
-    <I18nContext.Provider value={{ locale, direction, setLocale, t }}>
+    <I18nContext.Provider value={{ locale, direction, isRtl, isPersian, setLocale, t }}>
       {children}
     </I18nContext.Provider>
   );

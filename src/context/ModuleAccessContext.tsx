@@ -44,13 +44,20 @@ export const ModuleAccessProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const hardwareId = useMemo(() => getMachineFingerprint(), []);
   const activeOrgId = activeOrganization?.id;
 
+  const activeOrgIdRef = useRef<number | undefined>(activeOrgId);
+  activeOrgIdRef.current = activeOrgId;
+
+  const systemModulesRef = useRef<SystemModule[]>(systemModules);
+  systemModulesRef.current = systemModules;
+
   const isPro = useMemo(() => {
     return activeOrganization?.plan === 'pro';
   }, [activeOrganization?.plan]);
 
   // Load modules from local storage / SQLite
   const loadModules = useCallback(async (isInitial = false) => {
-    if (!activeOrgId) {
+    const orgId = activeOrgIdRef.current;
+    if (!orgId) {
       setOrgModules([]);
       setLoading(false);
       return;
@@ -70,12 +77,13 @@ export const ModuleAccessProvider: React.FC<{ children: React.ReactNode }> = ({ 
       if (!sysList || sysList.length === 0) {
         sysList = DEFAULT_SYSTEM_MODULES;
       }
+      systemModulesRef.current = sysList;
       setSystemModules(sysList);
 
       // 2. Fetch organization modules from SQLite / LocalStorage
       let orgList: OrganizationModule[] = [];
       if (adapter.getOrganizationModules) {
-        orgList = await adapter.getOrganizationModules({ organization_id: activeOrgId });
+        orgList = await adapter.getOrganizationModules({ organization_id: orgId });
       }
 
       // Merge and enrich orgList
@@ -94,21 +102,22 @@ export const ModuleAccessProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setOrgModules(enrichedOrgList);
 
       // Read last sync info
-      const syncInfo = getLastLicenseSyncInfo(activeOrgId);
+      const syncInfo = getLastLicenseSyncInfo(orgId);
       setLastSyncInfo(syncInfo);
     } catch (err) {
       console.warn('[ModuleAccessContext] Failed to load modules:', err);
     } finally {
       setLoading(false);
     }
-  }, [activeOrgId]);
+  }, []);
 
   /**
    * Sync and validate licenses against Directus server (background, non-blocking)
    */
   const syncWithServer = useCallback(
     async (force: boolean = false): Promise<LicenseSyncResult> => {
-      if (!activeOrgId) {
+      const orgId = activeOrgIdRef.current;
+      if (!orgId) {
         return {
           success: false,
           error: 'سازمان فعالی انتخاب نشده است.',
@@ -121,12 +130,12 @@ export const ModuleAccessProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       setIsSyncing(true);
       try {
-        const res = await syncOrganizationLicenses(activeOrgId, { force });
+        const res = await syncOrganizationLicenses(orgId, { force });
         if (res.success && res.modules) {
-          setOrgModules((prev) => {
-            // Merge enriched attributes
-            return res.modules.map((om) => {
-              const sys = systemModules.find((s) => s.slug === om.slug);
+          const sysList = systemModulesRef.current;
+          setOrgModules(
+            res.modules.map((om) => {
+              const sys = sysList.find((s) => s.slug === om.slug);
               return {
                 ...om,
                 name: om.name || sys?.name,
@@ -135,26 +144,33 @@ export const ModuleAccessProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 price_usd: om.price_usd ?? sys?.price_usd,
                 included_in_pro: om.included_in_pro !== undefined ? om.included_in_pro : sys?.included_in_pro,
               };
-            });
-          });
+            })
+          );
         }
-        const updatedInfo = getLastLicenseSyncInfo(activeOrgId);
+        const updatedInfo = getLastLicenseSyncInfo(orgId);
         setLastSyncInfo(updatedInfo);
         return res;
       } finally {
         setIsSyncing(false);
       }
     },
-    [activeOrgId, systemModules]
+    []
   );
 
   // Initial load when active organization changes
   useEffect(() => {
     let isMounted = true;
+    const orgId = activeOrgId;
+
+    if (!orgId) {
+      setOrgModules([]);
+      setLoading(false);
+      return;
+    }
 
     loadModules(true).then(() => {
-      if (isMounted && activeOrgId) {
-        // Non-blocking background sync
+      if (isMounted) {
+        // Non-blocking background sync only once after initial load
         syncWithServer(false).catch(() => {});
       }
     });

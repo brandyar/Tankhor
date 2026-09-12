@@ -39,7 +39,7 @@ import {
 export const ChequesPage: React.FC = () => {
   const { t } = useTranslation();
   const storage = storageManager.getAdapter();
-  const { currentOrganization } = useOrganization();
+  const { activeOrganization } = useOrganization();
 
   const [cheques, setCheques] = useState<Cheque[]>([]);
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
@@ -97,14 +97,14 @@ export const ChequesPage: React.FC = () => {
   });
 
   const loadData = async () => {
-    if (!currentOrganization?.id) return;
+    if (!activeOrganization?.id) return;
     setLoading(true);
     try {
       const [chkList, accList, custList, supList] = await Promise.all([
-        storage.getCheques({ organization_id: currentOrganization.id }),
-        storage.getFinancialAccounts({ organization_id: currentOrganization.id }),
-        storage.getCustomers({ organization_id: currentOrganization.id }),
-        storage.getSuppliers({ organization_id: currentOrganization.id }),
+        storage.getCheques({ organization_id: activeOrganization.id }),
+        storage.getFinancialAccounts({ organization_id: activeOrganization.id }),
+        storage.getCustomers({ organization_id: activeOrganization.id }),
+        storage.getSuppliers({ organization_id: activeOrganization.id }),
       ]);
       setCheques(chkList);
       setAccounts(accList);
@@ -119,7 +119,7 @@ export const ChequesPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [currentOrganization?.id]);
+  }, [activeOrganization?.id]);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -154,7 +154,7 @@ export const ChequesPage: React.FC = () => {
     const supId = typeof chk.supplier_id === 'object' ? (chk.supplier_id as any)?.id : chk.supplier_id;
 
     setFormState({
-      type: chk.type,
+      type: (chk.type as ChequeType) || 'received',
       sayad_id: chk.sayad_id,
       cheque_number: chk.cheque_number,
       bank_name: chk.bank_name,
@@ -174,12 +174,12 @@ export const ChequesPage: React.FC = () => {
 
   const handleSaveCheque = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentOrganization?.id || !formState.sayad_id || !formState.cheque_number || !formState.amount) return;
+    if (!activeOrganization?.id || !formState.sayad_id || !formState.cheque_number || !formState.amount) return;
 
     try {
       const payload: Partial<Cheque> = {
         id: editingCheque?.id,
-        organization_id: currentOrganization.id,
+        organization_id: activeOrganization.id,
         type: formState.type,
         sayad_id: formState.sayad_id.trim(),
         cheque_number: formState.cheque_number.trim(),
@@ -565,7 +565,7 @@ export const ChequesPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div>{getStatusBadge(chk.status)}</div>
+                    <div>{getStatusBadge(chk.status as ChequeStatus)}</div>
                   </div>
 
                   {/* Sayad ID & Serial */}

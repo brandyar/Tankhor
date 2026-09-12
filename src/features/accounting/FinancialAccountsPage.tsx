@@ -35,7 +35,7 @@ import {
 export const FinancialAccountsPage: React.FC = () => {
   const { t } = useTranslation();
   const storage = storageManager.getAdapter();
-  const { currentOrganization } = useOrganization();
+  const { activeOrganization } = useOrganization();
 
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
   const [treasuryTxs, setTreasuryTxs] = useState<TreasuryTransaction[]>([]);
@@ -86,12 +86,12 @@ export const FinancialAccountsPage: React.FC = () => {
   });
 
   const loadData = async () => {
-    if (!currentOrganization?.id) return;
+    if (!activeOrganization?.id) return;
     setLoading(true);
     try {
-      const accList = await storage.getFinancialAccounts({ organization_id: currentOrganization.id });
+      const accList = await storage.getFinancialAccounts({ organization_id: activeOrganization.id });
       setAccounts(accList);
-      const txList = await storage.getTreasuryTransactions({ organization_id: currentOrganization.id });
+      const txList = await storage.getTreasuryTransactions({ organization_id: activeOrganization.id });
       setTreasuryTxs(txList);
     } catch (err) {
       console.error('Error loading financial accounts:', err);
@@ -102,7 +102,7 @@ export const FinancialAccountsPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [currentOrganization?.id]);
+  }, [activeOrganization?.id]);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -146,12 +146,12 @@ export const FinancialAccountsPage: React.FC = () => {
 
   const handleSaveAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentOrganization?.id || !accForm.name.trim()) return;
+    if (!activeOrganization?.id || !accForm.name.trim()) return;
 
     try {
       const payload: Partial<FinancialAccount> = {
         id: editingAccount?.id,
-        organization_id: currentOrganization.id,
+        organization_id: activeOrganization.id,
         name: accForm.name.trim(),
         type: accForm.type,
         bank_name: accForm.bank_name.trim() || null,
@@ -208,11 +208,11 @@ export const FinancialAccountsPage: React.FC = () => {
 
   const handleSaveTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentOrganization?.id || !transferAmount || Number(transferAmount) <= 0) return;
+    if (!activeOrganization?.id || !transferAmount || Number(transferAmount) <= 0) return;
 
     try {
       const payload: Partial<TreasuryTransaction> = {
-        organization_id: currentOrganization.id,
+        organization_id: activeOrganization.id,
         type: transferType,
         source_account_id: transferType !== 'deposit' && sourceAccountId ? Number(sourceAccountId) : null,
         destination_account_id: transferType !== 'withdrawal' && destinationAccountId ? Number(destinationAccountId) : null,

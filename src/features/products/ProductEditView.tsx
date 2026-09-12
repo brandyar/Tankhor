@@ -132,10 +132,13 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
           setTitle(prod.title || '');
           setSlug(prod.slug || '');
           const bId = typeof prod.brand_id === 'number' ? prod.brand_id : (prod.brand_id as any)?.id || '';
+          const cId = typeof prod.category_id === 'number' ? prod.category_id : (prod.category_id as any)?.id || '';
+          const colId = typeof prod.collection_id === 'number' ? prod.collection_id : (prod.collection_id as any)?.id || '';
+          const sId = typeof prod.season_id === 'number' ? prod.season_id : (prod.season_id as any)?.id || '';
           setBrandId(bId);
-          setCategoryId(prod.category_id || '');
-          setCollectionId(prod.collection_id || '');
-          setSeasonId(prod.season_id || '');
+          setCategoryId(cId);
+          setCollectionId(colId);
+          setSeasonId(sId);
           const sgId = typeof prod.size_guide_template_id === 'number' 
             ? prod.size_guide_template_id 
             : (typeof prod.size_guide_template_id === 'object' && prod.size_guide_template_id !== null)
@@ -531,9 +534,9 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
             size_id: sizeId,
             sku: v.sku ? v.sku.trim() : `SKU-${Date.now().toString().slice(-6)}`,
             barcode: v.barcode ? v.barcode.trim() : undefined,
-            price: v.price !== undefined && v.price !== '' ? Number(v.price) : 0,
-            cost: v.cost !== undefined && v.cost !== '' ? Number(v.cost) : 0,
-            stock_quantity: v.stock_quantity !== undefined && v.stock_quantity !== '' ? Number(v.stock_quantity) : 0,
+            price: v.price !== undefined && (v.price as any) !== '' ? Number(v.price) : 0,
+            cost: v.cost !== undefined && (v.cost as any) !== '' ? Number(v.cost) : 0,
+            stock_quantity: v.stock_quantity !== undefined && (v.stock_quantity as any) !== '' ? Number(v.stock_quantity) : 0,
             image: v.image ? v.image.trim() : undefined,
             status: v.status || 'published',
             sort: v.sort !== undefined ? Number(v.sort) : 0,
@@ -1116,7 +1119,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                       {/* Color Select */}
                       <td className="py-2.5 px-3">
                         <select
-                          value={v.color_id || ''}
+                          value={typeof v.color_id === 'object' ? (v.color_id as any)?.id || '' : v.color_id || ''}
                           onChange={(e) => handleUpdateVariantRow(index, 'color_id', e.target.value ? Number(e.target.value) : undefined)}
                           className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-800 dark:text-neutral-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                         >
@@ -1132,7 +1135,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                       {/* Size Select */}
                       <td className="py-2.5 px-3">
                         <select
-                          value={v.size_id || ''}
+                          value={typeof v.size_id === 'object' ? (v.size_id as any)?.id || '' : v.size_id || ''}
                           onChange={(e) => handleUpdateVariantRow(index, 'size_id', e.target.value ? Number(e.target.value) : undefined)}
                           className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-800 dark:text-neutral-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                         >
@@ -1279,21 +1282,21 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
                 type="number"
                 placeholder="مثال: 450000"
                 value={bulkPrice}
-                onChange={(e) => setBulkPrice(e.target.value)}
+                onChange={(e) => setBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
               />
               <Input
                 label={t('products.bulkCostPriceLabel')}
                 type="number"
                 placeholder="مثال: 300000"
                 value={bulkCost}
-                onChange={(e) => setBulkCost(e.target.value)}
+                onChange={(e) => setBulkCost(e.target.value === '' ? '' : Number(e.target.value))}
               />
               <Input
                 label={t('products.bulkStockLabel')}
                 type="number"
                 placeholder="مثال: 10"
                 value={bulkStock}
-                onChange={(e) => setBulkStock(e.target.value)}
+                onChange={(e) => setBulkStock(e.target.value === '' ? '' : Number(e.target.value))}
               />
             </div>
 

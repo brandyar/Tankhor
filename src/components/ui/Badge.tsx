@@ -2,7 +2,7 @@ import React from 'react';
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+  variant?: 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'default' | 'primary' | 'error' | 'secondary' | 'outline';
   size?: 'sm' | 'md';
   className?: string;
 }
@@ -13,6 +13,15 @@ export const Badge: React.FC<BadgeProps> = ({
   size = 'md',
   className = '',
 }) => {
+  const resolvedVariant =
+    variant === 'default' || variant === 'secondary' || variant === 'outline'
+      ? 'neutral'
+      : variant === 'primary'
+      ? 'info'
+      : variant === 'error'
+      ? 'danger'
+      : variant;
+
   const variantStyles = {
     success: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/60',
     warning: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200/80 dark:border-amber-800/60',
@@ -28,7 +37,7 @@ export const Badge: React.FC<BadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center font-mono border rounded-full whitespace-nowrap tracking-tight ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      className={`inline-flex items-center font-mono border rounded-full whitespace-nowrap tracking-tight ${variantStyles[resolvedVariant]} ${sizeStyles[size]} ${className}`}
     >
       {children}
     </span>

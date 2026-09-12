@@ -7,6 +7,7 @@ interface CardProps {
   action?: React.ReactNode;
   className?: string;
   id?: string;
+  onClick?: () => void;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -16,9 +17,14 @@ export const Card: React.FC<CardProps> = ({
   action,
   className = '',
   id,
+  onClick,
 }) => {
   return (
-    <div id={id} className={`bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl shadow-vercel-sm overflow-hidden transition-all text-neutral-900 dark:text-neutral-100 ${className}`}>
+    <div
+      id={id}
+      onClick={onClick}
+      className={`bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-800/80 rounded-xl shadow-vercel-sm overflow-hidden transition-all text-neutral-900 dark:text-neutral-100 ${className}`}
+    >
       {(title || action) && (
         <div className="px-5 py-4 border-b border-neutral-100 dark:border-neutral-800/60 flex items-center justify-between gap-4">
           <div>

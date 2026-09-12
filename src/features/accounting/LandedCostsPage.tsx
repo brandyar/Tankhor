@@ -157,7 +157,8 @@ export const LandedCostsPage: React.FC = () => {
   const calculatedAllocations: CalculatedItemAllocation[] = useMemo(() => {
     if (!poItems.length || amount <= 0) {
       return poItems.map((item) => {
-        const vInfo = variantsMap[item.variant_id] || { sku: '', title: '', currentBuyPrice: 0 };
+        const vId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
+        const vInfo = (vId ? variantsMap[vId] : undefined) || { sku: '', title: '', currentBuyPrice: 0 };
         const qty = item.quantity_ordered || item.quantity_received || 1;
         const unitCost = item.unit_cost || 0;
         const total = item.total || qty * unitCost;
@@ -180,7 +181,8 @@ export const LandedCostsPage: React.FC = () => {
     const totalPoQty = poItems.reduce((acc, item) => acc + (item.quantity_ordered || item.quantity_received || 1), 0);
 
     return poItems.map((item) => {
-      const vInfo = variantsMap[item.variant_id] || { sku: '', title: '', currentBuyPrice: 0 };
+      const vId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
+      const vInfo = (vId ? variantsMap[vId] : undefined) || { sku: '', title: '', currentBuyPrice: 0 };
       const qty = item.quantity_ordered || item.quantity_received || 1;
       const unitCost = item.unit_cost || 0;
       const baseTotal = item.total || qty * unitCost;

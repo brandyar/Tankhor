@@ -95,8 +95,12 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
         const whId = typeof ord.warehouse_id === 'object' ? (ord.warehouse_id as any)?.id : ord.warehouse_id;
         const wh = whList.find((w) => Number(w.id) === Number(whId));
 
+        const rawTotal = (ord as any).total ?? (ord as any).total_amount ?? (ord as any).subtotal ?? 0;
+        const numericTotal = Number(rawTotal) || 0;
+
         return {
           ...ord,
+          total: numericTotal,
           customer_name: cust ? cust.name : ((ord as any).customer_name || t('orders.generalCustomer')),
           warehouse_name: wh ? wh.name : ((ord as any).warehouse_name || t('orders.defaultWarehouse')),
         };

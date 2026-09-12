@@ -199,7 +199,7 @@ export const ProductsView: React.FC = () => {
               {p.title}
             </p>
             <p className="text-[11px] font-mono text-neutral-400 mt-0.5">
-              {p.brand || t('products.defaultBrand')} | Slug: {p.slug || '-'}
+              {typeof p.brand === 'object' ? (p.brand as any)?.name : p.brand || t('products.defaultBrand')} | Slug: {p.slug || '-'}
             </p>
           </div>
         </div>

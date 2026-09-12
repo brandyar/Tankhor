@@ -219,6 +219,7 @@ export interface LandedCostAllocation {
   landed_cost_id?: number | LandedCost;
   purchase_order_item_id: number;
   allocated_amount: number;
+  allocated_cost?: number;
   effective_unit_cost: number;
   // Joined / Display fields
   variant_id?: number;

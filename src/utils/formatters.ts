@@ -28,14 +28,17 @@ export function toPersianDigits(num: number | string | undefined | null, force: 
  * Formats monetary amounts according to currency and active locale
  */
 export function formatCurrency(
-  amount: number | undefined | null,
+  amount: number | string | undefined | null,
   currency: string = 'TOMAN',
   isPersian?: boolean
 ): string {
-  if (amount === undefined || amount === null) return '-';
+  if (amount === undefined || amount === null || amount === '') return '-';
+
+  const num = typeof amount === 'number' ? amount : Number(amount);
+  if (isNaN(num)) return '-';
 
   const persianMode = isPersian !== undefined ? isPersian : isCurrentLocalePersian();
-  const formattedNumber = new Intl.NumberFormat('en-US').format(amount);
+  const formattedNumber = new Intl.NumberFormat('en-US').format(num);
 
   if (persianMode) {
     const persianNumber = toPersianDigits(formattedNumber, true);

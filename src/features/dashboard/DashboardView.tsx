@@ -180,7 +180,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       header: t('dashboard.movementType'),
       render: (m) => {
         const isIn = m.type === 'purchase' || m.type === 'transfer_in' || m.type === 'return';
-        let label = m.type;
+        let label: string = String(m.type);
         if (m.type === 'purchase') label = t('dashboard.purchaseIn');
         else if (m.type === 'sale') label = t('dashboard.saleOut');
         else if (m.type === 'return') label = t('dashboard.returnIn');

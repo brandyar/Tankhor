@@ -58,7 +58,6 @@ export const ExpensesPage: React.FC = () => {
     title: '',
     code: '',
     icon: 'Receipt',
-    description: '',
     status: 'active',
   });
   const [editingCategory, setEditingCategory] = useState<ExpenseCategory | null>(null);
@@ -172,7 +171,7 @@ export const ExpensesPage: React.FC = () => {
 
       await adapter.saveExpenseCategory(payload);
       setEditingCategory(null);
-      setCategoryForm({ title: '', code: '', icon: 'Receipt', description: '', status: 'active' });
+      setCategoryForm({ title: '', code: '', icon: 'Receipt', status: 'active' });
       await loadData();
     } catch (err) {
       console.error('[ExpensesPage] Failed to save category:', err);
@@ -529,7 +528,7 @@ export const ExpensesPage: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setEditingCategory(null);
-                    setCategoryForm({ title: '', code: '', icon: 'Receipt', description: '', status: 'active' });
+                    setCategoryForm({ title: '', code: '', icon: 'Receipt', status: 'active' });
                   }}
                 >
                   انصراف
@@ -565,7 +564,6 @@ export const ExpensesPage: React.FC = () => {
                         title: cat.title,
                         code: cat.code,
                         icon: cat.icon || 'Receipt',
-                        description: cat.description || '',
                         status: cat.status || 'active',
                       });
                     }}

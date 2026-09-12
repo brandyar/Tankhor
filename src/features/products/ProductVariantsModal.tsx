@@ -102,7 +102,7 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
                 </Badge>
               </h4>
               <p className="text-xs text-slate-500 mt-0.5">
-                {t('products.brand')}: <span className="font-semibold text-slate-700 dark:text-neutral-300">{product.brand || t('products.defaultBrand')}</span> | Slug: {product.slug || '-'}
+                {t('products.brand')}: <span className="font-semibold text-slate-700 dark:text-neutral-300">{typeof product.brand === 'object' ? (product.brand as any)?.name : product.brand || t('products.defaultBrand')}</span> | Slug: {product.slug || '-'}
               </p>
             </div>
           </div>
@@ -216,7 +216,7 @@ export const ProductVariantsModal: React.FC<ProductVariantsModalProps> = ({
                         {v.price ? formatCurrency(v.price, activeOrganization?.currency, isPersian) : '-'}
                       </td>
                       <td className="px-3 py-2.5 font-mono text-slate-500 dark:text-neutral-400">
-                        {v.cost_price ? formatCurrency(v.cost_price, activeOrganization?.currency, isPersian) : '-'}
+                        {(v.cost !== undefined || (v as any).cost_price !== undefined) ? formatCurrency(v.cost ?? (v as any).cost_price, activeOrganization?.currency, isPersian) : '-'}
                       </td>
                       <td className="px-3 py-2.5 font-mono font-bold">
                         <span className={`px-2 py-0.5 rounded-full text-[11px] ${
