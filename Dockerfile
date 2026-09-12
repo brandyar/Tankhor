@@ -5,17 +5,23 @@ FROM node:22-slim AS builder
 
 WORKDIR /app
 
-# Prevent memory exhaustion & speed up npm
-ENV NODE_ENV=development
-ENV NPM_CONFIG_AUDIT=false
-ENV NPM_CONFIG_FUND=false
-ENV NPM_CONFIG_UPDATE_NOTIFIER=false
+# Prevent memory exhaustion & speed up npm network reliability
+ENV NODE_ENV=development \
+    NODE_OPTIONS="--max-old-space-size=4096" \
+    NPM_CONFIG_AUDIT=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FETCH_RETRIES=5 \
+    NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=10000 \
+    NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=60000 \
+    NPM_CONFIG_FETCH_TIMEOUT=300000 \
+    NPM_CONFIG_MAXSOCKETS=8
 
 # Copy dependency manifests and npm network configs
 COPY package.json package-lock.json .npmrc* ./
 
-# Fast, clean dependency installation
-RUN npm ci --no-audit --no-fund
+# Fast, clean dependency installation with fallback
+RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
 
 # Copy all source files
 COPY . .
