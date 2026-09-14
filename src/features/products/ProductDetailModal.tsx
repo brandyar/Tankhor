@@ -77,7 +77,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         setCollectionId(colId);
         setSeasonId(sId);
         setSizeGuideTemplateId(sgId);
-        setMainImage(product.main_image || '');
+        const rawMain = product.main_image;
+        const mainStr = typeof rawMain === 'string'
+          ? rawMain
+          : (rawMain && typeof rawMain === 'object' && (rawMain as any).id)
+            ? String((rawMain as any).id)
+            : '';
+        setMainImage(mainStr);
         setTags(product.tags || '');
         setSort(product.sort !== undefined ? product.sort : 0);
         setDescription(product.description || '');
@@ -128,7 +134,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         collection_id: collectionId ? Number(collectionId) : undefined,
         season_id: seasonId ? Number(seasonId) : undefined,
         size_guide_template_id: sizeGuideTemplateId ? Number(sizeGuideTemplateId) : undefined,
-        main_image: mainImage,
+        main_image: mainImage ? (typeof mainImage === 'string' ? mainImage.trim() : (mainImage as any).id || '') : null,
         tags,
         sort: sort !== '' ? Number(sort) : 0,
         description,

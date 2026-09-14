@@ -396,6 +396,20 @@ export const LocalBackupRestoreCard: React.FC = () => {
                       <FileSpreadsheet className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                       {t('settings.backupInventory')}
                     </button>
+                    <button
+                      onClick={() => handleExportCsv('expenses', 'هزینه‌ها')}
+                      className="px-2 py-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 font-medium text-neutral-700 dark:text-neutral-200 transition-colors flex items-center gap-1"
+                    >
+                      <FileSpreadsheet className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+                      هزینه‌ها
+                    </button>
+                    <button
+                      onClick={() => handleExportCsv('cheques', 'چک‌ها')}
+                      className="px-2 py-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 font-medium text-neutral-700 dark:text-neutral-200 transition-colors flex items-center gap-1"
+                    >
+                      <FileSpreadsheet className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                      چک‌ها
+                    </button>
                   </div>
                 </div>
               </div>

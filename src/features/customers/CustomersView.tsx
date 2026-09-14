@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
 import { storageManager } from '../../storage';
@@ -11,8 +11,9 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
-import { formatDate, formatCurrency } from '../../utils/formatters';
+import { formatDate, formatCurrency, toPersianDigits } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
+import { exportCustomersToExcel, parseCustomersFromExcel } from '../../utils/excelUtils';
 import {
   Users,
   Plus,
@@ -26,16 +27,21 @@ import {
   User,
   CheckCircle2,
   Trash2,
+  Download,
+  Upload,
+  RefreshCw,
 } from 'lucide-react';
 
 export const CustomersView: React.FC = () => {
   const { t, locale } = useTranslation();
   const { activeOrganization } = useOrganization();
   const isPersian = locale === 'fa';
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isImporting, setIsImporting] = useState(false);
   const [search, setSearch] = useState('');
 
   // Add/Edit Modal
@@ -158,18 +164,105 @@ export const CustomersView: React.FC = () => {
     return { count: custOrders.length, totalSpent, orders: custOrders };
   };
 
+  const handleExportExcel = () => {
+    const listToExport = filteredCustomers.length > 0 ? filteredCustomers : customers;
+    if (listToExport.length === 0) {
+      alert('مشتری‌ای جهت خروجی اکسل وجود ندارد.');
+      return;
+    }
+    exportCustomersToExcel(listToExport);
+  };
+
+  const handleImportExcelClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const result = parseCustomersFromExcel(buffer);
+
+      if (!result.success || result.items.length === 0) {
+        alert(result.errors.length > 0 ? result.errors.join('\n') : t('customers.importError'));
+        return;
+      }
+
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id || 1;
+
+      let savedCount = 0;
+      for (const cust of result.items) {
+        if (!cust.name) continue;
+        const custAny = cust as any;
+        const fullAddress = [custAny.province, custAny.city, cust.address].filter(Boolean).join(' - ') || cust.address || '';
+        await adapter.saveCustomer({
+          organization_id: orgId,
+          name: cust.name,
+          phone: cust.phone || custAny.mobile || '',
+          email: cust.email || '',
+          address: fullAddress,
+          notes: cust.notes || '',
+          status: cust.status || 'active',
+        });
+        savedCount++;
+      }
+
+      await loadData();
+      alert(t('customers.importSuccess', { count: isPersian ? toPersianDigits(savedCount) : savedCount }));
+    } catch (err) {
+      console.error('[CustomersView] Excel import error:', err);
+      alert(t('customers.importError'));
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileImport}
+        accept=".xlsx,.xls"
+        className="hidden"
+      />
+
       <PageHeader
         title={t('customers.title')}
         subtitle={t('customers.subtitle')}
         action={
-          <Button
-            onClick={() => handleOpenModal()}
-            icon={<Plus className="w-4 h-4" />}
-          >
-            {t('customers.addNewCustomer')}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportExcel}
+              icon={<Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+            >
+              {t('customers.exportExcel')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleImportExcelClick}
+              disabled={isImporting}
+              icon={<Upload className={`w-4 h-4 text-indigo-600 dark:text-indigo-400 ${isImporting ? 'animate-bounce' : ''}`} />}
+            >
+              {isImporting ? 'در حال ورود...' : t('customers.importExcel')}
+            </Button>
+            <Button
+              onClick={() => handleOpenModal()}
+              icon={<Plus className="w-4 h-4" />}
+            >
+              {t('customers.addNewCustomer')}
+            </Button>
+          </div>
         }
       />
 

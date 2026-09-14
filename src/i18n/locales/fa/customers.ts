@@ -39,4 +39,9 @@ export const customersFa = {
   notesPlaceholder: 'ترجیحات مشتری، کد تخفیف اختصاصی یا توضیحات...',
   saveChanges: 'ذخیره تغییرات',
   submitCustomer: 'ثبت مشتری',
+  exportExcel: 'خروجی اکسل',
+  importExcel: 'ورود از اکسل',
+  importSuccess: '{count} مشتری با موفقیت از اکسل وارد گردید.',
+  importError: 'خطا در پردازش فایل اکسل مشتریان.',
 };
+

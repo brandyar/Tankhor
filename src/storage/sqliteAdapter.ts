@@ -307,18 +307,20 @@ export class SqliteStorageAdapter implements IStorageProvider {
     return item;
   }
 
-  private async deleteItem(col: string, id: number): Promise<boolean> {
+  private async deleteItem(col: string, id: number | string): Promise<boolean> {
+    const normId = normalizeId(id) || Number(id);
     const db = await this.initDatabase();
     if (db) {
       try {
-        await db.execute(`DELETE FROM ${col} WHERE id = $1`, [id]);
+        await db.execute(`DELETE FROM ${col} WHERE id = $1`, [normId]);
       } catch (err) {
         console.error(`[SqliteStorageAdapter] Error deleting from ${col}:`, err);
       }
     }
 
     const list = this.fallbackMemoryStore.get(col) || [];
-    const filtered = list.filter((x) => x.id !== id);
+    const filtered = list.filter((x) => (normalizeId(x.id) || Number(x.id)) !== normId && x.id !== id);
+    this.fallbackMemoryStore.set(col, filtered);
     this.saveLocalStorageFallback(col, filtered);
     return true;
   }
@@ -335,12 +337,9 @@ export class SqliteStorageAdapter implements IStorageProvider {
   }
 
   private getActiveOrgId(params?: QueryParams): number | undefined {
-    if (params && 'organization_id' in params) {
-      if (params.organization_id !== undefined && params.organization_id !== null) {
-        const num = Number(params.organization_id);
-        if (!isNaN(num) && num > 0) return num;
-      }
-      return undefined;
+    if (params && params.organization_id !== undefined && params.organization_id !== null) {
+      const num = Number(params.organization_id);
+      if (!isNaN(num) && num > 0) return num;
     }
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('tankhor_active_org_id');
@@ -518,6 +517,7 @@ export class SqliteStorageAdapter implements IStorageProvider {
         saved = {
           ...existing,
           ...product,
+          main_image: product.main_image !== undefined ? (product.main_image || null as any) : existing.main_image,
           id: pId,
           date_updated: new Date().toISOString(),
         };
@@ -549,23 +549,25 @@ export class SqliteStorageAdapter implements IStorageProvider {
     return saved;
   }
 
-  async deleteProduct(id: number): Promise<boolean> {
-    await this.deleteItem('products', id);
+  async deleteProduct(id: number | string): Promise<boolean> {
+    const normId = normalizeId(id) || Number(id);
+    await this.deleteItem('products', normId);
 
     const variants = await this.getItems<ProductVariant>('product_variants');
     const removedVariantIds: number[] = [];
     for (const v of variants) {
-      if (normalizeId(v.product_id) === id) {
-        removedVariantIds.push(v.id);
-        await this.deleteItem('product_variants', v.id);
+      if ((normalizeId(v.product_id) || Number(v.product_id)) === normId) {
+        const vId = normalizeId(v.id) || Number(v.id);
+        removedVariantIds.push(vId);
+        await this.deleteItem('product_variants', vId);
       }
     }
 
     const inventoryList = await this.getItems<InventoryItem>('inventory_items');
     for (const inv of inventoryList) {
-      const vId = normalizeId(inv.variant_id);
+      const vId = normalizeId(inv.variant_id) || Number(inv.variant_id);
       if (vId && removedVariantIds.includes(vId)) {
-        await this.deleteItem('inventory_items', inv.id);
+        await this.deleteItem('inventory_items', normalizeId(inv.id) || Number(inv.id));
       }
     }
 
@@ -630,6 +632,7 @@ export class SqliteStorageAdapter implements IStorageProvider {
           product_id: productId || existing.product_id,
           color_id: colorId,
           size_id: sizeId,
+          image: variant.image !== undefined ? (variant.image || null as any) : existing.image,
           date_updated: new Date().toISOString(),
         };
       } else {
@@ -1595,6 +1598,24 @@ export class SqliteStorageAdapter implements IStorageProvider {
     };
 
     await this.saveItem('expenses', saved);
+
+    // If payment is linked to a financial account/cashbox, record treasury withdrawal
+    if (saved.account_id && saved.amount > 0) {
+      try {
+        await this.saveTreasuryTransaction({
+          organization_id: orgId,
+          type: 'withdrawal',
+          source_account_id: saved.account_id,
+          amount: saved.amount,
+          expense_id: saved.id,
+          description: `پرداخت هزینه: ${saved.title}`,
+          transaction_date: saved.expense_date,
+        });
+      } catch (tErr) {
+        console.warn('[SqliteAdapter] Failed to record treasury tx for expense:', tErr);
+      }
+    }
+
     return saved;
   }
 

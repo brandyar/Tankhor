@@ -32,15 +32,21 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   const [resolvedDisplayUrl, setResolvedDisplayUrl] = useState<string>('');
   const [compressionInfo, setCompressionInfo] = useState<{ origSize: number; compSize: number } | null>(null);
 
+  const safeValue = typeof value === 'string'
+    ? value
+    : (value && typeof value === 'object' && (value as any).id)
+      ? String((value as any).id)
+      : '';
+
   useEffect(() => {
     let isMounted = true;
-    if (value) {
+    if (safeValue) {
       // First try sync cache
-      const syncUrl = mediaManager.getDisplayUrlSync(value);
+      const syncUrl = mediaManager.getDisplayUrlSync(safeValue);
       if (syncUrl) setResolvedDisplayUrl(syncUrl);
 
       // Resolve async (for Tauri FS local blobs or cloud URLs)
-      mediaManager.getDisplayUrl(value).then((url) => {
+      mediaManager.getDisplayUrl(safeValue).then((url) => {
         if (isMounted && url) {
           setResolvedDisplayUrl(url);
         }
@@ -52,7 +58,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [value]);
+  }, [safeValue]);
 
   const handleFileChange = async (file: File) => {
     if (!file) return;

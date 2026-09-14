@@ -39,4 +39,9 @@ export const customersEn = {
   notesPlaceholder: 'Customer preferences, special discounts or remarks...',
   saveChanges: 'Save Changes',
   submitCustomer: 'Register Customer',
+  exportExcel: 'Export Excel',
+  importExcel: 'Import Excel',
+  importSuccess: '{count} customers imported successfully.',
+  importError: 'Failed to import customers from Excel.',
 };
+

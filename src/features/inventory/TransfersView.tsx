@@ -369,14 +369,14 @@ export const TransfersView: React.FC = () => {
               header: t('inventory.transferNumber'),
               render: (trf) => (
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-mono font-bold text-xs shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-800/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-mono font-bold text-xs shrink-0">
                     <ArrowLeftRight className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm">
+                    <span className="font-mono font-bold text-slate-900 dark:text-neutral-100 text-xs sm:text-sm">
                       {trf.transfer_number}
                     </span>
-                    <div className="text-[10px] text-slate-400 font-mono">
+                    <div className="text-[10px] text-slate-400 dark:text-neutral-400 font-mono">
                       {formatDate(trf.date_created, isPersian)}
                     </div>
                   </div>
@@ -387,8 +387,8 @@ export const TransfersView: React.FC = () => {
               key: 'from_warehouse_id',
               header: t('inventory.sourceWarehouseSender'),
               render: (trf) => (
-                <div className="flex items-center gap-1.5 font-medium text-slate-800 text-xs">
-                  <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-neutral-200 text-xs">
+                  <Building2 className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-400" />
                   {trf.from_warehouse_name}
                 </div>
               ),
@@ -397,8 +397,8 @@ export const TransfersView: React.FC = () => {
               key: 'to_warehouse_id',
               header: t('inventory.destWarehouseReceiver'),
               render: (trf) => (
-                <div className="flex items-center gap-1.5 font-medium text-slate-800 text-xs">
-                  <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-neutral-200 text-xs">
+                  <Building2 className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-400" />
                   {trf.to_warehouse_name}
                 </div>
               ),
@@ -467,7 +467,7 @@ export const TransfersView: React.FC = () => {
       >
         <div className="space-y-4">
           {formError && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-2">
+            <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-xl text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               {formError}
             </div>
@@ -490,30 +490,30 @@ export const TransfersView: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">{t('inventory.transferNotesLabel')}</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">{t('inventory.transferNotesLabel')}</label>
             <textarea
               rows={2}
               placeholder={t('inventory.transferNotesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full p-2.5 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-[#181a20] text-slate-900 dark:text-neutral-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
             />
           </div>
 
           {/* Add Item Section */}
-          <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
-            <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-              <Package className="w-4 h-4 text-indigo-600" />
+          <div className="p-3.5 bg-slate-50 dark:bg-neutral-800/60 border border-slate-200/80 dark:border-neutral-700 rounded-xl space-y-3">
+            <h4 className="text-xs font-bold text-slate-800 dark:text-neutral-200 flex items-center gap-1.5">
+              <Package className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               {t('inventory.addItemsToTransfer')}
             </h4>
 
             <div className="flex flex-col sm:flex-row items-end gap-2">
               <div className="flex-1 w-full">
-                <label className="block text-[11px] text-slate-500 mb-1">{t('inventory.selectItemVariantSku')}</label>
+                <label className="block text-[11px] text-slate-500 dark:text-neutral-400 mb-1">{t('inventory.selectItemVariantSku')}</label>
                 <select
                   value={itemVariantId}
                   onChange={(e) => setItemVariantId(Number(e.target.value))}
-                  className="w-full p-2 text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full p-2 text-xs border border-slate-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-[#181a20] text-slate-900 dark:text-neutral-100 focus:ring-2 focus:ring-indigo-500 outline-none"
                 >
                   <option value={0}>{t('inventory.selectVariantPlaceholder')}</option>
                   {variants.map((v, vIdx) => (
@@ -545,19 +545,19 @@ export const TransfersView: React.FC = () => {
 
             {/* Selected Items List */}
             {selectedItems.length > 0 && (
-              <div className="divide-y divide-slate-200 bg-white border border-slate-200 rounded-lg overflow-hidden">
+              <div className="divide-y divide-slate-200 dark:divide-neutral-700 bg-white dark:bg-[#181a20] border border-slate-200 dark:border-neutral-700 rounded-lg overflow-hidden">
                 {selectedItems.map((item, index) => {
                   const v = variants.find((varObj) => varObj.id === item.variant_id);
                   return (
                     <div key={`trf_sel_${item.variant_id}_${index}`} className="p-2.5 flex items-center justify-between text-xs">
                       <div>
-                        <span className="font-bold text-slate-900">{v ? getVariantLabel(v) : `${t('products.variant')} #${item.variant_id}`}</span>
-                        <span className="mr-3 text-indigo-600 font-mono font-bold">{t('inventory.quantity')}: {item.quantity}</span>
+                        <span className="font-bold text-slate-900 dark:text-neutral-100">{v ? getVariantLabel(v) : `${t('products.variant')} #${item.variant_id}`}</span>
+                        <span className="mr-3 text-indigo-600 dark:text-indigo-400 font-mono font-bold">{t('inventory.quantity')}: {item.quantity}</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(item.variant_id)}
-                        className="text-red-500 hover:text-red-700 text-xs p-1"
+                        className="text-red-500 hover:text-red-700 text-xs p-1 cursor-pointer"
                       >
                         {t('common.delete')}
                       </button>
@@ -568,7 +568,7 @@ export const TransfersView: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-neutral-800">
             <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
               {t('common.cancel')}
             </Button>
@@ -590,27 +590,27 @@ export const TransfersView: React.FC = () => {
           title={`${t('inventory.transferDetailsTitle')} ${selectedTransfer.transfer_number}`}
         >
           <div className="space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+            <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-neutral-800/60 rounded-xl border border-slate-200/80 dark:border-neutral-700">
               <div>
-                <span className="text-slate-500 block">{t('inventory.sourceWarehouseSender')}:</span>
-                <span className="font-bold text-slate-900">{selectedTransfer.from_warehouse_name}</span>
+                <span className="text-slate-500 dark:text-neutral-400 block">{t('inventory.sourceWarehouseSender')}:</span>
+                <span className="font-bold text-slate-900 dark:text-neutral-100">{selectedTransfer.from_warehouse_name}</span>
               </div>
               <div>
-                <span className="text-slate-500 block">{t('inventory.destWarehouseReceiver')}:</span>
-                <span className="font-bold text-slate-900">{selectedTransfer.to_warehouse_name}</span>
+                <span className="text-slate-500 dark:text-neutral-400 block">{t('inventory.destWarehouseReceiver')}:</span>
+                <span className="font-bold text-slate-900 dark:text-neutral-100">{selectedTransfer.to_warehouse_name}</span>
               </div>
               <div>
-                <span className="text-slate-500 block">{t('common.status')}:</span>
+                <span className="text-slate-500 dark:text-neutral-400 block">{t('common.status')}:</span>
                 <div>{getStatusBadge(selectedTransfer.status)}</div>
               </div>
               <div>
-                <span className="text-slate-500 block">{t('inventory.dateTime')}:</span>
-                <span className="font-mono text-slate-800">{formatDate(selectedTransfer.date_created, isPersian)}</span>
+                <span className="text-slate-500 dark:text-neutral-400 block">{t('inventory.dateTime')}:</span>
+                <span className="font-mono text-slate-800 dark:text-neutral-200">{formatDate(selectedTransfer.date_created, isPersian)}</span>
               </div>
             </div>
 
             {selectedTransfer.notes && (
-              <div className="p-3 bg-amber-50/60 border border-amber-200/60 rounded-xl text-amber-900">
+              <div className="p-3 bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/60 rounded-xl text-amber-900 dark:text-amber-200">
                 <span className="font-bold block mb-1">{t('inventory.transferNotesLabel')}:</span>
                 <p>{selectedTransfer.notes}</p>
               </div>

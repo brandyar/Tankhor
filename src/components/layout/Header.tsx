@@ -3,7 +3,7 @@ import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { storageManager } from '../../storage';
+import { storageManager, isTauriEnvironment } from '../../storage';
 import { StorageSyncManager } from '../../storage/syncManager';
 import { LoginModal } from '../../features/auth/LoginModal';
 import { CreateOrganizationModal } from '../../features/organizations/CreateOrganizationModal';
@@ -52,11 +52,18 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
       setModeState(storageManager.getMode());
     };
 
+    const handleQueueChange = (e?: any) => {
+      const count = typeof e?.detail === 'number' ? e.detail : StorageSyncManager.getQueue().length;
+      setPendingCount(count);
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('tankhor_storage_mode_changed', handleModeChange);
+    window.addEventListener('tankhor_sync_queue_updated', handleQueueChange);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('tankhor_storage_mode_changed', handleModeChange);
+      window.removeEventListener('tankhor_sync_queue_updated', handleQueueChange);
     };
   }, []);
 
@@ -74,6 +81,11 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
       storageManager.setMode('cloud_synced');
       setModeState('cloud_synced');
     } else {
+      // In web environment, keep in cloud mode if Pro
+      if (!isTauriEnvironment() && activeOrganization?.plan === 'pro') {
+        handleSyncNow();
+        return;
+      }
       storageManager.setMode('local_offline');
       setModeState('local_offline');
     }
@@ -89,6 +101,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
       await StorageSyncManager.syncLocalToCloud(storageManager.getCloudAdapter());
       setPendingCount(StorageSyncManager.getQueue().length);
       await refreshOrganizations();
+    } catch (err) {
+      console.error('[Header] Sync error:', err);
     } finally {
       setSyncing(false);
     }
@@ -212,29 +226,57 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
 
         {/* Right / End: Storage Mode Indicator, Language Switcher, Theme Switcher, User Badge */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Storage Mode Toggle Badge */}
+          {/* Unified Storage Mode & Sync Badge */}
           <button
-            onClick={toggleStorageMode}
-            title={t('common.storageMode')}
-            className="flex items-center gap-1.5 text-xs font-mono px-3 py-1 rounded-full border border-neutral-200/90 dark:border-neutral-700/80 hover:bg-neutral-50 dark:hover:bg-neutral-800 bg-neutral-50/80 dark:bg-neutral-800/80 text-neutral-800 dark:text-neutral-200 transition-all cursor-pointer shadow-2xs"
+            onClick={() => {
+              if (pendingCount > 0 || mode === 'cloud_synced') {
+                handleSyncNow();
+              } else {
+                toggleStorageMode();
+              }
+            }}
+            disabled={syncing}
+            title={
+              pendingCount > 0
+                ? `${pendingCount} ${t('common.syncPending')} - برای همگام‌سازی کلیک کنید`
+                : mode === 'cloud_synced'
+                ? 'حالت ابری فعال (کلیک برای بررسی و همگام‌سازی)'
+                : t('common.storageMode')
+            }
+            className={`flex items-center gap-1.5 text-xs font-mono px-3 py-1 rounded-full border transition-all cursor-pointer shadow-2xs ${
+              pendingCount > 0
+                ? 'text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/50 border-amber-300 dark:border-amber-700/70 hover:bg-amber-100 dark:hover:bg-amber-900/60'
+                : mode === 'cloud_synced' && isCloudAuthenticated
+                ? 'text-blue-900 dark:text-blue-200 bg-blue-50/80 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 hover:bg-blue-100/80 dark:hover:bg-blue-900/50'
+                : 'text-neutral-800 dark:text-neutral-200 bg-neutral-50/80 dark:bg-neutral-800/80 border-neutral-200/90 dark:border-neutral-700/80 hover:bg-neutral-100 dark:hover:bg-neutral-700'
+            }`}
           >
-            <span className={`w-2 h-2 rounded-full ${mode === 'cloud_synced' && isCloudAuthenticated ? 'bg-blue-500 animate-pulse' : 'bg-emerald-500'}`} />
+            {syncing ? (
+              <RefreshCw className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 animate-spin" />
+            ) : (
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  pendingCount > 0
+                    ? 'bg-amber-500 animate-ping'
+                    : mode === 'cloud_synced' && isCloudAuthenticated
+                    ? 'bg-blue-500 animate-pulse'
+                    : 'bg-emerald-500'
+                }`}
+              />
+            )}
             <span className="hidden md:inline">
-              {mode === 'local_offline' ? t('common.localOffline') : (isCloudAuthenticated ? t('common.cloudSynced') : t('common.cloudLoginRequired'))}
+              {pendingCount > 0
+                ? `${pendingCount} ${t('common.syncPending')}`
+                : mode === 'local_offline'
+                ? t('common.localOffline')
+                : isCloudAuthenticated
+                ? t('common.cloudSynced')
+                : t('common.cloudLoginRequired')}
             </span>
+            {pendingCount > 0 && (
+              <RefreshCw className={`w-3 h-3 text-amber-600 dark:text-amber-400 ms-1 ${syncing ? 'animate-spin' : ''}`} />
+            )}
           </button>
-
-          {/* Sync Status Button if pending */}
-          {pendingCount > 0 && (
-            <button
-              onClick={handleSyncNow}
-              disabled={syncing}
-              className="flex items-center gap-1.5 text-xs font-mono text-amber-900 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 px-3 py-1 rounded-full border border-amber-200/80 dark:border-amber-800/60 transition-colors cursor-pointer"
-            >
-              <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin' : ''}`} />
-              <span>{pendingCount} {t('common.syncPending')}</span>
-            </button>
-          )}
 
           {/* Dark / Light / System Theme Switcher Dropdown */}
           <div className="relative" ref={themeMenuRef}>

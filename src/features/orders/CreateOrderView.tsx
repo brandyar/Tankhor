@@ -13,6 +13,8 @@ import {
   PaymentStatus,
   Category,
 } from '../../types';
+import { FinancialAccount } from '../../types/accounting';
+import { useModuleAccess } from '../../hooks/useModuleAccess';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -48,6 +50,7 @@ import {
   UserPlus,
   Check,
   Percent,
+  Wallet,
 } from 'lucide-react';
 
 interface CartLine {
@@ -83,6 +86,47 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('paid');
   const [paymentType, setPaymentType] = useState<POSPaymentType>('pos');
   const [orderNotes, setOrderNotes] = useState('');
+
+  // Accounting Module Integration
+  const { hasAccess } = useModuleAccess();
+  const hasAccounting = hasAccess('accounting');
+  const [financialAccounts, setFinancialAccounts] = useState<FinancialAccount[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<number | ''>('');
+
+  const resolveDefaultAccount = (accList: FinancialAccount[], pType: POSPaymentType): number | '' => {
+    if (!accList || accList.length === 0) return '';
+    if (pType === 'cash') {
+      const match =
+        accList.find((a) => a.type === 'cashbox' && a.is_default) ||
+        accList.find((a) => a.type === 'cashbox') ||
+        accList.find((a) => a.is_default) ||
+        accList[0];
+      return match ? match.id : '';
+    } else if (pType === 'pos') {
+      const match =
+        accList.find((a) => a.pos_terminal_id && a.is_default) ||
+        accList.find((a) => a.pos_terminal_id) ||
+        accList.find((a) => a.type === 'bank' && a.is_default) ||
+        accList.find((a) => a.type === 'bank') ||
+        accList[0];
+      return match ? match.id : '';
+    } else if (pType === 'card_to_card') {
+      const match =
+        accList.find((a) => a.type === 'bank' && a.is_default) ||
+        accList.find((a) => a.type === 'bank') ||
+        accList[0];
+      return match ? match.id : '';
+    }
+    return '';
+  };
+
+  const handlePaymentTypeChange = (newType: POSPaymentType) => {
+    setPaymentType(newType);
+    if (hasAccounting && financialAccounts.length > 0) {
+      const defAccId = resolveDefaultAccount(financialAccounts, newType);
+      setSelectedAccountId(defAccId);
+    }
+  };
 
   // Cart & Scanner
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -134,6 +178,18 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
       setProducts(prodList);
 
       if (whList.length > 0) setSelectedWarehouseId(whList[0].id);
+
+      if (hasAccounting && orgId) {
+        try {
+          const accs = await adapter.getFinancialAccounts({ organization_id: orgId });
+          const activeAccs = (accs || []).filter((a) => a.status === 'active');
+          setFinancialAccounts(activeAccs);
+          const defAccId = resolveDefaultAccount(activeAccs, paymentType);
+          if (defAccId) setSelectedAccountId(defAccId);
+        } catch (fErr) {
+          console.warn('[CreateOrderView] Could not load financial accounts:', fErr);
+        }
+      }
     } catch (err) {
       console.error('[CreateOrderView] Error loading order form data:', err);
     } finally {
@@ -386,6 +442,46 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             reference_id: String(savedOrder.id),
             note: `POS #${orderNumber}`,
           });
+        }
+      }
+
+      // If accounting module is active, record treasury or customer ledger transaction
+      if (hasAccounting && activeOrganization?.id) {
+        const orgNumId = Number(activeOrganization.id);
+        if ((paymentType === 'cash' || paymentType === 'pos' || paymentType === 'card_to_card') && selectedAccountId) {
+          try {
+            await adapter.saveTreasuryTransaction({
+              organization_id: orgNumId,
+              destination_account_id: Number(selectedAccountId),
+              type: 'deposit',
+              amount: grandTotal,
+              tracking_code: `ORD-${orderNumber}`,
+              description: `دریافت وجه فاکتور فروش #${orderNumber} (${customerName !== t('orders.generalCustomer') ? customerName : 'مشتری حضوری'})`,
+              transaction_date: new Date().toISOString(),
+            });
+          } catch (trErr) {
+            console.warn('[CreateOrderView] Could not record treasury transaction for order:', trErr);
+          }
+        } else if (paymentType === 'credit' && selectedCustomerId) {
+          try {
+            await adapter.savePersonTransaction({
+              organization_id: orgNumId,
+              customer_id: selectedCustomerId,
+              party_type: 'customer',
+              party_name: customerName,
+              type: 'debtor',
+              transaction_type: 'sale_invoice',
+              amount: grandTotal,
+              debit_amount: grandTotal,
+              status: 'pending',
+              reference_number: orderNumber,
+              order_id: savedOrder.id,
+              description: `فاکتور فروش نسیه #${orderNumber}`,
+              transaction_date: new Date().toISOString(),
+            });
+          } catch (ptErr) {
+            console.warn('[CreateOrderView] Could not record person transaction for credit order:', ptErr);
+          }
         }
       }
 
@@ -1000,7 +1096,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
               <div className="grid grid-cols-4 gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setPaymentType('pos')}
+                  onClick={() => handlePaymentTypeChange('pos')}
                   className={`py-2 px-1 rounded-xl border text-center transition-all ${
                     paymentType === 'pos'
                       ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
@@ -1013,7 +1109,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
                 <button
                   type="button"
-                  onClick={() => setPaymentType('cash')}
+                  onClick={() => handlePaymentTypeChange('cash')}
                   className={`py-2 px-1 rounded-xl border text-center transition-all ${
                     paymentType === 'cash'
                       ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
@@ -1026,7 +1122,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
                 <button
                   type="button"
-                  onClick={() => setPaymentType('card_to_card')}
+                  onClick={() => handlePaymentTypeChange('card_to_card')}
                   className={`py-2 px-1 rounded-xl border text-center transition-all ${
                     paymentType === 'card_to_card'
                       ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
@@ -1039,7 +1135,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
                 <button
                   type="button"
-                  onClick={() => setPaymentType('credit')}
+                  onClick={() => handlePaymentTypeChange('credit')}
                   className={`py-2 px-1 rounded-xl border text-center transition-all ${
                     paymentType === 'credit'
                       ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
@@ -1051,6 +1147,39 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                 </button>
               </div>
             </div>
+
+            {/* Financial Account / Cashbox Selector (When Accounting Module is Active) */}
+            {hasAccounting && financialAccounts.length > 0 && paymentType !== 'credit' && (
+              <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-neutral-800 dark:text-neutral-200">
+                    <Wallet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>واریز به حساب / صندوق:</span>
+                  </div>
+                  {selectedAccountId && (
+                    <span className="text-[11px] text-neutral-500 font-mono">
+                      {(() => {
+                        const acc = financialAccounts.find((a) => a.id === selectedAccountId);
+                        return acc && acc.current_balance !== undefined
+                          ? `موجودی: ${formatCurrency(acc.current_balance, 'TOMAN', isPersian)}`
+                          : '';
+                      })()}
+                    </span>
+                  )}
+                </div>
+                <select
+                  value={selectedAccountId ? String(selectedAccountId) : ''}
+                  onChange={(e) => setSelectedAccountId(e.target.value ? Number(e.target.value) : '')}
+                  className="w-full px-2.5 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-xs font-medium text-neutral-900 dark:text-neutral-100"
+                >
+                  {financialAccounts.map((acc) => (
+                    <option key={acc.id} value={String(acc.id)}>
+                      {acc.name} ({acc.type === 'cashbox' ? 'صندوق' : 'بانک/پوز'}{acc.is_default ? ' - پیش‌فرض' : ''})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Cash Return Calculator (If Cash Selected) */}
             {paymentType === 'cash' && (

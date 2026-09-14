@@ -48,12 +48,9 @@ export class LocalOfflineAdapter implements IStorageProvider {
   }
 
   private getActiveOrgId(params?: QueryParams): number | undefined {
-    if (params && 'organization_id' in params) {
-      if (params.organization_id !== undefined && params.organization_id !== null) {
-        const num = Number(params.organization_id);
-        if (!isNaN(num) && num > 0) return num;
-      }
-      return undefined;
+    if (params && params.organization_id !== undefined && params.organization_id !== null) {
+      const num = Number(params.organization_id);
+      if (!isNaN(num) && num > 0) return num;
     }
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('tankhor_active_org_id');
@@ -276,7 +273,12 @@ export class LocalOfflineAdapter implements IStorageProvider {
     if (product.id) {
       const idx = list.findIndex((p) => p.id === product.id);
       if (idx !== -1) {
-        list[idx] = { ...list[idx], ...product, date_updated: new Date().toISOString() };
+        list[idx] = {
+          ...list[idx],
+          ...product,
+          main_image: product.main_image !== undefined ? (product.main_image || null as any) : list[idx].main_image,
+          date_updated: new Date().toISOString()
+        };
         this.setItem('products', list);
         return list[idx];
       }
@@ -296,18 +298,19 @@ export class LocalOfflineAdapter implements IStorageProvider {
     return newProduct;
   }
 
-  async deleteProduct(id: number): Promise<boolean> {
+  async deleteProduct(id: number | string): Promise<boolean> {
+    const normId = normalizeId(id) || Number(id);
     let list = this.getItem<Product>('products', []);
-    list = list.filter((p) => p.id !== id);
+    list = list.filter((p) => (normalizeId(p.id) || Number(p.id)) !== normId && p.id !== id);
     this.setItem('products', list);
 
     // Clean up associated variants, inventory & movements
     const variants = this.getItem<ProductVariant>('product_variants', []);
     const removedVariantIds: number[] = [];
     const remainingVariants = variants.filter((v) => {
-      const pId = typeof v.product_id === 'number' ? v.product_id : (v.product_id as any)?.id;
-      if (pId === id) {
-        removedVariantIds.push(v.id);
+      const pId = normalizeId(v.product_id) || Number(v.product_id);
+      if (pId === normId) {
+        removedVariantIds.push(normalizeId(v.id) || Number(v.id));
         return false;
       }
       return true;
@@ -316,14 +319,14 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
     let inventoryList = this.getItem<InventoryItem>('inventory_items', []);
     inventoryList = inventoryList.filter((i) => {
-      const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
+      const vId = normalizeId(i.variant_id) || Number(i.variant_id);
       return !removedVariantIds.includes(vId);
     });
     this.setItem('inventory_items', inventoryList);
 
     let movementsList = this.getItem<InventoryMovement>('inventory_movements', []);
     movementsList = movementsList.filter((m) => {
-      const vId = typeof m.variant_id === 'number' ? m.variant_id : (m.variant_id as any)?.id;
+      const vId = normalizeId(m.variant_id) || Number(m.variant_id);
       return !removedVariantIds.includes(vId);
     });
     this.setItem('inventory_movements', movementsList);
@@ -432,6 +435,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
           product_id: productId || list[idx].product_id,
           color_id: colorId,
           size_id: sizeId,
+          image: variant.image !== undefined ? (variant.image || null as any) : list[idx].image,
           date_updated: new Date().toISOString(),
         };
         saved = list[idx];
@@ -1952,6 +1956,24 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
     all.unshift(newExp);
     this.setItem('expenses', all);
+
+    // If payment is linked to a financial account/cashbox, record treasury withdrawal
+    if (newExp.account_id && newExp.amount > 0) {
+      try {
+        await this.saveTreasuryTransaction({
+          organization_id: orgId,
+          type: 'withdrawal',
+          source_account_id: newExp.account_id,
+          amount: newExp.amount,
+          expense_id: newExp.id,
+          description: `پرداخت هزینه: ${newExp.title}`,
+          transaction_date: newExp.expense_date,
+        });
+      } catch (tErr) {
+        console.warn('[LocalAdapter] Failed to record treasury tx for expense:', tErr);
+      }
+    }
+
     return newExp;
   }
 

@@ -22,6 +22,7 @@ import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
 import { SizeChartModal } from '../../components/modals/SizeChartModal';
 import { confirmAction } from '../../utils/confirm';
+import { toPersianDigits } from '../../utils/formatters';
 import {
   Ruler,
   Plus,
@@ -35,6 +36,7 @@ import {
   Info,
   Sparkles,
   Eye,
+  X,
 } from 'lucide-react';
 
 export const SizeGuidesView: React.FC = () => {
@@ -79,6 +81,11 @@ export const SizeGuidesView: React.FC = () => {
   const [matrixState, setMatrixState] = useState<Record<string, { value: string; id?: number }>>({});
   const [isSavingMatrix, setIsSavingMatrix] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
+
+  // Selected sizes for the active template
+  const [selectedTemplateSizeIds, setSelectedTemplateSizeIds] = useState<number[]>([]);
+  const [isSizeSelectModalOpen, setIsSizeSelectModalOpen] = useState(false);
+  const [sizeSearchQuery, setSizeSearchQuery] = useState('');
 
   const isPersian = locale === 'fa';
 
@@ -142,6 +149,25 @@ export const SizeGuidesView: React.FC = () => {
         };
       });
       setMatrixState(matrixMap);
+
+      // Retrieve selected sizes for this template
+      const stored = localStorage.getItem(`tankhor_tpl_sizes_${tpl.id}`);
+      let initialSizeIds: number[] = [];
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            initialSizeIds = parsed;
+          }
+        } catch {}
+      }
+      if (initialSizeIds.length === 0 && safeVals.length > 0) {
+        const idsFromValues = Array.from(
+          new Set(safeVals.map((v) => v.size_id).filter((id): id is number => typeof id === 'number'))
+        );
+        initialSizeIds = idsFromValues;
+      }
+      setSelectedTemplateSizeIds(initialSizeIds);
     } catch (err) {
       console.error('[SizeGuidesView] Error loading template details:', err);
     }
@@ -367,6 +393,24 @@ export const SizeGuidesView: React.FC = () => {
     }
   };
 
+  const handleUpdateTemplateSizeIds = (newIds: number[]) => {
+    setSelectedTemplateSizeIds(newIds);
+    if (selectedTemplate?.id) {
+      localStorage.setItem(`tankhor_tpl_sizes_${selectedTemplate.id}`, JSON.stringify(newIds));
+    }
+  };
+
+  const handleToggleTemplateSize = (sizeId: number) => {
+    const next = selectedTemplateSizeIds.includes(sizeId)
+      ? selectedTemplateSizeIds.filter((id) => id !== sizeId)
+      : [...selectedTemplateSizeIds, sizeId];
+    handleUpdateTemplateSizeIds(next);
+  };
+
+  const handleRemoveSizeFromTemplate = (sizeId: number) => {
+    handleUpdateTemplateSizeIds(selectedTemplateSizeIds.filter((id) => id !== sizeId));
+  };
+
   // Type Translations & Badges
   const getTypeBadge = (type?: string) => {
     const safeType = (type || 'apparel').toLowerCase();
@@ -570,6 +614,61 @@ export const SizeGuidesView: React.FC = () => {
                 )}
               </Card>
 
+              {/* Template Sizes Management */}
+              <Card className="p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-neutral-400 font-mono flex items-center gap-1.5">
+                      <Ruler className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                      {t('sizeguides.templateSizesHeader')} ({isPersian ? toPersianDigits(selectedTemplateSizeIds.length) : selectedTemplateSizeIds.length})
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
+                      {selectedTemplateSizeIds.length > 0
+                        ? `${isPersian ? toPersianDigits(selectedTemplateSizeIds.length) : selectedTemplateSizeIds.length} ${t('sizeguides.selectedSizesCount')}`
+                        : t('sizeguides.noSizesSelectedForTemplate')}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    icon={<Plus className="w-3.5 h-3.5" />}
+                    onClick={() => setIsSizeSelectModalOpen(true)}
+                  >
+                    {t('sizeguides.selectTemplateSizes')}
+                  </Button>
+                </div>
+
+                {selectedTemplateSizeIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {sizes
+                      .filter((s) => selectedTemplateSizeIds.includes(s.id))
+                      .map((sz) => (
+                        <div
+                          key={`tpl_sz_${sz.id}`}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/70 text-indigo-900 dark:text-indigo-300 text-xs font-medium"
+                        >
+                          <span className="font-bold">{sz.name}</span>
+                          <button
+                            type="button"
+                            title={t('sizeguides.removeSizeFromTemplate')}
+                            onClick={() => handleRemoveSizeFromTemplate(sz.id)}
+                            className="p-0.5 text-indigo-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/60 rounded-xl text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between gap-2">
+                    <span>{t('sizeguides.noSizesSelectedForTemplate')}</span>
+                    <Button size="sm" onClick={() => setIsSizeSelectModalOpen(true)}>
+                      {t('sizeguides.chooseSizesBtn')}
+                    </Button>
+                  </div>
+                )}
+              </Card>
+
               {/* Defined Measurements List */}
               <Card className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
@@ -636,9 +735,12 @@ export const SizeGuidesView: React.FC = () => {
                   <div className="p-8 text-center text-slate-400 dark:text-neutral-500 text-xs">
                     {t('sizeguides.defineParamsFirst')}
                   </div>
-                ) : sizes.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 dark:text-neutral-500 text-xs">
-                    {t('sizeguides.noSizesFound')}
+                ) : sizes.filter((s) => selectedTemplateSizeIds.includes(s.id)).length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 dark:text-neutral-500 text-xs space-y-3">
+                    <p>{t('sizeguides.noSizesSelectedForTemplate')}</p>
+                    <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={() => setIsSizeSelectModalOpen(true)}>
+                      {t('sizeguides.chooseSizesBtn')}
+                    </Button>
                   </div>
                 ) : (
                   <div className="overflow-x-auto custom-scrollbar border border-slate-200 dark:border-neutral-800 rounded-xl">
@@ -657,7 +759,9 @@ export const SizeGuidesView: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-neutral-800 bg-white dark:bg-[#13151a]">
-                        {sizes.map((sz, szIdx) => (
+                        {sizes
+                          .filter((sz) => selectedTemplateSizeIds.includes(sz.id))
+                          .map((sz, szIdx) => (
                           <tr key={sz.id ? `tr_sz_${sz.id}_${szIdx}` : `tr_sz_idx_${szIdx}`} className="hover:bg-slate-50/60 dark:hover:bg-neutral-800/50 transition-colors">
                             <td className="p-3 font-bold text-slate-900 dark:text-neutral-100 sticky start-0 bg-white dark:bg-[#13151a] shadow-xs z-10">
                               <span className="px-2 py-1 bg-slate-100 dark:bg-neutral-800 rounded-md font-mono text-xs text-slate-800 dark:text-neutral-200">
@@ -827,6 +931,87 @@ export const SizeGuidesView: React.FC = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal: Select Template Sizes */}
+      <Modal
+        isOpen={isSizeSelectModalOpen}
+        onClose={() => setIsSizeSelectModalOpen(false)}
+        title={t('sizeguides.selectSizesModalTitle')}
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500 dark:text-neutral-400">
+            {t('sizeguides.selectSizesModalSubtitle')}
+          </p>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1">
+              <Input
+                placeholder={t('sizeguides.searchSizesPlaceholder')}
+                value={sizeSearchQuery}
+                onChange={(e) => setSizeSearchQuery(e.target.value)}
+                icon={<Search className="w-4 h-4" />}
+              />
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleUpdateTemplateSizeIds(sizes.map((s) => s.id))}
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline px-2 py-1 font-medium cursor-pointer"
+              >
+                {t('sizeguides.selectAllSizes')}
+              </button>
+              <span className="text-slate-300 dark:text-neutral-700">|</span>
+              <button
+                type="button"
+                onClick={() => handleUpdateTemplateSizeIds([])}
+                className="text-xs text-slate-500 dark:text-neutral-400 hover:underline px-2 py-1 cursor-pointer"
+              >
+                {t('sizeguides.deselectAllSizes')}
+              </button>
+            </div>
+          </div>
+
+          <div className="max-h-64 overflow-y-auto custom-scrollbar border border-slate-200 dark:border-neutral-800 rounded-xl p-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {sizes
+              .filter((s) => !sizeSearchQuery.trim() || s.name.toLowerCase().includes(sizeSearchQuery.toLowerCase()))
+              .map((sz) => {
+                const isSelected = selectedTemplateSizeIds.includes(sz.id);
+                return (
+                  <button
+                    key={`modal_sz_${sz.id}`}
+                    type="button"
+                    onClick={() => handleToggleTemplateSize(sz.id)}
+                    className={`flex items-center justify-between p-2.5 rounded-lg border text-xs text-start transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-500 text-indigo-950 dark:text-indigo-200 font-bold shadow-xs'
+                        : 'bg-white dark:bg-[#181a20] border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-neutral-300 hover:border-slate-300 dark:hover:border-neutral-600'
+                    }`}
+                  >
+                    <span>{sz.name}</span>
+                    <div
+                      className={`w-4 h-4 rounded flex items-center justify-center text-[10px] ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white'
+                          : 'border border-slate-300 dark:border-neutral-600'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                    </div>
+                  </button>
+                );
+              })}
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-neutral-800">
+            <span className="text-xs text-slate-500 dark:text-neutral-400 font-medium">
+              {isPersian ? toPersianDigits(selectedTemplateSizeIds.length) : selectedTemplateSizeIds.length} {t('sizeguides.selectedSizesCount')}
+            </span>
+            <Button onClick={() => setIsSizeSelectModalOpen(false)}>
+              {t('sizeguides.applySelectedSizes')}
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Modal: Interactive & Printable Size Chart Preview */}

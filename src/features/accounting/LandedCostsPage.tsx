@@ -501,25 +501,25 @@ export const LandedCostsPage: React.FC = () => {
           </Select>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             variant="outline"
             size="sm"
             onClick={loadData}
             disabled={loading}
-            className="h-9 gap-1.5"
+            icon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
+            className="h-9 shrink-0 whitespace-nowrap"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>تازه‌سازی</span>
+            تازه‌سازی
           </Button>
 
           <Button
             onClick={handleOpenNew}
             size="sm"
-            className="h-9 gap-1.5"
+            icon={<Plus className="w-4 h-4" />}
+            className="h-9 shrink-0 whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
-            <span>{t('accounting.newLandedCost')}</span>
+            {t('accounting.newLandedCost')}
           </Button>
         </div>
       </div>

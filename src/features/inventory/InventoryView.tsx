@@ -11,7 +11,8 @@ import { Badge } from '../../components/ui/Badge';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { toPersianDigits, formatCurrency } from '../../utils/formatters';
 import { StockAdjustmentModal } from './StockAdjustmentModal';
-import { Package, Warehouse as WarehouseIcon, AlertTriangle, RefreshCw, Plus, Search, Layers, ShieldAlert, Barcode as BarcodeIcon } from 'lucide-react';
+import { Package, Warehouse as WarehouseIcon, AlertTriangle, RefreshCw, Plus, Search, Layers, ShieldAlert, Barcode as BarcodeIcon, FileSpreadsheet, Download, Upload } from 'lucide-react';
+import { exportInventoryToExcel, parseInventoryFromExcel } from '../../utils/excelUtils';
 
 export const InventoryView: React.FC = () => {
   const { t, locale } = useTranslation();
@@ -199,18 +200,67 @@ export const InventoryView: React.FC = () => {
     },
   ];
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleExportExcel = () => {
+    exportInventoryToExcel(inventoryItems, variants, warehouses);
+  };
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const res = parseInventoryFromExcel(buffer);
+      if (!res.success) {
+        alert(res.errors.join('\n') || 'خطا در خواندن فایل اکسل');
+        return;
+      }
+
+      alert(`فایل اکسل موجودی انبار با موفقیت بررسی شد. ${res.importedCount} ردیف داده شناسایی گردید.`);
+    } catch (err: any) {
+      alert(`خطا در پردازش فایل اکسل: ${err?.message || err}`);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={t('inventory.title')}
         subtitle={t('inventory.subtitle')}
         action={
-          <Button
-            onClick={() => setIsAdjustmentModalOpen(true)}
-            icon={<RefreshCw className="w-4 h-4" />}
-          >
-            {t('inventory.stockAdjustment')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImportExcel}
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              icon={<Upload className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />}
+            >
+              ورود اکسل
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExportExcel}
+              icon={<FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+            >
+              خروجی اکسل
+            </Button>
+            <Button
+              onClick={() => setIsAdjustmentModalOpen(true)}
+              icon={<RefreshCw className="w-4 h-4" />}
+            >
+              {t('inventory.stockAdjustment')}
+            </Button>
+          </div>
         }
       />
 

@@ -877,25 +877,31 @@ export class BackupManager {
             ['size_guide_values', values],
           ];
 
-          for (const [col, items] of allSeeded) {
-            for (const item of items) {
-              const orgId = typeof item.organization_id === 'number' ? item.organization_id : (item.organization_id?.id || activeOrgId);
-              await db.execute(
-                `INSERT OR REPLACE INTO ${col} (id, organization_id, data, date_updated) VALUES ($1, $2, $3, datetime('now'))`,
-                [item.id, orgId, JSON.stringify(item)]
-              );
+          await db.execute('BEGIN TRANSACTION');
+          try {
+            for (const [col, items] of allSeeded) {
+              for (const item of items) {
+                const orgId = typeof item.organization_id === 'number' ? item.organization_id : (item.organization_id?.id || activeOrgId);
+                await db.execute(
+                  `INSERT OR REPLACE INTO ${col} (id, organization_id, data, date_updated) VALUES ($1, $2, $3, datetime('now'))`,
+                  [item.id, orgId, JSON.stringify(item)]
+                );
+              }
             }
+            await db.execute('COMMIT');
+          } catch (txErr) {
+            await db.execute('ROLLBACK');
+            throw txErr;
           }
         } catch (dbErr) {
           console.warn('[BackupManager] SQLite sync warning during demo seed:', dbErr);
         }
       }
 
-      // Sync with Cloud Directus if in Cloud Mode or Directus session is active
+      // Sync with Cloud Directus ONLY if currently in Cloud Mode
       try {
         const { storageManager } = await import('./index');
-        const { directusClient } = await import('../api/directus');
-        if (storageManager.getMode() === 'cloud_synced' || Boolean(directusClient.getToken())) {
+        if (storageManager.getMode() === 'cloud_synced') {
           const { CloudMigrationManager } = await import('./cloudMigrationManager');
           await CloudMigrationManager.migrateLocalToCloud(activeOrgId);
         }

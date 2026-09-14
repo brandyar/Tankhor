@@ -14,7 +14,7 @@ import { formatCurrency, toPersianDigits, normalizeId } from '../../utils/format
 import {
   ArrowRight, Save, Plus, Trash2, Grid, Tag, Shirt, Package, Layers,
   CheckCircle2, Sliders, RefreshCw, Sparkles, DollarSign, Archive,
-  Palette, Ruler, Check, X, Search
+  Palette, Ruler, Check, X, Search, Sun, FolderTree
 } from 'lucide-react';
 
 interface ProductEditViewProps {
@@ -76,6 +76,28 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
   const [isAddSizeModalOpen, setIsAddSizeModalOpen] = useState(false);
   const [newSizeName, setNewSizeName] = useState('');
   const [isCreatingSize, setIsCreatingSize] = useState(false);
+
+  // Inline Add Category state
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryParentId, setNewCategoryParentId] = useState<number | ''>('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+
+  // Inline Add Collection state
+  const [isAddCollectionModalOpen, setIsAddCollectionModalOpen] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [isCreatingCollection, setIsCreatingCollection] = useState(false);
+
+  // Inline Add Season state
+  const [isAddSeasonModalOpen, setIsAddSeasonModalOpen] = useState(false);
+  const [newSeasonName, setNewSeasonName] = useState('');
+  const [newSeasonCode, setNewSeasonCode] = useState('');
+  const [isCreatingSeason, setIsCreatingSeason] = useState(false);
+
+  // Inline Add Brand state
+  const [isAddBrandModalOpen, setIsAddBrandModalOpen] = useState(false);
+  const [newBrandName, setNewBrandName] = useState('');
+  const [isCreatingBrand, setIsCreatingBrand] = useState(false);
 
   // Variants in editable table
   const [variants, setVariants] = useState<(Partial<ProductVariant> & { _tempId?: string })[]>([]);
@@ -145,20 +167,35 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
             ? (prod.size_guide_template_id as any).id || ''
             : normalizeId(prod.size_guide_template_id) || '';
           setSizeGuideTemplateId(sgId);
-          setMainImage(prod.main_image || '');
+          const rawMainImg = prod.main_image;
+          const imgRef = typeof rawMainImg === 'string'
+            ? rawMainImg
+            : (rawMainImg && typeof rawMainImg === 'object' && (rawMainImg as any).id)
+              ? String((rawMainImg as any).id)
+              : '';
+          setMainImage(imgRef);
           setTags(prod.tags || '');
           setSort(prod.sort !== undefined ? prod.sort : 0);
           setDescription(prod.description || '');
           setStatus(prod.status || 'published');
 
           const vList = await adapter.getVariantsByProductId(productId);
-          const normalizedVList = vList.map((v) => ({
-            ...v,
-            id: normalizeId(v.id),
-            product_id: normalizeId(v.product_id),
-            color_id: normalizeId(v.color_id),
-            size_id: normalizeId(v.size_id),
-          }));
+          const normalizedVList = vList.map((v) => {
+            const rawImg = v.image;
+            const vImgRef = typeof rawImg === 'string'
+              ? rawImg
+              : (rawImg && typeof rawImg === 'object' && (rawImg as any).id)
+                ? String((rawImg as any).id)
+                : (rawImg ? String(rawImg) : undefined);
+            return {
+              ...v,
+              id: normalizeId(v.id),
+              product_id: normalizeId(v.product_id),
+              color_id: normalizeId(v.color_id),
+              size_id: normalizeId(v.size_id),
+              image: vImgRef,
+            };
+          });
           setVariants(normalizedVList);
 
           // Extract colors and sizes present in loaded variants
@@ -424,6 +461,94 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
     }
   };
 
+  const handleCreateCategoryInline = async () => {
+    if (!newCategoryName.trim()) return;
+    setIsCreatingCategory(true);
+    try {
+      const adapter = storageManager.getAdapter();
+      const created = await adapter.saveCategory({
+        organization_id: activeOrganization?.id || 1,
+        name: newCategoryName.trim(),
+        parent_id: newCategoryParentId ? Number(newCategoryParentId) : undefined,
+      });
+      setCategories((prev) => [created, ...prev]);
+      setCategoryId(created.id);
+      setNewCategoryName('');
+      setNewCategoryParentId('');
+      setIsAddCategoryModalOpen(false);
+    } catch (err) {
+      console.error('Error creating inline category:', err);
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  };
+
+  const handleCreateCollectionInline = async () => {
+    if (!newCollectionName.trim()) return;
+    setIsCreatingCollection(true);
+    try {
+      const adapter = storageManager.getAdapter();
+      const created = await adapter.saveCollection({
+        organization_id: activeOrganization?.id || 1,
+        name: newCollectionName.trim(),
+      });
+      setCollections((prev) => [created, ...prev]);
+      setCollectionId(created.id);
+      setNewCollectionName('');
+      setIsAddCollectionModalOpen(false);
+    } catch (err) {
+      console.error('Error creating inline collection:', err);
+    } finally {
+      setIsCreatingCollection(false);
+    }
+  };
+
+  const handleCreateSeasonInline = async () => {
+    if (!newSeasonName.trim()) return;
+    setIsCreatingSeason(true);
+    try {
+      const adapter = storageManager.getAdapter();
+      const created = await adapter.saveSeason({
+        organization_id: activeOrganization?.id || 1,
+        name: newSeasonName.trim(),
+        code: newSeasonCode.trim() || undefined,
+        status: 'active',
+        start_date: null,
+        end_date: null,
+      });
+      setSeasons((prev) => [created, ...prev]);
+      setSeasonId(created.id);
+      setNewSeasonName('');
+      setNewSeasonCode('');
+      setIsAddSeasonModalOpen(false);
+    } catch (err) {
+      console.error('Error creating inline season:', err);
+    } finally {
+      setIsCreatingSeason(false);
+    }
+  };
+
+  const handleCreateBrandInline = async () => {
+    if (!newBrandName.trim()) return;
+    setIsCreatingBrand(true);
+    try {
+      const adapter = storageManager.getAdapter();
+      const created = await adapter.saveBrand({
+        organization_id: activeOrganization?.id || 1,
+        name: newBrandName.trim(),
+        status: 'active',
+      });
+      setBrands((prev) => [created, ...prev]);
+      setBrandId(created.id);
+      setNewBrandName('');
+      setIsAddBrandModalOpen(false);
+    } catch (err) {
+      console.error('Error creating inline brand:', err);
+    } finally {
+      setIsCreatingBrand(false);
+    }
+  };
+
   const handleAddVariantRow = () => {
     const defaultColor = colors.length > 0 ? colors[0].id : undefined;
     const defaultSize = sizes.length > 0 ? sizes[0].id : undefined;
@@ -502,7 +627,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
         collection_id: collectionId && !isNaN(Number(collectionId)) && Number(collectionId) > 0 ? Number(collectionId) : undefined,
         season_id: seasonId && !isNaN(Number(seasonId)) && Number(seasonId) > 0 ? Number(seasonId) : undefined,
         size_guide_template_id: sizeGuideTemplateId && !isNaN(Number(sizeGuideTemplateId)) && Number(sizeGuideTemplateId) > 0 ? Number(sizeGuideTemplateId) : undefined,
-        main_image: mainImage ? mainImage.trim() : undefined,
+        main_image: mainImage ? (typeof mainImage === 'string' ? mainImage.trim() : (mainImage as any).id || '') : null,
         tags: tags ? tags.trim() : undefined,
         sort: sort !== '' ? Number(sort) : 0,
         description: description ? description.trim() : undefined,
@@ -537,7 +662,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
             price: v.price !== undefined && (v.price as any) !== '' ? Number(v.price) : 0,
             cost: v.cost !== undefined && (v.cost as any) !== '' ? Number(v.cost) : 0,
             stock_quantity: v.stock_quantity !== undefined && (v.stock_quantity as any) !== '' ? Number(v.stock_quantity) : 0,
-            image: v.image ? v.image.trim() : undefined,
+            image: v.image ? (typeof v.image === 'string' ? v.image.trim() : (v.image as any).id || '') : null,
             status: v.status || 'published',
             sort: v.sort !== undefined ? Number(v.sort) : 0,
           },
@@ -655,45 +780,103 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Select
-                  label={t('products.category')}
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
-                  options={[
-                    { value: '', label: t('products.selectOption') },
-                    ...getCategoryOptions(),
-                  ]}
-                />
-                <Select
-                  label={t('products.collection')}
-                  value={collectionId}
-                  onChange={(e) => setCollectionId(e.target.value ? Number(e.target.value) : '')}
-                  options={[
-                    { value: '', label: t('products.noCollection') },
-                    ...collections.map((col) => ({ value: col.id, label: col.name })),
-                  ]}
-                />
-                <Select
-                  label={t('products.season')}
-                  value={seasonId}
-                  onChange={(e) => setSeasonId(e.target.value ? Number(e.target.value) : '')}
-                  options={[
-                    { value: '', label: t('products.allSeasonsLabel') },
-                    ...seasons.map((s) => ({ value: s.id, label: s.name })),
-                  ]}
-                />
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                      {t('products.category')}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddCategoryModalOpen(true)}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>{t('products.newBadge')}</span>
+                    </button>
+                  </div>
+                  <Select
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
+                    options={[
+                      { value: '', label: t('products.selectOption') },
+                      ...getCategoryOptions(),
+                    ]}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                      {t('products.collection')}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddCollectionModalOpen(true)}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>{t('products.newBadge')}</span>
+                    </button>
+                  </div>
+                  <Select
+                    value={collectionId}
+                    onChange={(e) => setCollectionId(e.target.value ? Number(e.target.value) : '')}
+                    options={[
+                      { value: '', label: t('products.noCollection') },
+                      ...collections.map((col) => ({ value: col.id, label: col.name })),
+                    ]}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                      {t('products.season')}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddSeasonModalOpen(true)}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>{t('products.newBadge')}</span>
+                    </button>
+                  </div>
+                  <Select
+                    value={seasonId}
+                    onChange={(e) => setSeasonId(e.target.value ? Number(e.target.value) : '')}
+                    options={[
+                      { value: '', label: t('products.allSeasonsLabel') },
+                      ...seasons.map((s) => ({ value: s.id, label: s.name })),
+                    ]}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Select
-                  label={t('products.brand')}
-                  value={brandId}
-                  onChange={(e) => setBrandId(e.target.value ? Number(e.target.value) : '')}
-                  options={[
-                    { value: '', label: t('products.noBrand') },
-                    ...brands.map((b) => ({ value: b.id, label: b.name })),
-                  ]}
-                />
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                      {t('products.brand')}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddBrandModalOpen(true)}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>{t('products.newBadge')}</span>
+                    </button>
+                  </div>
+                  <Select
+                    value={brandId}
+                    onChange={(e) => setBrandId(e.target.value ? Number(e.target.value) : '')}
+                    options={[
+                      { value: '', label: t('products.noBrand') },
+                      ...brands.map((b) => ({ value: b.id, label: b.name })),
+                    ]}
+                  />
+                </div>
                 <Select
                   label={t('products.sizeGuide')}
                   value={sizeGuideTemplateId}
@@ -1402,6 +1585,181 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
               </Button>
               <Button size="sm" isLoading={isCreatingSize} onClick={handleCreateSizeInline}>
                 {t('products.createAndSelectSize')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Add Category Modal */}
+      {isAddCategoryModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-[#13151a] rounded-xl p-5 max-w-sm w-full shadow-vercel-lg border border-neutral-200/80 dark:border-neutral-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                <FolderTree className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span>{t('products.createNewCategoryTitle')}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAddCategoryModalOpen(false)}
+                className="text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <Input
+                label={`${t('products.categoryNameHeader')} *`}
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder={t('products.categoryNameHeader')}
+                autoFocus
+              />
+              <Select
+                label={t('products.parentCategory')}
+                value={newCategoryParentId}
+                onChange={(e) => setNewCategoryParentId(e.target.value ? Number(e.target.value) : '')}
+                options={[
+                  { value: '', label: t('products.noParentCategory') },
+                  ...getCategoryOptions(),
+                ]}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+              <Button variant="outline" size="sm" onClick={() => setIsAddCategoryModalOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button size="sm" isLoading={isCreatingCategory} onClick={handleCreateCategoryInline}>
+                {t('products.createAndSelectCategory')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Add Collection Modal */}
+      {isAddCollectionModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-[#13151a] rounded-xl p-5 max-w-sm w-full shadow-vercel-lg border border-neutral-200/80 dark:border-neutral-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span>{t('products.createNewCollectionTitle')}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAddCollectionModalOpen(false)}
+                className="text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <Input
+                label={`${t('products.collectionName')} *`}
+                value={newCollectionName}
+                onChange={(e) => setNewCollectionName(e.target.value)}
+                placeholder={t('products.collectionName')}
+                autoFocus
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+              <Button variant="outline" size="sm" onClick={() => setIsAddCollectionModalOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button size="sm" isLoading={isCreatingCollection} onClick={handleCreateCollectionInline}>
+                {t('products.createAndSelectCollection')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Add Season Modal */}
+      {isAddSeasonModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-[#13151a] rounded-xl p-5 max-w-sm w-full shadow-vercel-lg border border-neutral-200/80 dark:border-neutral-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                <Sun className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                <span>{t('products.createNewSeasonTitle')}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAddSeasonModalOpen(false)}
+                className="text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <Input
+                label={`${t('products.seasonNameHeader')} *`}
+                value={newSeasonName}
+                onChange={(e) => setNewSeasonName(e.target.value)}
+                placeholder={t('products.seasonNameHeader')}
+                autoFocus
+              />
+              <Input
+                label={t('products.seasonCode')}
+                value={newSeasonCode}
+                onChange={(e) => setNewSeasonCode(e.target.value)}
+                placeholder="مثال: SS25 یا FW24"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+              <Button variant="outline" size="sm" onClick={() => setIsAddSeasonModalOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button size="sm" isLoading={isCreatingSeason} onClick={handleCreateSeasonInline}>
+                {t('products.createAndSelectSeason')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Add Brand Modal */}
+      {isAddBrandModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-[#13151a] rounded-xl p-5 max-w-sm w-full shadow-vercel-lg border border-neutral-200/80 dark:border-neutral-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                <Tag className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>{t('products.createNewBrandTitle')}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAddBrandModalOpen(false)}
+                className="text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <Input
+                label={`${t('products.brandNameHeader')} *`}
+                value={newBrandName}
+                onChange={(e) => setNewBrandName(e.target.value)}
+                placeholder={t('products.brandNameHeader')}
+                autoFocus
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+              <Button variant="outline" size="sm" onClick={() => setIsAddBrandModalOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button size="sm" isLoading={isCreatingBrand} onClick={handleCreateBrandInline}>
+                {t('products.createAndSelectBrand')}
               </Button>
             </div>
           </div>

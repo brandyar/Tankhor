@@ -183,11 +183,26 @@ export class DirectusAdminClient {
 
   public static async getItemById<T = any>(collection: string, id: string | number, fields?: string): Promise<T | null> {
     try {
+      // For items collections, using filter query avoids Directus 403/404 errors when ID doesn't exist
+      if (!collection.startsWith('directus_') && collection !== 'users' && collection !== 'roles' && collection !== 'settings') {
+        const items = await this.getItems<T>(collection, {
+          filter: { id: { _eq: id } },
+          limit: 1,
+          fields: fields || '*',
+        });
+        return items && items.length > 0 ? items[0] : null;
+      }
+
       const queryString = fields ? `?fields=${fields}` : '';
       const endpoint = `${this.getCollectionEndpoint(collection, String(id))}${queryString}`;
       return await this.request<T>(endpoint);
     } catch (err: any) {
-      if (err.message?.includes('404') || err.message?.toLowerCase().includes('not found')) {
+      if (
+        err.message?.includes('404') ||
+        err.message?.includes('403') ||
+        err.message?.toLowerCase().includes('not found') ||
+        err.message?.toLowerCase().includes("don't have permission")
+      ) {
         return null;
       }
       throw err;

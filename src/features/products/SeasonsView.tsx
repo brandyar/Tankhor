@@ -78,20 +78,44 @@ export const SeasonsView: React.FC = () => {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id || 1;
 
-      await adapter.saveSeason({
+      const payload: Partial<Season> = {
         id: editingSeason?.id,
         organization_id: orgId,
-        name,
-        code,
-        start_date: startDate,
-        end_date: endDate,
+        name: name.trim(),
+        code: code.trim() || undefined,
+        start_date: startDate && startDate.trim() !== '' ? startDate : null,
+        end_date: endDate && endDate.trim() !== '' ? endDate : null,
         status,
-      });
+      };
+
+      // Optimistic instant feedback
+      if (editingSeason?.id) {
+        setSeasons((prev) =>
+          prev.map((s) => (s.id === editingSeason.id ? ({ ...s, ...payload } as Season) : s))
+        );
+      } else {
+        const tempSeason: Season = {
+          id: Date.now(),
+          organization_id: orgId,
+          name: payload.name!,
+          code: payload.code,
+          start_date: payload.start_date || undefined,
+          end_date: payload.end_date || undefined,
+          status: payload.status || 'active',
+        };
+        setSeasons((prev) => [tempSeason, ...prev]);
+      }
 
       setIsModalOpen(false);
+
+      const saved = await adapter.saveSeason(payload);
+      setSeasons((prev) =>
+        prev.map((s) => (s.id === (editingSeason?.id || (s.id > 1000000000 ? s.id : -1)) ? saved : s))
+      );
       await loadSeasons();
     } catch (err) {
       console.error('[SeasonsView] Error saving season:', err);
+      await loadSeasons();
     } finally {
       setIsSaving(false);
     }
@@ -99,9 +123,15 @@ export const SeasonsView: React.FC = () => {
 
   const handleDelete = async (id: number) => {
     if (await confirmAction(t('products.confirmDeleteSeason'))) {
-      const adapter = storageManager.getAdapter();
-      await adapter.deleteSeason(id);
-      await loadSeasons();
+      try {
+        setSeasons((prev) => prev.filter((s) => s.id !== id));
+        const adapter = storageManager.getAdapter();
+        await adapter.deleteSeason(id);
+        await loadSeasons();
+      } catch (err) {
+        console.error('[SeasonsView] Error deleting season:', err);
+        await loadSeasons();
+      }
     }
   };
 

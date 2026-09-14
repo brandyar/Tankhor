@@ -25,12 +25,14 @@ export class StorageSyncManager {
     queue.push(newItem);
     if (typeof window !== 'undefined') {
       localStorage.setItem(this.QUEUE_KEY, JSON.stringify(queue));
+      window.dispatchEvent(new CustomEvent('tankhor_sync_queue_updated', { detail: queue.length }));
     }
   }
 
   public static clearQueue() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(this.QUEUE_KEY);
+      window.dispatchEvent(new CustomEvent('tankhor_sync_queue_updated', { detail: 0 }));
     }
   }
 
@@ -57,6 +59,9 @@ export class StorageSyncManager {
     // 2. Sync database change queue
     const queue = this.getQueue();
     if (queue.length === 0) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('tankhor_sync_queue_updated', { detail: 0 }));
+      }
       return {
         success: 0,
         failed: 0,
@@ -69,7 +74,38 @@ export class StorageSyncManager {
     let failed = 0;
     const remaining: SyncQueueItem[] = [];
 
-    for (const item of queue) {
+    const collectionPriority: Record<string, number> = {
+      expense_categories: 1,
+      categories: 1,
+      financial_accounts: 1,
+      warehouses: 1,
+      suppliers: 1,
+      customers: 1,
+      brands: 1,
+      collections: 1,
+      seasons: 1,
+      colors: 1,
+      sizes: 1,
+      size_groups: 1,
+      products: 2,
+      product_variants: 3,
+      expenses: 4,
+      orders: 4,
+      purchase_orders: 4,
+      treasury_transactions: 4,
+      person_transactions: 4,
+      cheques: 4,
+      landed_costs: 4,
+      landed_cost_allocations: 5,
+    };
+
+    const sortedQueue = [...queue].sort((a, b) => {
+      const pa = collectionPriority[a.collection] || 10;
+      const pb = collectionPriority[b.collection] || 10;
+      return pa - pb;
+    });
+
+    for (const item of sortedQueue) {
       try {
         if (item.action === 'CREATE' || item.action === 'UPDATE') {
           if (item.collection === 'products') await cloudAdapter.saveProduct(item.payload);
@@ -78,10 +114,37 @@ export class StorageSyncManager {
           else if (item.collection === 'inventory_movements') await cloudAdapter.recordMovement(item.payload);
           else if (item.collection === 'orders') await cloudAdapter.saveOrder(item.payload);
           else if (item.collection === 'organization_users') await cloudAdapter.saveOrganizationUser(item.payload);
+          else if (item.collection === 'expenses') await cloudAdapter.saveExpense(item.payload);
+          else if (item.collection === 'expense_categories') await cloudAdapter.saveExpenseCategory(item.payload);
+          else if (item.collection === 'financial_accounts') await cloudAdapter.saveFinancialAccount(item.payload);
+          else if (item.collection === 'treasury_transactions') await cloudAdapter.saveTreasuryTransaction(item.payload);
+          else if (item.collection === 'cheques') await cloudAdapter.saveCheque(item.payload);
+          else if (item.collection === 'person_transactions') await cloudAdapter.savePersonTransaction(item.payload);
+          else if (item.collection === 'landed_costs') await cloudAdapter.saveLandedCost(item.payload);
+          else if (item.collection === 'landed_cost_allocations') await cloudAdapter.saveLandedCostAllocation(item.payload);
+          else if (item.collection === 'customers') await cloudAdapter.saveCustomer(item.payload);
+          else if (item.collection === 'suppliers') await cloudAdapter.saveSupplier(item.payload);
+          else if (item.collection === 'purchase_orders') await cloudAdapter.savePurchaseOrder(item.payload);
+          else if (item.collection === 'stock_transfers') await cloudAdapter.saveStockTransfer(item.payload);
+          else if (item.collection === 'brands') await cloudAdapter.saveBrand(item.payload);
+          else if (item.collection === 'collections') await cloudAdapter.saveCollection(item.payload);
+          else if (item.collection === 'seasons') await cloudAdapter.saveSeason(item.payload);
+          else if (item.collection === 'colors') await cloudAdapter.saveColor(item.payload);
+          else if (item.collection === 'sizes') await cloudAdapter.saveSize(item.payload);
+          else if (item.collection === 'size_groups') await cloudAdapter.saveSizeGroup(item.payload);
+          else if (item.collection === 'warehouses') await cloudAdapter.saveWarehouse(item.payload);
+          else if (item.collection === 'warehouse_locations') await cloudAdapter.saveLocation(item.payload);
         } else if (item.action === 'DELETE') {
           if (item.collection === 'products') await cloudAdapter.deleteProduct(item.payload.id);
           else if (item.collection === 'product_variants') await cloudAdapter.deleteVariant(item.payload.id);
           else if (item.collection === 'organization_users') await cloudAdapter.deleteOrganizationUser(item.payload.id);
+          else if (item.collection === 'expenses') await cloudAdapter.deleteExpense(item.payload.id);
+          else if (item.collection === 'expense_categories') await cloudAdapter.deleteExpenseCategory(item.payload.id);
+          else if (item.collection === 'financial_accounts') await cloudAdapter.deleteFinancialAccount(item.payload.id);
+          else if (item.collection === 'cheques') await cloudAdapter.deleteCheque(item.payload.id);
+          else if (item.collection === 'landed_costs') await cloudAdapter.deleteLandedCost(item.payload.id);
+          else if (item.collection === 'customers') await cloudAdapter.deleteCustomer(item.payload.id);
+          else if (item.collection === 'suppliers') await cloudAdapter.deleteSupplier(item.payload.id);
         }
         success++;
       } catch (err) {
@@ -93,6 +156,7 @@ export class StorageSyncManager {
 
     if (typeof window !== 'undefined') {
       localStorage.setItem(this.QUEUE_KEY, JSON.stringify(remaining));
+      window.dispatchEvent(new CustomEvent('tankhor_sync_queue_updated', { detail: remaining.length }));
     }
 
     return {

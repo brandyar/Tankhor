@@ -23,6 +23,7 @@ import { DataTable } from '../../components/ui/DataTable';
 import { formatDate, formatCurrency, toPersianDigits } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
 import { printElement } from '../../utils/print';
+import { printOrderInvoice, OrderItemPrintData } from '../../utils/orderInvoicePrint';
 import {
   ShoppingCart,
   Plus,
@@ -37,7 +38,11 @@ import {
   AlertCircle,
   Tag,
   Trash2,
+  FileSpreadsheet,
+  Download,
+  Upload,
 } from 'lucide-react';
+import { exportOrdersToExcel, parseOrdersFromExcel } from '../../utils/excelUtils';
 
 interface OrdersViewProps {
   onNavigateToCreate?: () => void;
@@ -219,17 +224,15 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
       });
 
       setSelectedOrderItems(itemsDisplay);
-
-      setTimeout(() => {
-        printElement('printable-order-invoice', { title: `${t('orders.invoice')}_${ord.order_number || ''}` });
-      }, 50);
+      printOrderInvoice(ord, itemsDisplay, activeOrganization, isPersian, receiptType);
     } catch (err) {
       console.error('[OrdersView] Error loading order for direct print:', err);
     }
   };
 
   const triggerPrint = () => {
-    printElement('printable-order-invoice', { title: `${t('orders.invoice')}_${selectedOrder?.order_number || ''}` });
+    if (!selectedOrder) return;
+    printOrderInvoice(selectedOrder, selectedOrderItems, activeOrganization, isPersian, receiptType);
   };
 
   const getOrderStatusBadge = (status: OrderStatus) => {
@@ -270,20 +273,69 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
     return matchesSearch && matchesStatus;
   });
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleExportExcel = () => {
+    exportOrdersToExcel(orders);
+  };
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const res = parseOrdersFromExcel(buffer);
+      if (!res.success) {
+        alert(res.errors.join('\n') || 'خطا در خواندن فایل اکسل');
+        return;
+      }
+
+      alert(`فایل اکسل سفارشات با موفقیت بررسی شد. ${res.importedCount} ردیف سفارش شناسایی گردید.`);
+    } catch (err: any) {
+      alert(`خطا در پردازش فایل اکسل: ${err?.message || err}`);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="space-y-6 font-sans">
       <PageHeader
         title={t('orders.title')}
         subtitle={t('orders.subtitle')}
         action={
-          permissions.canCreateOrders ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImportExcel}
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+            />
             <Button
-              onClick={onNavigateToCreate}
-              icon={<Plus className="w-4 h-4" />}
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              icon={<Upload className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />}
             >
-              {t('orders.createOrder')}
+              ورود اکسل
             </Button>
-          ) : undefined
+            <Button
+              variant="outline"
+              onClick={handleExportExcel}
+              icon={<FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+            >
+              خروجی اکسل
+            </Button>
+            {permissions.canCreateOrders && (
+              <Button
+                onClick={onNavigateToCreate}
+                icon={<Plus className="w-4 h-4" />}
+              >
+                {t('orders.createOrder')}
+              </Button>
+            )}
+          </div>
         }
       />
 

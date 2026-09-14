@@ -298,6 +298,130 @@ const TENANT_SCOPED_COLLECTIONS = new Set([
   'landed_cost_allocations',
 ]);
 
+function sanitizePayloadForDirectus(collection: string, raw: Record<string, any>): Record<string, any> {
+  const payload = { ...raw };
+
+  // 1. Extract IDs if relational objects were sent
+  const relationalFields = [
+    'organization_id',
+    'category_id',
+    'account_id',
+    'customer_id',
+    'supplier_id',
+    'product_id',
+    'variant_id',
+    'order_id',
+    'purchase_order_id',
+    'warehouse_id',
+    'destination_warehouse_id',
+    'source_warehouse_id',
+    'source_account_id',
+    'destination_account_id',
+    'target_account_id',
+    'brand_id',
+    'collection_id',
+    'season_id',
+    'color_id',
+    'size_id',
+    'size_group_id',
+    'template_id',
+  ];
+
+  for (const f of relationalFields) {
+    if (payload[f] !== undefined && payload[f] !== null) {
+      if (typeof payload[f] === 'object' && payload[f].id !== undefined) {
+        payload[f] = Number(payload[f].id);
+      } else if (typeof payload[f] === 'string' && !isNaN(Number(payload[f])) && payload[f].trim() !== '') {
+        payload[f] = Number(payload[f]);
+      }
+    }
+  }
+
+  // 2. Collection-specific sanitization & mapping
+  if (collection === 'expenses') {
+    const pm = payload.payment_method;
+    if (pm === 'bank_account' || pm === 'card_transfer' || pm === 'bank') {
+      payload.payment_method = 'bank';
+    } else if (pm === 'pos') {
+      payload.payment_method = 'pos';
+    } else if (pm === 'cheque') {
+      payload.payment_method = 'cheque';
+    } else if (pm === 'credit') {
+      payload.payment_method = 'credit';
+    } else {
+      payload.payment_method = 'cash';
+    }
+
+    const noteParts: string[] = [];
+    if (payload.paid_to) noteParts.push(`دریافت‌کننده: ${payload.paid_to}`);
+    if (payload.reference_code) noteParts.push(`کد پیگیری: ${payload.reference_code}`);
+    if (payload.description) noteParts.push(payload.description);
+    if (payload.notes && payload.notes !== payload.description) noteParts.push(payload.notes);
+    if (noteParts.length > 0) {
+      payload.notes = noteParts.join(' | ');
+    }
+
+    if (payload.amount !== undefined) {
+      payload.amount = Number(payload.amount) || 0;
+    }
+
+    if (payload.expense_date) {
+      const dateStr = String(payload.expense_date);
+      payload.expense_date = dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`;
+    }
+
+    delete payload.paid_to;
+    delete payload.reference_code;
+    delete payload.description;
+    delete payload.category_title;
+    delete payload.category_code;
+    delete payload.category_icon;
+    delete payload.account_name;
+    delete payload.created_by_name;
+  }
+
+  if (collection === 'expense_categories') {
+    if (!payload.icon) payload.icon = 'Receipt';
+    if (!payload.status) payload.status = 'active';
+    delete payload.expense_count;
+    delete payload.total_amount;
+  }
+
+  if (collection === 'financial_accounts') {
+    if (payload.initial_balance !== undefined) payload.initial_balance = Number(payload.initial_balance) || 0;
+    if (payload.current_balance !== undefined) payload.current_balance = Number(payload.current_balance) || 0;
+    if (payload.is_default !== undefined) payload.is_default = Boolean(payload.is_default);
+    delete payload.status;
+  }
+
+  if (collection === 'treasury_transactions') {
+    if (payload.amount !== undefined) payload.amount = Number(payload.amount) || 0;
+    delete payload.source_account_name;
+    delete payload.destination_account_name;
+  }
+
+  if (collection === 'cheques') {
+    if (payload.amount !== undefined) payload.amount = Number(payload.amount) || 0;
+    if (payload.alert_days_before !== undefined) payload.alert_days_before = Number(payload.alert_days_before) || 3;
+    delete payload.notes;
+    delete payload.customer_name;
+    delete payload.supplier_name;
+  }
+
+  if (collection === 'person_transactions') {
+    if (payload.amount !== undefined) payload.amount = Number(payload.amount) || 0;
+    if (payload.balance_after !== undefined) payload.balance_after = Number(payload.balance_after) || 0;
+    delete payload.debit_amount;
+    delete payload.credit_amount;
+    delete payload.running_balance;
+    delete payload.status;
+    delete payload.customer_name;
+    delete payload.supplier_name;
+  }
+
+  return payload;
+}
+
 // Generic List items with injected Tenant Scope
 proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   const { collection } = req.params;
@@ -580,7 +704,80 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
       }
     }
 
-    const created = await DirectusAdminClient.createItem(collection, payload);
+    const cleanPayload = sanitizePayloadForDirectus(collection, payload);
+    // Explicitly delete id on create to allow Directus auto-increment primary key
+    delete cleanPayload.id;
+
+    // Special validation for expenses foreign keys to prevent PG foreign key violations
+    if (collection === 'expenses') {
+      if (cleanPayload.category_id) {
+        const catId = Number(cleanPayload.category_id);
+        if (isNaN(catId) || catId <= 0 || catId >= 1000000000) {
+          cleanPayload.category_id = null;
+        } else {
+          // Check if category exists in Directus for this organization
+          const existingCat = await DirectusAdminClient.getItemById('expense_categories', catId).catch(() => null);
+          if (!existingCat) {
+            // Find any valid category for this org or create a default one
+            const orgCats = await DirectusAdminClient.getItems('expense_categories', {
+              filter: { organization_id: { _eq: orgIdNum } },
+              limit: 1,
+            }).catch(() => []);
+            if (orgCats && orgCats.length > 0) {
+              cleanPayload.category_id = orgCats[0].id;
+            } else {
+              const newDefaultCat = await DirectusAdminClient.createItem('expense_categories', {
+                organization_id: orgIdNum,
+                title: 'سایر هزینه‌های عمومی',
+                code: 'EXP-MISC',
+                icon: 'Receipt',
+                status: 'active',
+              }).catch(() => null);
+              cleanPayload.category_id = newDefaultCat ? newDefaultCat.id : null;
+            }
+          }
+        }
+      } else {
+        // If no category_id was provided, find or seed default
+        const orgCats = await DirectusAdminClient.getItems('expense_categories', {
+          filter: { organization_id: { _eq: orgIdNum } },
+          limit: 1,
+        }).catch(() => []);
+        if (orgCats && orgCats.length > 0) {
+          cleanPayload.category_id = orgCats[0].id;
+        } else {
+          const newDefaultCat = await DirectusAdminClient.createItem('expense_categories', {
+            organization_id: orgIdNum,
+            title: 'سایر هزینه‌های عمومی',
+            code: 'EXP-MISC',
+            icon: 'Receipt',
+            status: 'active',
+          }).catch(() => null);
+          cleanPayload.category_id = newDefaultCat ? newDefaultCat.id : null;
+        }
+      }
+
+      if (cleanPayload.account_id) {
+        const accId = Number(cleanPayload.account_id);
+        if (isNaN(accId) || accId <= 0 || accId >= 1000000000) {
+          cleanPayload.account_id = null;
+        } else {
+          const existingAcc = await DirectusAdminClient.getItemById('financial_accounts', accId).catch(() => null);
+          if (!existingAcc) {
+            cleanPayload.account_id = null;
+          }
+        }
+      }
+
+      if (cleanPayload.receipt_attachment) {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(cleanPayload.receipt_attachment));
+        if (!isUuid) {
+          delete cleanPayload.receipt_attachment;
+        }
+      }
+    }
+
+    const created = await DirectusAdminClient.createItem(collection, cleanPayload);
     return res.status(201).json({ data: created });
   } catch (error: any) {
     console.error(`[API Proxy] Error creating in ${collection}:`, error.message);
@@ -678,7 +875,8 @@ proxyRouter.patch('/items/:collection/:id', requireAuth, async (req: Authenticat
     // Prevent tenant hijacking
     delete payload.organization_id;
 
-    const updated = await DirectusAdminClient.updateItem(collection, id, payload);
+    const cleanPayload = sanitizePayloadForDirectus(collection, payload);
+    const updated = await DirectusAdminClient.updateItem(collection, id, cleanPayload);
     return res.json({ data: updated });
   } catch (error: any) {
     return res.status(500).json({ error: error.message || `Failed to update ${collection}/${id}` });
@@ -744,5 +942,39 @@ proxyRouter.post('/files', requireAuth, upload.single('file'), async (req: Authe
     return res.status(201).json(result);
   } catch (error: any) {
     return res.status(500).json({ error: error.message || 'File upload proxy failed' });
+  }
+});
+
+// Assets Proxy (Directly stream uploaded images from Directus storage)
+proxyRouter.get('/assets/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).send('Asset ID is required');
+    }
+
+    const queryString = Object.keys(req.query).length > 0 ? `?${new URLSearchParams(req.query as any).toString()}` : '';
+    const directusUrl = `${DirectusAdminClient.getBaseUrl()}/assets/${id}${queryString}`;
+    const token = DirectusAdminClient.getAdminToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const upstream = await fetch(directusUrl, { headers });
+    if (!upstream.ok) {
+      return res.status(upstream.status).send(upstream.statusText || 'Asset not found');
+    }
+
+    const contentType = upstream.headers.get('content-type') || 'image/webp';
+    res.setHeader('Content-Type', contentType);
+    const cacheControl = upstream.headers.get('cache-control') || 'public, max-age=86400';
+    res.setHeader('Cache-Control', cacheControl);
+
+    const arrayBuf = await upstream.arrayBuffer();
+    return res.send(Buffer.from(arrayBuf));
+  } catch (error: any) {
+    console.error('[proxy] /assets/:id error:', error);
+    return res.status(500).send('Failed to proxy asset');
   }
 });

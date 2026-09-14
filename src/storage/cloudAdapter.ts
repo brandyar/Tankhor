@@ -3,6 +3,7 @@ import { directusClient } from '../api/directus';
 import { LocalOfflineAdapter } from './localAdapter';
 import { StorageSyncManager } from './syncManager';
 import { normalizeId } from '../utils/formatters';
+import { mediaManager } from '../utils/mediaManager';
 import {
   Organization, OrganizationUser, Category, Collection, Season, Color, SizeGroup, Size, Brand,
   Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
@@ -218,6 +219,20 @@ export class CloudDirectusAdapter implements IStorageProvider {
     delete payload.size_guide_template;
     delete payload.variants;
 
+    if (payload.main_image) {
+      const rawImg = typeof payload.main_image === 'string' ? payload.main_image.trim() : (payload.main_image as any)?.id || '';
+      if (rawImg && !UUID_REGEX.test(rawImg)) {
+        try {
+          const uploadedUuid = await mediaManager.uploadMediaRefToCloud(rawImg);
+          if (uploadedUuid) {
+            payload.main_image = uploadedUuid;
+          }
+        } catch (uploadErr) {
+          console.warn('[CloudDirectusAdapter] Auto-uploading local image to cloud failed:', uploadErr);
+        }
+      }
+    }
+
     payload.main_image = cleanUuid(payload.main_image);
     payload.brand_id = cleanInt(payload.brand_id);
     payload.category_id = cleanInt(payload.category_id);
@@ -373,6 +388,20 @@ export class CloudDirectusAdapter implements IStorageProvider {
     delete payload.size;
     delete payload.product;
     delete payload._tempId;
+
+    if (payload.image) {
+      const rawImg = typeof payload.image === 'string' ? payload.image.trim() : (payload.image as any)?.id || '';
+      if (rawImg && !UUID_REGEX.test(rawImg)) {
+        try {
+          const uploadedUuid = await mediaManager.uploadMediaRefToCloud(rawImg);
+          if (uploadedUuid) {
+            payload.image = uploadedUuid;
+          }
+        } catch (uploadErr) {
+          console.warn('[CloudDirectusAdapter] Auto-uploading variant image to cloud failed:', uploadErr);
+        }
+      }
+    }
 
     payload.image = cleanUuid(payload.image);
     payload.color_id = cleanInt(payload.color_id);
@@ -631,12 +660,18 @@ export class CloudDirectusAdapter implements IStorageProvider {
   }
 
   async saveSeason(season: Partial<Season>): Promise<Season> {
+    const payload: Partial<Season> = {
+      ...season,
+      code: season.code?.trim() || null,
+      start_date: season.start_date && season.start_date.trim() !== '' ? season.start_date : null,
+      end_date: season.end_date && season.end_date.trim() !== '' ? season.end_date : null,
+    };
     try {
-      if (season.id) return await directusClient.updateItem<Season>('seasons', season.id, season);
-      return await directusClient.createItem<Season>('seasons', season);
+      if (payload.id) return await directusClient.updateItem<Season>('seasons', payload.id, payload);
+      return await directusClient.createItem<Season>('seasons', payload);
     } catch {
-      const saved = await this.localAdapter.saveSeason(season);
-      StorageSyncManager.enqueue({ action: season.id ? 'UPDATE' : 'CREATE', collection: 'seasons', payload: saved });
+      const saved = await this.localAdapter.saveSeason(payload);
+      StorageSyncManager.enqueue({ action: payload.id ? 'UPDATE' : 'CREATE', collection: 'seasons', payload: saved });
       return saved;
     }
   }
@@ -1479,27 +1514,46 @@ export class CloudDirectusAdapter implements IStorageProvider {
   }
 
   async saveExpenseCategory(cat: Partial<ExpenseCategory>): Promise<ExpenseCategory> {
+    const localSaved = await this.localAdapter.saveExpenseCategory(cat);
     try {
-      if (cat.id) {
-        return await directusClient.updateItem<ExpenseCategory>('expense_categories', cat.id, cat);
+      const directusPayload: Record<string, any> = {
+        title: cat.title || 'سرفصل هزینه',
+        code: cat.code || null,
+        icon: cat.icon || 'Receipt',
+        status: cat.status || 'active',
+      };
+      if (cat.organization_id) {
+        directusPayload.organization_id = Number(typeof cat.organization_id === 'object' ? (cat.organization_id as any).id : cat.organization_id);
       }
-      return await directusClient.createItem<ExpenseCategory>('expense_categories', cat);
-    } catch {
-      const saved = await this.localAdapter.saveExpenseCategory(cat);
-      StorageSyncManager.enqueue({ action: cat.id ? 'UPDATE' : 'CREATE', collection: 'expense_categories', payload: saved });
-      return saved;
+
+      if (cat.id && typeof cat.id === 'number' && cat.id < 1000000000) {
+        const updated = await directusClient.updateItem<ExpenseCategory>('expense_categories', cat.id, directusPayload);
+        const merged = { ...localSaved, ...updated };
+        await this.localAdapter.saveExpenseCategory(merged);
+        return merged;
+      }
+      const created = await directusClient.createItem<ExpenseCategory>('expense_categories', directusPayload);
+      if (localSaved.id && localSaved.id !== created.id) {
+        await this.localAdapter.deleteExpenseCategory(localSaved.id);
+      }
+      const merged = { ...localSaved, ...created };
+      await this.localAdapter.saveExpenseCategory(merged);
+      return merged;
+    } catch (err) {
+      console.error('[CloudAdapter] Error saving expense category to cloud:', err);
+      StorageSyncManager.enqueue({ action: cat.id ? 'UPDATE' : 'CREATE', collection: 'expense_categories', payload: localSaved });
+      return localSaved;
     }
   }
 
   async deleteExpenseCategory(id: number): Promise<boolean> {
+    const deleted = await this.localAdapter.deleteExpenseCategory(id);
     try {
       await directusClient.deleteItem('expense_categories', id);
-      return true;
     } catch {
-      const deleted = await this.localAdapter.deleteExpenseCategory(id);
       StorageSyncManager.enqueue({ action: 'DELETE', collection: 'expense_categories', payload: { id } });
-      return deleted;
     }
+    return deleted;
   }
 
   async getExpenses(params?: QueryParams): Promise<Expense[]> {
@@ -1508,46 +1562,115 @@ export class CloudDirectusAdapter implements IStorageProvider {
         sort: ['-expense_date', '-id'],
         fields: ['*', 'category_id.*'],
       };
+      const orgId = normalizeId(params?.organization_id);
+      if (orgId) query['filter[organization_id][_eq]'] = orgId;
       if (params?.category_id) query['filter[category_id][_eq]'] = params.category_id;
       if (params?.search) query['filter[title][_icontains]'] = params.search;
 
       const items = await directusClient.getItems<Expense>('expenses', query);
-      return items.map((exp) => {
+      const localItems = await this.localAdapter.getExpenses(params);
+
+      if (!items || items.length === 0) {
+        return localItems;
+      }
+
+      const mergedMap = new Map<number, Expense>();
+      localItems.forEach((it) => mergedMap.set(it.id, it));
+      items.forEach((exp) => {
         const cat = typeof exp.category_id === 'object' ? (exp.category_id as any) : null;
-        return {
+        mergedMap.set(exp.id, {
           ...exp,
           category_title: cat?.title || exp.category_title || 'سایر هزینه‌ها',
           category_code: cat?.code || exp.category_code,
           category_icon: cat?.icon || exp.category_icon || 'Receipt',
-        };
+        });
       });
+
+      return Array.from(mergedMap.values()).sort((a, b) => (b.id || 0) - (a.id || 0));
     } catch {
       return await this.localAdapter.getExpenses(params);
     }
   }
 
   async saveExpense(exp: Partial<Expense>): Promise<Expense> {
+    const localSaved = await this.localAdapter.saveExpense(exp);
     try {
-      if (exp.id) {
-        return await directusClient.updateItem<Expense>('expenses', exp.id, exp);
+      const catId = typeof exp.category_id === 'object' && exp.category_id !== null
+        ? Number((exp.category_id as any).id)
+        : (exp.category_id ? Number(exp.category_id) : null);
+
+      const accId = typeof exp.account_id === 'object' && exp.account_id !== null
+        ? Number((exp.account_id as any).id)
+        : (exp.account_id ? Number(exp.account_id) : null);
+
+      let pm: string = 'cash';
+      if (exp.payment_method === 'bank_account' || exp.payment_method === 'card_transfer' || exp.payment_method === 'bank') {
+        pm = 'bank';
+      } else if (exp.payment_method === 'pos') {
+        pm = 'pos';
+      } else if (exp.payment_method === 'cheque') {
+        pm = 'cheque';
+      } else if (exp.payment_method === 'credit') {
+        pm = 'credit';
       }
-      return await directusClient.createItem<Expense>('expenses', exp);
-    } catch {
-      const saved = await this.localAdapter.saveExpense(exp);
-      StorageSyncManager.enqueue({ action: exp.id ? 'UPDATE' : 'CREATE', collection: 'expenses', payload: saved });
-      return saved;
+
+      const noteParts: string[] = [];
+      if (exp.paid_to) noteParts.push(`دریافت‌کننده: ${exp.paid_to}`);
+      if (exp.reference_code) noteParts.push(`کد پیگیری: ${exp.reference_code}`);
+      if (exp.description) noteParts.push(exp.description);
+      if (exp.notes && exp.notes !== exp.description) noteParts.push(exp.notes);
+
+      const directusPayload: Record<string, any> = {
+        title: exp.title || 'هزینه جاری',
+        amount: Number(exp.amount) || 0,
+        category_id: catId,
+        payment_method: pm,
+        notes: noteParts.length > 0 ? noteParts.join(' | ') : null,
+      };
+
+      if (exp.organization_id) {
+        directusPayload.organization_id = Number(typeof exp.organization_id === 'object' ? (exp.organization_id as any).id : exp.organization_id);
+      }
+      if (accId) {
+        directusPayload.account_id = accId;
+      }
+      if (exp.expense_date) {
+        const dateStr = String(exp.expense_date);
+        directusPayload.expense_date = dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`;
+      }
+      if (exp.receipt_attachment) {
+        directusPayload.receipt_attachment = exp.receipt_attachment;
+      }
+
+      if (exp.id && typeof exp.id === 'number' && exp.id < 1000000000) {
+        const updated = await directusClient.updateItem<Expense>('expenses', exp.id, directusPayload);
+        const merged = { ...localSaved, ...updated };
+        await this.localAdapter.saveExpense(merged);
+        return merged;
+      }
+
+      const created = await directusClient.createItem<Expense>('expenses', directusPayload);
+      if (localSaved.id && localSaved.id !== created.id) {
+        await this.localAdapter.deleteExpense(localSaved.id);
+      }
+      const merged = { ...localSaved, ...created };
+      await this.localAdapter.saveExpense(merged);
+      return merged;
+    } catch (err) {
+      console.error('[CloudAdapter] Error saving expense to cloud:', err);
+      StorageSyncManager.enqueue({ action: exp.id ? 'UPDATE' : 'CREATE', collection: 'expenses', payload: localSaved });
+      return localSaved;
     }
   }
 
   async deleteExpense(id: number): Promise<boolean> {
+    const deleted = await this.localAdapter.deleteExpense(id);
     try {
       await directusClient.deleteItem('expenses', id);
-      return true;
     } catch {
-      const deleted = await this.localAdapter.deleteExpense(id);
       StorageSyncManager.enqueue({ action: 'DELETE', collection: 'expenses', payload: { id } });
-      return deleted;
     }
+    return deleted;
   }
 
   async getPersonTransactions(params?: QueryParams): Promise<PersonTransaction[]> {

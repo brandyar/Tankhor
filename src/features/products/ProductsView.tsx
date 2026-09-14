@@ -15,7 +15,8 @@ import { ProductVariantsModal } from './ProductVariantsModal';
 import { ProductImage } from '../../components/ui/ProductImage';
 import { directusClient } from '../../api/directus';
 import { confirmAction } from '../../utils/confirm';
-import { Plus, Search, Trash2, Edit, Layers, Filter, X, RefreshCw } from 'lucide-react';
+import { Plus, Search, Trash2, Edit, Layers, Filter, X, RefreshCw, FileSpreadsheet, Download, Upload } from 'lucide-react';
+import { exportProductsToExcel, parseProductsFromExcel } from '../../utils/excelUtils';
 
 export const ProductsView: React.FC = () => {
   const { t, locale } = useTranslation();
@@ -81,7 +82,7 @@ export const ProductsView: React.FC = () => {
 
       // Filter by Category
       if (selectedCategoryFilter) {
-        filteredProducts = filteredProducts.filter((p) => p.category_id === Number(selectedCategoryFilter));
+        filteredProducts = filteredProducts.filter((p) => (normalizeId(p.category_id) || Number(p.category_id)) === Number(selectedCategoryFilter));
       }
 
       // Filter by Brand
@@ -98,12 +99,12 @@ export const ProductsView: React.FC = () => {
 
       // Filter by Collection
       if (selectedCollectionFilter) {
-        filteredProducts = filteredProducts.filter((p) => p.collection_id === Number(selectedCollectionFilter));
+        filteredProducts = filteredProducts.filter((p) => (normalizeId(p.collection_id) || Number(p.collection_id)) === Number(selectedCollectionFilter));
       }
 
       // Filter by Season
       if (selectedSeasonFilter) {
-        filteredProducts = filteredProducts.filter((p) => p.season_id === Number(selectedSeasonFilter));
+        filteredProducts = filteredProducts.filter((p) => (normalizeId(p.season_id) || Number(p.season_id)) === Number(selectedSeasonFilter));
       }
 
       // Filter by Color (Products with at least one variant of selected color)
@@ -116,7 +117,7 @@ export const ProductsView: React.FC = () => {
             if (pId) matchingProductIds.add(pId);
           }
         });
-        filteredProducts = filteredProducts.filter((p) => matchingProductIds.has(p.id));
+        filteredProducts = filteredProducts.filter((p) => matchingProductIds.has(normalizeId(p.id) || Number(p.id)));
       }
 
       setProducts(filteredProducts);
@@ -129,6 +130,18 @@ export const ProductsView: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    const handleProductsChange = (e: any) => {
+      const deletedId = e?.detail?.deletedId;
+      if (deletedId !== undefined) {
+        const normDelId = normalizeId(deletedId) || Number(deletedId);
+        setProducts((prev) => prev.filter((p) => (normalizeId(p.id) || Number(p.id)) !== normDelId && p.id !== deletedId));
+      }
+      loadData();
+    };
+    window.addEventListener('tankhor_products_changed', handleProductsChange);
+    return () => {
+      window.removeEventListener('tankhor_products_changed', handleProductsChange);
+    };
   }, [
     activeOrganization,
     search,
@@ -156,9 +169,18 @@ export const ProductsView: React.FC = () => {
 
   const handleDeleteProduct = async (id: number) => {
     if (await confirmAction(t('common.confirmDeleteMessage'))) {
-      const adapter = storageManager.getAdapter();
-      await adapter.deleteProduct(id);
-      await loadData();
+      const normId = normalizeId(id) || Number(id);
+      try {
+        // Optimistically remove from state immediately for instant UI update on desktop & web
+        setProducts((prev) => prev.filter((p) => (normalizeId(p.id) || Number(p.id)) !== normId && p.id !== id));
+        const adapter = storageManager.getAdapter();
+        await adapter.deleteProduct(normId);
+        await loadData();
+        window.dispatchEvent(new CustomEvent('tankhor_products_changed', { detail: { deletedId: normId } }));
+      } catch (err) {
+        console.error('[ProductsView] Error deleting product:', err);
+        await loadData();
+      }
     }
   };
 
@@ -289,6 +311,39 @@ export const ProductsView: React.FC = () => {
     return options;
   };
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleExportExcel = () => {
+    exportProductsToExcel(
+      products,
+      allVariants,
+      categories,
+      brands,
+      colors,
+      sizes
+    );
+  };
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const res = parseProductsFromExcel(buffer);
+      if (!res.success) {
+        alert(res.errors.join('\n') || 'خطا در خواندن فایل اکسل');
+        return;
+      }
+
+      alert(`فایل اکسل با موفقیت بررسی شد. ${res.importedCount} ردیف کالا و تنوع شناسایی گردید.`);
+    } catch (err: any) {
+      alert(`خطا در پردازش فایل اکسل: ${err?.message || err}`);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   if (viewMode === 'edit') {
     return (
       <ProductEditView
@@ -305,11 +360,34 @@ export const ProductsView: React.FC = () => {
         title={t('navigation.allProducts')}
         subtitle={t('products.subtitle')}
         action={
-          permissions.canEditProducts ? (
-            <Button onClick={handleOpenNewProduct} icon={<Plus className="w-4 h-4" />}>
-              {t('common.create')}
+          <div className="flex items-center gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImportExcel}
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              icon={<Upload className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />}
+            >
+              ورود اکسل
             </Button>
-          ) : undefined
+            <Button
+              variant="outline"
+              onClick={handleExportExcel}
+              icon={<FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+            >
+              خروجی اکسل
+            </Button>
+            {permissions.canEditProducts && (
+              <Button onClick={handleOpenNewProduct} icon={<Plus className="w-4 h-4" />}>
+                {t('common.create')}
+              </Button>
+            )}
+          </div>
         }
       />
 

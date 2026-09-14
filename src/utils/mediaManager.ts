@@ -7,6 +7,9 @@
 import { isTauriEnvironment } from '../storage';
 import { compressImage, CompressedImageResult } from './imageCompressor';
 import { directusClient } from '../api/directus';
+import { saveMediaToIndexedDb, getMediaFromIndexedDb } from './mediaDb';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface LocalMediaItem {
   id: string; // filename e.g. "prod_img_1720000000_abc12.webp" or UUID
@@ -64,7 +67,7 @@ class MediaManager {
   /**
    * Saves a product/category image.
    * Compresses it first, saves to local disk (Tauri AppData) or Indexed/Local Storage,
-   * enqueues for cloud sync, and returns a safe media reference (mediaId or filename).
+   * uploads to Directus if connected, and returns a safe media reference (cloud UUID or filename).
    */
   public async saveImage(
     file: File | Blob,
@@ -87,6 +90,7 @@ class MediaManager {
     const relativePath = `${MEDIA_DIR_NAME}/${fileName}`;
 
     let displayUrl = compressed.dataUrl;
+    let finalMediaId = fileName;
 
     // 2. If in Desktop Tauri, save binary to Local File System
     if (isTauriEnvironment()) {
@@ -108,34 +112,131 @@ class MediaManager {
     // 3. Cache dataUrl in memory for instant local rendering
     this.inMemoryCache.set(fileName, compressed.dataUrl);
 
-    // 4. Save to Local Media Index
+    // 4. Save to IndexedDB for persistent offline storage across reloads
+    await saveMediaToIndexedDb(fileName, compressed.dataUrl, compressed.format);
+
+    // 5. Attempt direct upload to Directus / BFF if online or token available
+    try {
+      const fileToUpload = new File([compressed.blob], fileName, { type: compressed.format });
+      const uploadRes = await directusClient.uploadFile(fileToUpload);
+      if (uploadRes && uploadRes.id) {
+        finalMediaId = uploadRes.id;
+        this.inMemoryCache.set(finalMediaId, compressed.dataUrl);
+        await saveMediaToIndexedDb(finalMediaId, compressed.dataUrl, compressed.format);
+        console.log(`[MediaManager] Image directly uploaded to Directus asset: ${finalMediaId}`);
+      }
+    } catch (uploadErr) {
+      console.warn('[MediaManager] Direct cloud upload skipped (offline or unauthenticated):', uploadErr);
+    }
+
+    // 6. Save to Local Media Index
     this.saveLocalMediaRecord({
-      id: fileName,
+      id: finalMediaId,
       fileName,
       relativePath,
       mimeType: compressed.format,
       size: compressed.compressedSize,
       dataUrl: compressed.dataUrl.length < 500000 ? compressed.dataUrl : undefined,
-      synced: false,
+      cloudAssetId: finalMediaId !== fileName ? finalMediaId : undefined,
+      synced: finalMediaId !== fileName,
       createdAt: new Date().toISOString(),
     });
 
-    // 5. Enqueue for background cloud sync
-    this.enqueueForCloudSync({
-      mediaId: fileName,
-      fileName,
-      mimeType: compressed.format,
-      productId: options?.productId,
-      dataUrl: compressed.dataUrl,
-      timestamp: new Date().toISOString(),
-      status: 'pending',
-    });
+    // 7. Enqueue for background cloud sync if not yet uploaded to cloud
+    if (finalMediaId === fileName) {
+      this.enqueueForCloudSync({
+        mediaId: fileName,
+        fileName,
+        mimeType: compressed.format,
+        productId: options?.productId,
+        dataUrl: compressed.dataUrl,
+        timestamp: new Date().toISOString(),
+        status: 'pending',
+      });
+    }
 
     return {
-      mediaId: fileName,
+      mediaId: finalMediaId,
       displayUrl,
       compressed,
     };
+  }
+
+  /**
+   * Uploads any local media reference (filename or dataUrl) to Directus Cloud.
+   * Returns the Directus file UUID if successful.
+   */
+  public async uploadMediaRefToCloud(mediaRef?: string | null): Promise<string | null> {
+    if (!mediaRef) return null;
+    const ref = typeof mediaRef === 'string'
+      ? mediaRef.trim()
+      : (mediaRef && typeof mediaRef === 'object' && (mediaRef as any).id)
+        ? String((mediaRef as any).id).trim()
+        : '';
+    if (!ref) return null;
+    if (UUID_REGEX.test(ref)) return ref;
+
+    try {
+      let fileBlob: Blob | null = null;
+      let mimeType = 'image/webp';
+      const fileName = ref.includes('.') ? ref : `${ref}.webp`;
+
+      // 1. Check inMemoryCache
+      const cached = this.inMemoryCache.get(ref);
+      if (cached && cached.startsWith('data:')) {
+        const res = await fetch(cached);
+        fileBlob = await res.blob();
+        mimeType = fileBlob.type || mimeType;
+      }
+
+      // 2. Check IndexedDB
+      if (!fileBlob) {
+        const idbData = await getMediaFromIndexedDb(ref);
+        if (idbData && idbData.startsWith('data:')) {
+          const res = await fetch(idbData);
+          fileBlob = await res.blob();
+          mimeType = fileBlob.type || mimeType;
+        }
+      }
+
+      // 3. Check Tauri FS
+      if (!fileBlob && isTauriEnvironment()) {
+        try {
+          const { readFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+          const relativePath = ref.startsWith(MEDIA_DIR_NAME) ? ref : `${MEDIA_DIR_NAME}/${ref}`;
+          const bytes = await readFile(relativePath, { baseDir: BaseDirectory.AppData });
+          mimeType = ref.endsWith('.png') ? 'image/png' : ref.endsWith('.jpg') ? 'image/jpeg' : 'image/webp';
+          fileBlob = new Blob([bytes], { type: mimeType });
+        } catch {}
+      }
+
+      // 4. Check if ref itself is a data URL
+      if (!fileBlob && ref.startsWith('data:')) {
+        const res = await fetch(ref);
+        fileBlob = await res.blob();
+        mimeType = fileBlob.type || mimeType;
+      }
+
+      if (!fileBlob) {
+        console.warn('[MediaManager] No binary data found to upload for ref:', ref);
+        return null;
+      }
+
+      const fileToUpload = new File([fileBlob], fileName, { type: mimeType });
+      const uploadRes = await directusClient.uploadFile(fileToUpload);
+      if (uploadRes && uploadRes.id) {
+        const cloudId = uploadRes.id;
+        if (cached) {
+          this.inMemoryCache.set(cloudId, cached);
+          await saveMediaToIndexedDb(cloudId, cached, mimeType);
+        }
+        this.updateLocalMediaRecordSyncStatus(ref, cloudId);
+        return cloudId;
+      }
+    } catch (err) {
+      console.warn('[MediaManager] uploadMediaRefToCloud failed:', err);
+    }
+    return null;
   }
 
   /**
@@ -143,60 +244,84 @@ class MediaManager {
    * to a renderable image src URL.
    */
   public async getDisplayUrl(mediaRef?: string | null): Promise<string> {
-    if (!mediaRef) return '';
+    const ref = typeof mediaRef === 'string'
+      ? mediaRef.trim()
+      : (mediaRef && typeof mediaRef === 'object' && (mediaRef as any).id)
+        ? String((mediaRef as any).id).trim()
+        : '';
+    if (!ref) return '';
 
     // Direct HTTP or Data URL
-    if (mediaRef.startsWith('data:') || mediaRef.startsWith('http://') || mediaRef.startsWith('https://')) {
-      return mediaRef;
+    if (ref.startsWith('data:') || ref.startsWith('http://') || ref.startsWith('https://')) {
+      return ref;
     }
 
     // Check memory cache
-    if (this.inMemoryCache.has(mediaRef)) {
-      return this.inMemoryCache.get(mediaRef)!;
+    if (this.inMemoryCache.has(ref)) {
+      return this.inMemoryCache.get(ref)!;
+    }
+
+    // Check IndexedDB
+    const idbData = await getMediaFromIndexedDb(ref);
+    if (idbData) {
+      this.inMemoryCache.set(ref, idbData);
+      return idbData;
     }
 
     // If on Desktop Tauri and this is a local media file (e.g. media_123.webp)
-    if (isTauriEnvironment() && (mediaRef.includes('media_') || mediaRef.endsWith('.webp') || mediaRef.endsWith('.jpg') || mediaRef.endsWith('.png'))) {
+    if (isTauriEnvironment() && (ref.includes('media_') || ref.endsWith('.webp') || ref.endsWith('.jpg') || ref.endsWith('.png'))) {
       try {
         const { readFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
-        const relativePath = mediaRef.startsWith(MEDIA_DIR_NAME) ? mediaRef : `${MEDIA_DIR_NAME}/${mediaRef}`;
+        const relativePath = ref.startsWith(MEDIA_DIR_NAME) ? ref : `${MEDIA_DIR_NAME}/${ref}`;
         const bytes = await readFile(relativePath, { baseDir: BaseDirectory.AppData });
         
-        const mime = mediaRef.endsWith('.webp') ? 'image/webp' : mediaRef.endsWith('.png') ? 'image/png' : 'image/jpeg';
+        const mime = ref.endsWith('.webp') ? 'image/webp' : ref.endsWith('.png') ? 'image/png' : 'image/jpeg';
         const blob = new Blob([bytes], { type: mime });
         const objectUrl = URL.createObjectURL(blob);
         
-        this.inMemoryCache.set(mediaRef, objectUrl);
+        this.inMemoryCache.set(ref, objectUrl);
         return objectUrl;
       } catch (readErr) {
-        console.warn(`[MediaManager] Failed to read local file AppData/${mediaRef}:`, readErr);
+        console.warn(`[MediaManager] Failed to read local file AppData/${ref}:`, readErr);
       }
     }
 
     // Check localStorage fallback index
     const localRecords = this.getLocalMediaIndex();
-    const found = localRecords.find((r) => r.id === mediaRef || r.fileName === mediaRef);
+    const found = localRecords.find((r) => r.id === ref || r.fileName === ref);
     if (found && found.dataUrl) {
-      this.inMemoryCache.set(mediaRef, found.dataUrl);
+      this.inMemoryCache.set(ref, found.dataUrl);
       return found.dataUrl;
     }
 
-    // If not local or is a Directus Cloud Asset UUID, resolve via API asset URL
-    return directusClient.getAssetUrl(mediaRef);
+    // If it's a UUID or cloud asset, resolve via API asset URL
+    if (UUID_REGEX.test(ref)) {
+      return directusClient.getAssetUrl(ref);
+    }
+
+    return '';
   }
 
   /**
    * Synchronous URL resolver with fallback for initial render.
    */
   public getDisplayUrlSync(mediaRef?: string | null): string {
-    if (!mediaRef) return '';
-    if (mediaRef.startsWith('data:') || mediaRef.startsWith('http://') || mediaRef.startsWith('https://')) {
-      return mediaRef;
+    const ref = typeof mediaRef === 'string'
+      ? mediaRef.trim()
+      : (mediaRef && typeof mediaRef === 'object' && (mediaRef as any).id)
+        ? String((mediaRef as any).id).trim()
+        : '';
+    if (!ref) return '';
+    if (ref.startsWith('data:') || ref.startsWith('http://') || ref.startsWith('https://')) {
+      return ref;
     }
-    if (this.inMemoryCache.has(mediaRef)) {
-      return this.inMemoryCache.get(mediaRef)!;
+    if (this.inMemoryCache.has(ref)) {
+      return this.inMemoryCache.get(ref)!;
     }
-    return directusClient.getAssetUrl(mediaRef);
+    if (UUID_REGEX.test(ref)) {
+      return directusClient.getAssetUrl(ref);
+    }
+    return '';
   }
 
   // --- Cloud Sync Queue Management ---

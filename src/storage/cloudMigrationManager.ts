@@ -41,6 +41,14 @@ const DIRECTUS_ALLOWED_FIELDS: Record<string, Set<string>> = {
   purchase_order_items: new Set(['organization_id', 'purchase_order_id', 'variant_id', 'quantity', 'unit_cost', 'total_cost']),
   stock_transfers: new Set(['organization_id', 'transfer_number', 'source_warehouse_id', 'destination_warehouse_id', 'status', 'notes']),
   stock_transfer_items: new Set(['organization_id', 'transfer_id', 'variant_id', 'quantity']),
+  expense_categories: new Set(['organization_id', 'title', 'code', 'icon', 'status']),
+  expenses: new Set(['organization_id', 'category_id', 'title', 'amount', 'expense_date', 'payment_method', 'account_id', 'receipt_attachment', 'paid_to', 'description', 'reference_code', 'notes', 'created_by']),
+  person_transactions: new Set(['organization_id', 'party_type', 'customer_id', 'supplier_id', 'type', 'transaction_type', 'amount', 'debit_amount', 'credit_amount', 'running_balance', 'balance_after', 'order_id', 'purchase_order_id', 'reference_code', 'reference_number', 'payment_method', 'transaction_date', 'description', 'status']),
+  financial_accounts: new Set(['organization_id', 'name', 'type', 'bank_name', 'account_number', 'card_number', 'shaba_number', 'pos_terminal_id', 'initial_balance', 'current_balance', 'is_default', 'status']),
+  treasury_transactions: new Set(['organization_id', 'source_account_id', 'destination_account_id', 'type', 'amount', 'tracking_code', 'transaction_date', 'person_transaction_id', 'expense_id', 'description', 'receipt_attachment']),
+  cheques: new Set(['organization_id', 'type', 'sayad_id', 'cheque_number', 'bank_name', 'branch_name', 'account_number', 'drawer_name', 'customer_id', 'supplier_id', 'amount', 'issue_date', 'due_date', 'status', 'target_account_id', 'alert_days_before', 'image_front', 'image_back', 'notes']),
+  landed_costs: new Set(['organization_id', 'purchase_order_id', 'cost_type', 'title', 'amount', 'allocation_method', 'expense_id', 'date_applied', 'notes']),
+  landed_cost_allocations: new Set(['landed_cost_id', 'purchase_order_item_id', 'allocated_amount', 'allocated_cost', 'effective_unit_cost']),
 };
 
 export function sanitizeForDirectus(collection: string, rawItem: Record<string, any>): Record<string, any> {
@@ -93,6 +101,12 @@ export class CloudMigrationManager {
       orders: new Map(),
       purchase_orders: new Map(),
       stock_transfers: new Map(),
+      expense_categories: new Map(),
+      expenses: new Map(),
+      financial_accounts: new Map(),
+      person_transactions: new Map(),
+      cheques: new Map(),
+      landed_costs: new Map(),
     };
 
     const emitProgress = (
@@ -506,6 +520,241 @@ export class CloudMigrationManager {
         emitProgress('سفارشات و فاکتورها', i + 1, orderList.length, 'in_progress');
       }
       emitProgress('سفارشات و فاکتورها', orderList.length, orderList.length, 'completed');
+
+      // Phase 8: Financial & Accounting Module
+      // 8.1 Expense Categories
+      const expCategories = collections['expense_categories'] || [];
+      if (expCategories.length > 0) {
+        emitProgress('سرفصل‌های هزینه حسابداری', 0, expCategories.length, 'in_progress');
+        for (let i = 0; i < expCategories.length; i++) {
+          const item = { ...expCategories[i] };
+          const localId = Number(item.id);
+          delete item.id;
+          item.organization_id = orgId;
+          try {
+            const payload = sanitizeForDirectus('expense_categories', item);
+            const created = await directusClient.createItem<any>('expense_categories', payload);
+            if (created?.id) {
+              idMap['expense_categories']?.set(localId, Number(created.id));
+              totalMigrated++;
+            }
+          } catch (err: any) {
+            errors.push(`خطا در ثبت سرفصل هزینه (${item.title || localId}): ${err?.message || err}`);
+          }
+          emitProgress('سرفصل‌های هزینه حسابداری', i + 1, expCategories.length, 'in_progress');
+        }
+        emitProgress('سرفصل‌های هزینه حسابداری', expCategories.length, expCategories.length, 'completed');
+      }
+
+      // 8.2 Financial Accounts (Bank & Cashbox)
+      const finAccounts = collections['financial_accounts'] || [];
+      if (finAccounts.length > 0) {
+        emitProgress('حساب‌های مالی و صندوق‌ها', 0, finAccounts.length, 'in_progress');
+        for (let i = 0; i < finAccounts.length; i++) {
+          const item = { ...finAccounts[i] };
+          const localId = Number(item.id);
+          delete item.id;
+          item.organization_id = orgId;
+          try {
+            const payload = sanitizeForDirectus('financial_accounts', item);
+            const created = await directusClient.createItem<any>('financial_accounts', payload);
+            if (created?.id) {
+              idMap['financial_accounts']?.set(localId, Number(created.id));
+              totalMigrated++;
+            }
+          } catch (err: any) {
+            errors.push(`خطا در ثبت حساب مالی (${item.name || localId}): ${err?.message || err}`);
+          }
+          emitProgress('حساب‌های مالی و صندوق‌ها', i + 1, finAccounts.length, 'in_progress');
+        }
+        emitProgress('حساب‌های مالی و صندوق‌ها', finAccounts.length, finAccounts.length, 'completed');
+      }
+
+      // 8.3 Expenses
+      const expList = collections['expenses'] || [];
+      if (expList.length > 0) {
+        emitProgress('هزینه‌های جاری', 0, expList.length, 'in_progress');
+        for (let i = 0; i < expList.length; i++) {
+          const item = { ...expList[i] };
+          const localId = Number(item.id);
+          delete item.id;
+          item.organization_id = orgId;
+
+          if (item.category_id) {
+            const localCatId = Number(item.category_id?.id || item.category_id);
+            item.category_id = idMap['expense_categories']?.get(localCatId) || item.category_id;
+          }
+          if (item.account_id) {
+            const localAccId = Number(item.account_id?.id || item.account_id);
+            item.account_id = idMap['financial_accounts']?.get(localAccId) || item.account_id;
+          }
+
+          try {
+            const payload = sanitizeForDirectus('expenses', item);
+            const created = await directusClient.createItem<any>('expenses', payload);
+            if (created?.id) {
+              idMap['expenses']?.set(localId, Number(created.id));
+              totalMigrated++;
+            }
+          } catch (err: any) {
+            errors.push(`خطا در ثبت هزینه (${item.title || localId}): ${err?.message || err}`);
+          }
+          emitProgress('هزینه‌های جاری', i + 1, expList.length, 'in_progress');
+        }
+        emitProgress('هزینه‌های جاری', expList.length, expList.length, 'completed');
+      }
+
+      // 8.4 Person Transactions (Customer/Supplier Ledgers)
+      const personTransList = collections['person_transactions'] || [];
+      if (personTransList.length > 0) {
+        emitProgress('اسناد و حساب اشخاص (مشتریان و تامین‌کنندگان)', 0, personTransList.length, 'in_progress');
+        for (let i = 0; i < personTransList.length; i++) {
+          const item = { ...personTransList[i] };
+          const localId = Number(item.id);
+          delete item.id;
+          item.organization_id = orgId;
+
+          if (item.customer_id) {
+            const localCustId = Number(item.customer_id?.id || item.customer_id);
+            item.customer_id = idMap['customers']?.get(localCustId) || item.customer_id;
+          }
+          if (item.supplier_id) {
+            const localSuppId = Number(item.supplier_id?.id || item.supplier_id);
+            item.supplier_id = idMap['suppliers']?.get(localSuppId) || item.supplier_id;
+          }
+          if (item.order_id) {
+            const localOrdId = Number(item.order_id?.id || item.order_id);
+            item.order_id = idMap['orders']?.get(localOrdId) || null;
+          }
+          if (item.purchase_order_id) {
+            const localPOId = Number(item.purchase_order_id?.id || item.purchase_order_id);
+            item.purchase_order_id = idMap['purchase_orders']?.get(localPOId) || null;
+          }
+
+          try {
+            const payload = sanitizeForDirectus('person_transactions', item);
+            const created = await directusClient.createItem<any>('person_transactions', payload);
+            if (created?.id) {
+              idMap['person_transactions']?.set(localId, Number(created.id));
+              totalMigrated++;
+            }
+          } catch (err: any) {
+            errors.push(`خطا در ثبت سند شخص: ${err?.message || err}`);
+          }
+          emitProgress('اسناد و حساب اشخاص (مشتریان و تامین‌کنندگان)', i + 1, personTransList.length, 'in_progress');
+        }
+        emitProgress('اسناد و حساب اشخاص (مشتریان و تامین‌کنندگان)', personTransList.length, personTransList.length, 'completed');
+      }
+
+      // 8.5 Treasury Transactions (Transfers)
+      const treasuryTransList = collections['treasury_transactions'] || [];
+      if (treasuryTransList.length > 0) {
+        emitProgress('گردش خزانه و انتقالات حساب', 0, treasuryTransList.length, 'in_progress');
+        for (let i = 0; i < treasuryTransList.length; i++) {
+          const item = { ...treasuryTransList[i] };
+          delete item.id;
+          item.organization_id = orgId;
+
+          if (item.source_account_id) {
+            const localSId = Number(item.source_account_id?.id || item.source_account_id);
+            item.source_account_id = idMap['financial_accounts']?.get(localSId) || null;
+          }
+          if (item.destination_account_id) {
+            const localDId = Number(item.destination_account_id?.id || item.destination_account_id);
+            item.destination_account_id = idMap['financial_accounts']?.get(localDId) || null;
+          }
+          if (item.expense_id) {
+            const localEId = Number(item.expense_id?.id || item.expense_id);
+            item.expense_id = idMap['expenses']?.get(localEId) || null;
+          }
+          if (item.person_transaction_id) {
+            const localPTId = Number(item.person_transaction_id?.id || item.person_transaction_id);
+            item.person_transaction_id = idMap['person_transactions']?.get(localPTId) || null;
+          }
+
+          try {
+            const payload = sanitizeForDirectus('treasury_transactions', item);
+            await directusClient.createItem<any>('treasury_transactions', payload);
+            totalMigrated++;
+          } catch (err: any) {
+            // non-critical
+          }
+          emitProgress('گردش خزانه و انتقالات حساب', i + 1, treasuryTransList.length, 'in_progress');
+        }
+        emitProgress('گردش خزانه و انتقالات حساب', treasuryTransList.length, treasuryTransList.length, 'completed');
+      }
+
+      // 8.6 Cheques (Sayad)
+      const chequesList = collections['cheques'] || [];
+      if (chequesList.length > 0) {
+        emitProgress('مدیریت چک‌های صیادی', 0, chequesList.length, 'in_progress');
+        for (let i = 0; i < chequesList.length; i++) {
+          const item = { ...chequesList[i] };
+          const localId = Number(item.id);
+          delete item.id;
+          item.organization_id = orgId;
+
+          if (item.customer_id) {
+            const localCId = Number(item.customer_id?.id || item.customer_id);
+            item.customer_id = idMap['customers']?.get(localCId) || null;
+          }
+          if (item.supplier_id) {
+            const localSId = Number(item.supplier_id?.id || item.supplier_id);
+            item.supplier_id = idMap['suppliers']?.get(localSId) || null;
+          }
+          if (item.target_account_id) {
+            const localAId = Number(item.target_account_id?.id || item.target_account_id);
+            item.target_account_id = idMap['financial_accounts']?.get(localAId) || null;
+          }
+
+          try {
+            const payload = sanitizeForDirectus('cheques', item);
+            const created = await directusClient.createItem<any>('cheques', payload);
+            if (created?.id) {
+              idMap['cheques']?.set(localId, Number(created.id));
+              totalMigrated++;
+            }
+          } catch (err: any) {
+            errors.push(`خطا در ثبت چک (#${item.sayad_id || localId}): ${err?.message || err}`);
+          }
+          emitProgress('مدیریت چک‌های صیادی', i + 1, chequesList.length, 'in_progress');
+        }
+        emitProgress('مدیریت چک‌های صیادی', chequesList.length, chequesList.length, 'completed');
+      }
+
+      // 8.7 Landed Costs
+      const landedCostsList = collections['landed_costs'] || [];
+      if (landedCostsList.length > 0) {
+        emitProgress('بهای تمام‌شده و هزینه‌های جانبی خرید', 0, landedCostsList.length, 'in_progress');
+        for (let i = 0; i < landedCostsList.length; i++) {
+          const item = { ...landedCostsList[i] };
+          const localId = Number(item.id);
+          delete item.id;
+          item.organization_id = orgId;
+
+          if (item.purchase_order_id) {
+            const localPOId = Number(item.purchase_order_id?.id || item.purchase_order_id);
+            item.purchase_order_id = idMap['purchase_orders']?.get(localPOId) || item.purchase_order_id;
+          }
+          if (item.expense_id) {
+            const localEId = Number(item.expense_id?.id || item.expense_id);
+            item.expense_id = idMap['expenses']?.get(localEId) || null;
+          }
+
+          try {
+            const payload = sanitizeForDirectus('landed_costs', item);
+            const created = await directusClient.createItem<any>('landed_costs', payload);
+            if (created?.id) {
+              idMap['landed_costs']?.set(localId, Number(created.id));
+              totalMigrated++;
+            }
+          } catch (err: any) {
+            // non-critical
+          }
+          emitProgress('بهای تمام‌شده و هزینه‌های جانبی خرید', i + 1, landedCostsList.length, 'in_progress');
+        }
+        emitProgress('بهای تمام‌شده و هزینه‌های جانبی خرید', landedCostsList.length, landedCostsList.length, 'completed');
+      }
 
       return {
         success: errors.length === 0,

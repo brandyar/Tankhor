@@ -826,14 +826,18 @@ class DirectusClient {
     return json.data || json;
   }
 
-  public getAssetUrl(fileId: string): string {
+  public getAssetUrl(fileId?: string | null): string {
     if (!fileId) return '';
-    if (fileId.startsWith('data:') || fileId.startsWith('http://') || fileId.startsWith('https://')) {
-      return fileId;
+    const safeId = typeof fileId === 'string' ? fileId.trim() : (fileId as any)?.id ? String((fileId as any).id).trim() : '';
+    if (!safeId) return '';
+    if (safeId.startsWith('data:') || safeId.startsWith('http://') || safeId.startsWith('https://')) {
+      return safeId;
     }
-    const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
-    const directusUrl = metaEnv?.VITE_DIRECTUS_URL || 'https://api.tankhor.com';
-    return `${directusUrl.replace(/\/+$/, '')}/assets/${fileId}`;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(safeId);
+    if (!isUuid) return '';
+
+    // Route through BFF proxy /api/assets/:id so admin authentication & CORS are seamlessly handled
+    return `${this.getBaseUrl()}/assets/${safeId}`;
   }
 
   public async getProjectSettings(): Promise<{

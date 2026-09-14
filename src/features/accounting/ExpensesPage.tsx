@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import { storageManager } from '../../storage';
+import { useOrganization } from '../../context/OrganizationContext';
 import { Expense, ExpenseCategory } from '../../types';
+import { FinancialAccount } from '../../types/accounting';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -26,12 +28,15 @@ import {
   Tag,
   Check,
   RefreshCw,
+  Wallet,
 } from 'lucide-react';
 
 export const ExpensesPage: React.FC = () => {
   const { t } = useTranslation();
+  const { activeOrganization } = useOrganization();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [financialAccounts, setFinancialAccounts] = useState<FinancialAccount[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
@@ -45,6 +50,7 @@ export const ExpensesPage: React.FC = () => {
     title: '',
     amount: 0,
     category_id: 1,
+    account_id: undefined,
     expense_date: new Date().toISOString().split('T')[0],
     payment_method: 'card_transfer',
     paid_to: '',
@@ -66,12 +72,33 @@ export const ExpensesPage: React.FC = () => {
     try {
       setLoading(true);
       const adapter = storageManager.getAdapter();
-      const [cats, exps] = await Promise.all([
-        adapter.getExpenseCategories(),
-        adapter.getExpenses(),
+      const orgId = activeOrganization?.id ? Number(activeOrganization.id) : 1;
+
+      let cats = await adapter.getExpenseCategories({ organization_id: orgId });
+      // If no categories exist, auto-seed apparel boutique standard expense categories
+      if (!cats || cats.length === 0) {
+        const defaultCats = [
+          { title: 'اجاره و رهن فروشگاه', code: 'EXP-RENT', icon: 'Building2', status: 'active' as const },
+          { title: 'حقوق و دستمزد پرسنل', code: 'EXP-SALARY', icon: 'Users', status: 'active' as const },
+          { title: 'بسته‌بندی، پاکت و نایلون', code: 'EXP-PACK', icon: 'Package', status: 'active' as const },
+          { title: 'قبوض، برق و اینترنت', code: 'EXP-UTIL', icon: 'Zap', status: 'active' as const },
+          { title: 'تبلیغات و بازاریابی', code: 'EXP-ADS', icon: 'Megaphone', status: 'active' as const },
+          { title: 'حمل و نقل و پیک', code: 'EXP-SHIP', icon: 'Truck', status: 'active' as const },
+          { title: 'سایر هزینه‌های عمومی', code: 'EXP-MISC', icon: 'Receipt', status: 'active' as const },
+        ];
+        for (const dc of defaultCats) {
+          await adapter.saveExpenseCategory({ ...dc, organization_id: orgId });
+        }
+        cats = await adapter.getExpenseCategories({ organization_id: orgId });
+      }
+
+      const [exps, accs] = await Promise.all([
+        adapter.getExpenses({ organization_id: orgId }),
+        adapter.getFinancialAccounts({ organization_id: orgId }),
       ]);
-      setCategories(cats);
-      setExpenses(exps);
+      setCategories(cats || []);
+      setExpenses(exps || []);
+      setFinancialAccounts(accs || []);
     } catch (err) {
       console.error('[ExpensesPage] Error loading data:', err);
     } finally {
@@ -81,14 +108,16 @@ export const ExpensesPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [activeOrganization?.id]);
 
   const handleOpenNewExpense = () => {
     setEditingExpense(null);
+    const initialCatId = categories.length > 0 ? Number(categories[0].id) : 1;
     setExpenseForm({
       title: '',
       amount: 0,
-      category_id: categories.length > 0 ? Number(categories[0].id) : 1,
+      category_id: initialCatId,
+      account_id: undefined,
       expense_date: new Date().toISOString().split('T')[0],
       payment_method: 'card_transfer',
       paid_to: '',
@@ -101,10 +130,12 @@ export const ExpensesPage: React.FC = () => {
   const handleOpenEditExpense = (exp: Expense) => {
     setEditingExpense(exp);
     const catId = typeof exp.category_id === 'object' ? (exp.category_id as any)?.id : exp.category_id;
+    const accId = typeof exp.account_id === 'object' ? (exp.account_id as any)?.id : exp.account_id;
     setExpenseForm({
       title: exp.title,
       amount: exp.amount,
-      category_id: catId,
+      category_id: catId || (categories[0] ? Number(categories[0].id) : 1),
+      account_id: accId || undefined,
       expense_date: exp.expense_date ? exp.expense_date.split('T')[0] : new Date().toISOString().split('T')[0],
       payment_method: exp.payment_method || 'card_transfer',
       paid_to: exp.paid_to || '',
@@ -116,17 +147,33 @@ export const ExpensesPage: React.FC = () => {
 
   const handleSaveExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!expenseForm.title || !expenseForm.amount || Number(expenseForm.amount) <= 0) {
-      alert('لطفاً عنوان و مبلغ معتبر هزینه را وارد کنید.');
+    if (!expenseForm.title || !expenseForm.title.trim()) {
+      alert('لطفاً عنوان هزینه را وارد کنید.');
+      return;
+    }
+    const numAmount = Number(expenseForm.amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      alert('لطفاً مبلغ معتبر هزینه را وارد کنید.');
       return;
     }
 
     try {
       const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id ? Number(activeOrganization.id) : 1;
+      const catId = Number(expenseForm.category_id) || (categories[0] ? Number(categories[0].id) : 1);
+
       const payload: Partial<Expense> = {
-        ...expenseForm,
-        amount: Number(expenseForm.amount),
-        category_id: Number(expenseForm.category_id),
+        organization_id: orgId,
+        title: expenseForm.title.trim(),
+        amount: numAmount,
+        category_id: catId,
+        account_id: expenseForm.account_id ? Number(expenseForm.account_id) : undefined,
+        expense_date: expenseForm.expense_date || new Date().toISOString().split('T')[0],
+        payment_method: expenseForm.payment_method || 'card_transfer',
+        paid_to: expenseForm.paid_to?.trim() || '',
+        description: expenseForm.description?.trim() || '',
+        reference_code: expenseForm.reference_code?.trim() || '',
+        notes: expenseForm.description?.trim() || '',
       };
       if (editingExpense) {
         payload.id = editingExpense.id;
@@ -152,18 +199,38 @@ export const ExpensesPage: React.FC = () => {
     }
   };
 
+  const handleOpenNewCategory = () => {
+    setEditingCategory(null);
+    setCategoryForm({ title: '', code: '', icon: 'Receipt', status: 'active' });
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleOpenEditCategory = (cat: ExpenseCategory) => {
+    setEditingCategory(cat);
+    setCategoryForm({
+      title: cat.title,
+      code: cat.code || '',
+      icon: cat.icon || 'Receipt',
+      status: cat.status || 'active',
+    });
+    setIsCategoryModalOpen(true);
+  };
+
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!categoryForm.title) {
+    if (!categoryForm.title || !categoryForm.title.trim()) {
       alert('لطفاً عنوان سرفصل را وارد کنید.');
       return;
     }
 
     try {
       const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id ? Number(activeOrganization.id) : 1;
       const payload: Partial<ExpenseCategory> = {
         ...categoryForm,
-        code: categoryForm.code || `EXP-${Date.now().toString().slice(-4)}`,
+        organization_id: orgId,
+        title: categoryForm.title.trim(),
+        code: categoryForm.code?.trim() || `EXP-${Date.now().toString().slice(-4)}`,
       };
       if (editingCategory) {
         payload.id = editingCategory.id;
@@ -396,26 +463,39 @@ export const ExpensesPage: React.FC = () => {
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="مبلغ هزینه (تومان) *"
-              type="number"
-              min="0"
-              placeholder="0"
-              value={expenseForm.amount ? String(expenseForm.amount) : ''}
-              onChange={(e) => setExpenseForm({ ...expenseForm, amount: Number(e.target.value) })}
-              required
-            />
+            <div>
+              <Input
+                label="مبلغ هزینه (تومان) *"
+                type="text"
+                inputMode="numeric"
+                placeholder="0"
+                value={expenseForm.amount ? String(expenseForm.amount) : ''}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[^0-9]/g, '');
+                  setExpenseForm({ ...expenseForm, amount: raw ? Number(raw) : 0 });
+                }}
+                required
+              />
+              {expenseForm.amount > 0 && (
+                <p className="text-[11px] text-neutral-500 mt-1">
+                  {formatCurrency(expenseForm.amount, 'TOMAN', true)}
+                </p>
+              )}
+            </div>
 
             <div>
               <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
                 سرفصل هزینه *
               </label>
               <select
-                value={expenseForm.category_id ? String(expenseForm.category_id) : ''}
+                value={expenseForm.category_id ? String(expenseForm.category_id) : (categories[0] ? String(categories[0].id) : '1')}
                 onChange={(e) => setExpenseForm({ ...expenseForm, category_id: Number(e.target.value) })}
                 className="w-full px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
                 required
               >
+                {categories.length === 0 && (
+                  <option value="1">هزینه‌های عمومی</option>
+                )}
                 {categories.map((cat) => (
                   <option key={cat.id} value={String(cat.id)}>
                     {cat.title}
@@ -449,6 +529,26 @@ export const ExpensesPage: React.FC = () => {
               </select>
             </div>
           </div>
+
+          {financialAccounts.length > 0 && (
+            <div>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                کسر از صندوق یا حساب بانکی (اختیاری)
+              </label>
+              <select
+                value={expenseForm.account_id ? String(expenseForm.account_id) : ''}
+                onChange={(e) => setExpenseForm({ ...expenseForm, account_id: e.target.value ? Number(e.target.value) : undefined })}
+                className="w-full px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+              >
+                <option value="">-- بدون انتساب به حساب مالی (فقط ثبت هزینه) --</option>
+                {financialAccounts.map((acc) => (
+                  <option key={acc.id} value={String(acc.id)}>
+                    {acc.name} ({acc.type === 'cashbox' ? 'صندوق' : 'بانک'}{acc.current_balance !== undefined ? ` - موجودی: ${formatCurrency(acc.current_balance, 'TOMAN', true)}` : ''})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input

@@ -17,18 +17,19 @@ export const ProductImage: React.FC<ProductImageProps> = ({
   className = 'w-full h-full object-cover',
   containerClassName = 'w-10 h-10 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shrink-0 border border-neutral-200/80 dark:border-neutral-700/80',
 }) => {
-  const [displayUrl, setDisplayUrl] = useState<string>(() => mediaManager.getDisplayUrlSync(src));
+  const safeSrc = typeof src === 'string' ? src : (src && typeof src === 'object' && (src as any).id) ? String((src as any).id) : null;
+  const [displayUrl, setDisplayUrl] = useState<string>(() => mediaManager.getDisplayUrlSync(safeSrc));
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     setHasError(false);
 
-    if (src) {
-      const syncUrl = mediaManager.getDisplayUrlSync(src);
+    if (safeSrc) {
+      const syncUrl = mediaManager.getDisplayUrlSync(safeSrc);
       if (syncUrl) setDisplayUrl(syncUrl);
 
-      mediaManager.getDisplayUrl(src).then((url) => {
+      mediaManager.getDisplayUrl(safeSrc).then((url) => {
         if (isMounted && url) {
           setDisplayUrl(url);
         }
@@ -40,9 +41,9 @@ export const ProductImage: React.FC<ProductImageProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [src]);
+  }, [safeSrc]);
 
-  if (!src || hasError || !displayUrl) {
+  if (!safeSrc || hasError || !displayUrl) {
     return (
       <div className={containerClassName}>
         {fallbackText ? (

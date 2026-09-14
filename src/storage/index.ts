@@ -17,11 +17,37 @@ class StorageManagerSingleton {
     this.cloudAdapter = new CloudDirectusAdapter();
     this.isTauri = isTauriEnvironment();
 
-    const storedMode = (localStorage.getItem('tankhor_storage_mode') as StorageMode) || 'local_offline';
-    if (storedMode === 'cloud_synced') {
+    // Check if user is on web and has pro or active session
+    let isWebPro = false;
+    if (!this.isTauri && typeof window !== 'undefined') {
+      try {
+        const cachedRaw = localStorage.getItem('tankhor_cached_user_profile');
+        const token = localStorage.getItem('tankhor_directus_token');
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          const activeOrg = cached.activeOrganization || cached.active_organization;
+          if (activeOrg && activeOrg.plan === 'pro') {
+            isWebPro = true;
+          }
+        }
+        if (token) {
+          isWebPro = true;
+        }
+      } catch {}
+    }
+
+    if (isWebPro) {
       this.activeAdapter = this.cloudAdapter;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tankhor_storage_mode', 'cloud_synced');
+      }
     } else {
-      this.activeAdapter = this.isTauri ? this.sqliteAdapter : this.localAdapter;
+      const storedMode = (typeof window !== 'undefined' ? localStorage.getItem('tankhor_storage_mode') as StorageMode : null) || 'local_offline';
+      if (storedMode === 'cloud_synced') {
+        this.activeAdapter = this.cloudAdapter;
+      } else {
+        this.activeAdapter = this.isTauri ? this.sqliteAdapter : this.localAdapter;
+      }
     }
   }
 
@@ -38,6 +64,20 @@ class StorageManagerSingleton {
   }
 
   public setMode(mode: StorageMode) {
+    if (!this.isTauri && typeof window !== 'undefined') {
+      // In web environment, if Pro or cloud authenticated, enforce cloud_synced (offline disabled)
+      try {
+        const cachedRaw = localStorage.getItem('tankhor_cached_user_profile');
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          const activeOrg = cached.activeOrganization || cached.active_organization;
+          if (activeOrg && activeOrg.plan === 'pro') {
+            mode = 'cloud_synced';
+          }
+        }
+      } catch {}
+    }
+
     if (mode === 'cloud_synced') {
       let isPro = false;
       try {
@@ -51,7 +91,7 @@ class StorageManagerSingleton {
         }
       } catch {}
 
-      if (!isPro) {
+      if (!isPro && this.isTauri) {
         console.warn('[StorageManager] Cloud sync denied: organization plan is not pro.');
         localStorage.setItem('tankhor_storage_mode', 'local_offline');
         this.activeAdapter = this.isTauri ? this.sqliteAdapter : this.localAdapter;
@@ -62,7 +102,10 @@ class StorageManagerSingleton {
       }
     }
 
-    localStorage.setItem('tankhor_storage_mode', mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tankhor_storage_mode', mode);
+    }
+
     if (mode === 'cloud_synced') {
       this.activeAdapter = this.cloudAdapter;
     } else {

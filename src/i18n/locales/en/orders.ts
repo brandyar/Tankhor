@@ -44,6 +44,7 @@ export const ordersEn = {
   itemTotal: 'Line Total',
   emptyItems: 'No items added to invoice yet.',
   notes: 'Internal Notes & Invoice Comments',
+  print: 'Print Invoice',
   printInvoice: 'Print Invoice (A4/A5)',
   printThermal: 'Print POS Receipt',
   invoiceTitle: 'Sales Invoice',
