@@ -264,6 +264,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      NDK_HOME: /usr/local/lib/android/sdk/ndk/26.1.10909125
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -280,12 +284,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android NDK
+      - name: Accept Android SDK Licenses and Install NDK
         run: |
-          sdkmanager --install "ndk;26.1.10909125"
+          export PATH="/usr/local/lib/android/sdk/cmdline-tools/latest/bin:/usr/local/lib/android/sdk/platform-tools:$PATH"
+          SDK_BIN=$(which sdkmanager || echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager")
+          echo "Using sdkmanager at: $SDK_BIN"
+          yes | $SDK_BIN --licenses || true
+          $SDK_BIN --install "ndk;26.1.10909125" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -299,14 +304,10 @@ jobs:
         run: npx vite build
 
       - name: Initialize Android project if needed
-        env:
-          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
         run: |
           npx tauri android init || true
 
       - name: Build Android APK
-        env:
-          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
         run: |
           npx tauri android build --apk --target aarch64
 
