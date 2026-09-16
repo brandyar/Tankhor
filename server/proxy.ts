@@ -706,8 +706,9 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
     return res.status(403).json({ error: permCheck.message || 'شما دسترسی لازم برای این عملیات را ندارید.' });
   }
 
+  const payload = { ...req.body };
+
   try {
-    const payload = { ...req.body };
 
     // Special handling for organization_users creation / member invite
     if (collection === 'organization_users') {
@@ -897,6 +898,35 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
       }
     }
 
+    // Special handling for organization_modules: Upsert based on slug to prevent RECORD_NOT_UNIQUE errors
+    if (collection === 'organization_modules') {
+      const moduleSlug = cleanPayload.slug || payload.slug;
+      if (moduleSlug) {
+        const existingMods = await DirectusAdminClient.getItems('organization_modules', {
+          filter: {
+            _or: [
+              {
+                _and: [
+                  { organization_id: { _eq: orgIdNum } },
+                  { slug: { _eq: moduleSlug } },
+                ],
+              },
+              { slug: { _eq: moduleSlug } },
+            ],
+          },
+          limit: 1,
+        }).catch(() => []);
+
+        if (existingMods && existingMods.length > 0) {
+          const updated = await DirectusAdminClient.updateItem('organization_modules', existingMods[0].id, {
+            ...cleanPayload,
+            organization_id: orgIdNum,
+          });
+          return res.status(200).json({ data: updated });
+        }
+      }
+    }
+
     const created = await DirectusAdminClient.createItem(collection, cleanPayload);
     if (collection === 'pos_shifts') {
       return res.status(201).json({
@@ -909,6 +939,27 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
     }
     return res.status(201).json({ data: created });
   } catch (error: any) {
+    if (collection === 'organization_modules' && (error.message?.includes('RECORD_NOT_UNIQUE') || error.message?.includes('unique') || error.message?.includes('slug'))) {
+      try {
+        const targetSlug = payload?.slug || req.body?.slug;
+        if (targetSlug) {
+          const existing = await DirectusAdminClient.getItems('organization_modules', {
+            filter: { slug: { _eq: targetSlug } },
+            limit: 1,
+          }).catch(() => []);
+          if (existing && existing.length > 0) {
+            const updated = await DirectusAdminClient.updateItem('organization_modules', existing[0].id, {
+              ...payload,
+              organization_id: orgIdNum,
+            });
+            console.log(`[API Proxy] Resiliently updated organization_modules #${existing[0].id} for slug ${targetSlug}`);
+            return res.status(200).json({ data: updated });
+          }
+        }
+      } catch (upsertErr: any) {
+        console.error('[API Proxy] Error in fallback upsert for organization_modules:', upsertErr?.message);
+      }
+    }
     console.error(`[API Proxy] Error creating in ${collection}:`, error.message);
     return res.status(500).json({ error: error.message || `Failed to create item in ${collection}` });
   }

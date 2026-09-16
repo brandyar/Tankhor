@@ -135,6 +135,7 @@ export async function syncOrganizationLicenses(
 
         if (adapter.saveOrganizationModule) {
           await adapter.saveOrganizationModule({
+            ...(sMod.id ? { id: sMod.id } : {}),
             organization_id: organizationId,
             slug,
             module_id: sMod.module_id || 1,

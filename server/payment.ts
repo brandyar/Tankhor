@@ -457,8 +457,13 @@ async function handlePaymentCallback(req: any, res: Response) {
       try {
         const existingRecords = await DirectusAdminClient.getItems('organization_modules', {
           filter: {
-            _and: [
-              { organization_id: { _eq: targetOrgId } },
+            _or: [
+              {
+                _and: [
+                  { organization_id: { _eq: targetOrgId } },
+                  { slug: { _eq: moduleSlug } },
+                ],
+              },
               { slug: { _eq: moduleSlug } },
             ],
           },
@@ -467,6 +472,7 @@ async function handlePaymentCallback(req: any, res: Response) {
 
         if (existingRecords && existingRecords.length > 0) {
           await DirectusAdminClient.updateItem('organization_modules', existingRecords[0].id, {
+            organization_id: targetOrgId,
             status: 'active',
             license_type: 'lifetime',
             license_token: licenseToken,
@@ -488,18 +494,40 @@ async function handlePaymentCallback(req: any, res: Response) {
             }
           }
 
-          const created = await DirectusAdminClient.createItem('organization_modules', {
-            organization_id: targetOrgId,
-            module_id: moduleId || 1,
-            slug: moduleSlug,
-            license_type: 'lifetime',
-            status: 'active',
-            license_token: licenseToken,
-            hardware_id: hardwareId,
-            starts_at: new Date().toISOString().replace('Z', ''),
-            expires_at: null,
-          });
-          console.log(`[payment callback] Created organization_modules record #${created?.id} for org #${targetOrgId}`);
+          try {
+            const created = await DirectusAdminClient.createItem('organization_modules', {
+              organization_id: targetOrgId,
+              module_id: moduleId || 1,
+              slug: moduleSlug,
+              license_type: 'lifetime',
+              status: 'active',
+              license_token: licenseToken,
+              hardware_id: hardwareId,
+              starts_at: new Date().toISOString().replace('Z', ''),
+              expires_at: null,
+            });
+            console.log(`[payment callback] Created organization_modules record #${created?.id} for org #${targetOrgId}`);
+          } catch (createErr: any) {
+            // Fallback: If slug uniqueness constraint triggers, find by slug and update
+            const fallbackRecords = await DirectusAdminClient.getItems('organization_modules', {
+              filter: { slug: { _eq: moduleSlug } },
+              limit: 1,
+            }).catch(() => []);
+            if (fallbackRecords && fallbackRecords.length > 0) {
+              await DirectusAdminClient.updateItem('organization_modules', fallbackRecords[0].id, {
+                organization_id: targetOrgId,
+                status: 'active',
+                license_type: 'lifetime',
+                license_token: licenseToken,
+                hardware_id: hardwareId,
+                starts_at: new Date().toISOString().replace('Z', ''),
+                expires_at: null,
+              });
+              console.log(`[payment callback] Fallback updated organization_modules #${fallbackRecords[0].id} for org #${targetOrgId}`);
+            } else {
+              throw createErr;
+            }
+          }
         }
       } catch (modErr: any) {
         console.error('[payment callback] Error saving organization_modules to Directus:', modErr?.message);

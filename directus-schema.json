@@ -15337,7 +15337,7 @@
                 "numeric_scale": null,
                 "is_generated": false,
                 "is_nullable": true,
-                "is_unique": true,
+                "is_unique": false,
                 "is_indexed": false,
                 "is_primary_key": false,
                 "has_auto_increment": false,

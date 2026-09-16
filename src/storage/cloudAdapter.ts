@@ -1504,6 +1504,16 @@ export class CloudDirectusAdapter implements IStorageProvider {
       if (mod.id) {
         return await directusClient.updateItem<OrganizationModule>('organization_modules', mod.id, mod);
       }
+      // If no id provided, check if a record with this slug already exists in Directus to prevent RECORD_NOT_UNIQUE errors
+      if (mod.slug) {
+        const existing = await directusClient.getItems<OrganizationModule>('organization_modules', {
+          filter: { slug: { _eq: mod.slug } },
+          limit: 1,
+        }).catch(() => []);
+        if (existing && existing.length > 0) {
+          return await directusClient.updateItem<OrganizationModule>('organization_modules', existing[0].id, mod);
+        }
+      }
       return await directusClient.createItem<OrganizationModule>('organization_modules', mod);
     } catch {
       const saved = await this.localAdapter.saveOrganizationModule(mod);
