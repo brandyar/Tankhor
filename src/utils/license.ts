@@ -321,4 +321,16 @@ export const DEFAULT_SYSTEM_MODULES: SystemModule[] = [
     included_in_pro: false,
     status: 'published',
   },
+  {
+    id: 3,
+    name: 'همگام‌سازی با ووکامرس',
+    slug: 'woocommerce',
+    description: 'اتصال دوطرفه به فروشگاه اینترنتی ووکامرس، همگام‌سازی خودکار موجودی و قیمت متغیرهای پوشاک، و دریافت آنی سفارشات آنلاین',
+    icon: 'shopping-bag',
+    price_ir: '1480000',
+    price_usd: '45',
+    is_standalone_purchasable: true,
+    included_in_pro: false,
+    status: 'published',
+  },
 ];

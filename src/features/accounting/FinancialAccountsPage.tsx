@@ -8,6 +8,7 @@ import {
   TreasuryTransaction,
   TreasuryTransactionType,
 } from '../../types/accounting';
+import { Warehouse } from '../../types';
 import { formatCurrency, formatPersianDate } from '../../utils/formatters';
 import { DateInput } from '../../components/ui/DateInput';
 import {
@@ -39,6 +40,7 @@ export const FinancialAccountsPage: React.FC = () => {
 
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
   const [treasuryTxs, setTreasuryTxs] = useState<TreasuryTransaction[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -64,6 +66,7 @@ export const FinancialAccountsPage: React.FC = () => {
   const [accForm, setAccForm] = useState<{
     name: string;
     type: FinancialAccountType;
+    warehouse_id: number | '';
     bank_name: string;
     account_number: string;
     card_number: string;
@@ -75,6 +78,7 @@ export const FinancialAccountsPage: React.FC = () => {
   }>({
     name: '',
     type: 'cashbox',
+    warehouse_id: '',
     bank_name: '',
     account_number: '',
     card_number: '',
@@ -89,10 +93,14 @@ export const FinancialAccountsPage: React.FC = () => {
     if (!activeOrganization?.id) return;
     setLoading(true);
     try {
-      const accList = await storage.getFinancialAccounts({ organization_id: activeOrganization.id });
+      const [accList, txList, whList] = await Promise.all([
+        storage.getFinancialAccounts({ organization_id: activeOrganization.id }),
+        storage.getTreasuryTransactions({ organization_id: activeOrganization.id }),
+        storage.getWarehouses({ organization_id: activeOrganization.id }),
+      ]);
       setAccounts(accList);
-      const txList = await storage.getTreasuryTransactions({ organization_id: activeOrganization.id });
       setTreasuryTxs(txList);
+      setWarehouses(whList);
     } catch (err) {
       console.error('Error loading financial accounts:', err);
     } finally {
@@ -115,6 +123,7 @@ export const FinancialAccountsPage: React.FC = () => {
     setAccForm({
       name: '',
       type: 'cashbox',
+      warehouse_id: warehouses[0]?.id || '',
       bank_name: '',
       account_number: '',
       card_number: '',
@@ -129,9 +138,11 @@ export const FinancialAccountsPage: React.FC = () => {
 
   const handleOpenEditAccount = (acc: FinancialAccount) => {
     setEditingAccount(acc);
+    const rawWhId = typeof acc.warehouse_id === 'object' && acc.warehouse_id ? (acc.warehouse_id as any).id : acc.warehouse_id;
     setAccForm({
       name: acc.name,
       type: acc.type as FinancialAccountType,
+      warehouse_id: rawWhId ? Number(rawWhId) : '',
       bank_name: acc.bank_name || '',
       account_number: acc.account_number || '',
       card_number: acc.card_number || '',
@@ -154,6 +165,7 @@ export const FinancialAccountsPage: React.FC = () => {
         organization_id: activeOrganization.id,
         name: accForm.name.trim(),
         type: accForm.type,
+        warehouse_id: accForm.warehouse_id !== '' ? Number(accForm.warehouse_id) : null,
         bank_name: accForm.bank_name.trim() || null,
         account_number: accForm.account_number.trim() || null,
         card_number: accForm.card_number.trim() || null,
@@ -468,6 +480,17 @@ export const FinancialAccountsPage: React.FC = () => {
 
                 {/* Account Details Box */}
                 <div className="space-y-1.5 py-3 border-y border-neutral-100 dark:border-neutral-800 text-[11px]">
+                  {/* Linked Warehouse */}
+                  {(acc.warehouse_name || acc.warehouse_id) && (
+                    <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400">
+                      <span>انبار متصل:</span>
+                      <div className="flex items-center gap-1 font-medium text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md">
+                        <Building2 className="w-3 h-3 text-neutral-500" />
+                        <span>{acc.warehouse_name || (typeof acc.warehouse_id === 'object' ? (acc.warehouse_id as any)?.name : `انبار #${acc.warehouse_id}`)}</span>
+                      </div>
+                    </div>
+                  )}
+
                   {acc.card_number && (
                     <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400">
                       <span>شماره کارت:</span>
@@ -719,6 +742,28 @@ export const FinancialAccountsPage: React.FC = () => {
                       className="w-full px-3 py-2 text-xs bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white disabled:opacity-50"
                     />
                   </div>
+                </div>
+
+                {/* Linked Warehouse Selection */}
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    انبار پیش‌فرض / متصل به این صندوق
+                  </label>
+                  <select
+                    value={accForm.warehouse_id}
+                    onChange={(e) => setAccForm({ ...accForm, warehouse_id: e.target.value === '' ? '' : Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-xs bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white"
+                  >
+                    <option value="">{t('common.all') || 'همه انبارها / بدون انبار خاص'}</option>
+                    {warehouses.map((wh) => (
+                      <option key={wh.id} value={wh.id}>
+                        {wh.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10.5px] text-neutral-500 dark:text-neutral-400 mt-1">
+                    در صفحه ثبت سفارش، با انتخاب این انبار، این صندوق یا حساب به عنوان صندوق پیش‌فرض تسویه فعال می‌شود.
+                  </p>
                 </div>
 
                 {(accForm.type === 'bank' || accForm.type === 'pos') && (

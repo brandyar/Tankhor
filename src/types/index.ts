@@ -28,11 +28,41 @@ export interface OrganizationUser {
   user_id: string; // Directus user UUID
   role: UserRole;
   status: Status;
+  warehouse_id?: number | Warehouse | null;
+  financial_account_id?: number | null;
+  can_change_warehouse?: boolean | null;
   date_joined?: string;
   first_name?: string;
   last_name?: string;
   email?: string;
   password?: string;
+}
+
+export type PosShiftStatus = 'open' | 'closed';
+
+export interface PosShift {
+  id: number;
+  organization_id?: number | Organization;
+  user_id?: string | null;
+  warehouse_id?: number | Warehouse | null;
+  financial_account_id?: number | null;
+  opening_balance?: string | number | null;
+  closing_balance?: string | number | null;
+  status: PosShiftStatus;
+  opened_at?: string;
+  closed_at?: string | null;
+  notes?: string | null;
+  // Joined / calculated display metadata
+  user_name?: string;
+  user_email?: string;
+  warehouse_name?: string;
+  account_name?: string;
+  total_sales_amount?: number;
+  total_cash_amount?: number;
+  total_pos_amount?: number;
+  total_card_amount?: number;
+  total_credit_amount?: number;
+  total_orders_count?: number;
 }
 
 export interface Category {
@@ -176,6 +206,7 @@ export interface Warehouse {
   address?: string;
   phone?: string;
   status: Status;
+  is_default?: boolean;
   date_created?: string;
   date_updated?: string;
 }
@@ -267,6 +298,8 @@ export interface Order {
   tax: number;
   total: number;
   notes?: string;
+  payment_method?: string;
+  pos_shift_id?: number | null;
   user_created?: string;
   date_created?: string;
   date_updated?: string;
@@ -466,3 +499,4 @@ export interface OrganizationModule {
 }
 
 export * from './accounting';
+export * from './woocommerce';

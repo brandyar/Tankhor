@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, KeyRound, Sparkles, CheckCircle2, Copy, Check, ShieldCheck, Cpu, CreditCard } from 'lucide-react';
+import { Lock, KeyRound, Sparkles, CheckCircle2, Copy, Check, ShieldCheck, Cpu, CreditCard, Globe, Zap } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -122,15 +122,27 @@ export const ModuleLockedCard: React.FC<ModuleLockedCardProps> = ({
 
           {/* Features Highlights */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-            <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/60 dark:border-neutral-800">
-              <div className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>{t('modules.featureOfflineTitle', 'کارکرد ۱۰۰٪ آفلاین')}</span>
+            {moduleSlug === 'woocommerce' ? (
+              <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/60 dark:border-neutral-800">
+                <div className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                  <Globe className="w-4 h-4 text-violet-600" />
+                  <span>{t('modules.featureWcOnlineTitle', 'همگام‌سازی ابری و ارتباط زنده وب‌سرویس')}</span>
+                </div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5 leading-relaxed">
+                  {t('modules.featureWcOnlineDesc', 'ارتباط مستقیم دوطرفه با وردپرس و ووکامرس از طریق REST API و ثبت خودکار وب‌هوک سفارشات.')}
+                </p>
               </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5 leading-relaxed">
-                {t('modules.featureOfflineDesc', 'بدون نیاز به اینترنت، لایسنس روی دستگاه شما ثبت و فعال باقی می‌ماند.')}
-              </p>
-            </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/60 dark:border-neutral-800">
+                <div className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>{t('modules.featureOfflineTitle', 'کارکرد ۱۰۰٪ آفلاین')}</span>
+                </div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5 leading-relaxed">
+                  {t('modules.featureOfflineDesc', 'بدون نیاز به اینترنت، لایسنس روی دستگاه شما ثبت و فعال باقی می‌ماند.')}
+                </p>
+              </div>
+            )}
 
             <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/60 dark:border-neutral-800">
               <div className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
@@ -153,15 +165,27 @@ export const ModuleLockedCard: React.FC<ModuleLockedCardProps> = ({
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/60 dark:border-neutral-800">
-              <div className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
-                <Cpu className="w-4 h-4 text-sky-600" />
-                <span>{t('modules.featureHardwareTitle', 'قفل سخت‌افزاری امن')}</span>
+            {moduleSlug === 'woocommerce' ? (
+              <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/60 dark:border-neutral-800">
+                <div className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                  <Zap className="w-4 h-4 text-amber-500" />
+                  <span>{t('modules.featureWcSyncTitle', 'مدیریت خودکار موجودی و قیمت')}</span>
+                </div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5 leading-relaxed">
+                  {t('modules.featureWcSyncDesc', 'بروزرسانی بلادرنگ موجودی انبارها و قیمت تنوع‌های پوشاک در وب‌سایت بدون نیاز به وارد کردن دستی.')}
+                </p>
               </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5 leading-relaxed">
-                {t('modules.featureHardwareDesc', 'لایسنس با امضای رمزنگاری‌شده ضد دستکاری برای سیستم شما صادر می‌شود.')}
-              </p>
-            </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/60 dark:border-neutral-800">
+                <div className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                  <Cpu className="w-4 h-4 text-sky-600" />
+                  <span>{t('modules.featureHardwareTitle', 'قفل سخت‌افزاری امن')}</span>
+                </div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1.5 leading-relaxed">
+                  {t('modules.featureHardwareDesc', 'لایسنس با امضای رمزنگاری‌شده ضد دستکاری برای سیستم شما صادر می‌شود.')}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Hardware ID Display */}

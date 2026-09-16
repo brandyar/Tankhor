@@ -28,6 +28,7 @@ import { CustomersView } from './features/customers/CustomersView';
 import { SuppliersView } from './features/purchasing/SuppliersView';
 import { PurchaseOrdersView } from './features/purchasing/PurchaseOrdersView';
 import { AccountingView } from './features/accounting/AccountingView';
+import { WooCommercePage } from './features/woocommerce/WooCommercePage';
 import { SettingsView } from './features/settings/SettingsView';
 import { ReportsView } from './features/reports/ReportsView';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
@@ -79,6 +80,9 @@ const AuthenticatedApp: React.FC = () => {
       case 'orders/create':
         return permissions.canCreateOrders;
       case 'orders/all':
+      case 'sales/woocommerce':
+      case 'orders/woocommerce':
+      case 'woocommerce':
         return permissions.canViewOrders;
       case 'customers/all':
         return permissions.canViewCustomers;
@@ -176,6 +180,29 @@ const AuthenticatedApp: React.FC = () => {
         return <OrdersView onNavigateToCreate={() => setCurrentRoute('orders/create')} />;
       case 'orders/create':
         return <CreateOrderView onOrderCreated={() => setCurrentRoute('orders/all')} />;
+      case 'sales/woocommerce':
+      case 'sales/woocommerce/overview':
+      case 'sales/woocommerce/mappings':
+      case 'sales/woocommerce/logs':
+      case 'sales/woocommerce/settings':
+      case 'orders/woocommerce':
+      case 'woocommerce': {
+        const tab = currentRoute.includes('mappings')
+          ? 'mappings'
+          : currentRoute.includes('logs')
+          ? 'logs'
+          : currentRoute.includes('settings')
+          ? 'settings'
+          : 'overview';
+        return (
+          <WooCommercePage
+            initialTab={tab}
+            onNavigateTab={(newTab) => {
+              setCurrentRoute(newTab === 'overview' ? 'sales/woocommerce' : `sales/woocommerce/${newTab}`);
+            }}
+          />
+        );
+      }
       case 'customers/all':
         return <CustomersView />;
       case 'purchasing/suppliers':

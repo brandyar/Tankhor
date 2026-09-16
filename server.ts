@@ -5,6 +5,7 @@ import { createServer as createViteServer } from 'vite';
 import { authRouter } from './server/auth';
 import { proxyRouter } from './server/proxy';
 import { paymentRouter } from './server/payment';
+import { woocommerceRouter } from './server/woocommerce';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ async function startServer() {
   // API Routes (Mounted FIRST)
   app.use('/api/auth', authRouter);
   app.use('/api/payment', paymentRouter);
+  app.use('/api/woocommerce', woocommerceRouter);
   app.use('/api', proxyRouter);
 
   // Vite middleware in dev or static serving in production

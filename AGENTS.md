@@ -45,7 +45,9 @@
      3. **Inventory & Warehouses (انبار و موجودی)**: Overview, Barcode Print, Stock Movements/Transfers (Submenu), Warehouses & Locations (Submenu)
      4. **Catalog & Products (محصولات و کاتالوگ)**: Products, Variants, Size Guides, Attributes/Categories/Brands/Collections (Submenu)
      5. **Purchasing & Procurement (تدارکات و خرید)**: Purchase Orders, Suppliers
-     6. **Settings (تنظیمات)**: Organization & User Management, Cloud Sync & Storage
+     6. **Accounting & Treasury (حسابداری و مالی)**: Hierarchical main menu and submenus after activation (Dashboard, Expenses, Accounts & Cashboxes, Person Ledgers, Cheques, Landed Costs, Tax Reports, Accounting Software Export)
+     7. **WooCommerce Sync (فروشگاه آنلاین ووکامرس)**: Displayed right before Settings when activated, providing seamless store connection, inventory sync, and order import
+     8. **Settings (تنظیمات)**: Organization & User Management, Cloud Sync & Storage
    - Submenus support responsive collapsible states and auto-expansion based on the active route.
    - **Settings Sub-menu Structure**: Settings is organized into modular dedicated sub-menus:
      - `settings/org`: Organization profile, currency, and general information
@@ -56,7 +58,8 @@
      - `settings/updater`: Desktop version checks and one-click auto-updater (Desktop only)
    - **Dynamic Module Placement in Sidebar**:
      - Modules not yet purchased/activated automatically move to the bottom group (*ماژول‌ها و افزونه‌ها*) with subtle inactive styling and a clean *ماژول* badge.
-     - Once purchased or unlocked via Pro, modules immediately return to their native workflow section (e.g. *تولید و چاپ بارکد* under *انبار و موجودی*).
+     - Once purchased or unlocked via Pro, modules immediately return to their native workflow section (e.g. *تولید و چاپ بارکد* under *انبار و موجودی*، *حسابداری و مالی* به عنوان منوی جامع، و *فروشگاه آنلاین ووکامرس* قبل از تنظیمات).
+     - **Offline/Free Store Synchronization**: The WooCommerce integration module is fully functional in offline/local desktop storage (SQLite) as well as Cloud mode, allowing both free tier and Pro users to purchase and activate it standalone without requiring an active cloud subscription.
 
 7. **Modular Add-ons & Cryptographic Licensing (`useModuleAccess`)**:
    - Modules are defined in `system_modules` (slug, name, descriptions, `price_ir`, `price_usd`, `included_in_pro`).
@@ -85,29 +88,43 @@
         - Tax Reports (`TaxReportsPage`): Output VAT, Input VAT credits, and Seasonal Purchase/Sale reporting (Art. 169 & Moadian system).
         - Accounting Software Exports (`AccountingExportPage`): Double-entry balanced journal generators with 1-click UTF-8 BOM CSV exports for Sepidar (سپیدار), Holoo (هلو), and Samaneh Moadian (سامانه مؤدیان).
 
-11. **Locale-Aware Dual Calendar & Date Architecture (`DateInput` & `dateUtils`)**:
+11. **Comprehensive "Orders - Inventory - Accounting" Triangle Synchronization (MANDATORY)**:
+    - **Sales Orders Flow (`CreateOrderView`, `OrdersView`)**:
+      - **Inventory Side-Effects**: Confirming or completing an order automatically decrements sellable stock via `inventory_movements` (`type: 'sale'`, `reference_type: 'order'`) and updates `inventory_items`. Cancelling or deleting an order immediately triggers stock rollback (`type: 'return'`), restoring inventory balances.
+      - **Treasury Side-Effects**: Cash/POS payments create an immediate deposit transaction in `treasury_transactions` for the selected bank account/cashbox, incrementing its `current_balance`.
+      - **Person Ledger Side-Effects**: Every sale logs a sales invoice entry (`sale_invoice`, `debtor`) in `person_transactions` under the customer's account. Immediate payments concurrently register a receipt entry (`receipt`, `creditor`), keeping customer account statements fully audited.
+      - **Quick Invoice Settlement**: Unpaid/credit orders support 1-click settlement (`Settle Payment` modal), allowing cashiers to record receipt to a financial account and update the order to `paid` status seamlessly.
+    - **Purchasing Orders Flow (`PurchaseOrdersView`)**:
+      - Receiving goods (`status: 'received'`) creates inventory increments (`type: 'purchase'`) for all actual items and quantities in the purchase order, while simultaneously logging a payable entry (`purchase_invoice`, `creditor`) in the supplier's ledger.
+      - Cancelling or deleting a purchase order triggers reverse stock adjustments, preventing artificial stock inflation.
+    - **WooCommerce Online Store Flow (`server/woocommerce.ts`)**:
+      - Imported WooCommerce orders create native Tankhor orders, link or provision customers, deduct variant stocks from the designated warehouse, and for paid orders, automatically register Treasury deposits and dual ledger entries (`sale_invoice` + `receipt`).
+
+12. **Locale-Aware Dual Calendar & Date Architecture (`DateInput` & `dateUtils`)**:
     - **Persian (`fa`)**: Automatically displays an interactive, accessible Jalali (Shamsi) calendar popover powered by high-precision astronomical algorithms (`/src/utils/dateUtils.ts`), with Persian month names (فروردین تا اسفند), Persian numerals, and quick "امروز" selection.
     - **English (`en`)**: Seamlessly falls back to standard Gregorian system picker (`type="date"`).
     - **Data Integrity**: Storage format is strictly ISO-8601 date strings (`YYYY-MM-DD` or ISO timestamp) across SQLite, LocalStorage, and Directus collections.
     - **Formatters**: Date helpers in `/src/utils/formatters.ts` (`formatDate`, `formatDateNumeric`, `formatPersianDate`) dynamically respect the active locale.
 
-12. **Defensive UI & Runtime Error Boundaries**:
+13. **Defensive UI & Runtime Error Boundaries**:
     - All complex views and accounting dashboards are wrapped with `ErrorBoundary` (`/src/components/ui/ErrorBoundary.tsx`) to prevent fatal application crashes or blank screens.
     - Design system controls (such as `Select.tsx`) implement defensive fallback guards to handle both declarative `options` arrays and arbitrary `children` elements safely.
 
-13. **Automated Desktop Releases & Self-Updater**:
+14. **Automated Desktop Releases & Self-Updater**:
+    - Current App Version: `1.0.26`.
     - Automated multi-platform releases built via GitHub Actions (`/.github/workflows/release-tauri.yml`).
     - Windows desktop builds use NSIS target (`bundle.targets: ["nsis", "app", "dmg"]`) with `windows.installMode: "passive"` for seamless in-place updates.
     - Desktop auto-update system powered by Tauri Updater (`tauri-plugin-updater`) and GitHub Releases with dedicated `latest.json` manifest.
+    - Version synchronization across: `/package.json`, `/src-tauri/tauri.conf.json`, `/src-tauri/Cargo.toml`, `/src/utils/version.ts`, `/latest.json`, and `/assets/latest.json`.
     - Background check via `checkDesktopUpdate()` (`/src/utils/updater.ts`) on startup or manual trigger in Settings.
     - Universal RTL update notification modal (`UpdateNotificationModal.tsx`) showing release notes, real-time download progress, and zero-downtime relaunch via `@tauri-apps/plugin-process`.
     - Preservation of local SQLite database (`tankhor.db`) across desktop application updates.
 
-14. **Universal Iframe Printing Architecture (`printHtml`)**:
+15. **Universal Iframe Printing Architecture (`printHtml`)**:
     - Printing barcodes, orders, and receipts relies on an isolated, dynamic iframe in `/src/utils/print.ts` with explicit RTL, custom style inheritance, and font loading.
     - Guarantees seamless print dialog triggering across macOS Tauri (WKWebView), Windows Tauri (WebView2), and Web Browsers.
 
-15. **Strict Directus Cloud Schema Sanitization (`sanitizeForDirectus`)**:
+16. **Strict Directus Cloud Schema Sanitization (`sanitizeForDirectus`)**:
     - All automated data migrations and demo data seeding (`CloudMigrationManager.migrateLocalToCloud`) strictly filter payload keys using `sanitizeForDirectus()` against canonical schema definitions.
     - Prevents Directus 400 validation errors (such as unmapped `status` or `type` fields), ensuring onboarding demo data works smoothly in Cloud Mode.
 
@@ -126,6 +143,7 @@
 - `/server/proxy.ts`: Multi-tenant API proxy and tenant isolation enforcement
 - `/server/auth.ts`: Authentication, registration, and organization provisioning
 - `/server/payment.ts`: Zibal & Zarinpal payment gateway proxy, subscription & standalone module purchasing
+- `/server/woocommerce.ts`: WooCommerce REST synchronization proxy (product & variant sync, order import, warehouse deductions, customer matching)
 - `/src/hooks/useModuleAccess.ts`: Dynamic entitlement and module access checking hook
 - `/src/utils/license.ts`: Cryptographic offline license verification, hardware fingerprinting & price formatters
 - `/src/utils/dateUtils.ts`: High-precision Jalali-Gregorian conversion algorithms & constants
@@ -139,6 +157,8 @@
 - `/src/components/layout/`: Responsive App Shell (Sidebar, Top Header, Org Switcher)
 - `/src/features/`: Modular domain views (Dashboard, Products, Inventory, Orders, Purchasing, Size Guides, Settings, Organizations)
 - `/src/features/accounting/`: Complete accounting suite (Dashboard, Expenses, Person Ledgers, Financial Accounts, Cheques, Landed Costs, Tax Reports, Accounting Export)
+- `/src/features/woocommerce/`: WooCommerce integration module (store credentials, synchronization dashboard, logs, variant mapping)
+- `/server/woocommerce.ts`: WooCommerce REST API proxy, webhook ingestion, bidirectional stock sync & order import
 - `/src/utils/updater.ts`: Desktop update checker and installation helper using `@tauri-apps/plugin-updater` and `@tauri-apps/plugin-process`
 - `/.github/workflows/release-tauri.yml`: Multi-platform release pipeline for Tauri desktop (Windows, macOS) and Android APK
 

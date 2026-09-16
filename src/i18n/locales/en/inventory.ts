@@ -246,4 +246,9 @@ export const inventoryEn = {
   movementTypeAndQty: 'Movement Type & Qty',
   refDocNumber: 'Ref / Doc Number',
   movementNote: 'Movement Note',
+  transferItemsList: 'Transfer Items & Quantities',
+  noItemsInTransfer: 'No items found for this transfer.',
+  editThresholds: 'Edit Reorder Point & Safety Stock',
+  editThresholdsSuccess: 'Stock thresholds updated successfully.',
+  editThresholdsDesc: 'Set minimum stock levels and reorder alerts for this variant in the warehouse.',
 };

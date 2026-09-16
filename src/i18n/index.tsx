@@ -13,6 +13,7 @@ import { authFa } from './locales/fa/auth';
 import { reportsFa } from './locales/fa/reports';
 import { modulesFa } from './locales/fa/modules';
 import { accountingFa } from './locales/fa/accounting';
+import { woocommerceFa } from './locales/fa/woocommerce';
 
 import { commonEn } from './locales/en/common';
 import { navigationEn } from './locales/en/navigation';
@@ -28,6 +29,7 @@ import { authEn } from './locales/en/auth';
 import { reportsEn } from './locales/en/reports';
 import { modulesEn } from './locales/en/modules';
 import { accountingEn } from './locales/en/accounting';
+import { woocommerceEn } from './locales/en/woocommerce';
 
 export type Locale = 'fa' | 'en';
 export type Direction = 'rtl' | 'ltr';
@@ -51,6 +53,7 @@ const translations = {
     reports: reportsFa,
     modules: modulesFa,
     accounting: accountingFa,
+    woocommerce: woocommerceFa,
   },
   en: {
     common: commonEn,
@@ -70,6 +73,7 @@ const translations = {
     reports: reportsEn,
     modules: modulesEn,
     accounting: accountingEn,
+    woocommerce: woocommerceEn,
   },
 };
 

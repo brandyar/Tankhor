@@ -64,13 +64,13 @@ export async function getUserOrganizations(userId: string, targetActiveOrgId?: n
         filter: {
           _or: filters,
         },
-        fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id', 'user_id.id', 'user_id.email'],
+        fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id', 'warehouse_id', 'financial_account_id', 'can_change_warehouse', 'user_id.id', 'user_id.email'],
       });
     } catch {
       try {
         memberships = await DirectusAdminClient.getItems('organization_users', {
           filter: { user_id: { _eq: userId } },
-          fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id'],
+          fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id', 'warehouse_id', 'financial_account_id', 'can_change_warehouse'],
         });
       } catch {
         memberships = [];
@@ -81,10 +81,15 @@ export async function getUserOrganizations(userId: string, targetActiveOrgId?: n
     const orgIdsToFetch = new Set<number>();
 
     for (const m of memberships) {
+      const rawWh = typeof m.warehouse_id === 'object' && m.warehouse_id ? m.warehouse_id.id : m.warehouse_id;
+      const rawAcc = typeof m.financial_account_id === 'object' && m.financial_account_id ? m.financial_account_id.id : m.financial_account_id;
       if (typeof m.organization_id === 'object' && m.organization_id && m.organization_id.id && m.organization_id.name) {
         orgList.push({
           ...m.organization_id,
           user_role: m.role || 'viewer',
+          user_warehouse_id: rawWh ? Number(rawWh) : null,
+          user_financial_account_id: rawAcc ? Number(rawAcc) : null,
+          user_can_change_warehouse: m.can_change_warehouse !== undefined && m.can_change_warehouse !== null ? Boolean(m.can_change_warehouse) : true,
         });
       } else if (m.organization_id) {
         const idNum = Number(typeof m.organization_id === 'object' ? m.organization_id.id : m.organization_id);
@@ -103,9 +108,14 @@ export async function getUserOrganizations(userId: string, targetActiveOrgId?: n
             const matchingMembership = memberships.find(
               (m: any) => Number(typeof m.organization_id === 'object' ? m.organization_id?.id : m.organization_id) === Number(orgId)
             );
+            const rawWh = matchingMembership && typeof matchingMembership.warehouse_id === 'object' && matchingMembership.warehouse_id ? matchingMembership.warehouse_id.id : matchingMembership?.warehouse_id;
+            const rawAcc = matchingMembership && typeof matchingMembership.financial_account_id === 'object' && matchingMembership.financial_account_id ? matchingMembership.financial_account_id.id : matchingMembership?.financial_account_id;
             orgList.push({
               ...org,
               user_role: matchingMembership?.role || 'viewer',
+              user_warehouse_id: rawWh ? Number(rawWh) : null,
+              user_financial_account_id: rawAcc ? Number(rawAcc) : null,
+              user_can_change_warehouse: matchingMembership?.can_change_warehouse !== undefined && matchingMembership?.can_change_warehouse !== null ? Boolean(matchingMembership.can_change_warehouse) : true,
             });
           }
         } catch (fetchErr: any) {

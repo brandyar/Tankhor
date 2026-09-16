@@ -13,7 +13,9 @@ import {
   ExpenseCategory, Expense, PersonTransaction, ProfitLossSummary,
   FinancialAccount, FinancialAccountType, TreasuryTransaction, TreasuryTransactionType,
   Cheque, ChequeType, ChequeStatus,
-  LandedCost, LandedCostAllocation, VatReportSummary
+  LandedCost, LandedCostAllocation, VatReportSummary,
+  PosShift, PosShiftStatus,
+  WooCommerceSettings, WooCommerceLog, IntegrationMapping
 } from '../types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -101,13 +103,30 @@ export class CloudDirectusAdapter implements IStorageProvider {
     const query: any = {
       sort: '-id',
       filter: { organization_id: { _eq: numOrgId } },
-      fields: ['id', 'organization_id', 'role', 'status', 'date_joined', 'user_id.*', 'user_id.id', 'user_id.email', 'user_id.first_name', 'user_id.last_name', 'user_id.avatar'],
+      fields: [
+        'id',
+        'organization_id',
+        'role',
+        'status',
+        'warehouse_id',
+        'financial_account_id',
+        'can_change_warehouse',
+        'date_joined',
+        'user_id.*',
+        'user_id.id',
+        'user_id.email',
+        'user_id.first_name',
+        'user_id.last_name',
+        'user_id.avatar',
+      ],
     };
     try {
       const items = await directusClient.getItems<any>('organization_users', query);
       if (Array.isArray(items) && items.length > 0) {
         return items.map((ou: any) => {
           const u = typeof ou.user_id === 'object' && ou.user_id ? ou.user_id : {};
+          const rawWh = typeof ou.warehouse_id === 'object' && ou.warehouse_id ? ou.warehouse_id.id : ou.warehouse_id;
+          const rawAcc = typeof ou.financial_account_id === 'object' && ou.financial_account_id ? ou.financial_account_id.id : ou.financial_account_id;
           return {
             ...ou,
             organization_id: numOrgId,
@@ -116,6 +135,9 @@ export class CloudDirectusAdapter implements IStorageProvider {
             last_name: ou.last_name || u.last_name || '',
             email: ou.email || u.email || '',
             avatar: ou.avatar || u.avatar || null,
+            warehouse_id: rawWh ? Number(rawWh) : null,
+            financial_account_id: rawAcc ? Number(rawAcc) : null,
+            can_change_warehouse: ou.can_change_warehouse !== undefined && ou.can_change_warehouse !== null ? Boolean(ou.can_change_warehouse) : true,
           };
         });
       }
@@ -1295,6 +1317,16 @@ export class CloudDirectusAdapter implements IStorageProvider {
     }
   }
 
+  async getStockTransferItems(transferId?: number): Promise<StockTransferItem[]> {
+    try {
+      return await directusClient.getItems<StockTransferItem>('stock_transfer_items', {
+        filter: transferId ? { transfer_id: { _eq: transferId } } : undefined,
+      });
+    } catch {
+      return this.localAdapter.getStockTransferItems(transferId);
+    }
+  }
+
   async saveStockTransfer(st: Partial<StockTransfer>, items?: Partial<StockTransferItem>[]): Promise<StockTransfer> {
     try {
       const payload: any = { ...st };
@@ -1736,6 +1768,7 @@ export class CloudDirectusAdapter implements IStorageProvider {
     try {
       const query: Record<string, any> = {
         sort: ['id'],
+        fields: ['*', 'warehouse_id.*'],
       };
       if (params?.status) query['filter[status][_eq]'] = params.status;
       if (params?.type) query['filter[type][_eq]'] = params.type;
@@ -1745,7 +1778,13 @@ export class CloudDirectusAdapter implements IStorageProvider {
       if (items.length === 0) {
         return await this.localAdapter.getFinancialAccounts(params);
       }
-      return items;
+      return items.map((acc) => {
+        const wh = typeof acc.warehouse_id === 'object' && acc.warehouse_id ? (acc.warehouse_id as any) : null;
+        return {
+          ...acc,
+          warehouse_name: wh?.name || acc.warehouse_name,
+        };
+      });
     } catch {
       return await this.localAdapter.getFinancialAccounts(params);
     }
@@ -2067,5 +2106,235 @@ export class CloudDirectusAdapter implements IStorageProvider {
 
   async getVatReport(params?: { organizationId?: number; year?: number; quarter?: 1 | 2 | 3 | 4 }): Promise<VatReportSummary> {
     return await this.localAdapter.getVatReport(params);
+  }
+
+  // POS Shifts (شیفت‌های صندوق)
+  async getPosShifts(params?: QueryParams & { user_id?: string; status?: PosShiftStatus; warehouse_id?: number }): Promise<PosShift[]> {
+    const orgId = params?.organization_id || (typeof window !== 'undefined' ? localStorage.getItem('tankhor_active_org_id') : null);
+    if (!orgId) return [];
+
+    const numOrgId = Number(orgId);
+    if (isNaN(numOrgId) || numOrgId <= 0) return [];
+
+    const query: any = {
+      sort: '-id',
+      fields: ['*'],
+    };
+
+    if (params?.user_id) {
+      query.filter = query.filter || {};
+      query.filter.user_id = { _eq: params.user_id };
+    }
+    if (params?.status) {
+      query.filter = query.filter || {};
+      query.filter.status = { _eq: params.status };
+    }
+    if (params?.warehouse_id) {
+      query.filter = query.filter || {};
+      query.filter.warehouse_id = { _eq: Number(params.warehouse_id) };
+    }
+
+    try {
+      const items = await directusClient.getItems<any>('pos_shifts', query);
+      if (Array.isArray(items) && items.length > 0) {
+        // Hydrate and mirror to local storage
+        for (const item of items) {
+          const normalizedItem: PosShift = {
+            ...item,
+            organization_id: numOrgId,
+            status: Array.isArray(item.status) ? item.status[0] : (item.status || 'open'),
+          };
+          await this.localAdapter.savePosShift(normalizedItem);
+        }
+        return await this.localAdapter.getPosShifts(params);
+      }
+      return await this.localAdapter.getPosShifts(params);
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] getPosShifts failed, using local adapter:', err?.message || err);
+      return await this.localAdapter.getPosShifts(params);
+    }
+  }
+
+  async getActivePosShift(userId?: string, warehouseId?: number): Promise<PosShift | null> {
+    try {
+      const shifts = await this.getPosShifts({ status: 'open' });
+      if (userId && warehouseId) {
+        const match = shifts.find((s) => {
+          const whId = typeof s.warehouse_id === 'object' ? (s.warehouse_id as any)?.id : s.warehouse_id;
+          const uMatch = s.user_id === userId || (s as any).user_email === userId;
+          return uMatch && Number(whId) === Number(warehouseId);
+        });
+        if (match) return match;
+      }
+      if (userId) {
+        const userShift = shifts.find((s) => s.user_id === userId || (s as any).user_email === userId);
+        return userShift || null;
+      }
+      if (warehouseId) {
+        const whShift = shifts.find((s) => {
+          const whId = typeof s.warehouse_id === 'object' ? (s.warehouse_id as any)?.id : s.warehouse_id;
+          return Number(whId) === Number(warehouseId);
+        });
+        return whShift || null;
+      }
+      return shifts.length > 0 ? shifts[0] : null;
+    } catch {
+      return await this.localAdapter.getActivePosShift(userId, warehouseId);
+    }
+  }
+
+  async savePosShift(shift: Partial<PosShift>): Promise<PosShift> {
+    try {
+      if (shift.id) {
+        const updated = await directusClient.updateItem<PosShift>('pos_shifts', shift.id, shift);
+        const result = { ...shift, ...updated };
+        await this.localAdapter.savePosShift(result);
+        return result;
+      } else {
+        const created = await directusClient.createItem<PosShift>('pos_shifts', shift);
+        const result = { ...shift, ...created };
+        await this.localAdapter.savePosShift(result);
+        return result;
+      }
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] savePosShift failed, fallback to local & sync:', err?.message || err);
+      const saved = await this.localAdapter.savePosShift(shift);
+      StorageSyncManager.enqueue({ action: shift.id ? 'UPDATE' : 'CREATE', collection: 'pos_shifts', payload: saved });
+      return saved;
+    }
+  }
+
+  async closePosShift(id: number, closingBalance: number | string, notes?: string): Promise<PosShift> {
+    try {
+      const updated = await directusClient.updateItem<PosShift>('pos_shifts', id, {
+        closing_balance: String(closingBalance),
+        status: 'closed',
+        closed_at: new Date().toISOString(),
+      });
+      await this.localAdapter.closePosShift(id, closingBalance, notes);
+      return updated;
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] closePosShift failed, fallback to local & sync:', err?.message || err);
+      const updated = await this.localAdapter.closePosShift(id, closingBalance, notes);
+      StorageSyncManager.enqueue({ action: 'UPDATE', collection: 'pos_shifts', payload: updated });
+      return updated;
+    }
+  }
+
+  async deletePosShift(id: number): Promise<boolean> {
+    try {
+      await directusClient.deleteItem('pos_shifts', id);
+      await this.localAdapter.deletePosShift(id);
+      return true;
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] deletePosShift failed, fallback to local & sync:', err?.message || err);
+      await this.localAdapter.deletePosShift(id);
+      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'pos_shifts', payload: { id } });
+      return true;
+    }
+  }
+
+  // WooCommerce Integration (ماژول همگام‌سازی ووکامرس)
+  async getWooCommerceSettings(params?: QueryParams): Promise<WooCommerceSettings | null> {
+    try {
+      const items = await directusClient.getItems<WooCommerceSettings>('woocommerce_settings', {
+        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+        limit: 1,
+      });
+      if (Array.isArray(items) && items.length > 0) {
+        await this.localAdapter.saveWooCommerceSettings(items[0]);
+        return items[0];
+      }
+      return await this.localAdapter.getWooCommerceSettings(params);
+    } catch {
+      return await this.localAdapter.getWooCommerceSettings(params);
+    }
+  }
+
+  async saveWooCommerceSettings(settings: Partial<WooCommerceSettings>): Promise<WooCommerceSettings> {
+    try {
+      if (settings.id) {
+        const updated = await directusClient.updateItem<WooCommerceSettings>('woocommerce_settings', settings.id, settings);
+        const result = { ...settings, ...updated };
+        await this.localAdapter.saveWooCommerceSettings(result);
+        return result;
+      } else {
+        const created = await directusClient.createItem<WooCommerceSettings>('woocommerce_settings', settings);
+        const result = { ...settings, ...created };
+        await this.localAdapter.saveWooCommerceSettings(result);
+        return result;
+      }
+    } catch (err: any) {
+      console.warn('[CloudDirectusAdapter] saveWooCommerceSettings fallback to local:', err?.message || err);
+      const saved = await this.localAdapter.saveWooCommerceSettings(settings);
+      StorageSyncManager.enqueue({ action: settings.id ? 'UPDATE' : 'CREATE', collection: 'woocommerce_settings', payload: saved });
+      return saved;
+    }
+  }
+
+  async getWooCommerceLogs(params?: QueryParams & { limit?: number }): Promise<WooCommerceLog[]> {
+    try {
+      const items = await directusClient.getItems<WooCommerceLog>('woocommerce_logs', {
+        sort: '-id',
+        limit: params?.limit || 50,
+      });
+      if (Array.isArray(items) && items.length > 0) {
+        for (const item of items) {
+          await this.localAdapter.addWooCommerceLog(item);
+        }
+        return await this.localAdapter.getWooCommerceLogs(params);
+      }
+      return await this.localAdapter.getWooCommerceLogs(params);
+    } catch {
+      return await this.localAdapter.getWooCommerceLogs(params);
+    }
+  }
+
+  async addWooCommerceLog(log: Partial<WooCommerceLog>): Promise<WooCommerceLog> {
+    try {
+      const created = await directusClient.createItem<WooCommerceLog>('woocommerce_logs', log);
+      const result = { ...log, ...created } as WooCommerceLog;
+      await this.localAdapter.addWooCommerceLog(result);
+      return result;
+    } catch {
+      return await this.localAdapter.addWooCommerceLog(log);
+    }
+  }
+
+  async getIntegrationMappings(params?: QueryParams & { entity_type?: string }): Promise<IntegrationMapping[]> {
+    try {
+      const query: any = {};
+      if (params?.entity_type) {
+        query.filter = { entity_type: { _eq: params.entity_type } };
+      }
+      const items = await directusClient.getItems<IntegrationMapping>('woocommerce_mappings', query);
+      if (Array.isArray(items) && items.length > 0) {
+        for (const item of items) {
+          await this.localAdapter.saveIntegrationMapping(item);
+        }
+        return await this.localAdapter.getIntegrationMappings(params);
+      }
+      return await this.localAdapter.getIntegrationMappings(params);
+    } catch {
+      return await this.localAdapter.getIntegrationMappings(params);
+    }
+  }
+
+  async saveIntegrationMapping(mapping: Partial<IntegrationMapping>): Promise<IntegrationMapping> {
+    try {
+      if (mapping.id) {
+        const updated = await directusClient.updateItem<IntegrationMapping>('woocommerce_mappings', mapping.id, mapping);
+        const result = { ...mapping, ...updated };
+        await this.localAdapter.saveIntegrationMapping(result);
+        return result;
+      } else {
+        const created = await directusClient.createItem<IntegrationMapping>('woocommerce_mappings', mapping);
+        const result = { ...mapping, ...created };
+        await this.localAdapter.saveIntegrationMapping(result);
+        return result;
+      }
+    } catch {
+      return await this.localAdapter.saveIntegrationMapping(mapping);
+    }
   }
 }

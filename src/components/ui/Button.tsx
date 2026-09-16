@@ -40,11 +40,11 @@ export const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {isLoading ? (
-        <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin me-1.5" />
+        <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin me-1.5 shrink-0" />
       ) : (
-        icon && <span className="inline-flex shrink-0">{icon}</span>
+        icon && <span className="inline-flex shrink-0 items-center justify-center">{icon}</span>
       )}
-      <span className="whitespace-nowrap">{children}</span>
+      <span className="whitespace-nowrap inline-flex items-center justify-center gap-1.5">{children}</span>
     </button>
   );
 };

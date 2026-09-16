@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
+import { useAuth } from '../../context/AuthContext';
 import { storageManager } from '../../storage';
 import {
   ProductVariant,
@@ -12,6 +13,8 @@ import {
   OrderStatus,
   PaymentStatus,
   Category,
+  InventoryItem,
+  PosShift,
 } from '../../types';
 import { FinancialAccount } from '../../types/accounting';
 import { useModuleAccess } from '../../hooks/useModuleAccess';
@@ -22,7 +25,8 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
-import { formatDate, formatCurrency } from '../../utils/formatters';
+import { PosShiftModal } from '../../components/modals/PosShiftModal';
+import { formatDate, formatCurrency, toPersianDigits } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
 import { printElement } from '../../utils/print';
 import {
@@ -46,6 +50,9 @@ import {
   X,
   FileText,
   Sparkles,
+  Clock,
+  Lock,
+  Unlock,
   Phone,
   UserPlus,
   Check,
@@ -65,10 +72,40 @@ type POSPaymentType = 'pos' | 'cash' | 'card_to_card' | 'credit';
 
 export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onOrderCreated }) => {
   const { t, locale } = useTranslation();
-  const { activeOrganization } = useOrganization();
+  const { activeOrganization, organizationUsers } = useOrganization();
+  const { user } = useAuth();
   const isPersian = locale === 'fa';
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+
+  // User membership & branch lock resolution
+  const currentUserMember = useMemo(() => {
+    if (!user || !organizationUsers || organizationUsers.length === 0) return null;
+    return organizationUsers.find((ou) => {
+      const ouUserId = typeof ou.user_id === 'object' ? (ou.user_id as any)?.id : ou.user_id;
+      const ouEmail = typeof ou.user_id === 'object' ? (ou.user_id as any)?.email : ou.email;
+      if (user?.id && ouUserId && String(ouUserId) === String(user.id)) return true;
+      if (user?.email && ouEmail && String(ouEmail).toLowerCase() === String(user.email).toLowerCase()) return true;
+      if (user?.email && ou.email && String(ou.email).toLowerCase() === String(user.email).toLowerCase()) return true;
+      return false;
+    });
+  }, [user, organizationUsers]);
+
+  const isWarehouseLocked = Boolean(
+    currentUserMember &&
+    currentUserMember.can_change_warehouse === false &&
+    currentUserMember.warehouse_id
+  );
+
+  const isAccountLocked = Boolean(
+    currentUserMember &&
+    currentUserMember.financial_account_id &&
+    (currentUserMember.can_change_warehouse === false || currentUserMember.role === 'sales')
+  );
+
+  // POS Shift State
+  const [activeShift, setActiveShift] = useState<PosShift | null>(null);
+  const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
 
   // Core Data
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -76,6 +113,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
   const [categories, setCategories] = useState<Category[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Active Selections
@@ -93,19 +131,69 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
   const [financialAccounts, setFinancialAccounts] = useState<FinancialAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<number | ''>('');
 
-  const resolveDefaultAccount = (accList: FinancialAccount[], pType: POSPaymentType): number | '' => {
+  const resolveDefaultAccount = (
+    accList: FinancialAccount[],
+    pType: POSPaymentType,
+    targetWhId?: number
+  ): number | '' => {
     if (!accList || accList.length === 0) return '';
+
+    // 0. User Dedicated Assigned Cashbox / POS account (Top Priority)
+    if (currentUserMember?.financial_account_id) {
+      const rawUserAccId = typeof currentUserMember.financial_account_id === 'object' && currentUserMember.financial_account_id
+        ? (currentUserMember.financial_account_id as any).id
+        : currentUserMember.financial_account_id;
+      const userMatch = accList.find((a) => a.id === Number(rawUserAccId));
+      if (userMatch) return userMatch.id;
+    }
+
+    const currentWhId = targetWhId !== undefined ? targetWhId : selectedWarehouseId;
+
+    // 1. Check if there's an account matching the payment type and explicitly assigned to current warehouse
+    if (currentWhId) {
+      if (pType === 'cash') {
+        const whCashMatch = accList.find((a) => {
+          const aWhId = typeof a.warehouse_id === 'object' && a.warehouse_id ? (a.warehouse_id as any).id : a.warehouse_id;
+          return (a.type === 'cashbox' || a.type === 'petty_cash') && Number(aWhId) === Number(currentWhId);
+        });
+        if (whCashMatch) return whCashMatch.id;
+      } else if (pType === 'pos') {
+        const whPosMatch = accList.find((a) => {
+          const aWhId = typeof a.warehouse_id === 'object' && a.warehouse_id ? (a.warehouse_id as any).id : a.warehouse_id;
+          return (a.type === 'pos' || a.type === 'bank' || a.pos_terminal_id) && Number(aWhId) === Number(currentWhId);
+        });
+        if (whPosMatch) return whPosMatch.id;
+      } else if (pType === 'card_to_card') {
+        const whBankMatch = accList.find((a) => {
+          const aWhId = typeof a.warehouse_id === 'object' && a.warehouse_id ? (a.warehouse_id as any).id : a.warehouse_id;
+          return (a.type === 'bank' || a.type === 'pos') && Number(aWhId) === Number(currentWhId);
+        });
+        if (whBankMatch) return whBankMatch.id;
+      }
+    }
+
+    // 2. Second priority: Check if user has previously selected a preferred cashbox/account for this org
+    if (typeof window !== 'undefined' && activeOrganization?.id) {
+      const storedKey = `tankhor_pos_account_${activeOrganization.id}_${user?.id || 'default'}`;
+      const storedId = localStorage.getItem(storedKey);
+      if (storedId) {
+        const found = accList.find((a) => String(a.id) === storedId);
+        if (found) return found.id;
+      }
+    }
+
+    // 3. Fallback: Type-based default match
     if (pType === 'cash') {
       const match =
-        accList.find((a) => a.type === 'cashbox' && a.is_default) ||
-        accList.find((a) => a.type === 'cashbox') ||
+        accList.find((a) => (a.type === 'cashbox' || a.type === 'petty_cash') && a.is_default) ||
+        accList.find((a) => a.type === 'cashbox' || a.type === 'petty_cash') ||
         accList.find((a) => a.is_default) ||
         accList[0];
       return match ? match.id : '';
     } else if (pType === 'pos') {
       const match =
-        accList.find((a) => a.pos_terminal_id && a.is_default) ||
-        accList.find((a) => a.pos_terminal_id) ||
+        accList.find((a) => (a.pos_terminal_id || a.type === 'pos') && a.is_default) ||
+        accList.find((a) => a.pos_terminal_id || a.type === 'pos') ||
         accList.find((a) => a.type === 'bank' && a.is_default) ||
         accList.find((a) => a.type === 'bank') ||
         accList[0];
@@ -117,13 +205,44 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         accList[0];
       return match ? match.id : '';
     }
-    return '';
+    return accList[0]?.id || '';
   };
+
+  const loadFinancialAccounts = useCallback(async (forcedWhId?: number) => {
+    try {
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id ? Number(activeOrganization.id) : undefined;
+      
+      let accs: FinancialAccount[] = [];
+      if (orgId) {
+        accs = await adapter.getFinancialAccounts({ organization_id: orgId });
+      }
+      
+      // Fallback: if empty, query without filter
+      if (!accs || accs.length === 0) {
+        accs = await adapter.getFinancialAccounts();
+      }
+
+      // Filter out only explicitly archived or inactive accounts
+      const activeAccs = (accs || []).filter((a) => a.status !== 'archived' && a.status !== 'inactive');
+      setFinancialAccounts(activeAccs);
+
+      const targetWh = forcedWhId !== undefined ? forcedWhId : selectedWarehouseId;
+      setSelectedAccountId((prev) => {
+        if (prev && activeAccs.some((a) => a.id === prev)) {
+          return prev;
+        }
+        return resolveDefaultAccount(activeAccs, paymentType, targetWh);
+      });
+    } catch (fErr) {
+      console.warn('[CreateOrderView] Could not load financial accounts:', fErr);
+    }
+  }, [activeOrganization?.id, paymentType, selectedWarehouseId]);
 
   const handlePaymentTypeChange = (newType: POSPaymentType) => {
     setPaymentType(newType);
-    if (hasAccounting && financialAccounts.length > 0) {
-      const defAccId = resolveDefaultAccount(financialAccounts, newType);
+    if (financialAccounts.length > 0) {
+      const defAccId = resolveDefaultAccount(financialAccounts, newType, selectedWarehouseId);
       setSelectedAccountId(defAccId);
     }
   };
@@ -158,17 +277,33 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
   const [isSavingCustomer, setIsSavingCustomer] = useState(false);
 
+  // Stock Calculation Helper for Selected Warehouse
+  const getVariantAvailableStock = (variantId: number, warehouseId = selectedWarehouseId): number => {
+    if (!warehouseId) return 0;
+    const item = inventoryItems.find((inv) => {
+      const vId = typeof inv.variant_id === 'object' ? (inv.variant_id as any)?.id : inv.variant_id;
+      const wId = typeof inv.warehouse_id === 'object' ? (inv.warehouse_id as any)?.id : inv.warehouse_id;
+      return Number(vId) === Number(variantId) && Number(wId) === Number(warehouseId);
+    });
+    if (!item) return 0;
+    const total = Number(item.quantity) || 0;
+    const reserved = Number(item.reserved_quantity) || 0;
+    const damaged = Number(item.damaged_quantity) || 0;
+    return Math.max(0, total - reserved - damaged);
+  };
+
   const loadData = async () => {
     setIsLoading(true);
     try {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
-      const [custList, whList, catList, varList, prodList] = await Promise.all([
+      const [custList, whList, catList, varList, prodList, invList] = await Promise.all([
         adapter.getCustomers({ organization_id: orgId }),
         adapter.getWarehouses({ organization_id: orgId }),
         adapter.getCategories({ organization_id: orgId }),
         adapter.getVariants({ organization_id: orgId }),
         adapter.getProducts({ organization_id: orgId }),
+        adapter.getInventoryItems({ organization_id: orgId }),
       ]);
 
       setCustomers(custList);
@@ -176,20 +311,30 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
       setCategories(catList);
       setVariants(varList);
       setProducts(prodList);
+      setInventoryItems(invList || []);
 
-      if (whList.length > 0) setSelectedWarehouseId(whList[0].id);
-
-      if (hasAccounting && orgId) {
-        try {
-          const accs = await adapter.getFinancialAccounts({ organization_id: orgId });
-          const activeAccs = (accs || []).filter((a) => a.status === 'active');
-          setFinancialAccounts(activeAccs);
-          const defAccId = resolveDefaultAccount(activeAccs, paymentType);
-          if (defAccId) setSelectedAccountId(defAccId);
-        } catch (fErr) {
-          console.warn('[CreateOrderView] Could not load financial accounts:', fErr);
+      let activeWhId = selectedWarehouseId;
+      if (currentUserMember?.warehouse_id) {
+        const rawAssignedWh = typeof currentUserMember.warehouse_id === 'object' && currentUserMember.warehouse_id
+          ? (currentUserMember.warehouse_id as any).id
+          : currentUserMember.warehouse_id;
+        if (whList.some((w) => w.id === Number(rawAssignedWh))) {
+          activeWhId = Number(rawAssignedWh);
         }
+      } else if (whList.length > 0) {
+        activeWhId = activeWhId && whList.some((w) => w.id === activeWhId) ? activeWhId : whList[0].id;
       }
+      setSelectedWarehouseId(activeWhId);
+
+      // Load active POS shift for current cashier & selected branch
+      const activeUserId = user?.id || user?.email;
+      if (storageManager.getActivePosShift) {
+        const openShift = await storageManager.getActivePosShift(activeUserId, activeWhId);
+        setActiveShift(openShift || null);
+      }
+
+      // Load Financial Accounts for Settlement
+      await loadFinancialAccounts(activeWhId);
     } catch (err) {
       console.error('[CreateOrderView] Error loading order form data:', err);
     } finally {
@@ -199,7 +344,60 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
   useEffect(() => {
     loadData();
-  }, [activeOrganization]);
+  }, [activeOrganization?.id, hasAccounting]);
+
+  // Re-check active POS shift when selected warehouse changes
+  useEffect(() => {
+    const checkWarehouseShift = async () => {
+      const activeUserId = user?.id || user?.email;
+      if (storageManager.getActivePosShift && selectedWarehouseId) {
+        try {
+          const shift = await storageManager.getActivePosShift(activeUserId, selectedWarehouseId);
+          setActiveShift(shift || null);
+        } catch {
+          // ignore
+        }
+      }
+    };
+    if (selectedWarehouseId) {
+      checkWarehouseShift();
+    }
+  }, [selectedWarehouseId, user?.id, user?.email]);
+
+  // Reactive synchronization when user's assigned warehouse or cashbox is resolved
+  useEffect(() => {
+    if (currentUserMember?.warehouse_id) {
+      const rawAssignedWh = typeof currentUserMember.warehouse_id === 'object' && currentUserMember.warehouse_id
+        ? (currentUserMember.warehouse_id as any).id
+        : currentUserMember.warehouse_id;
+      const numWh = Number(rawAssignedWh);
+      if (numWh && (isWarehouseLocked || !selectedWarehouseId)) {
+        setSelectedWarehouseId(numWh);
+      }
+    }
+  }, [currentUserMember, isWarehouseLocked]);
+
+  useEffect(() => {
+    if (currentUserMember?.financial_account_id) {
+      const rawAssignedAcc = typeof currentUserMember.financial_account_id === 'object' && currentUserMember.financial_account_id
+        ? (currentUserMember.financial_account_id as any).id
+        : currentUserMember.financial_account_id;
+      const numAcc = Number(rawAssignedAcc);
+      if (numAcc && (isAccountLocked || !selectedAccountId)) {
+        setSelectedAccountId(numAcc);
+      }
+    }
+  }, [currentUserMember, isAccountLocked]);
+
+  // Re-evaluate account when warehouse, accounts, or user membership change
+  useEffect(() => {
+    if (financialAccounts.length > 0) {
+      const bestAccId = resolveDefaultAccount(financialAccounts, paymentType, selectedWarehouseId);
+      if (bestAccId) {
+        setSelectedAccountId(bestAccId);
+      }
+    }
+  }, [selectedWarehouseId, financialAccounts.length, paymentType, currentUserMember]);
 
   // Focus barcode input on load
   useEffect(() => {
@@ -208,29 +406,6 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
     }
   }, [isLoading]);
 
-  // Handle Barcode Scan / Quick SKU Enter
-  const handleBarcodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!barcodeQuery.trim()) return;
-
-    const query = barcodeQuery.trim().toLowerCase();
-    const matched = variants.find((v) => {
-      const sku = (v.sku || '').toLowerCase();
-      const barcode = (v.barcode || '').toLowerCase();
-      return sku === query || barcode === query;
-    });
-
-    if (matched) {
-      handleAddToCart(matched);
-      const prod = products.find((p) => p.id === (typeof matched.product_id === 'object' ? matched.product_id.id : matched.product_id));
-      const title = prod ? prod.title : t('orders.untitledProduct');
-      showToast('success', t('orders.itemAddedToCart', { title }));
-      setBarcodeQuery('');
-    } else {
-      showToast('error', t('orders.itemNotFoundWithBarcode', { barcode: barcodeQuery }));
-    }
-  };
-
   const showToast = (type: 'success' | 'error', message: string) => {
     setScannerToast({ type, message });
     setTimeout(() => {
@@ -238,14 +413,25 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
     }, 3000);
   };
 
-  // Add Variant to Cart
+  // Add Variant to Cart with warehouse stock validation
   const handleAddToCart = (variant: ProductVariant) => {
     const prod = products.find((p) => p.id === (typeof variant.product_id === 'object' ? variant.product_id.id : variant.product_id));
     const title = prod ? prod.title : t('orders.untitledProduct');
     const price = variant.price || 0;
 
+    const available = getVariantAvailableStock(variant.id, selectedWarehouseId);
+    if (available <= 0) {
+      showToast('error', t('orders.outOfStockInSelectedWarehouse'));
+      return;
+    }
+
     const existingIdx = cart.findIndex((c) => c.variant.id === variant.id);
     if (existingIdx !== -1) {
+      const currentQty = cart[existingIdx].quantity;
+      if (currentQty + 1 > available) {
+        showToast('error', t('orders.maxStockReached', { max: available }));
+        return;
+      }
       const updated = [...cart];
       updated[existingIdx].quantity += 1;
       setCart(updated);
@@ -263,9 +449,43 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
     }
   };
 
+  // Handle Barcode Scan / Quick SKU Enter
+  const handleBarcodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!barcodeQuery.trim()) return;
+
+    const query = barcodeQuery.trim().toLowerCase();
+    const matched = variants.find((v) => {
+      const sku = (v.sku || '').toLowerCase();
+      const barcode = (v.barcode || '').toLowerCase();
+      return sku === query || barcode === query;
+    });
+
+    if (matched) {
+      const available = getVariantAvailableStock(matched.id, selectedWarehouseId);
+      if (available <= 0) {
+        showToast('error', t('orders.outOfStockInSelectedWarehouse'));
+        return;
+      }
+      handleAddToCart(matched);
+      const prod = products.find((p) => p.id === (typeof matched.product_id === 'object' ? matched.product_id.id : matched.product_id));
+      const title = prod ? prod.title : t('orders.untitledProduct');
+      showToast('success', t('orders.itemAddedToCart', { title }));
+      setBarcodeQuery('');
+    } else {
+      showToast('error', t('orders.itemNotFoundWithBarcode', { barcode: barcodeQuery }));
+    }
+  };
+
   const handleUpdateQty = (variantId: number, qty: number) => {
     if (qty <= 0) {
       handleRemoveLine(variantId);
+      return;
+    }
+    const available = getVariantAvailableStock(variantId, selectedWarehouseId);
+    if (qty > available) {
+      showToast('error', t('orders.maxStockReached', { max: available }));
+      setCart(cart.map((c) => (c.variant.id === variantId ? { ...c, quantity: available } : c)));
       return;
     }
     setCart(cart.map((c) => (c.variant.id === variantId ? { ...c, quantity: qty } : c)));
@@ -375,6 +595,21 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
       return;
     }
 
+    // Strict validation: Ensure all cart items have enough stock in selected warehouse
+    for (const item of cart) {
+      const available = getVariantAvailableStock(item.variant.id, selectedWarehouseId);
+      if (item.quantity > available) {
+        setErrorMsg(
+          t('orders.insufficientStockNotice', {
+            title: item.productTitle,
+            available: isPersian ? toPersianDigits(available) : available,
+            requested: isPersian ? toPersianDigits(item.quantity) : item.quantity,
+          }) || `موجودی کالای «${item.productTitle}» در انبار انتخابی کافی نیست (موجودی: ${available}، درخواستی: ${item.quantity}).`
+        );
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       const adapter = storageManager.getAdapter();
@@ -407,6 +642,9 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         discount: totalDiscount,
         tax: taxAmount,
         total: grandTotal,
+        payment_method: paymentType,
+        user_created: user?.id,
+        pos_shift_id: activeShift?.id || undefined,
         notes: `[${t('orders.paymentMethod')}: ${
           paymentType === 'pos'
             ? t('orders.posTerminal')
@@ -415,7 +653,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             : paymentType === 'card_to_card'
             ? t('orders.cardToCard')
             : t('orders.storeCredit')
-        }] ${orderNotes}`.trim(),
+        }]${activeShift ? ` [${isPersian ? `شیفت #${activeShift.id}` : `Shift #${activeShift.id}`}]` : ''} ${orderNotes}`.trim(),
       };
 
       const orderItems: Partial<OrderItem>[] = cart.map((c) => ({
@@ -445,10 +683,13 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         }
       }
 
-      // If accounting module is active, record treasury or customer ledger transaction
+      // If accounting module is active, record treasury and customer ledger transactions
       if (hasAccounting && activeOrganization?.id) {
         const orgNumId = Number(activeOrganization.id);
-        if ((paymentType === 'cash' || paymentType === 'pos' || paymentType === 'card_to_card') && selectedAccountId) {
+        const isCashOrElectronic = paymentType === 'cash' || paymentType === 'pos' || paymentType === 'card_to_card';
+
+        // 1. If paid via cash, pos terminal, or bank card, deposit to treasury account
+        if (isCashOrElectronic && selectedAccountId) {
           try {
             await adapter.saveTreasuryTransaction({
               organization_id: orgNumId,
@@ -462,27 +703,76 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
           } catch (trErr) {
             console.warn('[CreateOrderView] Could not record treasury transaction for order:', trErr);
           }
-        } else if (paymentType === 'credit' && selectedCustomerId) {
+        }
+
+        // 2. Keep Customer Ledger (معین اشخاص) synchronized
+        if (selectedCustomerId) {
           try {
-            await adapter.savePersonTransaction({
-              organization_id: orgNumId,
-              customer_id: selectedCustomerId,
-              party_type: 'customer',
-              party_name: customerName,
-              type: 'debtor',
-              transaction_type: 'sale_invoice',
-              amount: grandTotal,
-              debit_amount: grandTotal,
-              status: 'pending',
-              reference_number: orderNumber,
-              order_id: savedOrder.id,
-              description: `فاکتور فروش نسیه #${orderNumber}`,
-              transaction_date: new Date().toISOString(),
-            });
+            if (paymentType === 'credit') {
+              // Credit sale: customer is debtor with pending payment status
+              await adapter.savePersonTransaction({
+                organization_id: orgNumId,
+                customer_id: selectedCustomerId,
+                party_type: 'customer',
+                party_name: customerName,
+                type: 'debtor',
+                transaction_type: 'sale_invoice',
+                amount: grandTotal,
+                debit_amount: grandTotal,
+                status: 'pending',
+                reference_number: orderNumber,
+                order_id: savedOrder.id,
+                description: `فاکتور فروش نسیه #${orderNumber}`,
+                transaction_date: new Date().toISOString(),
+              });
+            } else if (isCashOrElectronic) {
+              // Fully paid sale: record invoice debit and receipt credit for comprehensive audit trail
+              await adapter.savePersonTransaction({
+                organization_id: orgNumId,
+                customer_id: selectedCustomerId,
+                financial_account_id: selectedAccountId ? Number(selectedAccountId) : undefined,
+                party_type: 'customer',
+                party_name: customerName,
+                type: 'debtor',
+                transaction_type: 'sale_invoice',
+                amount: grandTotal,
+                debit_amount: grandTotal,
+                status: 'completed',
+                reference_number: orderNumber,
+                order_id: savedOrder.id,
+                description: `فاکتور فروش #${orderNumber} (تسویه نقدی/کارتخوان)`,
+                transaction_date: new Date().toISOString(),
+              });
+
+              await adapter.savePersonTransaction({
+                organization_id: orgNumId,
+                customer_id: selectedCustomerId,
+                financial_account_id: selectedAccountId ? Number(selectedAccountId) : undefined,
+                party_type: 'customer',
+                party_name: customerName,
+                type: 'creditor',
+                transaction_type: 'receipt',
+                amount: grandTotal,
+                credit_amount: grandTotal,
+                status: 'completed',
+                reference_number: `REC-${orderNumber}`,
+                order_id: savedOrder.id,
+                description: `دریافت وجه فاکتور فروش #${orderNumber}`,
+                transaction_date: new Date().toISOString(),
+              });
+            }
           } catch (ptErr) {
-            console.warn('[CreateOrderView] Could not record person transaction for credit order:', ptErr);
+            console.warn('[CreateOrderView] Could not record person transactions for order:', ptErr);
           }
         }
+      }
+
+      // Refresh inventory items to update stock in UI immediately
+      try {
+        const refreshedInv = await adapter.getInventoryItems({ organization_id: orgId });
+        setInventoryItems(refreshedInv || []);
+      } catch (invErr) {
+        console.warn('[CreateOrderView] Could not refresh inventory items:', invErr);
       }
 
       setLastSavedOrder({
@@ -717,6 +1007,24 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* POS Shift Management Trigger Button */}
+          <Button
+            variant={activeShift ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setIsShiftModalOpen(true)}
+            icon={<Clock className="w-3.5 h-3.5" />}
+            className={activeShift ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600' : ''}
+          >
+            {activeShift ? (
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                <span>{isPersian ? `شیفت باز #${activeShift.id}` : `Open Shift #${activeShift.id}`}</span>
+              </span>
+            ) : (
+              <span>{isPersian ? 'افتتاح شیفت صندوق' : 'Open POS Shift'}</span>
+            )}
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -866,17 +1174,30 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             ) : (
               filteredVariants.map((v, vIdx) => {
                 const prod = products.find((p) => p.id === (typeof v.product_id === 'object' ? v.product_id.id : v.product_id));
-                const stock = v.stock_quantity ?? 0;
+                const stock = getVariantAvailableStock(v.id, selectedWarehouseId);
                 const inCart = cart.find((c) => c.variant.id === v.id);
+                const isOutOfStock = stock <= 0;
 
                 return (
                   <div
                     key={`ord_var_${v.id}_${vIdx}`}
-                    onClick={() => handleAddToCart(v)}
-                    className={`p-3 bg-white dark:bg-[#13151a] border rounded-xl cursor-pointer transition-all duration-150 flex flex-col justify-between space-y-2 relative group hover:shadow-md ${
+                    onClick={() => {
+                      if (isOutOfStock) {
+                        showToast('error', t('orders.outOfStockInSelectedWarehouse'));
+                        return;
+                      }
+                      handleAddToCart(v);
+                    }}
+                    className={`p-3 bg-white dark:bg-[#13151a] border rounded-xl transition-all duration-150 flex flex-col justify-between space-y-2 relative group ${
+                      isOutOfStock
+                        ? 'opacity-65 border-dashed border-red-200 dark:border-red-950/60 bg-red-50/10 cursor-not-allowed'
+                        : 'cursor-pointer hover:shadow-md'
+                    } ${
                       inCart
                         ? 'border-emerald-500 dark:border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/20'
-                        : 'border-[#ebebeb] dark:border-neutral-800 hover:border-[#171717] dark:hover:border-neutral-500'
+                        : !isOutOfStock
+                        ? 'border-[#ebebeb] dark:border-neutral-800 hover:border-[#171717] dark:hover:border-neutral-500'
+                        : ''
                     }`}
                   >
                     {inCart && (
@@ -914,12 +1235,28 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                         <div className="font-bold text-[#171717] dark:text-neutral-100 text-xs font-mono">
                           {formatCurrency(v.price, 'TOMAN', isPersian)}
                         </div>
-                        <div className={`text-[10px] font-mono mt-0.5 ${stock > 5 ? 'text-emerald-700 dark:text-emerald-400' : stock > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-red-600 dark:text-red-400 font-bold'}`}>
-                          {stock > 0 ? t('orders.stockInCount', { count: stock }) : t('orders.outOfStock')}
+                        <div className={`text-[10px] font-mono mt-0.5 ${
+                          stock > 5
+                            ? 'text-emerald-700 dark:text-emerald-400 font-medium'
+                            : stock > 0
+                            ? 'text-amber-700 dark:text-amber-400 font-bold'
+                            : 'text-red-600 dark:text-red-400 font-bold'
+                        }`}>
+                          {stock > 0 ? (
+                            <span>{t('orders.stockInCount', { count: isPersian ? toPersianDigits(stock) : stock })}</span>
+                          ) : (
+                            <span className="bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                              {t('orders.outOfStockInSelectedWarehouse')}
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      <div className="w-7 h-7 rounded-lg bg-[#fafafa] dark:bg-[#181a20] group-hover:bg-[#171717] dark:group-hover:bg-neutral-100 group-hover:text-white dark:group-hover:text-neutral-900 text-[#171717] dark:text-neutral-300 border border-[#ebebeb] dark:border-neutral-700 group-hover:border-[#171717] flex items-center justify-center transition-all">
+                      <div className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all ${
+                        isOutOfStock
+                          ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border-neutral-200 dark:border-neutral-700'
+                          : 'bg-[#fafafa] dark:bg-[#181a20] group-hover:bg-[#171717] dark:group-hover:bg-neutral-100 group-hover:text-white dark:group-hover:text-neutral-900 text-[#171717] dark:text-neutral-300 border-[#ebebeb] dark:border-neutral-700 group-hover:border-[#171717]'
+                      }`}>
                         <Plus className="w-3.5 h-3.5" />
                       </div>
                     </div>
@@ -968,12 +1305,33 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200 mb-1">
-                  {t('orders.deliveryWarehouse')}
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200">
+                    {t('orders.deliveryWarehouse')}
+                  </label>
+                  {isWarehouseLocked && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                      <Lock className="w-2.5 h-2.5" />
+                      <span>{isPersian ? 'انبار اختصاصی شما' : 'Locked Branch'}</span>
+                    </span>
+                  )}
+                </div>
                 <Select
                   value={selectedWarehouseId}
-                  onChange={(e) => setSelectedWarehouseId(Number(e.target.value))}
+                  disabled={isWarehouseLocked}
+                  onChange={(e) => {
+                    const newWhId = Number(e.target.value);
+                    setSelectedWarehouseId(newWhId);
+                    if (cart.length > 0) {
+                      const exceeding = cart.filter((c) => c.quantity > getVariantAvailableStock(c.variant.id, newWhId));
+                      if (exceeding.length > 0) {
+                        showToast(
+                          'error',
+                          `توجه: موجودی ${exceeding.length} قلم از کالاهای سبد خرید در انبار انتخابی کافی نیست.`
+                        );
+                      }
+                    }
+                  }}
                   options={warehouses.map((w) => ({ value: w.id, label: `${w.name} (${w.code || w.id})` }))}
                 />
               </div>
@@ -1149,35 +1507,132 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             </div>
 
             {/* Financial Account / Cashbox Selector (When Accounting Module is Active) */}
-            {hasAccounting && financialAccounts.length > 0 && paymentType !== 'credit' && (
-              <div className="p-2.5 bg-neutral-50 dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl space-y-1.5">
+            {hasAccounting && paymentType !== 'credit' && (
+              <div className="p-3 bg-neutral-50 dark:bg-[#181a20] border border-neutral-200 dark:border-neutral-700 rounded-xl space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5 font-bold text-neutral-800 dark:text-neutral-200">
                     <Wallet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>واریز به حساب / صندوق:</span>
+                    <span>{t('orders.settlementAccount') || 'واریز به حساب / صندوق تسویه:'}</span>
                   </div>
-                  {selectedAccountId && (
-                    <span className="text-[11px] text-neutral-500 font-mono">
-                      {(() => {
-                        const acc = financialAccounts.find((a) => a.id === selectedAccountId);
-                        return acc && acc.current_balance !== undefined
-                          ? `موجودی: ${formatCurrency(acc.current_balance, 'TOMAN', isPersian)}`
-                          : '';
-                      })()}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isAccountLocked && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                        <Lock className="w-2.5 h-2.5" />
+                        <span>{isPersian ? 'صندوق اختصاصی شما' : 'Locked Cashbox'}</span>
+                      </span>
+                    )}
+                    {selectedAccountId && (
+                      <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-mono font-bold">
+                        {(() => {
+                          const acc = financialAccounts.find((a) => a.id === selectedAccountId);
+                          return acc && acc.current_balance !== undefined
+                            ? `موجودی: ${formatCurrency(acc.current_balance, 'TOMAN', isPersian)}`
+                            : '';
+                        })()}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <select
-                  value={selectedAccountId ? String(selectedAccountId) : ''}
-                  onChange={(e) => setSelectedAccountId(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-2.5 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-xs font-medium text-neutral-900 dark:text-neutral-100"
-                >
-                  {financialAccounts.map((acc) => (
-                    <option key={acc.id} value={String(acc.id)}>
-                      {acc.name} ({acc.type === 'cashbox' ? 'صندوق' : 'بانک/پوز'}{acc.is_default ? ' - پیش‌فرض' : ''})
-                    </option>
-                  ))}
-                </select>
+
+                {financialAccounts.length === 0 ? (
+                  <div className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between">
+                    <span>هنوز حساب مالی یا صندوق نقدی در ماژول حسابداری تعریف نشده است.</span>
+                    <button
+                      type="button"
+                      onClick={() => loadFinancialAccounts()}
+                      className="px-2 py-1 bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 rounded text-[10px] font-bold hover:bg-amber-300"
+                    >
+                      بروزرسانی
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      value={selectedAccountId ? String(selectedAccountId) : ''}
+                      disabled={isAccountLocked}
+                      onChange={(e) => {
+                        if (isAccountLocked) return;
+                        const val = e.target.value ? Number(e.target.value) : '';
+                        setSelectedAccountId(val);
+                        if (val && activeOrganization?.id) {
+                          localStorage.setItem(
+                            `tankhor_pos_account_${activeOrganization.id}_${user?.id || 'default'}`,
+                            String(val)
+                          );
+                        }
+                      }}
+                      className={`w-full px-2.5 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-xs font-medium text-neutral-900 dark:text-neutral-100 focus:ring-1 focus:ring-emerald-500 ${
+                        isAccountLocked ? 'opacity-80 cursor-not-allowed bg-neutral-100 dark:bg-neutral-800/80 border-amber-300 dark:border-amber-700' : ''
+                      }`}
+                    >
+                      {/* 1. Accounts linked to selected warehouse */}
+                      {(() => {
+                        const linkedAccs = financialAccounts.filter((acc) => {
+                          const aWhId = typeof acc.warehouse_id === 'object' && acc.warehouse_id ? (acc.warehouse_id as any).id : acc.warehouse_id;
+                          return Number(aWhId) === Number(selectedWarehouseId);
+                        });
+                        const otherAccs = financialAccounts.filter((acc) => {
+                          const aWhId = typeof acc.warehouse_id === 'object' && acc.warehouse_id ? (acc.warehouse_id as any).id : acc.warehouse_id;
+                          return Number(aWhId) !== Number(selectedWarehouseId);
+                        });
+
+                        const selectedWhObj = warehouses.find((w) => w.id === selectedWarehouseId);
+
+                        return (
+                          <>
+                            {linkedAccs.length > 0 && (
+                              <optgroup label={`⭐ متصل به انبار انتخابی (${selectedWhObj?.name || 'این انبار'})`}>
+                                {linkedAccs.map((acc) => (
+                                  <option key={acc.id} value={String(acc.id)}>
+                                    {acc.type === 'cashbox' ? '💵' : '💳'} {acc.name} {acc.bank_name ? `(${acc.bank_name})` : ''} - پیش‌فرض انبار
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+
+                            {otherAccs.length > 0 && (
+                              <optgroup label={linkedAccs.length > 0 ? 'سایر صندوق‌ها و حساب‌های مالی' : 'تمامی صندوق‌ها و حساب‌های بانکی'}>
+                                {otherAccs.map((acc) => {
+                                  const accWh = acc.warehouse_name || (typeof acc.warehouse_id === 'object' && acc.warehouse_id ? (acc.warehouse_id as any).name : null);
+                                  return (
+                                    <option key={acc.id} value={String(acc.id)}>
+                                      {acc.type === 'cashbox' ? '💵' : '💳'} {acc.name} {acc.bank_name ? `(${acc.bank_name})` : ''} {accWh ? `[انبار: ${accWh}]` : ''} {acc.is_default ? '(پیش‌فرض عمومی)' : ''}
+                                    </option>
+                                  );
+                                })}
+                              </optgroup>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </select>
+
+                    {/* Indicator if current selection matches warehouse */}
+                    {(() => {
+                      const selAcc = financialAccounts.find((a) => a.id === selectedAccountId);
+                      if (!selAcc) return null;
+                      const aWhId = typeof selAcc.warehouse_id === 'object' && selAcc.warehouse_id ? (selAcc.warehouse_id as any).id : selAcc.warehouse_id;
+                      const isLinkedToCurrentWh = Number(aWhId) === Number(selectedWarehouseId);
+
+                      return (
+                        <div className="flex items-center justify-between text-[11px] pt-0.5">
+                          <span className="text-neutral-500 dark:text-neutral-400">
+                            نوع حساب: <strong className="text-neutral-700 dark:text-neutral-300">{selAcc.type === 'cashbox' ? 'صندوق نقدی' : selAcc.type === 'pos' ? 'کارتخوان (POS)' : 'حساب بانکی'}</strong>
+                          </span>
+                          {isLinkedToCurrentWh ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full font-bold">
+                              ✓ متصل به انبار انتخابی
+                            </span>
+                          ) : aWhId ? (
+                            <span className="text-[10px] text-neutral-400">
+                              (متصل به انبار دیگر)
+                            </span>
+                          ) : null}
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
               </div>
             )}
 
@@ -1386,6 +1841,13 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
           </div>
         </Modal>
       )}
+
+      {/* POS Shift Management Modal */}
+      <PosShiftModal
+        isOpen={isShiftModalOpen}
+        onClose={() => setIsShiftModalOpen(false)}
+        onShiftChanged={(newShift) => setActiveShift(newShift)}
+      />
     </div>
   );
 };

@@ -9,7 +9,9 @@ import {
   ExpenseCategory, Expense, PersonTransaction, ProfitLossSummary,
   FinancialAccount, FinancialAccountType, TreasuryTransaction, TreasuryTransactionType,
   Cheque, ChequeType, ChequeStatus,
-  LandedCost, LandedCostAllocation, VatReportSummary
+  LandedCost, LandedCostAllocation, VatReportSummary,
+  PosShift, PosShiftStatus,
+  WooCommerceSettings, WooCommerceLog, IntegrationMapping
 } from '../types';
 import { DEFAULT_SYSTEM_MODULES } from '../utils/license';
 import { directusClient } from '../api/directus';
@@ -170,10 +172,16 @@ export class LocalOfflineAdapter implements IStorageProvider {
     if (ouData.id) {
       const idx = list.findIndex((ou) => ou.id === ouData.id);
       if (idx !== -1) {
+        const rawWh = ouData.warehouse_id !== undefined ? (ouData.warehouse_id ? Number(ouData.warehouse_id) : null) : list[idx].warehouse_id;
+        const rawAcc = ouData.financial_account_id !== undefined ? (ouData.financial_account_id ? Number(ouData.financial_account_id) : null) : list[idx].financial_account_id;
+        const rawCanChangeWh = ouData.can_change_warehouse !== undefined ? Boolean(ouData.can_change_warehouse) : (list[idx].can_change_warehouse ?? true);
         saved = {
           ...list[idx],
           ...ouData,
           organization_id: activeOrgId,
+          warehouse_id: rawWh,
+          financial_account_id: rawAcc,
+          can_change_warehouse: rawCanChangeWh,
         };
         list[idx] = saved;
       } else {
@@ -187,6 +195,9 @@ export class LocalOfflineAdapter implements IStorageProvider {
           first_name: ouData.first_name || '',
           last_name: ouData.last_name || '',
           email: ouData.email || '',
+          warehouse_id: ouData.warehouse_id ? Number(ouData.warehouse_id) : null,
+          financial_account_id: ouData.financial_account_id ? Number(ouData.financial_account_id) : null,
+          can_change_warehouse: ouData.can_change_warehouse !== undefined ? Boolean(ouData.can_change_warehouse) : true,
         };
         list.push(saved);
       }
@@ -202,6 +213,9 @@ export class LocalOfflineAdapter implements IStorageProvider {
         first_name: ouData.first_name || '',
         last_name: ouData.last_name || '',
         email: ouData.email || '',
+        warehouse_id: ouData.warehouse_id ? Number(ouData.warehouse_id) : null,
+        financial_account_id: ouData.financial_account_id ? Number(ouData.financial_account_id) : null,
+        can_change_warehouse: ouData.can_change_warehouse !== undefined ? Boolean(ouData.can_change_warehouse) : true,
       };
       list.push(saved);
     }
@@ -1473,6 +1487,17 @@ export class LocalOfflineAdapter implements IStorageProvider {
     return items;
   }
 
+  async getStockTransferItems(transferId?: number): Promise<StockTransferItem[]> {
+    let items = this.getItem<StockTransferItem>('stock_transfer_items', []);
+    if (transferId) {
+      items = items.filter((it) => {
+        const tId = typeof it.transfer_id === 'object' ? (it.transfer_id as any)?.id : it.transfer_id;
+        return Number(tId) === Number(transferId);
+      });
+    }
+    return items;
+  }
+
   async saveStockTransfer(st: Partial<StockTransfer>, items?: Partial<StockTransferItem>[]): Promise<StockTransfer> {
     const list = await this.getStockTransfers();
     let savedSt: StockTransfer;
@@ -2219,6 +2244,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
         organization_id: orgId,
         name: 'صندوق نقدی مرکزی',
         type: 'cashbox',
+        warehouse_id: 1,
         initial_balance: 0,
         current_balance: 0,
         is_default: true,
@@ -2230,6 +2256,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
         organization_id: orgId,
         name: 'حساب جاری بانک ملت',
         type: 'bank',
+        warehouse_id: null,
         bank_name: 'بانک ملت',
         account_number: '1234567890',
         card_number: '6104337890123456',
@@ -2245,6 +2272,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
         organization_id: orgId,
         name: 'کارتخوان فروشگاه (POS)',
         type: 'pos',
+        warehouse_id: 1,
         bank_name: 'به‌پرداخت ملت',
         pos_terminal_id: '99887766',
         initial_balance: 0,
@@ -2260,17 +2288,38 @@ export class LocalOfflineAdapter implements IStorageProvider {
     let items = this.getItem<FinancialAccount>('financial_accounts', []);
     const orgId = this.getActiveOrgId(params) || 1;
 
-    if (items.length === 0) {
-      items = this.getDefaultFinancialAccounts(orgId);
+    // If no accounts exist at all or no accounts exist for this specific org, initialize default accounts
+    const existingOrgAccs = items.filter((a) => {
+      const aOrgId = typeof a.organization_id === 'number' ? a.organization_id : Number((a.organization_id as any)?.id || (a as any).organization_id);
+      return aOrgId === orgId;
+    });
+
+    if (existingOrgAccs.length === 0) {
+      const defaultAccs = this.getDefaultFinancialAccounts(orgId);
+      items = [...items, ...defaultAccs];
       this.setItem('financial_accounts', items);
     }
 
     if (orgId) {
-      items = items.filter((a) => {
+      const matched = items.filter((a) => {
         const aOrgId = typeof a.organization_id === 'number' ? a.organization_id : Number((a.organization_id as any)?.id || (a as any).organization_id);
-        return aOrgId === orgId;
+        return aOrgId === orgId || !aOrgId;
       });
+      if (matched.length > 0) {
+        items = matched;
+      }
     }
+
+    const warehouses = await this.getWarehouses({ organization_id: orgId });
+    items = items.map((a) => {
+      const wId = typeof a.warehouse_id === 'object' && a.warehouse_id ? (a.warehouse_id as any).id : a.warehouse_id;
+      const foundWh = warehouses.find((w) => w.id === Number(wId));
+      return {
+        ...a,
+        warehouse_id: wId ? Number(wId) : null,
+        warehouse_name: foundWh ? foundWh.name : undefined,
+      };
+    });
 
     if (params?.status) {
       items = items.filter((a) => a.status === params.status);
@@ -2299,6 +2348,10 @@ export class LocalOfflineAdapter implements IStorageProvider {
     const list = this.getItem<FinancialAccount>('financial_accounts', []);
     const orgId = this.getActiveOrgId({ organization_id: normalizeId(account.organization_id) }) || 1;
 
+    const parsedWarehouseId = account.warehouse_id !== undefined
+      ? (account.warehouse_id ? Number(typeof account.warehouse_id === 'object' ? (account.warehouse_id as any).id : account.warehouse_id) : null)
+      : undefined;
+
     let savedAcc: FinancialAccount;
     if (account.id) {
       const idx = list.findIndex((a) => a.id === account.id);
@@ -2309,10 +2362,19 @@ export class LocalOfflineAdapter implements IStorageProvider {
             if (a.organization_id === orgId) a.is_default = false;
           });
         }
-        list[idx] = { ...list[idx], ...account, id: account.id };
+        list[idx] = {
+          ...list[idx],
+          ...account,
+          warehouse_id: parsedWarehouseId !== undefined ? parsedWarehouseId : list[idx].warehouse_id,
+          id: account.id,
+        };
         savedAcc = list[idx];
       } else {
-        savedAcc = { ...account, id: account.id } as FinancialAccount;
+        savedAcc = {
+          ...account,
+          warehouse_id: parsedWarehouseId !== undefined ? parsedWarehouseId : null,
+          id: account.id,
+        } as FinancialAccount;
         list.push(savedAcc);
       }
     } else {
@@ -2327,6 +2389,7 @@ export class LocalOfflineAdapter implements IStorageProvider {
         organization_id: orgId,
         name: account.name || 'حساب جدید',
         type: account.type || 'cashbox',
+        warehouse_id: parsedWarehouseId !== undefined ? parsedWarehouseId : null,
         bank_name: account.bank_name || null,
         account_number: account.account_number || null,
         card_number: account.card_number || null,
@@ -2924,5 +2987,357 @@ export class LocalOfflineAdapter implements IStorageProvider {
       salesInvoices,
       purchaseInvoices,
     };
+  }
+
+  // POS Shifts (شیفت‌های صندوق)
+  async getPosShifts(params?: QueryParams & { user_id?: string; status?: PosShiftStatus; warehouse_id?: number }): Promise<PosShift[]> {
+    const all = this.getItem<PosShift>('pos_shifts', []);
+    let filtered = this.filterByOrg(all, params);
+
+    if (params?.user_id) {
+      filtered = filtered.filter((s) => s.user_id === params.user_id);
+    }
+    if (params?.status) {
+      filtered = filtered.filter((s) => s.status === params.status);
+    }
+    if (params?.warehouse_id) {
+      filtered = filtered.filter((s) => {
+        const whId = typeof s.warehouse_id === 'object' ? (s.warehouse_id as any)?.id : s.warehouse_id;
+        return Number(whId) === Number(params.warehouse_id);
+      });
+    }
+
+    // Join metadata (warehouse, account, user) and compute sales statistics
+    const warehouses = this.getItem<Warehouse>('warehouses', []);
+    const accounts = this.getItem<FinancialAccount>('financial_accounts', []);
+    const users = this.getItem<OrganizationUser>('organization_users', []);
+    const orders = this.getItem<Order>('orders', []);
+
+    return filtered
+      .map((shift) => {
+        const whId = typeof shift.warehouse_id === 'object' ? (shift.warehouse_id as any)?.id : shift.warehouse_id;
+        const wh = warehouses.find((w) => w.id === Number(whId));
+
+        const accId = typeof shift.financial_account_id === 'object' ? (shift.financial_account_id as any)?.id : shift.financial_account_id;
+        const acc = accounts.find((a) => a.id === Number(accId));
+
+        const usr = users.find((u) => u.user_id === shift.user_id || u.email === shift.user_id);
+
+        // Compute orders within shift timeframe
+        const shiftStart = shift.opened_at ? new Date(shift.opened_at).getTime() : 0;
+        const shiftEnd = shift.closed_at ? new Date(shift.closed_at).getTime() : Date.now();
+
+        const shiftOrders = orders.filter((o) => {
+          // 1. If order has explicit pos_shift_id, link directly to this shift
+          if ((o as any).pos_shift_id && Number((o as any).pos_shift_id) === Number(shift.id)) {
+            return true;
+          }
+
+          // 2. Warehouse matching
+          const oWhId = typeof o.warehouse_id === 'object' ? (o.warehouse_id as any)?.id : o.warehouse_id;
+          if (whId && Number(oWhId) !== Number(whId)) return false;
+
+          // 3. Multi-cashier isolation: Do not attribute orders created by another cashier
+          if (shift.user_id) {
+            const oUser = (o as any).user_created || (o as any).user_id;
+            if (oUser && oUser !== shift.user_id) {
+              return false;
+            }
+          }
+
+          // 4. Time range check within shift window
+          const oTime = o.date_created ? new Date(o.date_created).getTime() : 0;
+          return oTime >= shiftStart && oTime <= shiftEnd;
+        });
+
+        let totalSales = 0;
+        let cashSales = 0;
+        let posSales = 0;
+        let cardSales = 0;
+        let creditSales = 0;
+
+        for (const ord of shiftOrders) {
+          const ordTotal = Number(ord.total) || 0;
+          totalSales += ordTotal;
+          const pMethod = String((ord as any).payment_method || (ord as any).payment_type || (ord as any).notes || '').toLowerCase();
+          if (pMethod.includes('cash') || pMethod.includes('نقدی') || pMethod.includes('نقد')) {
+            cashSales += ordTotal;
+          } else if (pMethod.includes('pos') || pMethod.includes('پوز') || pMethod.includes('کارتخوان')) {
+            posSales += ordTotal;
+          } else if (pMethod.includes('card') || pMethod.includes('کارت')) {
+            cardSales += ordTotal;
+          } else if (pMethod.includes('credit') || pMethod.includes('نسیه')) {
+            creditSales += ordTotal;
+          } else {
+            posSales += ordTotal;
+          }
+        }
+
+        return {
+          ...shift,
+          warehouse_name: wh?.name || (whId ? `انبار #${whId}` : undefined),
+          account_name: acc?.name || (accId ? `حساب #${accId}` : undefined),
+          user_name: usr ? `${usr.first_name || ''} ${usr.last_name || ''}`.trim() || usr.email : undefined,
+          user_email: usr?.email,
+          total_sales_amount: totalSales,
+          total_cash_amount: cashSales,
+          total_pos_amount: posSales,
+          total_card_amount: cardSales,
+          total_credit_amount: creditSales,
+          total_orders_count: shiftOrders.length,
+        };
+      })
+      .sort((a, b) => {
+        const tA = a.opened_at ? new Date(a.opened_at).getTime() : 0;
+        const tB = b.opened_at ? new Date(b.opened_at).getTime() : 0;
+        return tB - tA;
+      });
+  }
+
+  async getActivePosShift(userId?: string, warehouseId?: number): Promise<PosShift | null> {
+    const shifts = await this.getPosShifts({ status: 'open' });
+    if (userId && warehouseId) {
+      const match = shifts.find((s) => {
+        const whId = typeof s.warehouse_id === 'object' ? (s.warehouse_id as any)?.id : s.warehouse_id;
+        const uMatch = s.user_id === userId || (s as any).user_email === userId;
+        return uMatch && Number(whId) === Number(warehouseId);
+      });
+      if (match) return match;
+    }
+    if (userId) {
+      const userShift = shifts.find((s) => s.user_id === userId || (s as any).user_email === userId);
+      return userShift || null;
+    }
+    if (warehouseId) {
+      const whShift = shifts.find((s) => {
+        const whId = typeof s.warehouse_id === 'object' ? (s.warehouse_id as any)?.id : s.warehouse_id;
+        return Number(whId) === Number(warehouseId);
+      });
+      return whShift || null;
+    }
+    return shifts.length > 0 ? shifts[0] : null;
+  }
+
+  async savePosShift(shiftData: Partial<PosShift>): Promise<PosShift> {
+    const list = this.getItem<PosShift>('pos_shifts', []);
+    const activeOrgId = Number(shiftData.organization_id || this.getActiveOrgId());
+    let saved: PosShift;
+
+    if (shiftData.id) {
+      const idx = list.findIndex((s) => s.id === shiftData.id);
+      if (idx !== -1) {
+        saved = {
+          ...list[idx],
+          ...shiftData,
+          organization_id: activeOrgId,
+        };
+        list[idx] = saved;
+      } else {
+        saved = {
+          id: shiftData.id,
+          organization_id: activeOrgId,
+          user_id: shiftData.user_id || null,
+          warehouse_id: shiftData.warehouse_id || null,
+          financial_account_id: shiftData.financial_account_id || null,
+          opening_balance: shiftData.opening_balance ?? '0',
+          closing_balance: shiftData.closing_balance ?? null,
+          status: shiftData.status || 'open',
+          opened_at: shiftData.opened_at || new Date().toISOString(),
+          closed_at: shiftData.closed_at || null,
+        };
+        list.push(saved);
+      }
+    } else {
+      const nextId = this.generateUniqueId(list);
+      saved = {
+        id: nextId,
+        organization_id: activeOrgId,
+        user_id: shiftData.user_id || null,
+        warehouse_id: shiftData.warehouse_id || null,
+        financial_account_id: shiftData.financial_account_id || null,
+        opening_balance: shiftData.opening_balance ?? '0',
+        closing_balance: shiftData.closing_balance ?? null,
+        status: shiftData.status || 'open',
+        opened_at: shiftData.opened_at || new Date().toISOString(),
+        closed_at: shiftData.closed_at || null,
+      };
+      list.push(saved);
+    }
+
+    this.setItem('pos_shifts', list);
+    return saved;
+  }
+
+  async closePosShift(id: number, closingBalance: number | string, notes?: string): Promise<PosShift> {
+    const list = this.getItem<PosShift>('pos_shifts', []);
+    const idx = list.findIndex((s) => s.id === id);
+    if (idx === -1) {
+      throw new Error(`Shift #${id} not found`);
+    }
+
+    const updated: PosShift = {
+      ...list[idx],
+      closing_balance: String(closingBalance),
+      status: 'closed',
+      closed_at: new Date().toISOString(),
+    };
+
+    list[idx] = updated;
+    this.setItem('pos_shifts', list);
+    return updated;
+  }
+
+  async deletePosShift(id: number): Promise<boolean> {
+    const list = this.getItem<PosShift>('pos_shifts', []);
+    const filtered = list.filter((s) => s.id !== id);
+    this.setItem('pos_shifts', filtered);
+    return true;
+  }
+
+  // WooCommerce Integration
+  async getWooCommerceSettings(params?: QueryParams): Promise<WooCommerceSettings | null> {
+    const list = this.getItem<WooCommerceSettings>('woocommerce_settings', []);
+    const orgId = this.getActiveOrgId(params);
+    if (!orgId) return null;
+    const found = list.find((item) => normalizeId(item.organization_id) === orgId);
+    return found || null;
+  }
+
+  async saveWooCommerceSettings(settings: Partial<WooCommerceSettings>): Promise<WooCommerceSettings> {
+    const list = this.getItem<WooCommerceSettings>('woocommerce_settings', []);
+    const orgId = this.getActiveOrgId({ organization_id: normalizeId(settings.organization_id) });
+    if (!orgId) throw new Error('Active organization ID required');
+
+    const existingIdx = list.findIndex((item) => normalizeId(item.organization_id) === orgId);
+    let saved: WooCommerceSettings;
+
+    if (existingIdx !== -1) {
+      saved = {
+        ...list[existingIdx],
+        ...settings,
+        organization_id: orgId,
+        date_updated: new Date().toISOString(),
+      };
+      list[existingIdx] = saved;
+    } else {
+      const nextId = this.generateUniqueId(list as any);
+      saved = {
+        id: nextId,
+        organization_id: orgId,
+        site_url: settings.site_url || '',
+        consumer_key: settings.consumer_key || '',
+        consumer_secret: settings.consumer_secret || '',
+        warehouse_id: settings.warehouse_id || null,
+        financial_account_id: settings.financial_account_id || null,
+        default_customer_id: settings.default_customer_id || null,
+        auto_sync_stock: settings.auto_sync_stock ?? false,
+        auto_sync_price: settings.auto_sync_price ?? false,
+        auto_import_orders: settings.auto_import_orders ?? false,
+        sync_status: settings.sync_status || 'idle',
+        last_sync_at: settings.last_sync_at || null,
+        last_order_import_at: settings.last_order_import_at || null,
+        webhook_secret: settings.webhook_secret || null,
+        date_created: new Date().toISOString(),
+        date_updated: new Date().toISOString(),
+      };
+      list.push(saved);
+    }
+
+    this.setItem('woocommerce_settings', list);
+    return saved;
+  }
+
+  async getWooCommerceLogs(params?: QueryParams & { limit?: number }): Promise<WooCommerceLog[]> {
+    const list = this.getItem<WooCommerceLog>('woocommerce_logs', []);
+    const orgId = this.getActiveOrgId(params);
+    let filtered = list;
+    if (orgId) {
+      filtered = filtered.filter((log) => normalizeId(log.organization_id) === orgId);
+    }
+    // Sort desc by date
+    filtered.sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime());
+    if (params?.limit && params.limit > 0) {
+      filtered = filtered.slice(0, params.limit);
+    }
+    return filtered;
+  }
+
+  async addWooCommerceLog(log: Partial<WooCommerceLog>): Promise<WooCommerceLog> {
+    const list = this.getItem<WooCommerceLog>('woocommerce_logs', []);
+    const orgId = this.getActiveOrgId({ organization_id: normalizeId(log.organization_id) });
+    if (!orgId) throw new Error('Active organization ID required for log');
+
+    const nextId = this.generateUniqueId(list as any);
+    const newLog: WooCommerceLog = {
+      id: nextId,
+      organization_id: orgId,
+      action: log.action || 'test_connection',
+      direction: log.direction || 'outbound',
+      status: log.status || 'info',
+      message: log.message || '',
+      details: log.details || null,
+      date_created: log.date_created || new Date().toISOString(),
+    };
+
+    list.unshift(newLog);
+    // Keep max 500 logs locally
+    if (list.length > 500) {
+      list.length = 500;
+    }
+    this.setItem('woocommerce_logs', list);
+    return newLog;
+  }
+
+  async getIntegrationMappings(params?: QueryParams & { entity_type?: string }): Promise<IntegrationMapping[]> {
+    const list = this.getItem<IntegrationMapping>('woocommerce_mappings', []);
+    const orgId = this.getActiveOrgId(params);
+    let filtered = list;
+    if (orgId) {
+      filtered = filtered.filter((m) => normalizeId(m.organization_id) === orgId);
+    }
+    if (params?.entity_type) {
+      filtered = filtered.filter((m) => m.entity_type === params.entity_type);
+    }
+    return filtered;
+  }
+
+  async saveIntegrationMapping(mapping: Partial<IntegrationMapping>): Promise<IntegrationMapping> {
+    const list = this.getItem<IntegrationMapping>('woocommerce_mappings', []);
+    const orgId = this.getActiveOrgId({ organization_id: normalizeId(mapping.organization_id) });
+    if (!orgId) throw new Error('Active organization ID required');
+
+    const existingIdx = list.findIndex(
+      (m) =>
+        normalizeId(m.organization_id) === orgId &&
+        m.entity_type === mapping.entity_type &&
+        (m.tankhor_id === mapping.tankhor_id || String(m.external_id) === String(mapping.external_id))
+    );
+
+    let saved: IntegrationMapping;
+    if (existingIdx !== -1) {
+      saved = {
+        ...list[existingIdx],
+        ...mapping,
+        organization_id: orgId,
+        last_synced_at: new Date().toISOString(),
+      };
+      list[existingIdx] = saved;
+    } else {
+      const nextId = this.generateUniqueId(list as any);
+      saved = {
+        id: nextId,
+        organization_id: orgId,
+        entity_type: mapping.entity_type || 'variant',
+        tankhor_id: mapping.tankhor_id!,
+        external_id: mapping.external_id!,
+        sku: mapping.sku || null,
+        last_synced_at: new Date().toISOString(),
+        sync_status: mapping.sync_status || 'synced',
+      };
+      list.push(saved);
+    }
+
+    this.setItem('woocommerce_mappings', list);
+    return saved;
   }
 }

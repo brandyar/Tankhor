@@ -128,6 +128,104 @@ class StorageManagerSingleton {
   public getCloudAdapter(): CloudDirectusAdapter {
     return this.cloudAdapter;
   }
+
+  public async getWarehouses(params?: any) {
+    return this.activeAdapter.getWarehouses(params);
+  }
+
+  public async getFinancialAccounts(params?: any) {
+    return this.activeAdapter.getFinancialAccounts(params);
+  }
+
+  public async getProductVariants(params?: any) {
+    return this.activeAdapter.getVariants(params);
+  }
+
+  public async getVariants(params?: any) {
+    return this.activeAdapter.getVariants(params);
+  }
+
+  public async getInventoryItems(params?: any) {
+    return this.activeAdapter.getInventoryItems(params);
+  }
+
+  public async getPosShifts(params?: any) {
+    if (this.activeAdapter.getPosShifts) {
+      return this.activeAdapter.getPosShifts(params);
+    }
+    return [];
+  }
+
+  public async getActivePosShift(userId?: string, warehouseId?: number) {
+    if (this.activeAdapter.getActivePosShift) {
+      return this.activeAdapter.getActivePosShift(userId, warehouseId);
+    }
+    return null;
+  }
+
+  public async savePosShift(shift: any) {
+    if (this.activeAdapter.savePosShift) {
+      return this.activeAdapter.savePosShift(shift);
+    }
+    throw new Error('savePosShift not supported by active adapter');
+  }
+
+  public async closePosShift(id: number, closingBalance: number | string, notes?: string) {
+    if (this.activeAdapter.closePosShift) {
+      return this.activeAdapter.closePosShift(id, closingBalance, notes);
+    }
+    throw new Error('closePosShift not supported by active adapter');
+  }
+
+  public async deletePosShift(id: number) {
+    if (this.activeAdapter.deletePosShift) {
+      return this.activeAdapter.deletePosShift(id);
+    }
+    return false;
+  }
+
+  // WooCommerce Integration delegation
+  public async getWooCommerceSettings(params?: any) {
+    if (this.activeAdapter.getWooCommerceSettings) {
+      return this.activeAdapter.getWooCommerceSettings(params);
+    }
+    return null;
+  }
+
+  public async saveWooCommerceSettings(settings: any) {
+    if (this.activeAdapter.saveWooCommerceSettings) {
+      return this.activeAdapter.saveWooCommerceSettings(settings);
+    }
+    throw new Error('saveWooCommerceSettings not supported by active adapter');
+  }
+
+  public async getWooCommerceLogs(params?: any) {
+    if (this.activeAdapter.getWooCommerceLogs) {
+      return this.activeAdapter.getWooCommerceLogs(params);
+    }
+    return [];
+  }
+
+  public async addWooCommerceLog(log: any) {
+    if (this.activeAdapter.addWooCommerceLog) {
+      return this.activeAdapter.addWooCommerceLog(log);
+    }
+    return log;
+  }
+
+  public async getIntegrationMappings(params?: any) {
+    if (this.activeAdapter.getIntegrationMappings) {
+      return this.activeAdapter.getIntegrationMappings(params);
+    }
+    return [];
+  }
+
+  public async saveIntegrationMapping(mapping: any) {
+    if (this.activeAdapter.saveIntegrationMapping) {
+      return this.activeAdapter.saveIntegrationMapping(mapping);
+    }
+    return mapping;
+  }
 }
 
 export const storageManager = new StorageManagerSingleton();

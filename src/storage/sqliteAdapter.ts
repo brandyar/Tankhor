@@ -10,7 +10,8 @@ import {
   ExpenseCategory, Expense, PersonTransaction, ProfitLossSummary,
   FinancialAccount, FinancialAccountType, TreasuryTransaction, TreasuryTransactionType,
   Cheque, ChequeType, ChequeStatus,
-  LandedCost, LandedCostAllocation, VatReportSummary
+  LandedCost, LandedCostAllocation, VatReportSummary,
+  PosShift, PosShiftStatus
 } from '../types';
 import { DEFAULT_SYSTEM_MODULES } from '../utils/license';
 import { directusClient } from '../api/directus';
@@ -63,6 +64,7 @@ export const SQLITE_COLLECTIONS = [
   'cheques',
   'landed_costs',
   'landed_cost_allocations',
+  'pos_shifts',
 ] as const;
 
 export class SqliteStorageAdapter implements IStorageProvider {
@@ -427,7 +429,17 @@ export class SqliteStorageAdapter implements IStorageProvider {
     if (ouData.id) {
       const existing = list.find((ou) => ou.id === ouData.id);
       if (existing) {
-        saved = { ...existing, ...ouData, organization_id: activeOrgId };
+        const rawWh = ouData.warehouse_id !== undefined ? (ouData.warehouse_id ? Number(ouData.warehouse_id) : null) : existing.warehouse_id;
+        const rawAcc = ouData.financial_account_id !== undefined ? (ouData.financial_account_id ? Number(ouData.financial_account_id) : null) : existing.financial_account_id;
+        const rawCanChangeWh = ouData.can_change_warehouse !== undefined ? Boolean(ouData.can_change_warehouse) : (existing.can_change_warehouse ?? true);
+        saved = {
+          ...existing,
+          ...ouData,
+          organization_id: activeOrgId,
+          warehouse_id: rawWh,
+          financial_account_id: rawAcc,
+          can_change_warehouse: rawCanChangeWh,
+        };
       } else {
         saved = {
           id: ouData.id,
@@ -439,6 +451,9 @@ export class SqliteStorageAdapter implements IStorageProvider {
           first_name: ouData.first_name || '',
           last_name: ouData.last_name || '',
           email: ouData.email || '',
+          warehouse_id: ouData.warehouse_id ? Number(ouData.warehouse_id) : null,
+          financial_account_id: ouData.financial_account_id ? Number(ouData.financial_account_id) : null,
+          can_change_warehouse: ouData.can_change_warehouse !== undefined ? Boolean(ouData.can_change_warehouse) : true,
         };
       }
     } else {
@@ -453,6 +468,9 @@ export class SqliteStorageAdapter implements IStorageProvider {
         first_name: ouData.first_name || '',
         last_name: ouData.last_name || '',
         email: ouData.email || '',
+        warehouse_id: ouData.warehouse_id ? Number(ouData.warehouse_id) : null,
+        financial_account_id: ouData.financial_account_id ? Number(ouData.financial_account_id) : null,
+        can_change_warehouse: ouData.can_change_warehouse !== undefined ? Boolean(ouData.can_change_warehouse) : true,
       };
     }
 
@@ -1252,6 +1270,16 @@ export class SqliteStorageAdapter implements IStorageProvider {
   async getStockTransfers(params?: QueryParams): Promise<StockTransfer[]> {
     return this.getItems<StockTransfer>('stock_transfers', this.getActiveOrgId(params));
   }
+  async getStockTransferItems(transferId?: number): Promise<StockTransferItem[]> {
+    const all = await this.getItems<StockTransferItem>('stock_transfer_items');
+    if (transferId) {
+      return all.filter((it) => {
+        const tId = typeof it.transfer_id === 'object' ? (it.transfer_id as any)?.id : it.transfer_id;
+        return Number(tId) === Number(transferId);
+      });
+    }
+    return all;
+  }
   async saveStockTransfer(st: Partial<StockTransfer>, items?: Partial<StockTransferItem>[]): Promise<StockTransfer> {
     const list = await this.getItems<StockTransfer>('stock_transfers');
     const validId = typeof st.id === 'number' && st.id > 0 ? st.id : this.generateUniqueId(list);
@@ -1877,22 +1905,33 @@ export class SqliteStorageAdapter implements IStorageProvider {
       items = defaults;
     }
 
+    const warehouses = await this.getWarehouses({ organization_id: orgId });
+    const enriched = items.map((acc) => {
+      const rawWhId = typeof acc.warehouse_id === 'object' && acc.warehouse_id ? (acc.warehouse_id as any).id : acc.warehouse_id;
+      const wh = warehouses.find((w) => w.id === Number(rawWhId));
+      return {
+        ...acc,
+        warehouse_name: wh?.name || acc.warehouse_name,
+      };
+    });
+
+    let filtered = enriched;
     if (params?.status) {
-      items = items.filter((a) => a.status === params.status);
+      filtered = filtered.filter((a) => a.status === params.status);
     }
     if (params?.type) {
-      items = items.filter((a) => a.type === params.type);
+      filtered = filtered.filter((a) => a.type === params.type);
     }
     if (params?.search) {
       const q = params.search.toLowerCase();
-      items = items.filter((a) =>
+      filtered = filtered.filter((a) =>
         a.name.toLowerCase().includes(q) ||
         (a.bank_name && a.bank_name.toLowerCase().includes(q)) ||
         (a.account_number && a.account_number.includes(q)) ||
         (a.card_number && a.card_number.includes(q))
       );
     }
-    return items;
+    return filtered;
   }
 
   async getFinancialAccountById(id: number): Promise<FinancialAccount | null> {
@@ -1914,11 +1953,13 @@ export class SqliteStorageAdapter implements IStorageProvider {
       }
     }
 
+    const rawWhId = typeof account.warehouse_id === 'object' && account.warehouse_id ? (account.warehouse_id as any).id : account.warehouse_id;
     const saved: FinancialAccount = {
       id: validId,
       organization_id: orgId,
       name: account.name || 'حساب جدید',
       type: account.type || 'cashbox',
+      warehouse_id: rawWhId ? Number(rawWhId) : null,
       bank_name: account.bank_name || null,
       account_number: account.account_number || null,
       card_number: account.card_number || null,
@@ -2434,5 +2475,178 @@ export class SqliteStorageAdapter implements IStorageProvider {
       salesInvoices,
       purchaseInvoices,
     };
+  }
+
+  // POS Shifts (شیفت‌های صندوق)
+  async getPosShifts(params?: QueryParams & { user_id?: string; status?: PosShiftStatus; warehouse_id?: number }): Promise<PosShift[]> {
+    const orgId = this.getActiveOrgId(params) || 1;
+    const rawItems = await this.getItems<PosShift>('pos_shifts', orgId);
+    let filtered = rawItems;
+
+    if (params?.user_id) {
+      filtered = filtered.filter((s) => s.user_id === params.user_id);
+    }
+    if (params?.status) {
+      filtered = filtered.filter((s) => s.status === params.status);
+    }
+    if (params?.warehouse_id) {
+      filtered = filtered.filter((s) => {
+        const whId = typeof s.warehouse_id === 'object' ? (s.warehouse_id as any)?.id : s.warehouse_id;
+        return Number(whId) === Number(params.warehouse_id);
+      });
+    }
+
+    // Join metadata (warehouse, account, user) and compute sales statistics
+    const warehouses = await this.getWarehouses({ organization_id: orgId });
+    const accounts = await this.getFinancialAccounts({ organization_id: orgId });
+    const users = await this.getOrganizationUsers({ organization_id: orgId });
+    const orders = await this.getOrders({ organization_id: orgId });
+
+    return filtered
+      .map((shift) => {
+        const whId = typeof shift.warehouse_id === 'object' ? (shift.warehouse_id as any)?.id : shift.warehouse_id;
+        const wh = warehouses.find((w) => w.id === Number(whId));
+
+        const accId = typeof shift.financial_account_id === 'object' ? (shift.financial_account_id as any)?.id : shift.financial_account_id;
+        const acc = accounts.find((a) => a.id === Number(accId));
+
+        const usr = users.find((u) => u.user_id === shift.user_id || u.email === shift.user_id);
+
+        const shiftStart = shift.opened_at ? new Date(shift.opened_at).getTime() : 0;
+        const shiftEnd = shift.closed_at ? new Date(shift.closed_at).getTime() : Date.now();
+
+        const shiftOrders = orders.filter((o) => {
+          // 1. If order has explicit pos_shift_id, link directly to this shift
+          if ((o as any).pos_shift_id && Number((o as any).pos_shift_id) === Number(shift.id)) {
+            return true;
+          }
+
+          // 2. Warehouse matching
+          const oWhId = typeof o.warehouse_id === 'object' ? (o.warehouse_id as any)?.id : o.warehouse_id;
+          if (whId && Number(oWhId) !== Number(whId)) return false;
+
+          // 3. Multi-cashier isolation: Do not attribute orders created by another cashier
+          if (shift.user_id) {
+            const oUser = (o as any).user_created || (o as any).user_id;
+            if (oUser && oUser !== shift.user_id) {
+              return false;
+            }
+          }
+
+          // 4. Time range check within shift window
+          const oTime = o.date_created ? new Date(o.date_created).getTime() : 0;
+          return oTime >= shiftStart && oTime <= shiftEnd;
+        });
+
+        let totalSales = 0;
+        let cashSales = 0;
+        let posSales = 0;
+        let cardSales = 0;
+        let creditSales = 0;
+
+        for (const ord of shiftOrders) {
+          const ordTotal = Number(ord.total) || 0;
+          totalSales += ordTotal;
+          const pMethod = String((ord as any).payment_method || (ord as any).payment_type || (ord as any).notes || '').toLowerCase();
+          if (pMethod.includes('cash') || pMethod.includes('نقدی') || pMethod.includes('نقد')) {
+            cashSales += ordTotal;
+          } else if (pMethod.includes('pos') || pMethod.includes('پوز') || pMethod.includes('کارتخوان')) {
+            posSales += ordTotal;
+          } else if (pMethod.includes('card') || pMethod.includes('کارت')) {
+            cardSales += ordTotal;
+          } else if (pMethod.includes('credit') || pMethod.includes('نسیه')) {
+            creditSales += ordTotal;
+          } else {
+            posSales += ordTotal;
+          }
+        }
+
+        return {
+          ...shift,
+          warehouse_name: wh?.name || (whId ? `انبار #${whId}` : undefined),
+          account_name: acc?.name || (accId ? `حساب #${accId}` : undefined),
+          user_name: usr ? `${usr.first_name || ''} ${usr.last_name || ''}`.trim() || usr.email : undefined,
+          user_email: usr?.email,
+          total_sales_amount: totalSales,
+          total_cash_amount: cashSales,
+          total_pos_amount: posSales,
+          total_card_amount: cardSales,
+          total_credit_amount: creditSales,
+          total_orders_count: shiftOrders.length,
+        };
+      })
+      .sort((a, b) => {
+        const tA = a.opened_at ? new Date(a.opened_at).getTime() : 0;
+        const tB = b.opened_at ? new Date(b.opened_at).getTime() : 0;
+        return tB - tA;
+      });
+  }
+
+  async getActivePosShift(userId?: string, warehouseId?: number): Promise<PosShift | null> {
+    const shifts = await this.getPosShifts({ status: 'open' });
+    if (userId && warehouseId) {
+      const match = shifts.find((s) => {
+        const whId = typeof s.warehouse_id === 'object' ? (s.warehouse_id as any)?.id : s.warehouse_id;
+        const uMatch = s.user_id === userId || (s as any).user_email === userId;
+        return uMatch && Number(whId) === Number(warehouseId);
+      });
+      if (match) return match;
+    }
+    if (userId) {
+      const userShift = shifts.find((s) => s.user_id === userId || (s as any).user_email === userId);
+      return userShift || null;
+    }
+    if (warehouseId) {
+      const whShift = shifts.find((s) => {
+        const whId = typeof s.warehouse_id === 'object' ? (s.warehouse_id as any)?.id : s.warehouse_id;
+        return Number(whId) === Number(warehouseId);
+      });
+      return whShift || null;
+    }
+    return shifts.length > 0 ? shifts[0] : null;
+  }
+
+  async savePosShift(shiftData: Partial<PosShift>): Promise<PosShift> {
+    const activeOrgId = Number(shiftData.organization_id || this.getActiveOrgId());
+    const id = shiftData.id || this.generateUniqueId([]);
+
+    const shiftObj: PosShift = {
+      id,
+      organization_id: activeOrgId,
+      user_id: shiftData.user_id || null,
+      warehouse_id: shiftData.warehouse_id || null,
+      financial_account_id: shiftData.financial_account_id || null,
+      opening_balance: shiftData.opening_balance ?? '0',
+      closing_balance: shiftData.closing_balance ?? null,
+      status: shiftData.status || 'open',
+      opened_at: shiftData.opened_at || new Date().toISOString(),
+      closed_at: shiftData.closed_at || null,
+      ...shiftData,
+    };
+
+    await this.saveItem('pos_shifts', shiftObj);
+    return shiftObj;
+  }
+
+  async closePosShift(id: number, closingBalance: number | string, notes?: string): Promise<PosShift> {
+    const shifts = await this.getPosShifts();
+    const existing = shifts.find((s) => s.id === id);
+    if (!existing) {
+      throw new Error(`Shift #${id} not found`);
+    }
+
+    const updated: PosShift = {
+      ...existing,
+      closing_balance: String(closingBalance),
+      status: 'closed',
+      closed_at: new Date().toISOString(),
+    };
+
+    await this.saveItem('pos_shifts', updated);
+    return updated;
+  }
+
+  async deletePosShift(id: number): Promise<boolean> {
+    return await this.deleteItem('pos_shifts', id);
   }
 }

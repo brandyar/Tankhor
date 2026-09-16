@@ -246,4 +246,9 @@ export const inventoryFa = {
   movementTypeAndQty: 'نوع و تعداد گردش',
   refDocNumber: 'شماره سند / مرجع',
   movementNote: 'شرح گردش',
+  transferItemsList: 'اقلام و کالاهای حواله',
+  noItemsInTransfer: 'هیچ قلم کالایی برای این حواله ثبت نشده است.',
+  editThresholds: 'ویرایش نقطه سفارش و ذخیره اطمینان',
+  editThresholdsSuccess: 'حدود سفارش مجدد و ذخیره اطمینان با موفقیت ذخیره شد.',
+  editThresholdsDesc: 'تعیین حداقل موجودی و نقطه هشدار سفارش مجدد برای این تنوع در انبار',
 };

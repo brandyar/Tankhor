@@ -296,6 +296,10 @@ const TENANT_SCOPED_COLLECTIONS = new Set([
   'cheques',
   'landed_costs',
   'landed_cost_allocations',
+  'pos_shifts',
+  'woocommerce_settings',
+  'woocommerce_logs',
+  'woocommerce_mappings',
 ]);
 
 function sanitizePayloadForDirectus(collection: string, raw: Record<string, any>): Record<string, any> {
@@ -306,6 +310,7 @@ function sanitizePayloadForDirectus(collection: string, raw: Record<string, any>
     'organization_id',
     'category_id',
     'account_id',
+    'financial_account_id',
     'customer_id',
     'supplier_id',
     'product_id',
@@ -419,6 +424,30 @@ function sanitizePayloadForDirectus(collection: string, raw: Record<string, any>
     delete payload.supplier_name;
   }
 
+  if (collection === 'pos_shifts') {
+    delete payload.organization_id;
+    delete payload.notes;
+    delete payload.warehouse_name;
+    delete payload.account_name;
+    delete payload.user_name;
+    delete payload.user_email;
+    delete payload.total_sales_amount;
+    delete payload.total_cash_amount;
+    delete payload.total_pos_amount;
+    delete payload.total_card_amount;
+    delete payload.total_credit_amount;
+    delete payload.total_orders_count;
+    if (payload.opening_balance !== undefined && payload.opening_balance !== null) {
+      payload.opening_balance = String(payload.opening_balance);
+    }
+    if (payload.closing_balance !== undefined && payload.closing_balance !== null) {
+      payload.closing_balance = String(payload.closing_balance);
+    }
+    if (payload.status !== undefined && payload.status !== null) {
+      payload.status = Array.isArray(payload.status) ? payload.status : [payload.status];
+    }
+  }
+
   return payload;
 }
 
@@ -469,12 +498,50 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
       }
     }
 
+    // Strip root organization_id for collections without organization_id column
+    if (
+      collection === 'warehouse_locations' ||
+      collection === 'pos_shifts' ||
+      collection === 'size_guide_measurements' ||
+      collection === 'size_guide_values' ||
+      collection === 'landed_cost_allocations'
+    ) {
+      if (clientFilter.organization_id) {
+        delete clientFilter.organization_id;
+      }
+      if (Array.isArray(clientFilter._and)) {
+        clientFilter._and = clientFilter._and.filter((cond: any) => !cond.organization_id);
+        if (clientFilter._and.length === 0) delete clientFilter._and;
+      }
+    }
+
+    // Directus JSON field operator limitation: status on pos_shifts cannot use _eq
+    let posShiftStatusFilter: string | null = null;
+    if (collection === 'pos_shifts') {
+      if (clientFilter.status) {
+        posShiftStatusFilter = typeof clientFilter.status === 'object' ? clientFilter.status._eq : clientFilter.status;
+        delete clientFilter.status;
+      }
+      if (Array.isArray(clientFilter._and)) {
+        clientFilter._and = clientFilter._and.filter((cond: any) => {
+          if (cond.status) {
+            posShiftStatusFilter = typeof cond.status === 'object' ? cond.status._eq : cond.status;
+            return false;
+          }
+          return true;
+        });
+        if (clientFilter._and.length === 0) delete clientFilter._and;
+      }
+    }
+
     // Inject mandatory organization boundary for tenant-scoped collections
     let effectiveFilter = clientFilter;
     if (TENANT_SCOPED_COLLECTIONS.has(collection)) {
       let tenantFilter: any = { organization_id: { _eq: orgIdNum } };
       
       if (collection === 'warehouse_locations') {
+        tenantFilter = { warehouse_id: { organization_id: { _eq: orgIdNum } } };
+      } else if (collection === 'pos_shifts') {
         tenantFilter = { warehouse_id: { organization_id: { _eq: orgIdNum } } };
       } else if (collection === 'size_guide_measurements' || collection === 'size_guide_values') {
         tenantFilter = { template_id: { organization_id: { _eq: orgIdNum } } };
@@ -497,18 +564,38 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
     if (collection === 'organization_users') {
       const orgUsersQuery: any = {
         filter: effectiveFilter,
-        fields: ['id', 'role', 'status', 'date_joined', 'organization_id', 'user_id.id', 'user_id.email', 'user_id.first_name', 'user_id.last_name', 'user_id.avatar', 'user_id.status'],
+        fields: [
+          'id',
+          'role',
+          'status',
+          'date_joined',
+          'organization_id',
+          'warehouse_id',
+          'financial_account_id',
+          'can_change_warehouse',
+          'user_id.id',
+          'user_id.email',
+          'user_id.first_name',
+          'user_id.last_name',
+          'user_id.avatar',
+          'user_id.status',
+        ],
         sort: req.query.sort || '-id',
       };
       const items = await DirectusAdminClient.getItems('organization_users', orgUsersQuery);
       const mapped = (items || []).map((ou: any) => {
         const u = typeof ou.user_id === 'object' && ou.user_id ? ou.user_id : {};
+        const rawWhId = typeof ou.warehouse_id === 'object' && ou.warehouse_id ? ou.warehouse_id.id : ou.warehouse_id;
+        const rawAccId = typeof ou.financial_account_id === 'object' && ou.financial_account_id ? ou.financial_account_id.id : ou.financial_account_id;
         return {
           ...ou,
           first_name: u.first_name || ou.first_name || '',
           last_name: u.last_name || ou.last_name || '',
           email: u.email || ou.email || '',
           user_id: typeof ou.user_id === 'string' ? ou.user_id : (u.id || ou.user_id || ''),
+          warehouse_id: rawWhId ? Number(rawWhId) : null,
+          financial_account_id: rawAccId ? Number(rawAccId) : null,
+          can_change_warehouse: ou.can_change_warehouse !== undefined && ou.can_change_warehouse !== null ? Boolean(ou.can_change_warehouse) : true,
         };
       });
       return res.json({ data: mapped });
@@ -523,6 +610,19 @@ proxyRouter.get('/items/:collection', requireAuth, async (req: AuthenticatedRequ
     if (req.query.fields) query.fields = req.query.fields;
 
     const items = await DirectusAdminClient.getItems(collection, query);
+
+    if (collection === 'pos_shifts') {
+      let mapped = (items || []).map((shift: any) => ({
+        ...shift,
+        organization_id: orgIdNum,
+        status: Array.isArray(shift.status) ? shift.status[0] : (shift.status || 'open'),
+      }));
+      if (posShiftStatusFilter) {
+        mapped = mapped.filter((s: any) => s.status === posShiftStatusFilter);
+      }
+      return res.json({ data: mapped });
+    }
+
     return res.json({ data: items });
   } catch (error: any) {
     console.error(`[API Proxy] Error fetching ${collection}:`, error.message);
@@ -570,7 +670,7 @@ function checkRolePermission(userRole: string, action: 'create' | 'update' | 'de
     if (action === 'delete') {
       return { allowed: false, message: 'نقش فروشنده (Sales) اجازه حذف اطلاعات را ندارد.' };
     }
-    const salesAllowedCollections = ['orders', 'order_items', 'customers'];
+    const salesAllowedCollections = ['orders', 'order_items', 'customers', 'pos_shifts'];
     if (!salesAllowedCollections.includes(collection)) {
       return { allowed: false, message: `نقش فروشنده (Sales) مجاز به انجام عملیات روی «${collection}» نیست.` };
     }
@@ -666,11 +766,24 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
         limit: 1,
       }).catch(() => []);
 
+      const whIdVal = payload.warehouse_id !== undefined && payload.warehouse_id !== null && payload.warehouse_id !== ''
+        ? Number(payload.warehouse_id)
+        : null;
+      const finAccIdVal = payload.financial_account_id !== undefined && payload.financial_account_id !== null && payload.financial_account_id !== ''
+        ? Number(payload.financial_account_id)
+        : null;
+      const canChangeWhVal = payload.can_change_warehouse !== undefined && payload.can_change_warehouse !== null
+        ? Boolean(payload.can_change_warehouse)
+        : true;
+
       let memberResult: any;
       if (existingMembers && existingMembers.length > 0) {
         memberResult = await DirectusAdminClient.updateItem('organization_users', existingMembers[0].id, {
           role: payload.role || 'sales',
           status: payload.status || 'active',
+          warehouse_id: whIdVal,
+          financial_account_id: finAccIdVal,
+          can_change_warehouse: canChangeWhVal,
         });
       } else {
         memberResult = await DirectusAdminClient.createItem('organization_users', {
@@ -679,6 +792,9 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
           role: payload.role || 'sales',
           status: payload.status || 'active',
           date_joined: new Date().toISOString(),
+          warehouse_id: whIdVal,
+          financial_account_id: finAccIdVal,
+          can_change_warehouse: canChangeWhVal,
         });
       }
 
@@ -688,6 +804,9 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
           first_name: firstName,
           last_name: lastName,
           email: email,
+          warehouse_id: whIdVal,
+          financial_account_id: finAccIdVal,
+          can_change_warehouse: canChangeWhVal,
         },
       });
     }
@@ -698,7 +817,8 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
         collection !== 'warehouse_locations' &&
         collection !== 'size_guide_measurements' &&
         collection !== 'size_guide_values' &&
-        collection !== 'landed_cost_allocations'
+        collection !== 'landed_cost_allocations' &&
+        collection !== 'pos_shifts'
       ) {
         payload.organization_id = orgIdNum;
       }
@@ -778,6 +898,15 @@ proxyRouter.post('/items/:collection', requireAuth, async (req: AuthenticatedReq
     }
 
     const created = await DirectusAdminClient.createItem(collection, cleanPayload);
+    if (collection === 'pos_shifts') {
+      return res.status(201).json({
+        data: {
+          ...created,
+          organization_id: orgIdNum,
+          status: Array.isArray(created.status) ? created.status[0] : (created.status || 'open'),
+        },
+      });
+    }
     return res.status(201).json({ data: created });
   } catch (error: any) {
     console.error(`[API Proxy] Error creating in ${collection}:`, error.message);
@@ -847,14 +976,28 @@ proxyRouter.patch('/items/:collection/:id', requireAuth, async (req: Authenticat
       const updatePayload: any = {};
       if (payload.role) updatePayload.role = payload.role;
       if (payload.status) updatePayload.status = payload.status;
+      if (payload.warehouse_id !== undefined) {
+        updatePayload.warehouse_id = payload.warehouse_id ? Number(payload.warehouse_id) : null;
+      }
+      if (payload.financial_account_id !== undefined) {
+        updatePayload.financial_account_id = payload.financial_account_id ? Number(payload.financial_account_id) : null;
+      }
+      if (payload.can_change_warehouse !== undefined) {
+        updatePayload.can_change_warehouse = Boolean(payload.can_change_warehouse);
+      }
 
       const updated = await DirectusAdminClient.updateItem('organization_users', id, updatePayload);
+      const rawWhId = updatePayload.warehouse_id !== undefined ? updatePayload.warehouse_id : (typeof orgUser.warehouse_id === 'object' ? orgUser.warehouse_id?.id : orgUser.warehouse_id);
+      const rawAccId = updatePayload.financial_account_id !== undefined ? updatePayload.financial_account_id : (typeof orgUser.financial_account_id === 'object' ? orgUser.financial_account_id?.id : orgUser.financial_account_id);
       return res.json({
         data: {
           ...updated,
           first_name: payload.first_name || (typeof orgUser.user_id === 'object' ? orgUser.user_id?.first_name : '') || '',
           last_name: payload.last_name || (typeof orgUser.user_id === 'object' ? orgUser.user_id?.last_name : '') || '',
           email: payload.email || (typeof orgUser.user_id === 'object' ? orgUser.user_id?.email : '') || '',
+          warehouse_id: rawWhId ? Number(rawWhId) : null,
+          financial_account_id: rawAccId ? Number(rawAccId) : null,
+          can_change_warehouse: updatePayload.can_change_warehouse !== undefined ? updatePayload.can_change_warehouse : (orgUser.can_change_warehouse !== undefined ? Boolean(orgUser.can_change_warehouse) : true),
         },
       });
     }
@@ -877,6 +1020,15 @@ proxyRouter.patch('/items/:collection/:id', requireAuth, async (req: Authenticat
 
     const cleanPayload = sanitizePayloadForDirectus(collection, payload);
     const updated = await DirectusAdminClient.updateItem(collection, id, cleanPayload);
+    if (collection === 'pos_shifts') {
+      return res.json({
+        data: {
+          ...updated,
+          organization_id: orgIdNum,
+          status: Array.isArray(updated.status) ? updated.status[0] : (updated.status || 'open'),
+        },
+      });
+    }
     return res.json({ data: updated });
   } catch (error: any) {
     return res.status(500).json({ error: error.message || `Failed to update ${collection}/${id}` });

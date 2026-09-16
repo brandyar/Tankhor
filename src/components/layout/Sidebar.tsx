@@ -45,6 +45,8 @@ import {
   Scale,
   FileText,
   FileSpreadsheet,
+  Globe,
+  Clock,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -94,6 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isRtl = locale === 'fa';
   const hasBarcodeAccess = hasAccess('barcode');
   const hasAccountingAccess = hasAccess('accounting');
+  const hasWooCommerceAccess = hasAccess('woocommerce');
   const isDesktop = isTauriEnvironment();
 
   // State to track open submenus
@@ -103,6 +106,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     stockOperations: false,
     accountingOperations: false,
     settingsManagement: false,
+    woocommerceOperations: false,
   });
 
   const toggleSubmenu = (key: string) => {
@@ -213,60 +217,61 @@ export const Sidebar: React.FC<SidebarProps> = ({
             title: t('navigation.accountingGroup', 'حسابداری و مالی'),
             entries: [
               {
-                type: 'item' as const,
-                route: 'accounting/dashboard',
-                label: t('navigation.accountingDashboard', 'سود و زیان و عملکرد'),
-                icon: BarChart3,
+                type: 'submenu' as const,
+                key: 'accountingOperations',
+                label: t('navigation.accountingGroup', 'حسابداری و مالی'),
+                icon: Calculator,
                 visible: permissions.canViewFinancials,
-              },
-              {
-                type: 'item' as const,
-                route: 'accounting/expenses',
-                label: t('navigation.expenses', 'هزینه‌ها و سرفصل‌ها'),
-                icon: Receipt,
-                visible: permissions.canViewFinancials,
-              },
-              {
-                type: 'item' as const,
-                route: 'accounting/persons',
-                label: t('navigation.personAccounts', 'طرف‌حساب‌ها و معین اشخاص'),
-                icon: Users,
-                visible: permissions.canViewFinancials,
-              },
-              {
-                type: 'item' as const,
-                route: 'accounting/accounts',
-                label: t('navigation.financialAccounts', 'صندوق‌ها و بانک‌ها'),
-                icon: Wallet,
-                visible: permissions.canViewFinancials,
-              },
-              {
-                type: 'item' as const,
-                route: 'accounting/cheques',
-                label: t('navigation.cheques', 'مدیریت چک‌های صیادی'),
-                icon: CheckSquare,
-                visible: permissions.canViewFinancials,
-              },
-              {
-                type: 'item' as const,
-                route: 'accounting/landed-costs',
-                label: t('navigation.landedCosts', 'بهای تمام‌شده و سربار خرید'),
-                icon: Scale,
-                visible: permissions.canViewFinancials,
-              },
-              {
-                type: 'item' as const,
-                route: 'accounting/tax',
-                label: t('navigation.taxReports', 'مالیات و ارزش افزوده'),
-                icon: FileText,
-                visible: permissions.canViewFinancials,
-              },
-              {
-                type: 'item' as const,
-                route: 'accounting/export',
-                label: t('navigation.accountingExport', 'خروجی اسناد و مودیان'),
-                icon: FileSpreadsheet,
-                visible: permissions.canViewFinancials,
+                items: [
+                  {
+                    route: 'accounting/dashboard',
+                    label: t('navigation.accountingDashboard', 'سود و زیان و عملکرد'),
+                    icon: BarChart3,
+                    visible: permissions.canViewFinancials,
+                  },
+                  {
+                    route: 'accounting/expenses',
+                    label: t('navigation.expenses', 'هزینه‌ها و سرفصل‌ها'),
+                    icon: Receipt,
+                    visible: permissions.canViewFinancials,
+                  },
+                  {
+                    route: 'accounting/persons',
+                    label: t('navigation.personAccounts', 'طرف‌حساب‌ها و معین اشخاص'),
+                    icon: Users,
+                    visible: permissions.canViewFinancials,
+                  },
+                  {
+                    route: 'accounting/accounts',
+                    label: t('navigation.financialAccounts', 'صندوق‌ها و بانک‌ها'),
+                    icon: Wallet,
+                    visible: permissions.canViewFinancials,
+                  },
+                  {
+                    route: 'accounting/cheques',
+                    label: t('navigation.cheques', 'مدیریت چک‌های صیادی'),
+                    icon: CheckSquare,
+                    visible: permissions.canViewFinancials,
+                  },
+                  {
+                    route: 'accounting/landed-costs',
+                    label: t('navigation.landedCosts', 'بهای تمام‌شده و سربار خرید'),
+                    icon: Scale,
+                    visible: permissions.canViewFinancials,
+                  },
+                  {
+                    route: 'accounting/tax',
+                    label: t('navigation.taxReports', 'مالیات و ارزش افزوده'),
+                    icon: FileText,
+                    visible: permissions.canViewFinancials,
+                  },
+                  {
+                    route: 'accounting/export',
+                    label: t('navigation.accountingExport', 'خروجی اسناد و مودیان'),
+                    icon: FileSpreadsheet,
+                    visible: permissions.canViewFinancials,
+                  },
+                ].filter((i) => i.visible !== false),
               },
             ],
           },
@@ -278,6 +283,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { type: 'item', route: 'reports/apparel', label: t('navigation.apparelReports'), icon: BarChart3, visible: permissions.canViewOrders || permissions.canViewFinancials },
       ],
     },
+    ...(hasWooCommerceAccess
+      ? [
+          {
+            title: t('navigation.woocommerceGroup', 'فروشگاه آنلاین و ووکامرس'),
+            entries: [
+              {
+                type: 'submenu' as const,
+                key: 'woocommerceOperations',
+                label: t('navigation.woocommerce', 'همگام‌سازی ووکامرس'),
+                icon: Globe,
+                visible: permissions.canViewOrders,
+                items: [
+                  {
+                    route: 'sales/woocommerce',
+                    label: t('navigation.wcOverview', 'پیشخوان همگام‌سازی'),
+                    icon: Boxes,
+                    visible: permissions.canViewOrders,
+                  },
+                  {
+                    route: 'sales/woocommerce/mappings',
+                    label: t('navigation.wcMappings', 'تطبیق کالاها و تنوع‌ها'),
+                    icon: Layers,
+                    visible: permissions.canViewOrders,
+                  },
+                  {
+                    route: 'sales/woocommerce/logs',
+                    label: t('navigation.wcLogs', 'گزارش و لاگ‌های رویداد'),
+                    icon: Clock,
+                    visible: permissions.canViewOrders,
+                  },
+                  {
+                    route: 'sales/woocommerce/settings',
+                    label: t('navigation.wcSettings', 'تنظیمات و اتصال'),
+                    icon: Settings,
+                    visible: permissions.canViewOrders,
+                  },
+                ].filter((i) => i.visible !== false),
+              },
+            ],
+          },
+        ]
+      : []),
     {
       title: t('navigation.settingsGroup'),
       entries: [
@@ -360,6 +407,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
     });
   }
 
+  if (!hasWooCommerceAccess && permissions.canViewOrders) {
+    lockedEntries.push({
+      type: 'item',
+      route: 'sales/woocommerce',
+      label: t('navigation.woocommerce', 'همگام‌سازی ووکامرس'),
+      icon: Globe,
+      badge: t('navigation.moduleBadge', 'ماژول'),
+      isLocked: true,
+      visible: true,
+    });
+  }
+
   if (lockedEntries.length > 0) {
     navGroups.push({
       title: t('navigation.lockedModulesGroup', 'ماژول‌ها و افزونه‌ها'),
@@ -380,7 +439,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     navGroups.forEach((group) => {
       group.entries.forEach((entry) => {
         if (entry.type === 'submenu' && isEntryVisible(entry)) {
-          const hasActive = entry.items.some((i) => i.visible !== false && (i.route === currentRoute || (entry.key === 'settingsManagement' && currentRoute.startsWith('settings'))));
+          const hasActive = entry.items.some(
+            (i) =>
+              i.visible !== false &&
+              (i.route === currentRoute ||
+                (entry.key === 'settingsManagement' && currentRoute.startsWith('settings')) ||
+                (entry.key === 'woocommerceOperations' && (currentRoute.startsWith('sales/woocommerce') || currentRoute.startsWith('woocommerce'))) ||
+                (entry.key === 'accountingOperations' && currentRoute.startsWith('accounting')))
+          );
           if (hasActive) {
             setOpenSubmenus((prev) => ({ ...prev, [entry.key]: true }));
           }
@@ -548,7 +614,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     const isOpen = !!openSubmenus[entry.key];
                     const visibleSubItems = entry.items.filter((i) => i.visible !== false);
                     if (visibleSubItems.length === 0) return null;
-                    const hasActiveChild = visibleSubItems.some((i) => i.route === currentRoute || (entry.key === 'settingsManagement' && currentRoute.startsWith('settings')));
+                    const hasActiveChild = visibleSubItems.some(
+                      (i) =>
+                        i.route === currentRoute ||
+                        (entry.key === 'settingsManagement' && currentRoute.startsWith('settings')) ||
+                        (entry.key === 'woocommerceOperations' && (currentRoute.startsWith('sales/woocommerce') || currentRoute.startsWith('woocommerce'))) ||
+                        (entry.key === 'accountingOperations' && currentRoute.startsWith('accounting'))
+                    );
 
                     if (isCollapsed) {
                       // In collapsed mode, render primary icon or trigger

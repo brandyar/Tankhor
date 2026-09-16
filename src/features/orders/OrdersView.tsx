@@ -12,6 +12,8 @@ import {
   OrderStatus,
   PaymentStatus,
 } from '../../types';
+import { FinancialAccount } from '../../types/accounting';
+import { useModuleAccess } from '../../hooks/useModuleAccess';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -41,6 +43,11 @@ import {
   FileSpreadsheet,
   Download,
   Upload,
+  CheckCircle2,
+  RotateCcw,
+  CreditCard,
+  Wallet,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { exportOrdersToExcel, parseOrdersFromExcel } from '../../utils/excelUtils';
 
@@ -65,11 +72,15 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
   const { activeOrganization, permissions } = useOrganization();
   const isPersian = locale === 'fa';
 
+  const { hasAccess } = useModuleAccess();
+  const hasAccounting = hasAccess('accounting');
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [financialAccounts, setFinancialAccounts] = useState<FinancialAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -81,17 +92,24 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [receiptType, setReceiptType] = useState<'standard' | 'thermal'>('standard');
 
+  // Payment Settlement State
+  const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+  const [settleOrderTarget, setSettleOrderTarget] = useState<Order | null>(null);
+  const [selectedSettleAccountId, setSelectedSettleAccountId] = useState<number>(0);
+  const [isSettlingPayment, setIsSettlingPayment] = useState(false);
+
   const loadData = async () => {
     setIsLoading(true);
     try {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
-      const [orderList, custList, whList, prodList, varList] = await Promise.all([
+      const [orderList, custList, whList, prodList, varList, accountsList] = await Promise.all([
         adapter.getOrders({ organization_id: orgId }),
         adapter.getCustomers({ organization_id: orgId }),
         adapter.getWarehouses({ organization_id: orgId }),
         adapter.getProducts({ organization_id: orgId }),
         adapter.getVariants({ organization_id: orgId }),
+        adapter.getFinancialAccounts ? adapter.getFinancialAccounts({ organization_id: orgId }).catch(() => []) : Promise.resolve([]),
       ]);
 
       const enriched = orderList.map((ord) => {
@@ -116,6 +134,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
       setWarehouses(whList);
       setProducts(prodList);
       setVariants(varList);
+      setFinancialAccounts(accountsList || []);
+      if (accountsList && accountsList.length > 0) {
+        setSelectedSettleAccountId(accountsList[0].id);
+      }
     } catch (err) {
       console.error('[OrdersView] Error loading orders:', err);
     } finally {
@@ -127,6 +149,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
     loadData();
   }, [activeOrganization]);
 
+  // Handle deleting order with inventory restock if it was previously confirmed/completed
   const handleDeleteOrder = async (ord: Order) => {
     if (!ord.id) return;
     const isConfirmed = await confirmAction(t('orders.confirmDeleteOrderWithNumber', { number: ord.order_number }));
@@ -134,6 +157,30 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
 
     try {
       const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id || 1;
+
+      // Restock inventory items if order had deducted stock (confirmed or completed)
+      if (ord.status === 'confirmed' || ord.status === 'completed') {
+        const orderItems = await adapter.getOrderItems(ord.id);
+        const whId = typeof ord.warehouse_id === 'object' ? (ord.warehouse_id as any)?.id : (ord.warehouse_id || 1);
+
+        for (const it of orderItems) {
+          const varId = typeof it.variant_id === 'object' ? (it.variant_id as any)?.id : it.variant_id;
+          if (varId && it.quantity > 0) {
+            await adapter.recordMovement({
+              organization_id: orgId,
+              variant_id: Number(varId),
+              warehouse_id: Number(whId),
+              type: 'return',
+              quantity: it.quantity,
+              reference_type: 'order',
+              reference_id: String(ord.id),
+              note: `مرجوعی به انبار بابت حذف فاکتور #${ord.order_number}`,
+            });
+          }
+        }
+      }
+
       await adapter.deleteOrder(ord.id);
       if (selectedOrder?.id === ord.id) {
         setIsDetailModalOpen(false);
@@ -142,6 +189,151 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
       await loadData();
     } catch (err) {
       console.error('[OrdersView] Error deleting order:', err);
+    }
+  };
+
+  // Handle changing order status with strict inventory sync
+  const handleUpdateOrderStatus = async (ord: Order, newStatus: OrderStatus) => {
+    if (!ord.id || ord.status === newStatus) return;
+
+    try {
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id || 1;
+      const whId = typeof ord.warehouse_id === 'object' ? (ord.warehouse_id as any)?.id : (ord.warehouse_id || 1);
+      const wasStockDeducted = ord.status === 'confirmed' || ord.status === 'completed';
+      const willDeductStock = newStatus === 'confirmed' || newStatus === 'completed';
+
+      // 1. If transitioning from un-deducted to confirmed/completed -> Deduct inventory
+      if (!wasStockDeducted && willDeductStock) {
+        const orderItems = await adapter.getOrderItems(ord.id);
+        for (const it of orderItems) {
+          const varId = typeof it.variant_id === 'object' ? (it.variant_id as any)?.id : it.variant_id;
+          if (varId && it.quantity > 0) {
+            await adapter.recordMovement({
+              organization_id: orgId,
+              variant_id: Number(varId),
+              warehouse_id: Number(whId),
+              type: 'sale',
+              quantity: it.quantity,
+              reference_type: 'order',
+              reference_id: String(ord.id),
+              note: `خروج از انبار بابت تایید فاکتور #${ord.order_number}`,
+            });
+          }
+        }
+      }
+      // 2. If transitioning from confirmed/completed to cancelled/draft -> Return stock to inventory
+      else if (wasStockDeducted && !willDeductStock) {
+        const orderItems = await adapter.getOrderItems(ord.id);
+        for (const it of orderItems) {
+          const varId = typeof it.variant_id === 'object' ? (it.variant_id as any)?.id : it.variant_id;
+          if (varId && it.quantity > 0) {
+            await adapter.recordMovement({
+              organization_id: orgId,
+              variant_id: Number(varId),
+              warehouse_id: Number(whId),
+              type: 'return',
+              quantity: it.quantity,
+              reference_type: 'order',
+              reference_id: String(ord.id),
+              note: `برگشت به انبار بابت تغییر وضعیت فاکتور #${ord.order_number} به ${newStatus}`,
+            });
+          }
+        }
+      }
+
+      // Save updated status
+      const updated = await adapter.saveOrder({ id: ord.id, status: newStatus });
+      setSelectedOrder((prev) => (prev && prev.id === ord.id ? { ...prev, status: newStatus } : prev));
+      await loadData();
+    } catch (err) {
+      console.error('[OrdersView] Error updating order status:', err);
+    }
+  };
+
+  // Settle Unpaid / Credit Order with Accounting & Treasury synchronization
+  const handleOpenSettleModal = (ord: Order) => {
+    setSettleOrderTarget(ord);
+    if (financialAccounts.length > 0 && !selectedSettleAccountId) {
+      setSelectedSettleAccountId(financialAccounts[0].id);
+    }
+    setIsSettleModalOpen(true);
+  };
+
+  const handleConfirmSettlePayment = async () => {
+    if (!settleOrderTarget?.id) return;
+    setIsSettlingPayment(true);
+
+    try {
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id || 1;
+      const orderTotal = Number(settleOrderTarget.total) || 0;
+      const custId = typeof settleOrderTarget.customer_id === 'object' ? (settleOrderTarget.customer_id as any)?.id : settleOrderTarget.customer_id;
+      const custName = settleOrderTarget.customer_name || t('orders.generalCustomer');
+
+      // 1. Update order payment status
+      await adapter.saveOrder({
+        id: settleOrderTarget.id,
+        payment_status: 'paid',
+        notes: `${settleOrderTarget.notes || ''} [تسویه فاکتور در تاریخ ${new Date().toLocaleDateString('fa-IR')}]`.trim(),
+      });
+
+      // 2. If accounting module is active, record Treasury Deposit & Customer Ledger Credit
+      if (hasAccounting && orgId) {
+        const orgNumId = Number(orgId);
+
+        // Treasury deposit to the chosen bank/cashbox
+        if (selectedSettleAccountId) {
+          try {
+            await adapter.saveTreasuryTransaction({
+              organization_id: orgNumId,
+              destination_account_id: Number(selectedSettleAccountId),
+              type: 'deposit',
+              amount: orderTotal,
+              tracking_code: `SETTLE-${settleOrderTarget.order_number}`,
+              description: `تسویه حساب فاکتور #${settleOrderTarget.order_number} (${custName})`,
+              transaction_date: new Date().toISOString(),
+            });
+          } catch (trErr) {
+            console.warn('[OrdersView] Error saving treasury settlement:', trErr);
+          }
+        }
+
+        // Customer Ledger settlement credit
+        if (custId) {
+          try {
+            await adapter.savePersonTransaction({
+              organization_id: orgNumId,
+              customer_id: Number(custId),
+              financial_account_id: selectedSettleAccountId ? Number(selectedSettleAccountId) : undefined,
+              party_type: 'customer',
+              party_name: custName,
+              type: 'creditor',
+              transaction_type: 'receipt',
+              amount: orderTotal,
+              credit_amount: orderTotal,
+              status: 'completed',
+              reference_number: `SETTLE-${settleOrderTarget.order_number}`,
+              order_id: settleOrderTarget.id,
+              description: `تسویه و دریافت وجه فاکتور فروش #${settleOrderTarget.order_number}`,
+              transaction_date: new Date().toISOString(),
+            });
+          } catch (ptErr) {
+            console.warn('[OrdersView] Error saving person ledger settlement:', ptErr);
+          }
+        }
+      }
+
+      setIsSettleModalOpen(false);
+      setSettleOrderTarget(null);
+      if (selectedOrder?.id === settleOrderTarget.id) {
+        setSelectedOrder((prev) => (prev ? { ...prev, payment_status: 'paid' } : null));
+      }
+      await loadData();
+    } catch (err) {
+      console.error('[OrdersView] Error settling payment:', err);
+    } finally {
+      setIsSettlingPayment(false);
     }
   };
 
@@ -426,6 +618,18 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
           ]}
           actions={(ord) => (
             <div className="flex items-center justify-end gap-2">
+              {ord.payment_status === 'pending' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenSettleModal(ord)}
+                  icon={<CreditCard className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                  className="border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                  title="تسویه حساب فاکتور نسیه"
+                >
+                  تسویه
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -466,7 +670,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
           maxWidth="max-w-3xl"
         >
           <div className="space-y-4 text-xs font-sans pt-1">
-            {/* Header Meta Info */}
+            {/* Header Meta Info & Status Control */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-slate-50 dark:bg-[#181a20] rounded-xl border border-slate-200 dark:border-neutral-800">
               <div>
                 <span className="text-slate-500 dark:text-neutral-400 text-[10px] block">{t('orders.buyerCustomer')}</span>
@@ -481,8 +685,42 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
                 <span className="font-mono text-slate-800 dark:text-neutral-200">{formatDate(selectedOrder.date_created, isPersian)}</span>
               </div>
               <div>
-                <span className="text-slate-500 dark:text-neutral-400 text-[10px] block">{t('orders.orderStatus')}:</span>
-                <div className="mt-0.5">{getOrderStatusBadge(selectedOrder.status)}</div>
+                <span className="text-slate-500 dark:text-neutral-400 text-[10px] block">{t('orders.paymentStatus')}:</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  {getPaymentStatusBadge(selectedOrder.payment_status)}
+                  {selectedOrder.payment_status === 'pending' && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenSettleModal(selectedOrder)}
+                      className="px-2 py-0.5 rounded text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white font-medium cursor-pointer"
+                    >
+                      تسویه
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Status & Inventory Sync Management Bar */}
+            <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-600 dark:text-neutral-300 font-medium">وضعیت فعلی سفارش:</span>
+                <div>{getOrderStatusBadge(selectedOrder.status)}</div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <span className="text-slate-500 dark:text-neutral-400 text-[11px] whitespace-nowrap">تغییر وضعیت:</span>
+                <Select
+                  value={selectedOrder.status}
+                  onChange={(e) => handleUpdateOrderStatus(selectedOrder, e.target.value as OrderStatus)}
+                  className="text-xs py-1"
+                  options={[
+                    { value: 'draft', label: 'پیش‌نویس' },
+                    { value: 'confirmed', label: 'تأیید شده (کسر از انبار)' },
+                    { value: 'completed', label: 'تکمیل شده (کسر از انبار)' },
+                    { value: 'cancelled', label: 'لغو شده (برگشت به انبار)' },
+                  ]}
+                />
               </div>
             </div>
 
@@ -787,6 +1025,76 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
                 </div>
               </div>
             )}
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: Settle Payment for Order (حسابداری و خزانه) */}
+      {settleOrderTarget && (
+        <Modal
+          isOpen={isSettleModalOpen}
+          onClose={() => {
+            if (!isSettlingPayment) {
+              setIsSettleModalOpen(false);
+              setSettleOrderTarget(null);
+            }
+          }}
+          title={`تسویه و دریافت وجه فاکتور #${settleOrderTarget.order_number}`}
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4 pt-1 text-xs">
+            <div className="p-3 bg-slate-50 dark:bg-[#181a20] rounded-xl border border-slate-200 dark:border-neutral-800 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 dark:text-neutral-400">طرف حساب (مشتری):</span>
+                <span className="font-bold text-slate-900 dark:text-neutral-100">{settleOrderTarget.customer_name}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 dark:text-neutral-400">مبلغ قابل تسویه:</span>
+                <span className="font-bold font-mono text-emerald-600 dark:text-emerald-400 text-sm">
+                  {formatCurrency(settleOrderTarget.total, 'TOMAN', isPersian)}
+                </span>
+              </div>
+            </div>
+
+            {hasAccounting && financialAccounts.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="font-medium text-slate-700 dark:text-neutral-300 block">
+                  واریز به حساب بانکی / صندوق (خزانه داری):
+                </label>
+                <Select
+                  value={selectedSettleAccountId}
+                  onChange={(e) => setSelectedSettleAccountId(Number(e.target.value))}
+                  options={financialAccounts.map((acc) => ({
+                    value: acc.id,
+                    label: `${acc.name} (${acc.type === 'bank' ? 'بانک' : acc.type === 'cash' ? 'صندوق' : 'کارتخوان'}) - ${formatCurrency(acc.current_balance || 0, 'TOMAN', isPersian)}`,
+                  }))}
+                />
+                <p className="text-[11px] text-slate-400 dark:text-neutral-500">
+                  وجه دریافتی مستقیماً به موجودی این حساب واریز شده و سند معین بستانکار مشتری ثبت می‌گردد.
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-neutral-800">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSettleModalOpen(false)}
+                disabled={isSettlingPayment}
+              >
+                {t('common.cancel')}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleConfirmSettlePayment}
+                isLoading={isSettlingPayment}
+                icon={<CheckCircle2 className="w-4 h-4" />}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white"
+              >
+                تأیید و ثبت تسویه حساب
+              </Button>
+            </div>
           </div>
         </Modal>
       )}

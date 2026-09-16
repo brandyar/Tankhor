@@ -7,7 +7,9 @@ import {
   Subscription, SystemModule, OrganizationModule,
   ExpenseCategory, Expense, PersonTransaction, ProfitLossSummary,
   FinancialAccount, TreasuryTransaction, Cheque, ChequeStatus,
-  LandedCost, LandedCostAllocation, VatReportSummary
+  LandedCost, LandedCostAllocation, VatReportSummary,
+  PosShift, PosShiftStatus,
+  WooCommerceSettings, WooCommerceLog, IntegrationMapping
 } from '../types';
 
 export type StorageMode = 'local_offline' | 'cloud_synced';
@@ -128,6 +130,7 @@ export interface IStorageProvider {
 
   // Stock Transfers
   getStockTransfers(params?: QueryParams): Promise<StockTransfer[]>;
+  getStockTransferItems(transferId?: number): Promise<StockTransferItem[]>;
   saveStockTransfer(st: Partial<StockTransfer>, items?: Partial<StockTransferItem>[]): Promise<StockTransfer>;
   deleteStockTransfer?(id: number): Promise<boolean>;
 
@@ -195,4 +198,18 @@ export interface IStorageProvider {
   saveLandedCostAllocation?(allocation: Partial<LandedCostAllocation>): Promise<LandedCostAllocation>;
   applyLandedCostToVariants?(landedCostId: number): Promise<{ updatedVariantsCount: number }>;
   getVatReport?(params?: { organizationId?: number; year?: number; quarter?: 1 | 2 | 3 | 4 }): Promise<VatReportSummary>;
+  // POS Shifts (شیفت‌های صندوق)
+  getPosShifts?(params?: QueryParams & { user_id?: string; status?: PosShiftStatus; warehouse_id?: number }): Promise<PosShift[]>;
+  getActivePosShift?(userId?: string, warehouseId?: number): Promise<PosShift | null>;
+  savePosShift?(shift: Partial<PosShift>): Promise<PosShift>;
+  closePosShift?(id: number, closingBalance: number | string, notes?: string): Promise<PosShift>;
+  deletePosShift?(id: number): Promise<boolean>;
+
+  // WooCommerce Integration (ماژول همگام‌سازی ووکامرس)
+  getWooCommerceSettings?(params?: QueryParams): Promise<WooCommerceSettings | null>;
+  saveWooCommerceSettings?(settings: Partial<WooCommerceSettings>): Promise<WooCommerceSettings>;
+  getWooCommerceLogs?(params?: QueryParams & { limit?: number }): Promise<WooCommerceLog[]>;
+  addWooCommerceLog?(log: Partial<WooCommerceLog>): Promise<WooCommerceLog>;
+  getIntegrationMappings?(params?: QueryParams & { entity_type?: string }): Promise<IntegrationMapping[]>;
+  saveIntegrationMapping?(mapping: Partial<IntegrationMapping>): Promise<IntegrationMapping>;
 }

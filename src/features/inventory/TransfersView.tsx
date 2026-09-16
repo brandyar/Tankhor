@@ -64,6 +64,8 @@ export const TransfersView: React.FC = () => {
   // Detail Modal State
   const [selectedTransfer, setSelectedTransfer] = useState<StockTransfer | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedTransferItems, setSelectedTransferItems] = useState<StockTransferItem[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -109,6 +111,22 @@ export const TransfersView: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [activeOrganization]);
+
+  const handleOpenDetails = async (trf: StockTransfer) => {
+    setSelectedTransfer(trf);
+    setIsDetailModalOpen(true);
+    setIsLoadingItems(true);
+    try {
+      const adapter = storageManager.getAdapter();
+      const items = await adapter.getStockTransferItems(trf.id);
+      setSelectedTransferItems(items);
+    } catch (err) {
+      console.error('[TransfersView] Error loading transfer items:', err);
+      setSelectedTransferItems([]);
+    } finally {
+      setIsLoadingItems(false);
+    }
+  };
 
   const handleAddItem = () => {
     if (!itemVariantId || itemQty <= 0) return;
@@ -164,9 +182,45 @@ export const TransfersView: React.FC = () => {
 
       const savedTransfer = await adapter.saveStockTransfer(transferData, transferItems);
 
-      // If status is in_transit or completed, create inventory movements!
-      if (status === 'in_transit' || status === 'completed') {
-        await recordTransferMovements(adapter, savedTransfer, selectedItems, status);
+      // Record movement depending on status
+      if (status === 'in_transit') {
+        // Send transfer: subtract from origin warehouse
+        for (const item of selectedItems) {
+          await adapter.recordMovement({
+            organization_id: orgId,
+            variant_id: item.variant_id,
+            warehouse_id: fromWhId,
+            type: 'transfer_out',
+            quantity: item.quantity,
+            reference_type: 'transfer',
+            reference_id: String(savedTransfer.id),
+            note: `${t('inventory.typeTransferOut')} -> ${toWhId}`,
+          });
+        }
+      } else if (status === 'completed') {
+        // Completed transfer directly: subtract from origin and add to destination
+        for (const item of selectedItems) {
+          await adapter.recordMovement({
+            organization_id: orgId,
+            variant_id: item.variant_id,
+            warehouse_id: fromWhId,
+            type: 'transfer_out',
+            quantity: item.quantity,
+            reference_type: 'transfer',
+            reference_id: String(savedTransfer.id),
+            note: `${t('inventory.typeTransferOut')} -> ${toWhId}`,
+          });
+          await adapter.recordMovement({
+            organization_id: orgId,
+            variant_id: item.variant_id,
+            warehouse_id: toWhId,
+            type: 'transfer_in',
+            quantity: item.quantity,
+            reference_type: 'transfer',
+            reference_id: String(savedTransfer.id),
+            note: `${t('inventory.typeTransferIn')} <- ${fromWhId}`,
+          });
+        }
       }
 
       setIsCreateModalOpen(false);
@@ -186,38 +240,75 @@ export const TransfersView: React.FC = () => {
       const adapter = storageManager.getAdapter();
       const fromId = typeof transfer.from_warehouse_id === 'object' ? (transfer.from_warehouse_id as any)?.id : transfer.from_warehouse_id;
       const toId = typeof transfer.to_warehouse_id === 'object' ? (transfer.to_warehouse_id as any)?.id : transfer.to_warehouse_id;
+      const orgId = activeOrganization?.id || transfer.organization_id || 1;
 
-      const updated = await adapter.saveStockTransfer({
+      // Fetch actual items belonging to this specific transfer
+      const transferItems = await adapter.getStockTransferItems(transfer.id);
+
+      // Check current status before updating
+      const prevStatus = transfer.status;
+
+      await adapter.saveStockTransfer({
         id: transfer.id,
         status: newStatus,
       });
 
-      // If completing transfer, record movements if not already recorded
-      if (newStatus === 'completed') {
-        // Record movement out from origin & in to target
-        const items = selectedItems.length > 0 ? selectedItems : [];
-        if (items.length === 0 && variants.length > 0) {
-          // Default movement for first variant if mock
+      if (newStatus === 'in_transit' && prevStatus === 'draft') {
+        // Leaving source warehouse
+        for (const itm of transferItems) {
+          const vId = typeof itm.variant_id === 'object' ? (itm.variant_id as any)?.id : itm.variant_id;
           await adapter.recordMovement({
-            organization_id: activeOrganization?.id || 1,
-            variant_id: variants[0].id,
+            organization_id: orgId,
+            variant_id: vId,
             warehouse_id: fromId,
             type: 'transfer_out',
-            quantity: 1,
+            quantity: Number(itm.quantity) || 1,
             reference_type: 'transfer',
             reference_id: String(transfer.id),
-            note: `${t('inventory.typeTransferOut')} -> ${transfer.to_warehouse_name}`,
+            note: `${t('inventory.typeTransferOut')} -> ${transfer.to_warehouse_name || toId}`,
           });
-          await adapter.recordMovement({
-            organization_id: activeOrganization?.id || 1,
-            variant_id: variants[0].id,
-            warehouse_id: toId,
-            type: 'transfer_in',
-            quantity: 1,
-            reference_type: 'transfer',
-            reference_id: String(transfer.id),
-            note: `${t('inventory.typeTransferIn')} <- ${transfer.from_warehouse_name}`,
-          });
+        }
+      } else if (newStatus === 'completed') {
+        if (prevStatus === 'draft') {
+          // Both transfer_out and transfer_in needed
+          for (const itm of transferItems) {
+            const vId = typeof itm.variant_id === 'object' ? (itm.variant_id as any)?.id : itm.variant_id;
+            await adapter.recordMovement({
+              organization_id: orgId,
+              variant_id: vId,
+              warehouse_id: fromId,
+              type: 'transfer_out',
+              quantity: Number(itm.quantity) || 1,
+              reference_type: 'transfer',
+              reference_id: String(transfer.id),
+              note: `${t('inventory.typeTransferOut')} -> ${transfer.to_warehouse_name || toId}`,
+            });
+            await adapter.recordMovement({
+              organization_id: orgId,
+              variant_id: vId,
+              warehouse_id: toId,
+              type: 'transfer_in',
+              quantity: Number(itm.quantity) || 1,
+              reference_type: 'transfer',
+              reference_id: String(transfer.id),
+              note: `${t('inventory.typeTransferIn')} <- ${transfer.from_warehouse_name || fromId}`,
+            });
+          }
+        } else if (prevStatus === 'in_transit') {
+          // Only transfer_in to destination warehouse!
+          for (const itm of transferItems) {
+            const vId = typeof itm.variant_id === 'object' ? (itm.variant_id as any)?.id : itm.variant_id;
+            await adapter.recordMovement({
+              organization_id: orgId,
+              variant_id: vId,
+              warehouse_id: toId,
+              type: 'transfer_in',
+              quantity: Number(itm.quantity) || 1,
+              reference_type: 'transfer',
+              reference_id: String(transfer.id),
+              note: `${t('inventory.typeTransferIn')} <- ${transfer.from_warehouse_name || fromId}`,
+            });
+          }
         }
       }
 
@@ -238,49 +329,11 @@ export const TransfersView: React.FC = () => {
       if (selectedTransfer?.id === trf.id) {
         setIsDetailModalOpen(false);
         setSelectedTransfer(null);
+        setSelectedTransferItems([]);
       }
       await loadData();
     } catch (err) {
       console.error('[TransfersView] Error deleting transfer:', err);
-    }
-  };
-
-  const recordTransferMovements = async (
-    adapter: any,
-    transfer: StockTransfer,
-    items: { variant_id: number; quantity: number }[],
-    status: TransferStatus
-  ) => {
-    const orgId = activeOrganization?.id || 1;
-    const fromId = typeof transfer.from_warehouse_id === 'object' ? transfer.from_warehouse_id.id : transfer.from_warehouse_id;
-    const toId = typeof transfer.to_warehouse_id === 'object' ? transfer.to_warehouse_id.id : transfer.to_warehouse_id;
-
-    for (const item of items) {
-      // Transfer Out from Origin
-      await adapter.recordMovement({
-        organization_id: orgId,
-        variant_id: item.variant_id,
-        warehouse_id: fromId,
-        type: 'transfer_out',
-        quantity: item.quantity,
-        reference_type: 'transfer',
-        reference_id: String(transfer.id),
-        note: `${t('inventory.typeTransferOut')} -> #${toId}`,
-      });
-
-      // If completed, record Transfer In immediately
-      if (status === 'completed') {
-        await adapter.recordMovement({
-          organization_id: orgId,
-          variant_id: item.variant_id,
-          warehouse_id: toId,
-          type: 'transfer_in',
-          quantity: item.quantity,
-          reference_type: 'transfer',
-          reference_id: String(transfer.id),
-          note: `${t('inventory.typeTransferIn')} <- #${fromId}`,
-        });
-      }
     }
   };
 
@@ -414,10 +467,7 @@ export const TransfersView: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setSelectedTransfer(trf);
-                  setIsDetailModalOpen(true);
-                }}
+                onClick={() => handleOpenDetails(trf)}
                 icon={<Eye className="w-3.5 h-3.5" />}
               >
                 {t('common.details')}
@@ -607,6 +657,49 @@ export const TransfersView: React.FC = () => {
                 <span className="text-slate-500 dark:text-neutral-400 block">{t('inventory.dateTime')}:</span>
                 <span className="font-mono text-slate-800 dark:text-neutral-200">{formatDate(selectedTransfer.date_created, isPersian)}</span>
               </div>
+            </div>
+
+            {/* Transfer Items List */}
+            <div className="space-y-2">
+              <h4 className="font-bold text-slate-800 dark:text-neutral-200 flex items-center gap-1.5 text-xs">
+                <Package className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                {t('inventory.transferItems')}
+              </h4>
+
+              {isLoadingItems ? (
+                <div className="p-4 text-center text-slate-400 dark:text-neutral-500">
+                  {t('common.loading')}
+                </div>
+              ) : selectedTransferItems.length === 0 ? (
+                <div className="p-3 text-center text-slate-400 dark:text-neutral-500 bg-slate-50 dark:bg-neutral-800/40 rounded-xl border border-slate-200/60 dark:border-neutral-700">
+                  {t('inventory.noItemsInTransfer')}
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 dark:divide-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-xl overflow-hidden bg-white dark:bg-[#181a20]">
+                  {selectedTransferItems.map((item, idx) => {
+                    const vId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
+                    const v = variants.find((variantObj) => variantObj.id === vId);
+                    return (
+                      <div key={`modal_trf_item_${item.id || idx}`} className="p-2.5 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-[10px]">
+                            {idx + 1}
+                          </span>
+                          <span className="font-medium text-slate-800 dark:text-neutral-200">
+                            {v ? getVariantLabel(v) : `${t('products.variant')} #${vId}`}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-500 dark:text-neutral-400">{t('inventory.quantity')}:</span>
+                          <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded text-xs">
+                            {item.quantity}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {selectedTransfer.notes && (

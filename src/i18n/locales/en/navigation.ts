@@ -55,4 +55,10 @@ export const navigationEn = {
   landedCosts: 'Landed Costs & Overhead',
   taxReports: 'VAT & Tax Reports',
   accountingExport: 'Financial & Tax Export',
+  woocommerceGroup: 'Online Store & WooCommerce',
+  woocommerce: 'WooCommerce Sync',
+  wcOverview: 'Dashboard & Connection',
+  wcMappings: 'Product & SKU Mappings',
+  wcLogs: 'Sync Events & Logs',
+  wcSettings: 'API Keys & Settings',
 };

@@ -33,10 +33,13 @@ import {
   AlertCircle,
   Trash2,
 } from 'lucide-react';
+import { useModuleAccess } from '../../hooks/useModuleAccess';
 
 export const PurchaseOrdersView: React.FC = () => {
   const { t, locale } = useTranslation();
   const { activeOrganization } = useOrganization();
+  const { hasAccess } = useModuleAccess();
+  const hasAccounting = hasAccess('accounting');
   const isPersian = locale === 'fa';
 
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
@@ -186,6 +189,30 @@ export const PurchaseOrdersView: React.FC = () => {
             note: `${t('purchasing.poReceiveStock')} #${poNumber}`,
           });
         }
+
+        // If accounting module is active, record Supplier Payable in Person Ledgers
+        if (hasAccounting && supplierId) {
+          try {
+            const supp = suppliers.find((s) => Number(s.id) === Number(supplierId));
+            await adapter.savePersonTransaction({
+              organization_id: Number(orgId),
+              supplier_id: Number(supplierId),
+              party_type: 'supplier',
+              party_name: supp?.name || `تامین‌کننده #${supplierId}`,
+              type: 'creditor',
+              transaction_type: 'purchase_invoice',
+              amount: totalAmount,
+              credit_amount: totalAmount,
+              status: 'pending',
+              reference_number: poNumber,
+              purchase_order_id: savedPO.id,
+              description: `فاکتور خرید کالا و انبارداری #${poNumber}`,
+              transaction_date: new Date().toISOString(),
+            });
+          } catch (accErr) {
+            console.warn('[PurchaseOrdersView] Could not record supplier transaction:', accErr);
+          }
+        }
       }
 
       setIsCreateModalOpen(false);
@@ -202,22 +229,78 @@ export const PurchaseOrdersView: React.FC = () => {
   const handleUpdateStatus = async (po: PurchaseOrder, newStatus: PurchaseOrderStatus) => {
     try {
       const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id || 1;
+      const whId = typeof po.warehouse_id === 'object' ? (po.warehouse_id as any)?.id : (po.warehouse_id || 1);
+      const suppId = typeof po.supplier_id === 'object' ? (po.supplier_id as any)?.id : po.supplier_id;
+      const poTotal = Number(po.total) || 0;
+
+      const wasReceived = po.status === 'received';
+      const willReceive = newStatus === 'received';
+
       await adapter.savePurchaseOrder({ id: po.id, status: newStatus });
 
-      // If completing/receiving, add stock
-      if (newStatus === 'received') {
-        const whId = typeof po.warehouse_id === 'object' ? (po.warehouse_id as any)?.id : po.warehouse_id;
-        if (variants.length > 0) {
-          await adapter.recordMovement({
-            organization_id: activeOrganization?.id || 1,
-            variant_id: variants[0].id,
-            warehouse_id: whId,
-            type: 'purchase',
-            quantity: 10,
-            reference_type: 'purchase_order',
-            reference_id: String(po.id),
-            note: `${t('purchasing.poReceiveStock')} #${po.purchase_number}`,
-          });
+      // If completing/receiving, increment stock based on ACTUAL order items
+      if (!wasReceived && willReceive) {
+        const poItems = await adapter.getPurchaseOrderItems(po.id);
+        for (const item of poItems) {
+          const varId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
+          const qty = item.quantity_received > 0 ? item.quantity_received : (item.quantity_ordered || 0);
+          if (varId && qty > 0) {
+            await adapter.recordMovement({
+              organization_id: orgId,
+              variant_id: Number(varId),
+              warehouse_id: Number(whId),
+              type: 'purchase',
+              quantity: qty,
+              reference_type: 'purchase_order',
+              reference_id: String(po.id),
+              note: `${t('purchasing.poReceiveStock')} #${po.purchase_number}`,
+            });
+          }
+        }
+
+        // Synchronize with accounting: record supplier payable
+        if (hasAccounting && suppId) {
+          try {
+            const supp = suppliers.find((s) => Number(s.id) === Number(suppId));
+            await adapter.savePersonTransaction({
+              organization_id: Number(orgId),
+              supplier_id: Number(suppId),
+              party_type: 'supplier',
+              party_name: supp?.name || `تامین‌کننده #${suppId}`,
+              type: 'creditor',
+              transaction_type: 'purchase_invoice',
+              amount: poTotal,
+              credit_amount: poTotal,
+              status: 'pending',
+              reference_number: po.purchase_number,
+              purchase_order_id: po.id,
+              description: `فاکتور خرید کالا #${po.purchase_number} (تحویل در انبار)`,
+              transaction_date: new Date().toISOString(),
+            });
+          } catch (accErr) {
+            console.warn('[PurchaseOrdersView] Could not record supplier transaction on receive:', accErr);
+          }
+        }
+      }
+      // If was previously received and now cancelled, roll back inventory items
+      else if (wasReceived && !willReceive) {
+        const poItems = await adapter.getPurchaseOrderItems(po.id);
+        for (const item of poItems) {
+          const varId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
+          const qty = item.quantity_received > 0 ? item.quantity_received : (item.quantity_ordered || 0);
+          if (varId && qty > 0) {
+            await adapter.recordMovement({
+              organization_id: orgId,
+              variant_id: Number(varId),
+              warehouse_id: Number(whId),
+              type: 'adjustment',
+              quantity: -qty,
+              reference_type: 'purchase_order',
+              reference_id: String(po.id),
+              note: `برگشت ورود کالا بابت لغو سفارش خرید #${po.purchase_number}`,
+            });
+          }
         }
       }
 
@@ -234,6 +317,30 @@ export const PurchaseOrdersView: React.FC = () => {
 
     try {
       const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id || 1;
+      const whId = typeof po.warehouse_id === 'object' ? (po.warehouse_id as any)?.id : (po.warehouse_id || 1);
+
+      // If PO was already received, reverse stock before deleting
+      if (po.status === 'received') {
+        const poItems = await adapter.getPurchaseOrderItems(po.id);
+        for (const item of poItems) {
+          const varId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
+          const qty = item.quantity_received > 0 ? item.quantity_received : (item.quantity_ordered || 0);
+          if (varId && qty > 0) {
+            await adapter.recordMovement({
+              organization_id: orgId,
+              variant_id: Number(varId),
+              warehouse_id: Number(whId),
+              type: 'adjustment',
+              quantity: -qty,
+              reference_type: 'purchase_order',
+              reference_id: String(po.id),
+              note: `کسر ورود کالا بابت حذف سفارش خرید #${po.purchase_number}`,
+            });
+          }
+        }
+      }
+
       await adapter.deletePurchaseOrder(po.id);
       if (selectedPO?.id === po.id) {
         setIsDetailModalOpen(false);

@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
-import { OrganizationUser, UserRole, Status } from '../../types';
+import { storageManager } from '../../storage';
+import { useModuleAccess } from '../../hooks/useModuleAccess';
+import { OrganizationUser, UserRole, Status, Warehouse } from '../../types';
+import { FinancialAccount } from '../../types/accounting';
 import { ROLE_DEFINITIONS, getRoleDefinition } from '../../utils/permissions';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -22,14 +25,17 @@ import {
   Check,
   X,
   Lock,
+  Unlock,
   Key,
   UserCheck,
   Crown,
   Briefcase,
-  Warehouse,
+  Warehouse as WarehouseIcon,
   ShoppingBag,
   Eye,
   EyeOff,
+  Building2,
+  Wallet,
 } from 'lucide-react';
 
 export const OrganizationMembersSection: React.FC = () => {
@@ -43,10 +49,34 @@ export const OrganizationMembersSection: React.FC = () => {
     permissions,
   } = useOrganization();
 
+  const { hasAccess } = useModuleAccess();
+  const hasAccounting = hasAccess('accounting');
+
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<OrganizationUser | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Auxiliary data for assignments
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [financialAccounts, setFinancialAccounts] = useState<FinancialAccount[]>([]);
+
+  useEffect(() => {
+    const loadAuxData = async () => {
+      try {
+        const whList = await storageManager.getWarehouses();
+        setWarehouses(whList || []);
+
+        if (hasAccounting && storageManager.getFinancialAccounts) {
+          const accList = await storageManager.getFinancialAccounts();
+          setFinancialAccounts(accList || []);
+        }
+      } catch (err) {
+        console.error('Failed to load aux data for members:', err);
+      }
+    };
+    loadAuxData();
+  }, [hasAccounting, activeOrganization?.id]);
 
   // Form states
   const [firstName, setFirstName] = useState('');
@@ -56,6 +86,9 @@ export const OrganizationMembersSection: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<UserRole>('sales');
   const [status, setStatus] = useState<Status>('active');
+  const [warehouseId, setWarehouseId] = useState<number | ''>('');
+  const [financialAccountId, setFinancialAccountId] = useState<number | ''>('');
+  const [canChangeWarehouse, setCanChangeWarehouse] = useState<boolean>(true);
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
@@ -68,6 +101,9 @@ export const OrganizationMembersSection: React.FC = () => {
     setShowPassword(false);
     setRole('sales');
     setStatus('active');
+    setWarehouseId(warehouses.length > 0 ? warehouses[0].id : '');
+    setFinancialAccountId('');
+    setCanChangeWarehouse(true);
     setIsModalOpen(true);
   };
 
@@ -80,6 +116,14 @@ export const OrganizationMembersSection: React.FC = () => {
     setShowPassword(false);
     setRole((member.role as UserRole) || 'viewer');
     setStatus(member.status || 'active');
+
+    const rawWhId = typeof member.warehouse_id === 'object' && member.warehouse_id ? (member.warehouse_id as any).id : member.warehouse_id;
+    setWarehouseId(rawWhId || '');
+
+    const rawAccId = typeof member.financial_account_id === 'object' && member.financial_account_id ? (member.financial_account_id as any).id : member.financial_account_id;
+    setFinancialAccountId(rawAccId || '');
+
+    setCanChangeWarehouse(member.can_change_warehouse !== undefined && member.can_change_warehouse !== null ? Boolean(member.can_change_warehouse) : true);
     setIsModalOpen(true);
   };
 
@@ -111,6 +155,9 @@ export const OrganizationMembersSection: React.FC = () => {
         user_id: editingMember?.user_id || `usr_${Date.now()}`,
         role: role,
         status: status,
+        warehouse_id: warehouseId ? Number(warehouseId) : null,
+        financial_account_id: hasAccounting && financialAccountId ? Number(financialAccountId) : null,
+        can_change_warehouse: canChangeWarehouse,
       });
       setIsModalOpen(false);
     } catch (err: any) {
@@ -146,7 +193,7 @@ export const OrganizationMembersSection: React.FC = () => {
       case 'manager':
         return <Briefcase className="w-4 h-4 text-blue-500" />;
       case 'warehouse':
-        return <Warehouse className="w-4 h-4 text-purple-500" />;
+        return <WarehouseIcon className="w-4 h-4 text-purple-500" />;
       case 'sales':
         return <ShoppingBag className="w-4 h-4 text-emerald-500" />;
       default:
@@ -279,6 +326,44 @@ export const OrganizationMembersSection: React.FC = () => {
                       )}
                     </div>
 
+                    {/* Assigned Warehouse & POS account tags */}
+                    {(member.warehouse_id || (hasAccounting && member.financial_account_id) || member.can_change_warehouse === false) && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-2">
+                        {member.warehouse_id && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200/80 dark:border-purple-800/60 text-purple-700 dark:text-purple-300 text-[10px] font-bold">
+                            <Building2 className="w-3 h-3 text-purple-500" />
+                            <span>
+                              {(() => {
+                                const rawWhId = typeof member.warehouse_id === 'object' && member.warehouse_id ? (member.warehouse_id as any).id : member.warehouse_id;
+                                const wh = warehouses.find((w) => w.id === Number(rawWhId));
+                                return wh ? wh.name : `${isPersian ? 'انبار #' : 'Warehouse #'}${rawWhId}`;
+                              })()}
+                            </span>
+                          </span>
+                        )}
+
+                        {hasAccounting && member.financial_account_id && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                            <Wallet className="w-3 h-3 text-amber-500" />
+                            <span>
+                              {(() => {
+                                const rawAccId = typeof member.financial_account_id === 'object' && member.financial_account_id ? (member.financial_account_id as any).id : member.financial_account_id;
+                                const acc = financialAccounts.find((a) => a.id === Number(rawAccId));
+                                return acc ? acc.name : `${isPersian ? 'حساب #' : 'Account #'}${rawAccId}`;
+                              })()}
+                            </span>
+                          </span>
+                        )}
+
+                        {member.can_change_warehouse === false && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 text-[10px] font-bold">
+                            <Lock className="w-3 h-3 text-neutral-400" />
+                            <span>{isPersian ? 'انبار قفل‌شده' : 'Locked Branch'}</span>
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     {/* Role & Permissions details */}
                     <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-[11px]">
                       <div className="flex items-center gap-1.5">
@@ -323,7 +408,7 @@ export const OrganizationMembersSection: React.FC = () => {
                 </th>
                 <th className="p-3 text-center">
                   <span className="inline-flex items-center gap-1.5 justify-center">
-                    <Warehouse className="w-3.5 h-3.5 text-purple-500" />
+                    <WarehouseIcon className="w-3.5 h-3.5 text-purple-500" />
                     <span>{t('settings.roleWarehouseShort')}</span>
                   </span>
                 </th>
@@ -486,6 +571,79 @@ export const OrganizationMembersSection: React.FC = () => {
                 { value: 'suspended', label: 'تعلیق شده (Suspended)' },
               ]}
             />
+          </div>
+
+          {/* POS & Warehouse Branch Assignment Section */}
+          <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-[#181a20] border border-neutral-200/90 dark:border-neutral-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span>{isPersian ? 'اختصاص شعبه، انبار و صندوق به کاربر' : 'Branch & POS Assignment'}</span>
+              </span>
+              <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                {isPersian ? 'تنظیمات صندوق فروشگاهی' : 'POS Settings'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Select
+                label={isPersian ? 'انبار / شعبه پیش‌فرض کاربر' : 'Default Warehouse / Branch'}
+                value={String(warehouseId)}
+                onChange={(e) => setWarehouseId(Number(e.target.value) || '')}
+                options={[
+                  { value: '', label: isPersian ? 'بدون انبار پیش‌فرض (همه انبارها)' : 'No Default (All Warehouses)' },
+                  ...warehouses.map((w) => ({
+                    value: String(w.id),
+                    label: `${w.name} ${w.is_default ? (isPersian ? '(اصلی)' : '(Main)') : ''}`,
+                  })),
+                ]}
+              />
+
+              {hasAccounting ? (
+                <Select
+                  label={isPersian ? 'صندوق نقدی یا دستگاه پوز پیش‌فرض' : 'Default Cashbox / POS Account'}
+                  value={String(financialAccountId)}
+                  onChange={(e) => setFinancialAccountId(Number(e.target.value) || '')}
+                  options={[
+                    { value: '', label: isPersian ? 'بدون صندوق اختصاصی (انتخاب آزاد)' : 'No Dedicated Cashbox' },
+                    ...financialAccounts.map((a) => ({
+                      value: String(a.id),
+                      label: `${a.name} (${a.type === 'cashbox' ? 'صندوق' : a.type === 'pos' ? 'پوز' : 'بانک'})`,
+                    })),
+                  ]}
+                />
+              ) : (
+                <div className="p-2.5 rounded-xl bg-neutral-100/70 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-700 text-[11px] text-neutral-500 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                  <span>{isPersian ? 'اختصاص صندوق با فعال بودن ماژول حسابداری در دسترس است.' : 'Cashbox assignment requires Accounting module.'}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Switch / Checkbox for can_change_warehouse */}
+            <label className="flex items-start gap-2.5 pt-1 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={canChangeWarehouse}
+                onChange={(e) => setCanChangeWarehouse(e.target.checked)}
+                className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+              />
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                  {canChangeWarehouse ? (
+                    <Unlock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  ) : (
+                    <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  )}
+                  <span>{isPersian ? 'اجازه تغییر انبار در ثبت سفارش / فاکتور فروش' : 'Allow changing warehouse on Order creation'}</span>
+                </span>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                  {isPersian
+                    ? 'اگر این گزینه غیرفعال باشد، کاربر فقط می‌تواند از انبار اختصاص‌داده‌شده فاکتور صادر کند و امکان انتخاب انبار دیگر را نخواهد داشت.'
+                    : 'If disabled, cashier is strictly locked to their assigned warehouse during order creation.'}
+                </p>
+              </div>
+            </label>
           </div>
 
           {/* Role Description Card */}

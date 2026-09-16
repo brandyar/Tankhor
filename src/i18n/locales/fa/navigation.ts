@@ -55,4 +55,10 @@ export const navigationFa = {
   landedCosts: 'بهای تمام‌شده و سربار خرید',
   taxReports: 'مالیات و ارزش افزوده',
   accountingExport: 'خروجی اسناد و مودیان',
+  woocommerceGroup: 'فروشگاه آنلاین و ووکامرس',
+  woocommerce: 'همگام‌سازی ووکامرس',
+  wcOverview: 'پیشخوان همگام‌سازی',
+  wcMappings: 'تطبیق کالاها و تنوع‌ها',
+  wcLogs: 'گزارش و لاگ‌های رویداد',
+  wcSettings: 'تنظیمات و اتصال',
 };

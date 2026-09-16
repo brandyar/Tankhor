@@ -29,6 +29,7 @@ import {
   ExternalLink,
   RefreshCw,
   Lock,
+  Globe,
 } from 'lucide-react';
 
 interface PurchaseModuleModalProps {
@@ -135,6 +136,8 @@ export const PurchaseModuleModal: React.FC<PurchaseModuleModalProps> = ({
         return <Users className="w-7 h-7 text-sky-500" />;
       case 'crm':
         return <HeartHandshake className="w-7 h-7 text-rose-500" />;
+      case 'woocommerce':
+        return <Globe className="w-7 h-7 text-violet-500" />;
       default:
         return <Boxes className="w-7 h-7 text-amber-500" />;
     }
@@ -403,6 +406,42 @@ export const PurchaseModuleModal: React.FC<PurchaseModuleModalProps> = ({
                 </div>
               </div>
 
+              {/* Module Feature Highlights */}
+              <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200/70 dark:border-neutral-800 space-y-2">
+                <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
+                  {moduleSlug === 'woocommerce' ? 'قابلیت‌های ماژول همگام‌سازی ووکامرس:' : 'مزایای فعال‌سازی ماژول:'}
+                </div>
+                <div className="grid grid-cols-1 gap-1.5 text-xs text-neutral-600 dark:text-neutral-400">
+                  {moduleSlug === 'woocommerce' ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>اتصال مستقیم دوطرفه با فروشگاه وردپرس از طریق REST API</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>همگام‌سازی لحظه‌ای موجودی انبارها و قیمت تنوع‌های پوشاک بر اساس SKU</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>ثبت خودکار سفارشات آنلاین با وب‌هوک و صدور سند فروش و انبارداری</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>کارکرد مستقل و آفلاین بدون نیاز به اتصال دائم اینترنت</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>لایسنس دائمی و امن متصل به شناسه سخت‌افزاری دستگاه</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
               {/* Hardware ID Info */}
               <div className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-between gap-2 text-xs">
                 <div className="flex items-center gap-2">
@@ -456,7 +495,7 @@ export const PurchaseModuleModal: React.FC<PurchaseModuleModalProps> = ({
                   className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 flex items-center gap-1 font-medium cursor-pointer"
                 >
                   <KeyRound className="w-3.5 h-3.5 text-neutral-400" />
-                  <span>{showManualKey ? 'بستن فرم ورود کلید لایسنس' : 'لایسنس آفلاین خریداری کرده‌اید؟ ورود دستی کلید'}</span>
+                  <span>{showManualKey ? 'بستن فرم ورود کلید لایسنس' : (moduleSlug === 'woocommerce' ? 'کلید لایسنس اختصاصی دارید؟ ورود دستی کلید' : 'لایسنس خریداری کرده‌اید؟ ورود دستی کلید')}</span>
                 </button>
 
                 {showManualKey && (

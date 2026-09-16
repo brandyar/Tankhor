@@ -18,6 +18,7 @@ import {
   RefreshCw,
   CloudCheck,
   XCircle,
+  Globe,
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -58,6 +59,8 @@ export const ModulesManagementCard: React.FC = () => {
         return <Users className="w-5 h-5 text-sky-600" />;
       case 'crm':
         return <HeartHandshake className="w-5 h-5 text-rose-600" />;
+      case 'woocommerce':
+        return <Globe className="w-5 h-5 text-violet-600" />;
       default:
         return <Boxes className="w-5 h-5 text-neutral-600" />;
     }

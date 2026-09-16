@@ -1,4 +1,4 @@
-import { Status, Organization, Customer, Supplier, Order, PurchaseOrder } from './index';
+import type { Status, Organization, Customer, Supplier, Order, PurchaseOrder, Warehouse } from './index';
 
 export type PartyType = 'customer' | 'supplier' | 'other';
 
@@ -54,6 +54,7 @@ export interface PersonTransaction {
   party_type: PartyType;
   customer_id?: number | Customer | string | null;
   supplier_id?: number | Supplier | string | null;
+  financial_account_id?: number | FinancialAccount | null;
   type?: 'debtor' | 'creditor'; // debtor = بدهکار (+), creditor = بستانکار (-)
   transaction_type: PersonTransactionType | string;
   amount: number;
@@ -115,6 +116,7 @@ export interface FinancialAccount {
   organization_id: number | Organization;
   name: string;
   type: FinancialAccountType | string;
+  warehouse_id?: number | Warehouse | null; // Default / Linked warehouse for this cashbox or POS terminal
   bank_name?: string | null;
   account_number?: string | null;
   card_number?: string | null;
@@ -125,6 +127,8 @@ export interface FinancialAccount {
   is_default: boolean;
   status?: Status | string;
   date_created?: string;
+  // Joined / Helper fields
+  warehouse_name?: string;
 }
 
 export type TreasuryTransactionType = 'deposit' | 'withdrawal' | 'transfer' | 'fee';

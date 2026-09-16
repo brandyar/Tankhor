@@ -11,7 +11,8 @@ import { Badge } from '../../components/ui/Badge';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { toPersianDigits, formatCurrency } from '../../utils/formatters';
 import { StockAdjustmentModal } from './StockAdjustmentModal';
-import { Package, Warehouse as WarehouseIcon, AlertTriangle, RefreshCw, Plus, Search, Layers, ShieldAlert, Barcode as BarcodeIcon, FileSpreadsheet, Download, Upload } from 'lucide-react';
+import { Modal } from '../../components/ui/Modal';
+import { Package, Warehouse as WarehouseIcon, AlertTriangle, RefreshCw, Plus, Search, Layers, ShieldAlert, Barcode as BarcodeIcon, FileSpreadsheet, Download, Upload, SlidersHorizontal } from 'lucide-react';
 import { exportInventoryToExcel, parseInventoryFromExcel } from '../../utils/excelUtils';
 
 export const InventoryView: React.FC = () => {
@@ -30,6 +31,13 @@ export const InventoryView: React.FC = () => {
 
   // Adjustment Modal
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+
+  // Edit Thresholds Modal
+  const [isThresholdModalOpen, setIsThresholdModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [editReorderPoint, setEditReorderPoint] = useState<number>(5);
+  const [editSafetyStock, setEditSafetyStock] = useState<number>(2);
+  const [isSavingThreshold, setIsSavingThreshold] = useState(false);
 
   const isPersian = locale === 'fa';
 
@@ -186,10 +194,11 @@ export const InventoryView: React.FC = () => {
       key: 'status_alert',
       header: t('inventory.stockStatus'),
       render: (item) => {
-        const isLow = item.quantity <= (item.reorder_point || 5);
-        const isCritical = item.quantity <= (item.safety_stock || 2);
+        const qty = item.available_quantity ?? item.quantity ?? 0;
+        const isOutOfStock = qty <= 0;
+        const isLow = !isOutOfStock && (qty <= (item.safety_stock ?? 2) || qty <= (item.reorder_point ?? 5));
 
-        if (isCritical) {
+        if (isOutOfStock) {
           return <Badge variant="danger">{t('inventory.statusOutOfStock')}</Badge>;
         }
         if (isLow) {
@@ -199,6 +208,36 @@ export const InventoryView: React.FC = () => {
       },
     },
   ];
+
+  const handleOpenThresholdModal = (item: InventoryItem) => {
+    setEditingItem(item);
+    setEditReorderPoint(item.reorder_point ?? 5);
+    setEditSafetyStock(item.safety_stock ?? 2);
+    setIsThresholdModalOpen(true);
+  };
+
+  const handleSaveThresholds = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+
+    setIsSavingThreshold(true);
+    try {
+      const adapter = storageManager.getAdapter();
+      await adapter.saveInventoryItem({
+        id: editingItem.id,
+        reorder_point: Number(editReorderPoint) >= 0 ? Number(editReorderPoint) : 5,
+        safety_stock: Number(editSafetyStock) >= 0 ? Number(editSafetyStock) : 2,
+      });
+
+      setIsThresholdModalOpen(false);
+      setEditingItem(null);
+      await loadData();
+    } catch (err) {
+      console.error('[InventoryView] Error updating inventory item thresholds:', err);
+    } finally {
+      setIsSavingThreshold(false);
+    }
+  };
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -360,8 +399,98 @@ export const InventoryView: React.FC = () => {
           data={inventoryItems}
           keyExtractor={(item) => item.id}
           isLoading={isLoading}
+          actions={(item) => (
+            <div className="flex items-center justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-neutral-800 text-slate-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 transition-colors"
+                onClick={() => handleOpenThresholdModal(item)}
+                title={t('inventory.editThresholds')}
+                icon={<SlidersHorizontal className="w-4 h-4" />}
+              />
+            </div>
+          )}
         />
       </Card>
+
+      {/* Modal: Edit Reorder Point and Safety Stock */}
+      {editingItem && (
+        <Modal
+          isOpen={isThresholdModalOpen}
+          onClose={() => {
+            setIsThresholdModalOpen(false);
+            setEditingItem(null);
+          }}
+          title={t('inventory.editThresholds')}
+        >
+          <form onSubmit={handleSaveThresholds} className="space-y-4 text-xs">
+            <div className="p-3 bg-slate-50 dark:bg-neutral-850 rounded-xl border border-slate-200 dark:border-neutral-700">
+              <span className="text-slate-500 dark:text-neutral-400 block mb-1">{t('inventory.skuAndTitle')}:</span>
+              <span className="font-bold text-slate-900 dark:text-neutral-100 font-mono">
+                {editingItem.sku || (typeof editingItem.variant_id === 'number' ? `VAR-#${editingItem.variant_id}` : '-')}
+              </span>
+              <p className="text-slate-600 dark:text-neutral-300 mt-1">
+                {editingItem.product_title || t('products.product')}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">
+                  {t('inventory.reorderPoint')}
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={editReorderPoint}
+                  onChange={(e) => setEditReorderPoint(Number(e.target.value))}
+                  placeholder="5"
+                />
+                <p className="text-[10px] text-slate-400 dark:text-neutral-500 mt-1">
+                  {t('inventory.reorderPointNotice')}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1">
+                  {t('inventory.safetyStock')}
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={editSafetyStock}
+                  onChange={(e) => setEditSafetyStock(Number(e.target.value))}
+                  placeholder="2"
+                />
+                <p className="text-[10px] text-slate-400 dark:text-neutral-500 mt-1">
+                  {t('inventory.safetyStockNotice')}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-neutral-800">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsThresholdModalOpen(false);
+                  setEditingItem(null);
+                }}
+              >
+                {t('common.cancel')}
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={isSavingThreshold}
+              >
+                {t('common.save')}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* Stock Adjustment Modal */}
       <StockAdjustmentModal
