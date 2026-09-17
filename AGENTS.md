@@ -7,10 +7,21 @@
 
 ## 🏗️ Architectural Directives
 
-1. **Storage Adapter Pattern (MANDATORY)**:
+1. **Storage Adapter Pattern & Facade Architecture (MANDATORY)**:
    - ALL database read and write operations across the entire application **MUST** pass through the `storageManager` instance defined in `/src/storage/index.ts`.
    - Never import or make direct Directus API, SQLite, or LocalStorage calls inside UI React components.
    - UI components consume `useStorage()` or `storageManager` methods which conform to `IStorageProvider`.
+   - **Modular Domain Decomposition (Facade Pattern)**:
+     - All storage adapters are decomposed into decoupled domain modules inheriting from lightweight base contexts (`LocalStorageBase`, `SqliteStorageBase`, `CloudStorageBase`):
+       - `*Org`: Organization, user profile, team members, roles, permissions
+       - `*Catalog`: Products, variants, categories, brands, collections, attributes, size guides
+       - `*Inventory`: Warehouses, locations, inventory items, stock movements, transfers
+       - `*Sales`: Orders, order items, customers, customer ledger synchronization
+       - `*Procurement`: Purchase orders, purchase order items, suppliers, supplier ledger synchronization
+       - `*Accounting`: Expenses, expense categories, financial accounts, treasury transactions, cheques, landed costs
+       - `*WooCommerce`: WooCommerce credentials, variant mappings, synchronization logs
+       - `*System`: Modules, settings, sync logs, media cache
+     - Main adapter classes (`LocalOfflineAdapter`, `SqliteStorageAdapter`, `CloudDirectusAdapter`) serve as clean Facades assembling domain sub-modules without duplicate code or circular dependencies.
    - **Hybrid Storage Resolution**:
      - Desktop (Tauri): `SqliteStorageAdapter` connects to local `sqlite:tankhor.db` using official `tauri-plugin-sql`, guaranteeing high scalability and resilience across OS resets.
      - Web Browser: `LocalOfflineAdapter` uses scoped local storage with memory cache.
@@ -111,7 +122,7 @@
     - Design system controls (such as `Select.tsx`) implement defensive fallback guards to handle both declarative `options` arrays and arbitrary `children` elements safely.
 
 14. **Automated Desktop Releases & Self-Updater**:
-    - Current App Version: `1.0.26`.
+    - Current App Version: `1.0.27`.
     - Automated multi-platform releases built via GitHub Actions (`/.github/workflows/release-tauri.yml`).
     - Windows desktop builds use NSIS target (`bundle.targets: ["nsis", "app", "dmg"]`) with `windows.installMode: "passive"` for seamless in-place updates.
     - Desktop auto-update system powered by Tauri Updater (`tauri-plugin-updater`) and GitHub Releases with dedicated `latest.json` manifest.
@@ -128,15 +139,25 @@
     - All automated data migrations and demo data seeding (`CloudMigrationManager.migrateLocalToCloud`) strictly filter payload keys using `sanitizeForDirectus()` against canonical schema definitions.
     - Prevents Directus 400 validation errors (such as unmapped `status` or `type` fields), ensuring onboarding demo data works smoothly in Cloud Mode.
 
+17. **Universal Image Resolution & Media Management (`ProductImage` & `mediaManager`)**:
+    - All product, variant, category, brand, collection, and dashboard metric images **MUST** be rendered using the `<ProductImage />` component (`/src/components/ui/ProductImage.tsx`) or resolved via `mediaManager.getDisplayUrl()`.
+    - Prevents broken image links when referencing raw Directus File UUIDs, Base64 strings, or local IndexedDB/blob URLs.
+    - Automatically provides elegant placeholder iconography, fallback text initials, and loading states across both offline/desktop and cloud setups.
+
 ---
 
 ## 📂 Key Code Structure
 
 - `/src/types/index.ts`: Strongly typed domain definitions for all Directus collections
 - `/src/storage/types.ts`: Storage provider interface & sync queue definitions
-- `/src/storage/localAdapter.ts`: Local persistence provider with multi-tenant isolation (Browser)
-- `/src/storage/sqliteAdapter.ts`: Native SQLite persistence provider for desktop (Tauri)
-- `/src/storage/cloudAdapter.ts`: Cloud REST API provider with local mirror fallback
+- `/src/storage/localAdapter.ts`: Local persistence provider facade (Browser)
+- `/src/storage/local/`: Modular LocalStorage domain providers (`localOrg.ts`, `localCatalog.ts`, `localInventory.ts`, `localSales.ts`, `localProcurement.ts`, `localAccounting.ts`, `localWooCommerce.ts`, `localSystem.ts`)
+- `/src/storage/sqliteAdapter.ts`: Native SQLite persistence provider facade (Desktop Tauri)
+- `/src/storage/sqlite/`: Modular SQLite domain providers (`sqliteOrg.ts`, `sqliteCatalog.ts`, `sqliteInventory.ts`, `sqliteSales.ts`, `sqliteProcurement.ts`, `sqliteAccounting.ts`, `sqliteWooCommerce.ts`, `sqliteSystem.ts`)
+- `/src/storage/cloudAdapter.ts`: Directus Cloud REST API persistence provider facade
+- `/src/storage/cloud/`: Modular Directus Cloud domain providers (`cloudOrg.ts`, `cloudCatalog.ts`, `cloudInventory.ts`, `cloudSales.ts`, `cloudProcurement.ts`, `cloudAccounting.ts`, `cloudWooCommerce.ts`, `cloudSystem.ts`)
+- `/src/storage/mediaManager.ts`: Offline media caching, blob storage, and image URL resolution
+- `/src/components/ui/ProductImage.tsx`: Unified image rendering component with Directus asset resolution and fallback
 - `/src/storage/syncManager.ts`: Sync manager for offline changes
 - `/src/storage/backupManager.ts`: Automated 1-click JSON backup, restore & demo data seeding engine
 - `/src/api/directus.ts`: Directus API client with desktop/web support
@@ -158,7 +179,6 @@
 - `/src/features/`: Modular domain views (Dashboard, Products, Inventory, Orders, Purchasing, Size Guides, Settings, Organizations)
 - `/src/features/accounting/`: Complete accounting suite (Dashboard, Expenses, Person Ledgers, Financial Accounts, Cheques, Landed Costs, Tax Reports, Accounting Export)
 - `/src/features/woocommerce/`: WooCommerce integration module (store credentials, synchronization dashboard, logs, variant mapping)
-- `/server/woocommerce.ts`: WooCommerce REST API proxy, webhook ingestion, bidirectional stock sync & order import
 - `/src/utils/updater.ts`: Desktop update checker and installation helper using `@tauri-apps/plugin-updater` and `@tauri-apps/plugin-process`
 - `/.github/workflows/release-tauri.yml`: Multi-platform release pipeline for Tauri desktop (Windows, macOS) and Android APK
 

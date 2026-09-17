@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/Badge';
 import { toPersianDigits, formatCurrency } from '../../utils/formatters';
 import { TopProductMetric } from './dashboardUtils';
 import { ProductVariant, Organization } from '../../types';
+import { ProductImage } from '../../components/ui/ProductImage';
 import {
   AlertTriangle, ArrowUpRight, Plus, RefreshCw, Shirt,
   CheckCircle2, ShoppingCart, ChevronLeft, ChevronRight
@@ -64,17 +65,12 @@ export const DashboardStockAlerts: React.FC<DashboardStockAlertsProps> = ({
                   <span className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-mono text-xs font-bold flex items-center justify-center shrink-0">
                     {isPersian ? toPersianDigits(idx + 1) : (idx + 1)}
                   </span>
-                  {p.image ? (
-                    <img
-                      src={p.image}
-                      alt={p.title}
-                      className="w-10 h-10 rounded-lg object-cover border border-neutral-200 dark:border-neutral-700 shrink-0"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 flex items-center justify-center shrink-0 border border-neutral-200 dark:border-neutral-700">
-                      <Shirt className="w-5 h-5" />
-                    </div>
-                  )}
+                  <ProductImage
+                    src={p.image}
+                    alt={p.title}
+                    fallbackText={p.title}
+                    containerClassName="w-10 h-10 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shrink-0 border border-neutral-200 dark:border-neutral-700 shadow-2xs"
+                  />
                   <div className="min-w-0">
                     <p className="font-bold text-neutral-900 dark:text-neutral-100 text-xs sm:text-sm truncate">
                       {p.title}

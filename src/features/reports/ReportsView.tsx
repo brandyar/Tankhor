@@ -31,6 +31,16 @@ import {
   Layers,
 } from 'lucide-react';
 
+// Helper to safely extract an ID from a directus relational field or raw number/string
+const getEntityId = (val: any): number | undefined => {
+  if (val === null || val === undefined) return undefined;
+  if (typeof val === 'object') {
+    return val.id !== undefined && val.id !== null ? Number(val.id) : undefined;
+  }
+  const num = Number(val);
+  return isNaN(num) ? undefined : num;
+};
+
 export const ReportsView: React.FC = () => {
   const { t, locale } = useTranslation();
   const { activeOrganization } = useOrganization();
@@ -60,7 +70,7 @@ export const ReportsView: React.FC = () => {
     setIsLoading(true);
     try {
       const adapter = storageManager.getAdapter();
-      const orgParams = activeOrganization ? { organization_id: activeOrganization.id } : {};
+      const orgParams = activeOrganization?.id ? { organization_id: activeOrganization.id } : {};
 
       const [
         prodsRes,
@@ -80,22 +90,31 @@ export const ReportsView: React.FC = () => {
         adapter.getCategories(orgParams),
       ]);
 
-      setProducts(prodsRes || []);
-      setVariants(varsRes || []);
-      setColors(colsRes || []);
-      setSizes(szsRes || []);
-      setInventoryItems(invRes || []);
-      setOrders(ordersRes || []);
-      setCategories(catsRes || []);
+      const validProducts = Array.isArray(prodsRes) ? prodsRes.filter((p): p is Product => Boolean(p && p.id)) : [];
+      const validVariants = Array.isArray(varsRes) ? varsRes.filter((v): v is ProductVariant => Boolean(v && v.id)) : [];
+      const validColors = Array.isArray(colsRes) ? colsRes.filter((c): c is Color => Boolean(c && c.id)) : [];
+      const validSizes = Array.isArray(szsRes) ? szsRes.filter((s): s is Size => Boolean(s && s.id)) : [];
+      const validInventory = Array.isArray(invRes) ? invRes.filter((i): i is InventoryItem => Boolean(i && i.id)) : [];
+      const validOrders = Array.isArray(ordersRes) ? ordersRes.filter((o): o is Order => Boolean(o && o.id)) : [];
+      const validCategories = Array.isArray(catsRes) ? catsRes.filter((cat): cat is Category => Boolean(cat && cat.id)) : [];
 
-      // Fetch order items for each order
+      setProducts(validProducts);
+      setVariants(validVariants);
+      setColors(validColors);
+      setSizes(validSizes);
+      setInventoryItems(validInventory);
+      setOrders(validOrders);
+      setCategories(validCategories);
+
+      // Fetch order items for each order safely
       const itemsMap: Record<number, OrderItem[]> = {};
-      if (ordersRes && ordersRes.length > 0) {
+      if (validOrders.length > 0) {
         await Promise.all(
-          ordersRes.map(async (o) => {
+          validOrders.map(async (o) => {
+            if (!o || !o.id) return;
             try {
               const items = await adapter.getOrderItems(o.id);
-              itemsMap[o.id] = items || [];
+              itemsMap[o.id] = Array.isArray(items) ? items.filter((item): item is OrderItem => Boolean(item && item.id)) : [];
             } catch {
               itemsMap[o.id] = [];
             }
@@ -111,14 +130,14 @@ export const ReportsView: React.FC = () => {
   };
 
   // Maps for quick lookup
-  const colorMap = useMemo(() => new Map(colors.map((c) => [c.id, c])), [colors]);
-  const sizeMap = useMemo(() => new Map(sizes.map((s) => [s.id, s])), [sizes]);
-  const variantMap = useMemo(() => new Map(variants.map((v) => [v.id, v])), [variants]);
-  const productMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
+  const colorMap = useMemo(() => new Map((colors || []).filter((c) => Boolean(c && c.id)).map((c) => [c.id, c])), [colors]);
+  const sizeMap = useMemo(() => new Map((sizes || []).filter((s) => Boolean(s && s.id)).map((s) => [s.id, s])), [sizes]);
+  const variantMap = useMemo(() => new Map((variants || []).filter((v) => Boolean(v && v.id)).map((v) => [v.id, v])), [variants]);
+  const productMap = useMemo(() => new Map((products || []).filter((p) => Boolean(p && p.id)).map((p) => [p.id, p])), [products]);
 
   // Combined Order Items
   const allOrderItems = useMemo(() => {
-    return Object.values(orderItemsMap).flat();
+    return Object.values(orderItemsMap).flat().filter(Boolean);
   }, [orderItemsMap]);
 
   // -------------------------------------------------------------
@@ -133,17 +152,20 @@ export const ReportsView: React.FC = () => {
     let totalSalesRev = 0;
 
     allOrderItems.forEach((item) => {
-      const variant = variantMap.get(typeof item.variant_id === 'object' ? (item.variant_id as any).id : item.variant_id);
+      if (!item) return;
+      const vId = getEntityId(item.variant_id);
+      const variant = vId !== undefined ? variantMap.get(vId) : undefined;
       const qty = item.quantity || 1;
       const rev = item.total || (item.unit_price * qty);
 
       totalSoldQty += qty;
       totalSalesRev += rev;
 
-      if (variant) {
+      if (variant && variant.id) {
         // Size aggregation
-        const szObj = variant.size_id ? sizeMap.get(typeof variant.size_id === 'object' ? (variant.size_id as any).id : variant.size_id) : null;
-        const sizeName = szObj?.name || variant.size_name || 'سایز نامشخص';
+        const szId = getEntityId(variant.size_id);
+        const szObj = szId !== undefined ? sizeMap.get(szId) : null;
+        const sizeName = szObj?.name || variant.size_name || t('reports.unknownLabel', 'سایز نامشخص');
         if (!sizeStats[sizeName]) {
           sizeStats[sizeName] = { name: sizeName, id: szObj?.id, qty: 0, revenue: 0 };
         }
@@ -151,8 +173,9 @@ export const ReportsView: React.FC = () => {
         sizeStats[sizeName].revenue += rev;
 
         // Color aggregation
-        const clrObj = variant.color_id ? colorMap.get(typeof variant.color_id === 'object' ? (variant.color_id as any).id : variant.color_id) : null;
-        const colorName = clrObj?.name || variant.color_name || 'رنگ نامشخص';
+        const clrId = getEntityId(variant.color_id);
+        const clrObj = clrId !== undefined ? colorMap.get(clrId) : null;
+        const colorName = clrObj?.name || variant.color_name || t('reports.unknownLabel', 'رنگ نامشخص');
         if (!colorStats[colorName]) {
           colorStats[colorName] = { name: colorName, hex: clrObj?.hex || '#94a3b8', id: clrObj?.id, qty: 0, revenue: 0 };
         }
@@ -160,11 +183,12 @@ export const ReportsView: React.FC = () => {
         colorStats[colorName].revenue += rev;
 
         // Variant aggregation
-        const prod = typeof variant.product_id === 'object' ? variant.product_id : productMap.get(variant.product_id as number);
-        const prodTitle = prod?.title || variant.product_title || 'کالا';
+        const pId = getEntityId(variant.product_id);
+        const prod = pId !== undefined ? productMap.get(pId) : (variant.product_id && typeof variant.product_id === 'object' ? variant.product_id : undefined);
+        const prodTitle = prod?.title || variant.product_title || t('reports.defaultProductTitle', 'کالا');
         if (!variantStats[variant.id]) {
           variantStats[variant.id] = {
-            sku: variant.sku,
+            sku: variant.sku || '',
             title: prodTitle,
             color: colorName,
             size: sizeName,
@@ -189,7 +213,7 @@ export const ReportsView: React.FC = () => {
       totalSoldQty,
       totalSalesRev,
     };
-  }, [allOrderItems, variantMap, sizeMap, colorMap, productMap]);
+  }, [allOrderItems, variantMap, sizeMap, colorMap, productMap, t]);
 
   // -------------------------------------------------------------
   // 2. DEAD STOCK ANALYSIS COMPUTATION
@@ -197,10 +221,13 @@ export const ReportsView: React.FC = () => {
   const deadStockData = useMemo(() => {
     // Collect sales date for variants
     const variantSalesMap: Record<number, { lastSaleDate: string; totalSold: number }> = {};
-    orders.forEach((ord) => {
+    (orders || []).forEach((ord) => {
+      if (!ord || !ord.id) return;
       const items = orderItemsMap[ord.id] || [];
       items.forEach((item) => {
-        const vId = typeof item.variant_id === 'object' ? (item.variant_id as any).id : item.variant_id;
+        if (!item) return;
+        const vId = getEntityId(item.variant_id);
+        if (vId === undefined) return;
         if (!variantSalesMap[vId]) {
           variantSalesMap[vId] = { lastSaleDate: ord.date_created || '', totalSold: 0 };
         }
@@ -226,9 +253,10 @@ export const ReportsView: React.FC = () => {
     let totalTiedCapital = 0;
     let totalDeadUnits = 0;
 
-    variants.forEach((v) => {
-      const stock = inventoryItems
-        .filter((inv) => (typeof inv.variant_id === 'object' ? (inv.variant_id as any).id : inv.variant_id) === v.id)
+    (variants || []).forEach((v) => {
+      if (!v || !v.id) return;
+      const stock = (inventoryItems || [])
+        .filter((inv) => inv && getEntityId(inv.variant_id) === v.id)
         .reduce((sum, inv) => sum + (inv.quantity || 0), 0);
 
       const stockCount = stock > 0 ? stock : (v.stock_quantity || 0);
@@ -241,9 +269,12 @@ export const ReportsView: React.FC = () => {
         const daysDiff = Math.max(15, Math.floor((Date.now() - new Date(lastDateStr).getTime()) / (1000 * 3600 * 24)));
 
         if (daysDiff >= deadStockDaysThreshold || soldQty === 0) {
-          const prod = typeof v.product_id === 'object' ? v.product_id : productMap.get(v.product_id as number);
-          const clr = v.color_id ? colorMap.get(typeof v.color_id === 'object' ? (v.color_id as any).id : v.color_id) : null;
-          const sz = v.size_id ? sizeMap.get(typeof v.size_id === 'object' ? (v.size_id as any).id : v.size_id) : null;
+          const pId = getEntityId(v.product_id);
+          const prod = pId !== undefined ? productMap.get(pId) : (v.product_id && typeof v.product_id === 'object' ? v.product_id : undefined);
+          const clrId = getEntityId(v.color_id);
+          const clr = clrId !== undefined ? colorMap.get(clrId) : null;
+          const szId = getEntityId(v.size_id);
+          const sz = szId !== undefined ? sizeMap.get(szId) : null;
 
           const unitCost = v.cost || (v.price ? v.price * 0.6 : 150000);
           const tiedCap = stockCount * unitCost;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
+import { useOrganization } from '../../context/OrganizationContext';
 import { storageManager } from '../../storage';
 import { ProfitLossSummary, Expense, PersonTransaction } from '../../types';
 import { Card } from '../../components/ui/Card';
@@ -39,6 +40,7 @@ export const AccountingDashboardPage: React.FC<AccountingDashboardPageProps> = (
   onOpenNewTransaction,
 }) => {
   const { t } = useTranslation();
+  const { activeOrganization } = useOrganization();
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<ProfitLossSummary | null>(null);
   const [recentExpenses, setRecentExpenses] = useState<Expense[]>([]);
@@ -49,9 +51,19 @@ export const AccountingDashboardPage: React.FC<AccountingDashboardPageProps> = (
     try {
       setLoading(true);
       const adapter = storageManager.getAdapter();
-      const pnl = await adapter.getProfitLossSummary({ period });
-      const exps = await adapter.getExpenses({ limit: 5 });
-      const txs = await adapter.getPersonTransactions({ limit: 5 });
+      const orgId = activeOrganization?.id ? Number(activeOrganization.id) : undefined;
+
+      if (adapter.reconcileOrdersWithTreasury && orgId) {
+        try {
+          await adapter.reconcileOrdersWithTreasury(orgId);
+        } catch {
+          // ignore
+        }
+      }
+
+      const pnl = await adapter.getProfitLossSummary({ period, organization_id: orgId });
+      const exps = await adapter.getExpenses({ limit: 5, organization_id: orgId });
+      const txs = await adapter.getPersonTransactions({ limit: 5, organization_id: orgId });
 
       setSummary(pnl);
       setRecentExpenses(exps);
@@ -65,7 +77,7 @@ export const AccountingDashboardPage: React.FC<AccountingDashboardPageProps> = (
 
   useEffect(() => {
     loadData();
-  }, [period]);
+  }, [period, activeOrganization?.id]);
 
   const isNetProfitable = (summary?.net_profit || 0) >= 0;
 

@@ -11,6 +11,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { ImageUpload } from '../../components/ui/ImageUpload';
+import { ProductImage } from '../../components/ui/ProductImage';
 import { directusClient } from '../../api/directus';
 import { confirmAction } from '../../utils/confirm';
 import {
@@ -199,10 +200,11 @@ export const CategoriesView: React.FC = () => {
             )}
 
             {node.image ? (
-              <img
-                src={directusClient.getAssetUrl(node.image)}
+              <ProductImage
+                src={node.image}
                 alt={node.name}
-                className="w-8 h-8 rounded-xl object-cover border border-slate-200 dark:border-neutral-700"
+                fallbackText={node.name}
+                containerClassName="w-8 h-8 rounded-xl overflow-hidden shrink-0 border border-slate-200 dark:border-neutral-700"
               />
             ) : (
               <div

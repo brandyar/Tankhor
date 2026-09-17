@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { ImageUpload } from '../../components/ui/ImageUpload';
+import { ProductImage } from '../../components/ui/ProductImage';
 import { directusClient } from '../../api/directus';
 import { confirmAction } from '../../utils/confirm';
 import { Award, Plus, Search, Edit, Trash2 } from 'lucide-react';
@@ -121,13 +122,15 @@ export const BrandsView: React.FC = () => {
       render: (brand) => (
         <div className="flex items-center gap-3">
           {brand.logo ? (
-            <img
-              src={directusClient.getAssetUrl(brand.logo)}
+            <ProductImage
+              src={brand.logo}
               alt={brand.name}
-              className="w-10 h-10 rounded-xl object-contain border border-slate-200 dark:border-neutral-700 bg-white dark:bg-[#181a20] p-1"
+              fallbackText={brand.name}
+              containerClassName="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 dark:border-neutral-700 bg-white dark:bg-[#181a20] p-1 shrink-0"
+              className="w-full h-full object-contain"
             />
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold shrink-0">
               <Award className="w-5 h-5" />
             </div>
           )}

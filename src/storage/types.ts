@@ -25,6 +25,7 @@ export interface QueryParams {
   period?: string;
   page?: number;
   limit?: number;
+  skipReconcile?: boolean;
 }
 
 export interface SyncQueueItem {
@@ -172,6 +173,7 @@ export interface IStorageProvider {
   deletePersonTransaction?(id: number): Promise<boolean>;
 
   getProfitLossSummary(params?: QueryParams): Promise<ProfitLossSummary>;
+  reconcileOrdersWithTreasury?(organization_id?: number): Promise<void>;
 
   // Accounting & Treasury (Phase 2)
   getFinancialAccounts(params?: QueryParams): Promise<FinancialAccount[]>;

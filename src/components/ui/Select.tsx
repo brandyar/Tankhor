@@ -31,17 +31,17 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           } ${className}`}
           {...props}
         >
-          {options
-            ? options.map((opt, idx) => (
-                <option
-                  key={`${opt.value}_${idx}`}
-                  value={opt.value}
-                  className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100"
-                >
-                  {opt.label}
-                </option>
-              ))
-            : children}
+          {children}
+          {Array.isArray(options) &&
+            options.filter(Boolean).map((opt, idx) => (
+              <option
+                key={`${opt.value}_${idx}`}
+                value={opt.value}
+                className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100"
+              >
+                {opt.label}
+              </option>
+            ))}
         </select>
         {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
       </div>

@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { ImageUpload } from '../../components/ui/ImageUpload';
+import { ProductImage } from '../../components/ui/ProductImage';
 import { directusClient } from '../../api/directus';
 import { confirmAction } from '../../utils/confirm';
 import { Layers, Plus, Search, Edit, Trash2 } from 'lucide-react';
@@ -126,13 +127,14 @@ export const CollectionsView: React.FC = () => {
       render: (col) => (
         <div className="flex items-center gap-3">
           {col.image ? (
-            <img
-              src={directusClient.getAssetUrl(col.image)}
+            <ProductImage
+              src={col.image}
               alt={col.name}
-              className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-neutral-700"
+              fallbackText={col.name}
+              containerClassName="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 dark:border-neutral-700 shrink-0"
             />
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold shrink-0">
               <Layers className="w-5 h-5" />
             </div>
           )}

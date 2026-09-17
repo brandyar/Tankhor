@@ -1,2350 +1,638 @@
-import { IStorageProvider, QueryParams, StorageMode } from './types';
-import { directusClient } from '../api/directus';
-import { LocalOfflineAdapter } from './localAdapter';
-import { StorageSyncManager } from './syncManager';
-import { normalizeId } from '../utils/formatters';
-import { mediaManager } from '../utils/mediaManager';
+import { IStorageProvider, StorageMode, QueryParams } from './types';
 import {
-  Organization, OrganizationUser, Category, Collection, Season, Color, SizeGroup, Size, Brand,
-  Product, ProductVariant, Warehouse, WarehouseLocation, InventoryItem,
-  InventoryMovement, Customer, Order, OrderItem, Supplier, PurchaseOrder,
-  PurchaseOrderItem, StockTransfer, StockTransferItem, SizeGuideTemplate,
-  SizeGuideMeasurement, SizeGuideValue, Subscription, SystemModule, OrganizationModule,
+  Organization, OrganizationUser, Category, Collection, Season, Color, Brand,
+  SizeGroup, Size, Product, ProductVariant, Warehouse, WarehouseLocation,
+  InventoryItem, InventoryMovement, Customer, Order, OrderItem,
+  Supplier, PurchaseOrder, PurchaseOrderItem, StockTransfer, StockTransferItem,
+  SizeGuideTemplate, SizeGuideMeasurement, SizeGuideValue,
+  Subscription, SystemModule, OrganizationModule,
   ExpenseCategory, Expense, PersonTransaction, ProfitLossSummary,
-  FinancialAccount, FinancialAccountType, TreasuryTransaction, TreasuryTransactionType,
-  Cheque, ChequeType, ChequeStatus,
+  FinancialAccount, TreasuryTransaction, Cheque, ChequeStatus,
   LandedCost, LandedCostAllocation, VatReportSummary,
   PosShift, PosShiftStatus,
   WooCommerceSettings, WooCommerceLog, IntegrationMapping
 } from '../types';
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function cleanUuid(val: any): string | null {
-  if (typeof val === 'string' && UUID_REGEX.test(val.trim())) {
-    return val.trim();
-  }
-  return null;
-}
-
-function cleanInt(val: any): number | null {
-  if (val === undefined || val === null || val === '') return null;
-  const num = Number(val);
-  if (isNaN(num) || num <= 0) return null;
-  return Math.floor(num);
-}
+import { LocalOfflineAdapter } from './localAdapter';
+import {
+  CloudStorageBase,
+  CloudOrgStorage,
+  CloudCatalogStorage,
+  CloudInventoryStorage,
+  CloudSalesStorage,
+  CloudProcurementStorage,
+  CloudAccountingStorage,
+  CloudWooCommerceStorage,
+} from './cloud';
 
 export class CloudDirectusAdapter implements IStorageProvider {
-  public mode: StorageMode = 'cloud_synced';
-  private localAdapter = new LocalOfflineAdapter();
+  mode: StorageMode = 'cloud_synced';
+  public localAdapter: LocalOfflineAdapter;
+  private base: CloudStorageBase;
 
-  // Organizations
+  // Domain Storage Modules
+  public org: CloudOrgStorage;
+  public catalog: CloudCatalogStorage;
+  public inventory: CloudInventoryStorage;
+  public sales: CloudSalesStorage;
+  public procurement: CloudProcurementStorage;
+  public accounting: CloudAccountingStorage;
+  public woocommerce: CloudWooCommerceStorage;
+
+  constructor(localAdapter?: LocalOfflineAdapter) {
+    this.localAdapter = localAdapter || new LocalOfflineAdapter();
+    this.base = new CloudStorageBase(this.localAdapter);
+
+    this.org = new CloudOrgStorage(this.base);
+    this.catalog = new CloudCatalogStorage(this.base);
+    this.inventory = new CloudInventoryStorage(this.base);
+    this.sales = new CloudSalesStorage(this.base);
+    this.procurement = new CloudProcurementStorage(this.base);
+    this.accounting = new CloudAccountingStorage(this.base);
+    this.woocommerce = new CloudWooCommerceStorage(this.base);
+  }
+
+  // ==========================================
+  // Organizations & Users
+  // ==========================================
   async getOrganizations(): Promise<Organization[]> {
-    try {
-      const orgs = await directusClient.getOrganizations();
-      const validOrgs: Organization[] = (Array.isArray(orgs) ? orgs : [])
-        .filter((o: any) => o && typeof o === 'object' && o.id && o.name);
-
-      if (validOrgs.length > 0) {
-        // Cache to local adapter for offline resilience
-        for (const org of validOrgs) {
-          await this.localAdapter.saveOrganization(org);
-        }
-        return validOrgs;
-      }
-      return await this.localAdapter.getOrganizations();
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] getOrganizations fallback:', err?.message || err);
-      return await this.localAdapter.getOrganizations();
-    }
+    return this.org.getOrganizations();
   }
 
   async getOrganizationById(id: number): Promise<Organization | null> {
-    try {
-      const org = await directusClient.getItemById<Organization>('organizations', id);
-      if (org && org.id && org.name) {
-        await this.localAdapter.saveOrganization(org);
-        return org;
-      }
-      return await this.localAdapter.getOrganizationById(id);
-    } catch {
-      return await this.localAdapter.getOrganizationById(id);
-    }
+    return this.org.getOrganizationById(id);
   }
 
   async saveOrganization(org: Partial<Organization>): Promise<Organization> {
-    try {
-      if (org.id) {
-        return await directusClient.updateItem<Organization>('organizations', org.id, org);
-      }
-      return await directusClient.createOrganization({
-        name: org.name || 'سازمان جدید',
-        slug: org.slug,
-        currency: org.currency,
-        timezone: org.timezone,
-        plan: org.plan,
-      });
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] Cloud saveOrganization failed, falling back to local adapter:', err?.message || err);
-      const saved = await this.localAdapter.saveOrganization(org);
-      StorageSyncManager.enqueue({ action: org.id ? 'UPDATE' : 'CREATE', collection: 'organizations', payload: saved });
-      return saved;
-    }
+    return this.org.saveOrganization(org);
   }
 
-  // Organization Users & Roles
   async getOrganizationUsers(params?: QueryParams): Promise<OrganizationUser[]> {
-    const orgId = params?.organization_id || (typeof window !== 'undefined' ? localStorage.getItem('tankhor_active_org_id') : null);
-    if (!orgId) return [];
-
-    const numOrgId = Number(orgId);
-    if (isNaN(numOrgId) || numOrgId <= 0) return [];
-
-    const query: any = {
-      sort: '-id',
-      filter: { organization_id: { _eq: numOrgId } },
-      fields: [
-        'id',
-        'organization_id',
-        'role',
-        'status',
-        'warehouse_id',
-        'financial_account_id',
-        'can_change_warehouse',
-        'date_joined',
-        'user_id.*',
-        'user_id.id',
-        'user_id.email',
-        'user_id.first_name',
-        'user_id.last_name',
-        'user_id.avatar',
-      ],
-    };
-    try {
-      const items = await directusClient.getItems<any>('organization_users', query);
-      if (Array.isArray(items) && items.length > 0) {
-        return items.map((ou: any) => {
-          const u = typeof ou.user_id === 'object' && ou.user_id ? ou.user_id : {};
-          const rawWh = typeof ou.warehouse_id === 'object' && ou.warehouse_id ? ou.warehouse_id.id : ou.warehouse_id;
-          const rawAcc = typeof ou.financial_account_id === 'object' && ou.financial_account_id ? ou.financial_account_id.id : ou.financial_account_id;
-          return {
-            ...ou,
-            organization_id: numOrgId,
-            user_id: u.id || ou.user_id,
-            first_name: ou.first_name || u.first_name || '',
-            last_name: ou.last_name || u.last_name || '',
-            email: ou.email || u.email || '',
-            avatar: ou.avatar || u.avatar || null,
-            warehouse_id: rawWh ? Number(rawWh) : null,
-            financial_account_id: rawAcc ? Number(rawAcc) : null,
-            can_change_warehouse: ou.can_change_warehouse !== undefined && ou.can_change_warehouse !== null ? Boolean(ou.can_change_warehouse) : true,
-          };
-        });
-      }
-      return [];
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] getOrganizationUsers failed, using local adapter:', err?.message || err);
-      return this.localAdapter.getOrganizationUsers({ organization_id: numOrgId });
-    }
+    return this.org.getOrganizationUsers(params);
   }
 
   async saveOrganizationUser(user: Partial<OrganizationUser>): Promise<OrganizationUser> {
-    try {
-      if (user.id) {
-        const updated = await directusClient.updateItem<OrganizationUser>('organization_users', user.id, user);
-        const result = { ...user, ...updated };
-        await this.localAdapter.saveOrganizationUser(result);
-        return result;
-      } else {
-        const created = await directusClient.createItem<OrganizationUser>('organization_users', user);
-        const result = { ...user, ...created };
-        await this.localAdapter.saveOrganizationUser(result);
-        return result;
-      }
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] saveOrganizationUser failed, falling back to local:', err?.message || err);
-      const saved = await this.localAdapter.saveOrganizationUser(user);
-      StorageSyncManager.enqueue({ action: user.id ? 'UPDATE' : 'CREATE', collection: 'organization_users', payload: saved });
-      return saved;
-    }
+    return this.org.saveOrganizationUser(user);
   }
 
   async deleteOrganizationUser(id: number): Promise<boolean> {
-    try {
-      await directusClient.deleteItem('organization_users', id);
-      await this.localAdapter.deleteOrganizationUser(id);
-      return true;
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] deleteOrganizationUser failed, using local:', err?.message || err);
-      const res = await this.localAdapter.deleteOrganizationUser(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'organization_users', payload: { id } });
-      return res;
-    }
+    return this.org.deleteOrganizationUser(id);
   }
 
-  // Products & Variants
-  async getProducts(params?: QueryParams): Promise<Product[]> {
-    const query: any = { sort: '-id' };
-    if (params?.organization_id) {
-      query.filter = { organization_id: { _eq: params.organization_id } };
-    }
-    try {
-      const products = await directusClient.getItems<Product>('products', query);
-      const [variants, inventoryItems] = await Promise.all([
-        directusClient.getItems<ProductVariant>('product_variants', {
-          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-        }).catch(() => []),
-        directusClient.getItems<InventoryItem>('inventory_items', {
-          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-        }).catch(() => []),
-      ]);
-
-      return products.map((p) => {
-        const pVariants = variants.filter((v) => {
-          const pId = typeof v.product_id === 'number' ? v.product_id : (v.product_id as any)?.id;
-          return pId === p.id;
-        });
-        const pVariantIds = new Set(pVariants.map((v) => v.id));
-        const pInventory = inventoryItems.filter((i) => {
-          const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-          return pVariantIds.has(vId);
-        });
-        const totalStock = pInventory.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
-
-        return {
-          ...p,
-          variants_count: pVariants.length,
-          total_stock: totalStock,
-        };
-      });
-    } catch {
-      return this.localAdapter.getProducts(params);
-    }
-  }
-
-  async getProductById(id: number): Promise<Product | null> {
-    try {
-      return await directusClient.getItemById<Product>('products', id);
-    } catch {
-      return this.localAdapter.getProductById(id);
-    }
-  }
-
-  async saveProduct(product: Partial<Product>): Promise<Product> {
-    const payload: any = { ...product };
-    delete payload.variants_count;
-    delete payload.total_stock;
-    delete payload.brand;
-    delete payload.category;
-    delete payload.collection;
-    delete payload.season;
-    delete payload.size_guide_template;
-    delete payload.variants;
-
-    if (payload.main_image) {
-      const rawImg = typeof payload.main_image === 'string' ? payload.main_image.trim() : (payload.main_image as any)?.id || '';
-      if (rawImg && !UUID_REGEX.test(rawImg)) {
-        try {
-          const uploadedUuid = await mediaManager.uploadMediaRefToCloud(rawImg);
-          if (uploadedUuid) {
-            payload.main_image = uploadedUuid;
-          }
-        } catch (uploadErr) {
-          console.warn('[CloudDirectusAdapter] Auto-uploading local image to cloud failed:', uploadErr);
-        }
-      }
-    }
-
-    payload.main_image = cleanUuid(payload.main_image);
-    payload.brand_id = cleanInt(payload.brand_id);
-    payload.category_id = cleanInt(payload.category_id);
-    payload.collection_id = cleanInt(payload.collection_id);
-    payload.season_id = cleanInt(payload.season_id);
-    payload.size_guide_template_id = cleanInt(payload.size_guide_template_id);
-    payload.sort = Number(payload.sort) || 0;
-    if (!payload.status) payload.status = 'published';
-
-    const id = payload.id ? Number(payload.id) : undefined;
-    delete payload.id;
-
-    try {
-      if (id) {
-        return await directusClient.updateItem<Product>('products', id, payload);
-      }
-      return await directusClient.createItem<Product>('products', payload);
-    } catch (err: any) {
-      console.error('[CloudDirectusAdapter] Cloud saveProduct failed:', err?.message || err);
-      throw err;
-    }
-  }
-
-  async deleteProduct(id: number): Promise<boolean> {
-    try {
-      // Find all variants for this product and delete their inventory & movements first
-      const variants = await directusClient.getItems<ProductVariant>('product_variants', {
-        filter: { product_id: { _eq: id } },
-      }).catch(() => []);
-
-      for (const v of variants) {
-        await this.deleteVariant(v.id).catch((err) => {
-          console.warn(`[CloudDirectusAdapter] Delete variant ${v.id} warning:`, err?.message || err);
-        });
-      }
-
-      return await directusClient.deleteItem('products', id);
-    } catch (err: any) {
-      console.error('[CloudDirectusAdapter] Cloud deleteProduct failed:', err?.message || err);
-      throw err;
-    }
-  }
-
-  async getVariants(params?: QueryParams): Promise<ProductVariant[]> {
-    const query: any = { sort: '-id' };
-    if (params?.organization_id) {
-      query.filter = { organization_id: { _eq: params.organization_id } };
-    }
-    try {
-      const [variants, products, colors, sizes, inventoryItems] = await Promise.all([
-        directusClient.getItems<ProductVariant>('product_variants', query),
-        directusClient.getItems<Product>('products', {
-          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-        }).catch(() => []),
-        directusClient.getItems<Color>('colors', {}).catch(() => []),
-        directusClient.getItems<Size>('sizes', {}).catch(() => []),
-        directusClient.getItems<InventoryItem>('inventory_items', {
-          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-        }).catch(() => []),
-      ]);
-
-      return variants.map((v) => {
-        const prodId = typeof v.product_id === 'number' ? v.product_id : (v.product_id as any)?.id;
-        const colorId = typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id;
-        const sizeId = typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id;
-
-        const prod = products.find((p) => p.id === prodId);
-        const color = colors.find((c) => c.id === colorId);
-        const size = sizes.find((s) => s.id === sizeId);
-
-        const vInv = inventoryItems.filter((i) => {
-          const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-          return vId === v.id;
-        });
-        const totalStock = vInv.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
-
-        return {
-          ...v,
-          product_title: prod?.title || v.product_title || 'محصول',
-          color_name: color?.name || v.color_name || '-',
-          size_name: size?.name || v.size_name || '-',
-          stock_quantity: totalStock,
-        };
-      });
-    } catch {
-      return this.localAdapter.getVariants(params);
-    }
-  }
-
-  async getVariantsByProductId(productId: number): Promise<ProductVariant[]> {
-    try {
-      const normProdId = normalizeId(productId) || Number(productId);
-      let variants = await directusClient.getItems<ProductVariant>('product_variants', {
-        filter: {
-          _or: [
-            { product_id: { _eq: normProdId } },
-            { product_id: { _eq: String(normProdId) } },
-          ],
-        },
-      }).catch(() => []);
-
-      if (variants.length === 0) {
-        // Fallback filter over all variants in case Directus relation object filter was used
-        const allVariants = await directusClient.getItems<ProductVariant>('product_variants', {}).catch(() => []);
-        variants = allVariants.filter((v) => normalizeId(v.product_id) === normProdId);
-      }
-
-      const [inventoryItems, colors, sizes, products] = await Promise.all([
-        directusClient.getItems<InventoryItem>('inventory_items', {}).catch(() => []),
-        directusClient.getItems<Color>('colors', {}).catch(() => []),
-        directusClient.getItems<Size>('sizes', {}).catch(() => []),
-        directusClient.getItems<Product>('products', { filter: { id: { _eq: normProdId } } }).catch(() => []),
-      ]);
-
-      const productTitle = products[0]?.title || 'محصول';
-
-      return variants.map((v) => {
-        const vNormId = normalizeId(v.id) || v.id;
-        const vInv = inventoryItems.filter((i) => normalizeId(i.variant_id) === vNormId);
-        const totalStock = vInv.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
-
-        const cId = normalizeId(v.color_id);
-        const sId = normalizeId(v.size_id);
-
-        const matchedColor = colors.find((c) => normalizeId(c.id) === cId);
-        const matchedSize = sizes.find((s) => normalizeId(s.id) === sId);
-
-        return {
-          ...v,
-          id: vNormId,
-          product_id: normProdId,
-          color_id: cId || undefined,
-          size_id: sId || undefined,
-          product_title: productTitle,
-          color_name: matchedColor?.name || v.color_name || '-',
-          size_name: matchedSize?.name || v.size_name || '-',
-          stock_quantity: totalStock,
-        };
-      });
-    } catch {
-      return this.localAdapter.getVariantsByProductId(productId);
-    }
-  }
-
-  async saveVariant(variant: Partial<ProductVariant>, warehouseId?: number, locationId?: number): Promise<ProductVariant> {
-    const payload: any = { ...variant };
-    const stockQty = payload.stock_quantity;
-    delete payload.stock_quantity;
-    delete payload.color_name;
-    delete payload.size_name;
-    delete payload.product_title;
-    delete payload.color;
-    delete payload.size;
-    delete payload.product;
-    delete payload._tempId;
-
-    if (payload.image) {
-      const rawImg = typeof payload.image === 'string' ? payload.image.trim() : (payload.image as any)?.id || '';
-      if (rawImg && !UUID_REGEX.test(rawImg)) {
-        try {
-          const uploadedUuid = await mediaManager.uploadMediaRefToCloud(rawImg);
-          if (uploadedUuid) {
-            payload.image = uploadedUuid;
-          }
-        } catch (uploadErr) {
-          console.warn('[CloudDirectusAdapter] Auto-uploading variant image to cloud failed:', uploadErr);
-        }
-      }
-    }
-
-    payload.image = cleanUuid(payload.image);
-    payload.color_id = cleanInt(payload.color_id);
-    payload.size_id = cleanInt(payload.size_id);
-    payload.product_id = normalizeId(payload.product_id) || Number(payload.product_id);
-    payload.price = payload.price !== undefined && payload.price !== '' ? Number(payload.price) : 0;
-    payload.cost = payload.cost !== undefined && payload.cost !== '' ? Number(payload.cost) : 0;
-    payload.sort = Number(payload.sort) || 0;
-    if (!payload.status) payload.status = 'published';
-
-    const id = normalizeId(payload.id);
-    delete payload.id;
-
-    try {
-      let saved: ProductVariant;
-      if (id) {
-        saved = await directusClient.updateItem<ProductVariant>('product_variants', id, payload);
-      } else {
-        saved = await directusClient.createItem<ProductVariant>('product_variants', payload);
-      }
-
-      // Robust inventory synchronization
-      if (stockQty !== undefined && stockQty !== null) {
-        const qtyNum = Math.max(0, Number(stockQty) || 0);
-        const orgId = saved.organization_id || 1;
-
-        // Query existing inventory items for this variant
-        const existingInventory = await directusClient.getItems<InventoryItem>('inventory_items', {
-          filter: { variant_id: { _eq: saved.id } },
-        }).catch(() => []);
-
-        if (existingInventory.length > 0) {
-          const itemToUpdate = (warehouseId && existingInventory.find((i) => {
-            const whId = typeof i.warehouse_id === 'number' ? i.warehouse_id : (i.warehouse_id as any)?.id;
-            return whId === warehouseId;
-          })) || existingInventory[0];
-
-          const reserved = Number(itemToUpdate.reserved_quantity) || 0;
-          const damaged = Number(itemToUpdate.damaged_quantity) || 0;
-          const available = Math.max(0, qtyNum - reserved - damaged);
-
-          const invUpdatePayload: any = {
-            quantity: qtyNum,
-            available_quantity: available,
-            updated_at: new Date().toISOString(),
-          };
-          if (locationId) {
-            invUpdatePayload.location_id = locationId;
-          }
-
-          await directusClient.updateItem<InventoryItem>('inventory_items', itemToUpdate.id, invUpdatePayload).catch((err) => {
-            console.warn('[CloudDirectusAdapter] Update inventory failed:', err?.message || err);
-          });
-        } else {
-          // Resolve or auto-create warehouse
-          let targetWarehouseId = warehouseId;
-          const warehouses = await directusClient.getItems<Warehouse>('warehouses', {
-            filter: { organization_id: { _eq: orgId } },
-          }).catch(() => []);
-
-          if (targetWarehouseId && warehouses.some((w) => w.id === targetWarehouseId)) {
-            // Valid warehouse selected
-          } else if (warehouses.length > 0) {
-            targetWarehouseId = warehouses[0].id;
-          } else {
-            const allWarehouses = await directusClient.getItems<Warehouse>('warehouses', {}).catch(() => []);
-            if (allWarehouses.length > 0) {
-              targetWarehouseId = allWarehouses[0].id;
-            } else {
-              try {
-                const newWh = await directusClient.createItem<Warehouse>('warehouses', {
-                  organization_id: orgId,
-                  name: 'انبار مرکزی',
-                  code: 'MAIN',
-                  type: 'warehouse',
-                  status: 'active',
-                });
-                targetWarehouseId = newWh.id;
-              } catch (whErr) {
-                console.warn('[CloudDirectusAdapter] Auto-create warehouse failed:', whErr);
-                targetWarehouseId = 1;
-              }
-            }
-          }
-
-          await directusClient.createItem<InventoryItem>('inventory_items', {
-            organization_id: orgId,
-            variant_id: saved.id,
-            warehouse_id: targetWarehouseId || 1,
-            location_id: locationId || undefined,
-            quantity: qtyNum,
-            reserved_quantity: 0,
-            available_quantity: qtyNum,
-            damaged_quantity: 0,
-            reorder_point: 5,
-            safety_stock: 2,
-            updated_at: new Date().toISOString(),
-          }).catch((err) => {
-            console.warn('[CloudDirectusAdapter] Create inventory failed:', err?.message || err);
-          });
-
-          // Record initial movement log
-          await directusClient.createItem<InventoryMovement>('inventory_movements', {
-            organization_id: orgId,
-            variant_id: saved.id,
-            warehouse_id: targetWarehouseId || 1,
-            location_id: locationId || undefined,
-            type: 'adjustment',
-            quantity: qtyNum,
-            reference_type: 'manual',
-            reference_id: `INIT-${saved.id}`,
-            note: 'موجودی اولیه هنگام ایجاد متغیر کالا',
-          }).catch((movErr) => console.warn('[CloudDirectusAdapter] Movement log error:', movErr));
-        }
-      }
-
-      return { ...saved, stock_quantity: stockQty !== undefined ? Number(stockQty) : 0 };
-    } catch (err: any) {
-      console.error('[CloudDirectusAdapter] Cloud saveVariant failed:', err?.message || err);
-      throw err;
-    }
-  }
-
-  async deleteVariant(id: number): Promise<boolean> {
-    try {
-      // 1. Delete associated inventory items first
-      const inventoryItems = await directusClient.getItems<InventoryItem>('inventory_items', {
-        filter: { variant_id: { _eq: id } },
-      }).catch(() => []);
-      for (const inv of inventoryItems) {
-        await directusClient.deleteItem('inventory_items', inv.id).catch((err) => {
-          console.warn(`[CloudDirectusAdapter] Delete inventory item ${inv.id} warning:`, err?.message || err);
-        });
-      }
-
-      // 2. Delete associated inventory movements
-      const movements = await directusClient.getItems<InventoryMovement>('inventory_movements', {
-        filter: { variant_id: { _eq: id } },
-      }).catch(() => []);
-      for (const mov of movements) {
-        await directusClient.deleteItem('inventory_movements', mov.id).catch(() => null);
-      }
-
-      // 3. Delete from product_variants
-      return await directusClient.deleteItem('product_variants', id);
-    } catch (err: any) {
-      console.error('[CloudDirectusAdapter] Cloud deleteVariant failed:', err?.message || err);
-      throw err;
-    }
-  }
-
-  // Catalog Attributes
-  async getCategories(params?: QueryParams): Promise<Category[]> {
-    const query: any = { sort: 'name' };
-    if (params?.organization_id) {
-      query.filter = { organization_id: { _eq: params.organization_id } };
-    }
-    try {
-      return await directusClient.getItems<Category>('categories', query);
-    } catch {
-      return this.localAdapter.getCategories(params);
-    }
-  }
-
-  async saveCategory(cat: Partial<Category>): Promise<Category> {
-    try {
-      if (cat.id) return await directusClient.updateItem<Category>('categories', cat.id, cat);
-      return await directusClient.createItem<Category>('categories', cat);
-    } catch {
-      const saved = await this.localAdapter.saveCategory(cat);
-      StorageSyncManager.enqueue({ action: cat.id ? 'UPDATE' : 'CREATE', collection: 'categories', payload: saved });
-      return saved;
-    }
-  }
-
-  async deleteCategory(id: number): Promise<boolean> {
-    try {
-      return await directusClient.deleteItem('categories', id);
-    } catch {
-      const res = await this.localAdapter.deleteCategory(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'categories', payload: { id } });
-      return res;
-    }
-  }
-
-  async getCollections(params?: QueryParams): Promise<Collection[]> {
-    try {
-      return await directusClient.getItems<Collection>('collections', {
-        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-      });
-    } catch {
-      return this.localAdapter.getCollections(params);
-    }
-  }
-
-  async saveCollection(col: Partial<Collection>): Promise<Collection> {
-    try {
-      if (col.id) return await directusClient.updateItem<Collection>('collections', col.id, col);
-      return await directusClient.createItem<Collection>('collections', col);
-    } catch {
-      const saved = await this.localAdapter.saveCollection(col);
-      StorageSyncManager.enqueue({ action: col.id ? 'UPDATE' : 'CREATE', collection: 'collections', payload: saved });
-      return saved;
-    }
-  }
-
-  async deleteCollection(id: number): Promise<boolean> {
-    try {
-      return await directusClient.deleteItem('collections', id);
-    } catch {
-      const res = await this.localAdapter.deleteCollection(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'collections', payload: { id } });
-      return res;
-    }
-  }
-
-  async getBrands(params?: QueryParams): Promise<Brand[]> {
-    try {
-      return await directusClient.getItems<Brand>('brands', {
-        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-      });
-    } catch {
-      return this.localAdapter.getBrands(params);
-    }
-  }
-
-  async saveBrand(brand: Partial<Brand>): Promise<Brand> {
-    try {
-      if (brand.id) return await directusClient.updateItem<Brand>('brands', brand.id, brand);
-      return await directusClient.createItem<Brand>('brands', brand);
-    } catch {
-      const saved = await this.localAdapter.saveBrand(brand);
-      StorageSyncManager.enqueue({ action: brand.id ? 'UPDATE' : 'CREATE', collection: 'brands', payload: saved });
-      return saved;
-    }
-  }
-
-  async deleteBrand(id: number): Promise<boolean> {
-    try {
-      return await directusClient.deleteItem('brands', id);
-    } catch {
-      const res = await this.localAdapter.deleteBrand(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'brands', payload: { id } });
-      return res;
-    }
-  }
-
-  async getSeasons(params?: QueryParams): Promise<Season[]> {
-    try {
-      return await directusClient.getItems<Season>('seasons', {
-        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-      });
-    } catch {
-      return this.localAdapter.getSeasons(params);
-    }
-  }
-
-  async saveSeason(season: Partial<Season>): Promise<Season> {
-    const payload: Partial<Season> = {
-      ...season,
-      code: season.code?.trim() || null,
-      start_date: season.start_date && season.start_date.trim() !== '' ? season.start_date : null,
-      end_date: season.end_date && season.end_date.trim() !== '' ? season.end_date : null,
-    };
-    try {
-      if (payload.id) return await directusClient.updateItem<Season>('seasons', payload.id, payload);
-      return await directusClient.createItem<Season>('seasons', payload);
-    } catch {
-      const saved = await this.localAdapter.saveSeason(payload);
-      StorageSyncManager.enqueue({ action: payload.id ? 'UPDATE' : 'CREATE', collection: 'seasons', payload: saved });
-      return saved;
-    }
-  }
-
-  async deleteSeason(id: number): Promise<boolean> {
-    try {
-      return await directusClient.deleteItem('seasons', id);
-    } catch {
-      const res = await this.localAdapter.deleteSeason(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'seasons', payload: { id } });
-      return res;
-    }
-  }
-
-  async getColors(params?: QueryParams): Promise<Color[]> {
-    try {
-      return await directusClient.getItems<Color>('colors', {
-        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-      });
-    } catch {
-      return this.localAdapter.getColors(params);
-    }
-  }
-
-  async saveColor(color: Partial<Color>): Promise<Color> {
-    try {
-      if (color.id) return await directusClient.updateItem<Color>('colors', color.id, color);
-      return await directusClient.createItem<Color>('colors', color);
-    } catch {
-      const saved = await this.localAdapter.saveColor(color);
-      StorageSyncManager.enqueue({ action: color.id ? 'UPDATE' : 'CREATE', collection: 'colors', payload: saved });
-      return saved;
-    }
-  }
-
-  async deleteColor(id: number): Promise<boolean> {
-    try {
-      return await directusClient.deleteItem('colors', id);
-    } catch {
-      const res = await this.localAdapter.deleteColor(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'colors', payload: { id } });
-      return res;
-    }
-  }
-
-  async getSizeGroups(params?: QueryParams): Promise<SizeGroup[]> {
-    try {
-      return await directusClient.getItems<SizeGroup>('size_groups', {
-        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-      });
-    } catch {
-      return this.localAdapter.getSizeGroups(params);
-    }
-  }
-
-  async saveSizeGroup(group: Partial<SizeGroup>): Promise<SizeGroup> {
-    try {
-      if (group.id) return await directusClient.updateItem<SizeGroup>('size_groups', group.id, group);
-      return await directusClient.createItem<SizeGroup>('size_groups', group);
-    } catch {
-      const saved = await this.localAdapter.saveSizeGroup(group);
-      StorageSyncManager.enqueue({ action: group.id ? 'UPDATE' : 'CREATE', collection: 'size_groups', payload: saved });
-      return saved;
-    }
-  }
-
-  async deleteSizeGroup(id: number): Promise<boolean> {
-    try {
-      return await directusClient.deleteItem('size_groups', id);
-    } catch {
-      const res = await this.localAdapter.deleteSizeGroup(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'size_groups', payload: { id } });
-      return res;
-    }
-  }
-
-  async getSizes(params?: QueryParams): Promise<Size[]> {
-    try {
-      return await directusClient.getItems<Size>('sizes', {
-        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-      });
-    } catch {
-      return this.localAdapter.getSizes(params);
-    }
-  }
-
-  async saveSize(size: Partial<Size>): Promise<Size> {
-    try {
-      if (size.id) return await directusClient.updateItem<Size>('sizes', size.id, size);
-      return await directusClient.createItem<Size>('sizes', size);
-    } catch {
-      const saved = await this.localAdapter.saveSize(size);
-      StorageSyncManager.enqueue({ action: size.id ? 'UPDATE' : 'CREATE', collection: 'sizes', payload: saved });
-      return saved;
-    }
-  }
-
-  async deleteSize(id: number): Promise<boolean> {
-    try {
-      return await directusClient.deleteItem('sizes', id);
-    } catch {
-      const res = await this.localAdapter.deleteSize(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'sizes', payload: { id } });
-      return res;
-    }
-  }
-
-  // Warehouses & Locations
-  async getWarehouses(params?: QueryParams): Promise<Warehouse[]> {
-    return directusClient.getItems<Warehouse>('warehouses', {
-      filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-    });
-  }
-
-  async saveWarehouse(wh: Partial<Warehouse>): Promise<Warehouse> {
-    if (wh.id) return directusClient.updateItem<Warehouse>('warehouses', wh.id, wh);
-    return directusClient.createItem<Warehouse>('warehouses', wh);
-  }
-
-  async deleteWarehouse(id: number): Promise<boolean> {
-    return directusClient.deleteItem('warehouses', id);
-  }
-
-  async getWarehouseLocations(params?: QueryParams): Promise<WarehouseLocation[]> {
-    const filter: any = {};
-    if (params?.warehouse_id) filter.warehouse_id = { _eq: params.warehouse_id };
-    return directusClient.getItems<WarehouseLocation>('warehouse_locations', {
-      filter: Object.keys(filter).length > 0 ? filter : undefined,
-    });
-  }
-
-  async getLocations(params?: QueryParams): Promise<WarehouseLocation[]> {
-    return this.getWarehouseLocations(params);
-  }
-
-  async getLocationsByWarehouseId(warehouseId: number): Promise<WarehouseLocation[]> {
-    return this.getWarehouseLocations({ warehouse_id: warehouseId });
-  }
-
-  async saveWarehouseLocation(loc: Partial<WarehouseLocation>): Promise<WarehouseLocation> {
-    if (loc.id) return directusClient.updateItem<WarehouseLocation>('warehouse_locations', loc.id, loc);
-    return directusClient.createItem<WarehouseLocation>('warehouse_locations', loc);
-  }
-
-  async saveLocation(loc: Partial<WarehouseLocation>): Promise<WarehouseLocation> {
-    return this.saveWarehouseLocation(loc);
-  }
-
-  async deleteWarehouseLocation(id: number): Promise<boolean> {
-    return directusClient.deleteItem('warehouse_locations', id);
-  }
-
-  // Inventory
-  async getInventoryItems(params?: QueryParams): Promise<InventoryItem[]> {
-    const filter: any = {};
-    if (params?.organization_id) filter.organization_id = { _eq: params.organization_id };
-    if (params?.warehouse_id) filter.warehouse_id = { _eq: params.warehouse_id };
-    if (params?.variant_id) filter.variant_id = { _eq: params.variant_id };
-
-    try {
-      const items = await directusClient.getItems<InventoryItem>('inventory_items', {
-        filter: Object.keys(filter).length > 0 ? filter : undefined,
-        sort: '-id',
-      });
-
-      const [variants, products, colors, sizes, warehouses, locations] = await Promise.all([
-        directusClient.getItems<ProductVariant>('product_variants', {
-          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-        }).catch(() => []),
-        directusClient.getItems<Product>('products', {
-          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-        }).catch(() => []),
-        directusClient.getItems<Color>('colors', {}).catch(() => []),
-        directusClient.getItems<Size>('sizes', {}).catch(() => []),
-        directusClient.getItems<Warehouse>('warehouses', {
-          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-        }).catch(() => []),
-        directusClient.getItems<WarehouseLocation>('warehouse_locations', {}).catch(() => []),
-      ]);
-
-      return items.map((item) => {
-        const vId = typeof item.variant_id === 'number' ? item.variant_id : (item.variant_id as any)?.id;
-        const wId = typeof item.warehouse_id === 'number' ? item.warehouse_id : (item.warehouse_id as any)?.id;
-        const locId = typeof item.location_id === 'number' ? item.location_id : (item.location_id as any)?.id;
-
-        const vObj = typeof item.variant_id === 'object' && item.variant_id !== null ? (item.variant_id as any) : null;
-        const wObj = typeof item.warehouse_id === 'object' && item.warehouse_id !== null ? (item.warehouse_id as any) : null;
-        const lObj = typeof item.location_id === 'object' && item.location_id !== null ? (item.location_id as any) : null;
-
-        const variant = variants.find((v) => v.id === vId) || vObj;
-        const prodId = variant ? (typeof variant.product_id === 'number' ? variant.product_id : (variant.product_id as any)?.id) : null;
-        const product = prodId ? products.find((p) => p.id === prodId) : (typeof variant?.product_id === 'object' ? variant.product_id : null);
-
-        const colorId = variant ? (typeof variant.color_id === 'number' ? variant.color_id : (variant.color_id as any)?.id) : null;
-        const sizeId = variant ? (typeof variant.size_id === 'number' ? variant.size_id : (variant.size_id as any)?.id) : null;
-
-        const color = colorId ? colors.find((c) => c.id === colorId) : (typeof variant?.color_id === 'object' ? variant.color_id : null);
-        const size = sizeId ? sizes.find((s) => s.id === sizeId) : (typeof variant?.size_id === 'object' ? variant.size_id : null);
-        const warehouse = warehouses.find((w) => w.id === wId) || wObj;
-        const location = locations.find((l) => l.id === locId) || lObj;
-
-        return {
-          ...item,
-          sku: variant?.sku || (vId ? `SKU-${vId}` : '-'),
-          product_title: product?.title || variant?.product_title || 'محصول',
-          color_name: color?.name || variant?.color_name || '-',
-          size_name: size?.name || variant?.size_name || '-',
-          warehouse_name: warehouse?.name || 'انبار مرکزی',
-          location_name: location?.name || '-',
-        };
-      });
-    } catch (err) {
-      console.warn('[CloudDirectusAdapter] Error fetching inventory items from cloud:', err);
-      return this.localAdapter.getInventoryItems(params);
-    }
-  }
-
-  async saveInventoryItem(item: Partial<InventoryItem>): Promise<InventoryItem> {
-    const payload: any = { ...item };
-    delete payload.sku;
-    delete payload.product_title;
-    delete payload.color_name;
-    delete payload.size_name;
-    delete payload.warehouse_name;
-    delete payload.location_name;
-
-    payload.organization_id = cleanInt(payload.organization_id) || 1;
-    payload.variant_id = cleanInt(payload.variant_id);
-    payload.warehouse_id = cleanInt(payload.warehouse_id) || 1;
-    payload.location_id = cleanInt(payload.location_id);
-    payload.quantity = Math.max(0, Number(payload.quantity) || 0);
-    payload.reserved_quantity = Math.max(0, Number(payload.reserved_quantity) || 0);
-    payload.damaged_quantity = Math.max(0, Number(payload.damaged_quantity) || 0);
-    payload.available_quantity = Math.max(0, payload.quantity - payload.reserved_quantity - payload.damaged_quantity);
-    if (payload.reorder_point !== undefined) payload.reorder_point = Math.max(0, Number(payload.reorder_point) || 0);
-    if (payload.safety_stock !== undefined) payload.safety_stock = Math.max(0, Number(payload.safety_stock) || 0);
-    payload.updated_at = new Date().toISOString();
-
-    const id = payload.id ? Number(payload.id) : undefined;
-    delete payload.id;
-
-    if (id) {
-      return directusClient.updateItem<InventoryItem>('inventory_items', id, payload);
-    }
-    return directusClient.createItem<InventoryItem>('inventory_items', payload);
-  }
-
-  async deleteInventoryItem(id: number): Promise<boolean> {
-    return directusClient.deleteItem('inventory_items', id);
-  }
-
-  async getInventoryMovements(params?: QueryParams): Promise<InventoryMovement[]> {
-    const filter: any = {};
-    if (params?.organization_id) filter.organization_id = { _eq: params.organization_id };
-    if (params?.warehouse_id) filter.warehouse_id = { _eq: params.warehouse_id };
-    if (params?.variant_id) filter.variant_id = { _eq: params.variant_id };
-    if (params?.type) filter.type = { _eq: params.type };
-
-    try {
-      const [movements, variants, warehouses] = await Promise.all([
-        directusClient.getItems<InventoryMovement>('inventory_movements', {
-          filter: Object.keys(filter).length > 0 ? filter : undefined,
-          sort: '-created_at',
-        }),
-        directusClient.getItems<ProductVariant>('product_variants', {
-          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-        }).catch(() => []),
-        directusClient.getItems<Warehouse>('warehouses', {
-          filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-        }).catch(() => []),
-      ]);
-
-      return movements.map((m) => {
-        const vId = typeof m.variant_id === 'number' ? m.variant_id : (m.variant_id as any)?.id;
-        const wId = typeof m.warehouse_id === 'number' ? m.warehouse_id : (m.warehouse_id as any)?.id;
-        const variant = variants.find((v) => v.id === vId);
-        const warehouse = warehouses.find((w) => w.id === wId);
-
-        return {
-          ...m,
-          sku: variant?.sku || m.sku || (vId ? `VAR-#${vId}` : '-'),
-          warehouse_name: warehouse?.name || m.warehouse_name || 'انبار مرکزی',
-        };
-      });
-    } catch {
-      return this.localAdapter.getInventoryMovements(params);
-    }
-  }
-
-  async recordMovement(movement: Partial<InventoryMovement>): Promise<InventoryMovement> {
-    const payload: any = { ...movement };
-    delete payload.sku;
-    delete payload.warehouse_name;
-
-    payload.organization_id = cleanInt(payload.organization_id) || 1;
-    payload.variant_id = cleanInt(payload.variant_id);
-    payload.warehouse_id = cleanInt(payload.warehouse_id) || 1;
-    payload.location_id = cleanInt(payload.location_id);
-    payload.quantity = Math.max(0, Number(payload.quantity) || 1);
-    if (!payload.type) payload.type = 'adjustment';
-    if (!payload.reference_type) payload.reference_type = 'manual';
-
-    const savedMovement = await directusClient.createItem<InventoryMovement>('inventory_movements', payload);
-
-    // Automatically update inventory_items balance
-    try {
-      const vId = payload.variant_id;
-      const wId = payload.warehouse_id;
-      const moveQty = payload.quantity;
-      const moveType = payload.type;
-
-      const existingItems = await directusClient.getItems<InventoryItem>('inventory_items', {
-        filter: {
-          _and: [
-            { variant_id: { _eq: vId } },
-            { warehouse_id: { _eq: wId } },
-          ],
-        },
-      }).catch(() => []);
-
-      if (existingItems.length > 0) {
-        const item = existingItems[0];
-        let currentQty = Number(item.quantity) || 0;
-        let currentDamaged = Number(item.damaged_quantity) || 0;
-        let currentReserved = Number(item.reserved_quantity) || 0;
-
-        if (moveType === 'purchase' || moveType === 'transfer_in' || moveType === 'return') {
-          currentQty += moveQty;
-        } else if (moveType === 'sale' || moveType === 'transfer_out') {
-          currentQty = Math.max(0, currentQty - moveQty);
-        } else if (moveType === 'damage') {
-          currentDamaged += moveQty;
-          currentQty = Math.max(0, currentQty - moveQty);
-        } else if (moveType === 'adjustment') {
-          currentQty = moveQty;
-        }
-
-        const availableQty = Math.max(0, currentQty - currentReserved - currentDamaged);
-
-        await directusClient.updateItem<InventoryItem>('inventory_items', item.id, {
-          quantity: currentQty,
-          available_quantity: availableQty,
-          damaged_quantity: currentDamaged,
-          location_id: payload.location_id || item.location_id,
-          updated_at: new Date().toISOString(),
-        });
-      } else {
-        let initialQty = moveQty;
-        let initialDamaged = 0;
-        if (moveType === 'damage') {
-          initialDamaged = moveQty;
-          initialQty = 0;
-        }
-        await directusClient.createItem<InventoryItem>('inventory_items', {
-          organization_id: payload.organization_id,
-          variant_id: vId,
-          warehouse_id: wId,
-          location_id: payload.location_id,
-          quantity: initialQty,
-          reserved_quantity: 0,
-          available_quantity: initialQty,
-          damaged_quantity: initialDamaged,
-          reorder_point: 5,
-          safety_stock: 2,
-          updated_at: new Date().toISOString(),
-        });
-      }
-    } catch (invErr) {
-      console.warn('[CloudDirectusAdapter] Auto-adjust inventory item warning:', invErr);
-    }
-
-    return savedMovement;
-  }
-
-  // Orders
-  async getOrders(params?: QueryParams): Promise<Order[]> {
-    try {
-      const orders = await directusClient.getItems<Order>('orders', {
-        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-        sort: '-date_created',
-      });
-      return orders;
-    } catch {
-      return this.localAdapter.getOrders(params);
-    }
-  }
-
-  async getOrderItems(orderId: number): Promise<OrderItem[]> {
-    try {
-      return await directusClient.getItems<OrderItem>('order_items', {
-        filter: { order_id: { _eq: orderId } },
-      });
-    } catch {
-      return this.localAdapter.getOrderItems(orderId);
-    }
-  }
-
-  async saveOrder(order: Partial<Order>, items?: Partial<OrderItem>[]): Promise<Order> {
-    try {
-      const payload: any = { ...order };
-      delete payload.customer_name;
-      delete payload.warehouse_name;
-      delete payload.items_count;
-      delete payload.items;
-
-      let savedOrder: Order;
-      if (payload.id) {
-        const id = payload.id;
-        delete payload.id;
-        savedOrder = await directusClient.updateItem<Order>('orders', id, payload);
-      } else {
-        delete payload.id;
-        savedOrder = await directusClient.createItem<Order>('orders', payload);
-      }
-
-      if (items && items.length > 0) {
-        for (const item of items) {
-          const itemPayload: any = { ...item };
-          delete itemPayload.id;
-          await directusClient.createItem<OrderItem>('order_items', {
-            ...itemPayload,
-            order_id: savedOrder.id,
-            organization_id: savedOrder.organization_id,
-          });
-        }
-      }
-
-      await this.localAdapter.saveOrder(savedOrder, items);
-      return savedOrder;
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] Cloud saveOrder failed, using local adapter:', err?.message || err);
-      const saved = await this.localAdapter.saveOrder(order, items);
-      StorageSyncManager.enqueue({ action: order.id ? 'UPDATE' : 'CREATE', collection: 'orders', payload: saved });
-      return saved;
-    }
-  }
-
-  async deleteOrder(id: number): Promise<boolean> {
-    try {
-      await directusClient.deleteItem('orders', id);
-      await this.localAdapter.deleteOrder(id);
-      return true;
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] deleteOrder failed, fallback to local:', err?.message || err);
-      const res = await this.localAdapter.deleteOrder(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'orders', payload: { id } });
-      return res;
-    }
-  }
-
-  // Customers
-  async getCustomers(params?: QueryParams): Promise<Customer[]> {
-    try {
-      return await directusClient.getItems<Customer>('customers', {
-        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-      });
-    } catch {
-      return this.localAdapter.getCustomers(params);
-    }
-  }
-
-  async saveCustomer(cust: Partial<Customer>): Promise<Customer> {
-    try {
-      const payload: any = { ...cust };
-      let savedCust: Customer;
-      if (payload.id) {
-        const id = payload.id;
-        delete payload.id;
-        savedCust = await directusClient.updateItem<Customer>('customers', id, payload);
-      } else {
-        delete payload.id;
-        savedCust = await directusClient.createItem<Customer>('customers', payload);
-      }
-      await this.localAdapter.saveCustomer(savedCust);
-      return savedCust;
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] saveCustomer failed, fallback to local:', err?.message || err);
-      const saved = await this.localAdapter.saveCustomer(cust);
-      StorageSyncManager.enqueue({ action: cust.id ? 'UPDATE' : 'CREATE', collection: 'customers', payload: saved });
-      return saved;
-    }
-  }
-
-  async deleteCustomer(id: number): Promise<boolean> {
-    try {
-      await directusClient.deleteItem('customers', id);
-      await this.localAdapter.deleteCustomer(id);
-      return true;
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] deleteCustomer failed, fallback to local:', err?.message || err);
-      const res = await this.localAdapter.deleteCustomer(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'customers', payload: { id } });
-      return res;
-    }
-  }
-
-  // Suppliers & Purchase Orders
-  async getSuppliers(params?: QueryParams): Promise<Supplier[]> {
-    try {
-      return await directusClient.getItems<Supplier>('suppliers', {
-        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-      });
-    } catch {
-      return this.localAdapter.getSuppliers(params);
-    }
-  }
-
-  async saveSupplier(sup: Partial<Supplier>): Promise<Supplier> {
-    try {
-      const payload: any = { ...sup };
-      let savedSup: Supplier;
-      if (payload.id) {
-        const id = payload.id;
-        delete payload.id;
-        savedSup = await directusClient.updateItem<Supplier>('suppliers', id, payload);
-      } else {
-        delete payload.id;
-        savedSup = await directusClient.createItem<Supplier>('suppliers', payload);
-      }
-      await this.localAdapter.saveSupplier(savedSup);
-      return savedSup;
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] saveSupplier failed, fallback to local:', err?.message || err);
-      const saved = await this.localAdapter.saveSupplier(sup);
-      StorageSyncManager.enqueue({ action: sup.id ? 'UPDATE' : 'CREATE', collection: 'suppliers', payload: saved });
-      return saved;
-    }
-  }
-
-  async deleteSupplier(id: number): Promise<boolean> {
-    try {
-      await directusClient.deleteItem('suppliers', id);
-      await this.localAdapter.deleteSupplier(id);
-      return true;
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] deleteSupplier failed, fallback to local:', err?.message || err);
-      const res = await this.localAdapter.deleteSupplier(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'suppliers', payload: { id } });
-      return res;
-    }
-  }
-
-  async getPurchaseOrders(params?: QueryParams): Promise<PurchaseOrder[]> {
-    try {
-      return await directusClient.getItems<PurchaseOrder>('purchase_orders', {
-        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-      });
-    } catch {
-      return this.localAdapter.getPurchaseOrders(params);
-    }
-  }
-
-  async getPurchaseOrderItems(purchaseOrderId?: number): Promise<PurchaseOrderItem[]> {
-    try {
-      const filter = purchaseOrderId ? { purchase_order_id: { _eq: purchaseOrderId } } : undefined;
-      return await directusClient.getItems<PurchaseOrderItem>('purchase_order_items', {
-        filter,
-        limit: -1,
-      });
-    } catch {
-      return this.localAdapter.getPurchaseOrderItems(purchaseOrderId);
-    }
-  }
-
-  async savePurchaseOrder(po: Partial<PurchaseOrder>, items?: Partial<PurchaseOrderItem>[]): Promise<PurchaseOrder> {
-    try {
-      const payload: any = { ...po };
-      let savedPo: PurchaseOrder;
-      if (payload.id) {
-        const id = payload.id;
-        delete payload.id;
-        savedPo = await directusClient.updateItem<PurchaseOrder>('purchase_orders', id, payload);
-      } else {
-        delete payload.id;
-        savedPo = await directusClient.createItem<PurchaseOrder>('purchase_orders', payload);
-      }
-
-      if (items && items.length > 0) {
-        for (const item of items) {
-          const itemPayload: any = { ...item };
-          delete itemPayload.id;
-          await directusClient.createItem<PurchaseOrderItem>('purchase_order_items', {
-            ...itemPayload,
-            purchase_order_id: savedPo.id,
-            organization_id: savedPo.organization_id,
-          });
-        }
-      }
-
-      await this.localAdapter.savePurchaseOrder(savedPo, items);
-      return savedPo;
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] savePurchaseOrder failed, fallback to local:', err?.message || err);
-      const saved = await this.localAdapter.savePurchaseOrder(po, items);
-      StorageSyncManager.enqueue({ action: po.id ? 'UPDATE' : 'CREATE', collection: 'purchase_orders', payload: saved });
-      return saved;
-    }
-  }
-
-  async deletePurchaseOrder(id: number): Promise<boolean> {
-    try {
-      await directusClient.deleteItem('purchase_orders', id);
-      await this.localAdapter.deletePurchaseOrder(id);
-      return true;
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] deletePurchaseOrder failed, fallback to local:', err?.message || err);
-      const res = await this.localAdapter.deletePurchaseOrder(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'purchase_orders', payload: { id } });
-      return res;
-    }
-  }
-
-  // Stock Transfers
-  async getStockTransfers(params?: QueryParams): Promise<StockTransfer[]> {
-    try {
-      return await directusClient.getItems<StockTransfer>('stock_transfers', {
-        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-      });
-    } catch {
-      return this.localAdapter.getStockTransfers(params);
-    }
-  }
-
-  async getStockTransferItems(transferId?: number): Promise<StockTransferItem[]> {
-    try {
-      return await directusClient.getItems<StockTransferItem>('stock_transfer_items', {
-        filter: transferId ? { transfer_id: { _eq: transferId } } : undefined,
-      });
-    } catch {
-      return this.localAdapter.getStockTransferItems(transferId);
-    }
-  }
-
-  async saveStockTransfer(st: Partial<StockTransfer>, items?: Partial<StockTransferItem>[]): Promise<StockTransfer> {
-    try {
-      const payload: any = { ...st };
-      let savedSt: StockTransfer;
-      if (payload.id) {
-        const id = payload.id;
-        delete payload.id;
-        savedSt = await directusClient.updateItem<StockTransfer>('stock_transfers', id, payload);
-      } else {
-        delete payload.id;
-        savedSt = await directusClient.createItem<StockTransfer>('stock_transfers', payload);
-      }
-
-      if (items && items.length > 0) {
-        for (const item of items) {
-          const itemPayload: any = { ...item };
-          delete itemPayload.id;
-          await directusClient.createItem<StockTransferItem>('stock_transfer_items', {
-            ...itemPayload,
-            transfer_id: savedSt.id,
-            organization_id: savedSt.organization_id,
-          });
-        }
-      }
-
-      await this.localAdapter.saveStockTransfer(savedSt, items);
-      return savedSt;
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] saveStockTransfer failed, fallback to local:', err?.message || err);
-      const saved = await this.localAdapter.saveStockTransfer(st, items);
-      StorageSyncManager.enqueue({ action: st.id ? 'UPDATE' : 'CREATE', collection: 'stock_transfers', payload: saved });
-      return saved;
-    }
-  }
-
-  async deleteStockTransfer(id: number): Promise<boolean> {
-    try {
-      await directusClient.deleteItem('stock_transfers', id);
-      await this.localAdapter.deleteStockTransfer(id);
-      return true;
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] deleteStockTransfer failed, fallback to local:', err?.message || err);
-      const res = await this.localAdapter.deleteStockTransfer(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'stock_transfers', payload: { id } });
-      return res;
-    }
-  }
-
-  // Size Guides
-  async getSizeGuideTemplates(params?: QueryParams): Promise<SizeGuideTemplate[]> {
-    return directusClient.getItems<SizeGuideTemplate>('size_guide_templates', {
-      filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-    });
-  }
-
-  async saveSizeGuideTemplate(tpl: Partial<SizeGuideTemplate>): Promise<SizeGuideTemplate> {
-    if (tpl.id) return directusClient.updateItem<SizeGuideTemplate>('size_guide_templates', tpl.id, tpl);
-    return directusClient.createItem<SizeGuideTemplate>('size_guide_templates', tpl);
-  }
-
-  async deleteSizeGuideTemplate(id: number): Promise<boolean> {
-    await directusClient.deleteItem('size_guide_templates', id);
-    return true;
-  }
-
-  async getSizeGuideMeasurements(templateId: number): Promise<SizeGuideMeasurement[]> {
-    return directusClient.getItems<SizeGuideMeasurement>('size_guide_measurements', {
-      filter: { template_id: { _eq: templateId } },
-    });
-  }
-
-  async saveSizeGuideMeasurement(meas: Partial<SizeGuideMeasurement>): Promise<SizeGuideMeasurement> {
-    if (meas.id) return directusClient.updateItem<SizeGuideMeasurement>('size_guide_measurements', meas.id, meas);
-    return directusClient.createItem<SizeGuideMeasurement>('size_guide_measurements', meas);
-  }
-
-  async deleteSizeGuideMeasurement(id: number): Promise<boolean> {
-    await directusClient.deleteItem('size_guide_measurements', id);
-    return true;
-  }
-
-  async getSizeGuideValues(templateId: number): Promise<SizeGuideValue[]> {
-    return directusClient.getItems<SizeGuideValue>('size_guide_values', {
-      filter: { template_id: { _eq: templateId } },
-    });
-  }
-
-  async saveSizeGuideValue(val: Partial<SizeGuideValue>): Promise<SizeGuideValue> {
-    if (val.id) return directusClient.updateItem<SizeGuideValue>('size_guide_values', val.id, val);
-    return directusClient.createItem<SizeGuideValue>('size_guide_values', val);
-  }
-
-  async deleteSizeGuideValue(id: number): Promise<boolean> {
-    await directusClient.deleteItem('size_guide_values', id);
-    return true;
-  }
-
-  // Subscriptions
   async getSubscriptions(params?: QueryParams): Promise<Subscription[]> {
-    try {
-      const filter: any = {};
-      if (params?.organization_id) {
-        filter.organization_id = { _eq: params.organization_id };
-      }
-      return await directusClient.getItems<Subscription>('subscriptions', {
-        filter,
-        sort: '-date_created',
-      });
-    } catch {
-      return this.localAdapter.getSubscriptions(params);
-    }
+    return this.org.getSubscriptions(params);
   }
 
   async getActiveSubscription(organizationId: number): Promise<Subscription | null> {
-    try {
-      const resp = await directusClient.getSubscriptions(organizationId);
-      return resp.activeSubscription || null;
-    } catch {
-      return this.localAdapter.getActiveSubscription(organizationId);
-    }
+    return this.org.getActiveSubscription(organizationId);
   }
 
   async saveSubscription(sub: Partial<Subscription>): Promise<Subscription> {
-    try {
-      if (sub.id) {
-        return await directusClient.updateItem<Subscription>('subscriptions', sub.id, sub);
-      }
-      return await directusClient.createItem<Subscription>('subscriptions', sub);
-    } catch {
-      const saved = await this.localAdapter.saveSubscription(sub);
-      StorageSyncManager.enqueue({ action: sub.id ? 'UPDATE' : 'CREATE', collection: 'subscriptions', payload: saved });
-      return saved;
-    }
+    return this.org.saveSubscription(sub);
   }
 
-  // System & Organization Modules
   async getSystemModules(params?: QueryParams): Promise<SystemModule[]> {
-    try {
-      const items = await directusClient.getSystemModules(params);
-      if (items && items.length > 0) {
-        this.localAdapter.setItem('system_modules', items);
-        let filtered = items;
-        if (params?.status) {
-          filtered = filtered.filter((m) => m.status === params.status);
-        }
-        return filtered;
-      }
-      return await this.localAdapter.getSystemModules(params);
-    } catch {
-      return await this.localAdapter.getSystemModules(params);
-    }
+    return this.org.getSystemModules(params);
   }
 
   async getOrganizationModules(params?: QueryParams): Promise<OrganizationModule[]> {
-    try {
-      const filter: any = {};
-      if (params?.organization_id) {
-        filter.organization_id = { _eq: params.organization_id };
-      }
-      if (params?.status) {
-        filter.status = { _eq: params.status };
-      }
-      const items = await directusClient.getItems<OrganizationModule>('organization_modules', {
-        filter,
-        sort: '-id',
-      });
-      return items;
-    } catch {
-      return await this.localAdapter.getOrganizationModules(params);
-    }
+    return this.org.getOrganizationModules(params);
   }
 
   async saveOrganizationModule(mod: Partial<OrganizationModule>): Promise<OrganizationModule> {
-    try {
-      if (mod.id) {
-        return await directusClient.updateItem<OrganizationModule>('organization_modules', mod.id, mod);
-      }
-      // If no id provided, check if a record with this slug already exists in Directus to prevent RECORD_NOT_UNIQUE errors
-      if (mod.slug) {
-        const existing = await directusClient.getItems<OrganizationModule>('organization_modules', {
-          filter: { slug: { _eq: mod.slug } },
-          limit: 1,
-        }).catch(() => []);
-        if (existing && existing.length > 0) {
-          return await directusClient.updateItem<OrganizationModule>('organization_modules', existing[0].id, mod);
-        }
-      }
-      return await directusClient.createItem<OrganizationModule>('organization_modules', mod);
-    } catch {
-      const saved = await this.localAdapter.saveOrganizationModule(mod);
-      StorageSyncManager.enqueue({ action: mod.id ? 'UPDATE' : 'CREATE', collection: 'organization_modules', payload: saved });
-      return saved;
-    }
+    return this.org.saveOrganizationModule(mod);
   }
 
   async deleteOrganizationModule(id: number): Promise<boolean> {
-    try {
-      await directusClient.deleteItem('organization_modules', id);
-      return true;
-    } catch {
-      const deleted = await this.localAdapter.deleteOrganizationModule(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'organization_modules', payload: { id } });
-      return deleted;
-    }
+    return this.org.deleteOrganizationModule(id);
+  }
+
+  // ==========================================
+  // Products & Variants
+  // ==========================================
+  async getProducts(params?: QueryParams): Promise<Product[]> {
+    return this.catalog.getProducts(params);
+  }
+
+  async getProductById(id: number): Promise<Product | null> {
+    return this.catalog.getProductById(id);
+  }
+
+  async saveProduct(product: Partial<Product>): Promise<Product> {
+    return this.catalog.saveProduct(product);
+  }
+
+  async deleteProduct(id: number): Promise<boolean> {
+    return this.catalog.deleteProduct(id);
+  }
+
+  async getVariants(params?: QueryParams): Promise<ProductVariant[]> {
+    return this.catalog.getVariants(params);
+  }
+
+  async getVariantsByProductId(productId: number): Promise<ProductVariant[]> {
+    return this.catalog.getVariantsByProductId(productId);
+  }
+
+  async saveVariant(variant: Partial<ProductVariant>, warehouseId?: number, locationId?: number): Promise<ProductVariant> {
+    return this.catalog.saveVariant(variant, warehouseId, locationId);
+  }
+
+  async deleteVariant(id: number): Promise<boolean> {
+    return this.catalog.deleteVariant(id);
+  }
+
+  // ==========================================
+  // Catalog Attributes
+  // ==========================================
+  async getCategories(params?: QueryParams): Promise<Category[]> {
+    return this.catalog.getCategories(params);
+  }
+
+  async saveCategory(cat: Partial<Category>): Promise<Category> {
+    return this.catalog.saveCategory(cat);
+  }
+
+  async deleteCategory(id: number): Promise<boolean> {
+    return this.catalog.deleteCategory(id);
+  }
+
+  async getCollections(params?: QueryParams): Promise<Collection[]> {
+    return this.catalog.getCollections(params);
+  }
+
+  async saveCollection(col: Partial<Collection>): Promise<Collection> {
+    return this.catalog.saveCollection(col);
+  }
+
+  async deleteCollection(id: number): Promise<boolean> {
+    return this.catalog.deleteCollection(id);
+  }
+
+  async getBrands(params?: QueryParams): Promise<Brand[]> {
+    return this.catalog.getBrands(params);
+  }
+
+  async saveBrand(brand: Partial<Brand>): Promise<Brand> {
+    return this.catalog.saveBrand(brand);
+  }
+
+  async deleteBrand(id: number): Promise<boolean> {
+    return this.catalog.deleteBrand(id);
+  }
+
+  async getSeasons(params?: QueryParams): Promise<Season[]> {
+    return this.catalog.getSeasons(params);
+  }
+
+  async saveSeason(season: Partial<Season>): Promise<Season> {
+    return this.catalog.saveSeason(season);
+  }
+
+  async deleteSeason(id: number): Promise<boolean> {
+    return this.catalog.deleteSeason(id);
+  }
+
+  async getColors(params?: QueryParams): Promise<Color[]> {
+    return this.catalog.getColors(params);
+  }
+
+  async saveColor(color: Partial<Color>): Promise<Color> {
+    return this.catalog.saveColor(color);
+  }
+
+  async deleteColor(id: number): Promise<boolean> {
+    return this.catalog.deleteColor(id);
+  }
+
+  async getSizeGroups(params?: QueryParams): Promise<SizeGroup[]> {
+    return this.catalog.getSizeGroups(params);
+  }
+
+  async saveSizeGroup(group: Partial<SizeGroup>): Promise<SizeGroup> {
+    return this.catalog.saveSizeGroup(group);
+  }
+
+  async deleteSizeGroup(id: number): Promise<boolean> {
+    return this.catalog.deleteSizeGroup(id);
+  }
+
+  async getSizes(params?: QueryParams): Promise<Size[]> {
+    return this.catalog.getSizes(params);
+  }
+
+  async saveSize(size: Partial<Size>): Promise<Size> {
+    return this.catalog.saveSize(size);
+  }
+
+  async deleteSize(id: number): Promise<boolean> {
+    return this.catalog.deleteSize(id);
+  }
+
+  // ==========================================
+  // Size Guides
+  // ==========================================
+  async getSizeGuideTemplates(params?: QueryParams): Promise<SizeGuideTemplate[]> {
+    return this.catalog.getSizeGuideTemplates(params);
+  }
+
+  async getSizeGuideTemplateById(id: number): Promise<SizeGuideTemplate | null> {
+    return this.catalog.getSizeGuideTemplateById(id);
+  }
+
+  async saveSizeGuideTemplate(tpl: Partial<SizeGuideTemplate>): Promise<SizeGuideTemplate> {
+    return this.catalog.saveSizeGuideTemplate(tpl);
+  }
+
+  async deleteSizeGuideTemplate(id: number): Promise<boolean> {
+    return this.catalog.deleteSizeGuideTemplate(id);
+  }
+
+  async getSizeGuideMeasurements(templateId: number): Promise<SizeGuideMeasurement[]> {
+    return this.catalog.getSizeGuideMeasurements(templateId);
+  }
+
+  async saveSizeGuideMeasurement(meas: Partial<SizeGuideMeasurement>): Promise<SizeGuideMeasurement> {
+    return this.catalog.saveSizeGuideMeasurement(meas);
+  }
+
+  async deleteSizeGuideMeasurement(id: number): Promise<boolean> {
+    return this.catalog.deleteSizeGuideMeasurement(id);
+  }
+
+  async getSizeGuideValues(templateId: number): Promise<SizeGuideValue[]> {
+    return this.catalog.getSizeGuideValues(templateId);
+  }
+
+  async saveSizeGuideValue(val: Partial<SizeGuideValue>): Promise<SizeGuideValue> {
+    return this.catalog.saveSizeGuideValue(val);
+  }
+
+  async deleteSizeGuideValue(id: number): Promise<boolean> {
+    return this.catalog.deleteSizeGuideValue(id);
+  }
+
+  // ==========================================
+  // Warehouses & Locations
+  // ==========================================
+  async getWarehouses(params?: QueryParams): Promise<Warehouse[]> {
+    return this.inventory.getWarehouses(params);
+  }
+
+  async getWarehouseById(id: number): Promise<Warehouse | null> {
+    return this.inventory.getWarehouseById(id);
+  }
+
+  async saveWarehouse(wh: Partial<Warehouse>): Promise<Warehouse> {
+    return this.inventory.saveWarehouse(wh);
+  }
+
+  async deleteWarehouse(id: number): Promise<boolean> {
+    return this.inventory.deleteWarehouse(id);
+  }
+
+  async getWarehouseLocations(params?: QueryParams): Promise<WarehouseLocation[]> {
+    return this.inventory.getWarehouseLocations(params);
+  }
+
+  async getLocations(params?: QueryParams): Promise<WarehouseLocation[]> {
+    return this.inventory.getLocations(params);
+  }
+
+  async getLocationsByWarehouseId(warehouseId: number): Promise<WarehouseLocation[]> {
+    return this.inventory.getLocationsByWarehouseId(warehouseId);
+  }
+
+  async saveWarehouseLocation(loc: Partial<WarehouseLocation>): Promise<WarehouseLocation> {
+    return this.inventory.saveWarehouseLocation(loc);
+  }
+
+  async saveLocation(loc: Partial<WarehouseLocation>): Promise<WarehouseLocation> {
+    return this.inventory.saveLocation(loc);
+  }
+
+  async deleteWarehouseLocation(id: number): Promise<boolean> {
+    return this.inventory.deleteWarehouseLocation(id);
+  }
+
+  async deleteLocation(id: number): Promise<boolean> {
+    return this.inventory.deleteLocation(id);
+  }
+
+  // ==========================================
+  // Inventory Items & Movements
+  // ==========================================
+  async getInventoryItems(params?: QueryParams): Promise<InventoryItem[]> {
+    return this.inventory.getInventoryItems(params);
+  }
+
+  async getInventoryItem(variantId: number, warehouseId: number): Promise<InventoryItem | null> {
+    return this.inventory.getInventoryItem(variantId, warehouseId);
+  }
+
+  async saveInventoryItem(item: Partial<InventoryItem>): Promise<InventoryItem> {
+    return this.inventory.saveInventoryItem(item);
+  }
+
+  async deleteInventoryItem(id: number): Promise<boolean> {
+    return this.inventory.deleteInventoryItem(id);
+  }
+
+  async getInventoryMovements(params?: QueryParams): Promise<InventoryMovement[]> {
+    return this.inventory.getInventoryMovements(params);
+  }
+
+  async saveInventoryMovement(movement: Partial<InventoryMovement>): Promise<InventoryMovement> {
+    return this.inventory.saveInventoryMovement(movement);
+  }
+
+  async recordMovement(movement: Partial<InventoryMovement>): Promise<InventoryMovement> {
+    return this.inventory.recordMovement(movement);
+  }
+
+  // ==========================================
+  // Stock Transfers
+  // ==========================================
+  async getStockTransfers(params?: QueryParams): Promise<StockTransfer[]> {
+    return this.inventory.getStockTransfers(params);
+  }
+
+  async getStockTransferById(id: number): Promise<StockTransfer | null> {
+    return this.inventory.getStockTransferById(id);
+  }
+
+  async getStockTransferItems(transferId?: number): Promise<StockTransferItem[]> {
+    return this.inventory.getStockTransferItems(transferId);
+  }
+
+  async saveStockTransfer(st: Partial<StockTransfer>, items?: Partial<StockTransferItem>[]): Promise<StockTransfer> {
+    return this.inventory.saveStockTransfer(st, items);
+  }
+
+  async deleteStockTransfer(id: number): Promise<boolean> {
+    return this.inventory.deleteStockTransfer(id);
+  }
+
+  // ==========================================
+  // Sales & Orders
+  // ==========================================
+  async getOrders(params?: QueryParams): Promise<Order[]> {
+    return this.sales.getOrders(params);
+  }
+
+  async getOrderById(id: number): Promise<Order | null> {
+    return this.sales.getOrderById(id);
+  }
+
+  async getOrderItems(orderId: number): Promise<OrderItem[]> {
+    return this.sales.getOrderItems(orderId);
+  }
+
+  async saveOrder(order: Partial<Order>, items?: Partial<OrderItem>[]): Promise<Order> {
+    return this.sales.saveOrder(order, items);
+  }
+
+  async deleteOrder(id: number): Promise<boolean> {
+    return this.sales.deleteOrder(id);
+  }
+
+  // ==========================================
+  // Customers
+  // ==========================================
+  async getCustomers(params?: QueryParams): Promise<Customer[]> {
+    return this.sales.getCustomers(params);
+  }
+
+  async getCustomerById(id: number): Promise<Customer | null> {
+    return this.sales.getCustomerById(id);
+  }
+
+  async saveCustomer(cust: Partial<Customer>): Promise<Customer> {
+    return this.sales.saveCustomer(cust);
+  }
+
+  async deleteCustomer(id: number): Promise<boolean> {
+    return this.sales.deleteCustomer(id);
+  }
+
+  // ==========================================
+  // POS Shifts (شیفت‌های صندوق)
+  // ==========================================
+  async getPosShifts(params?: QueryParams & { user_id?: string; status?: PosShiftStatus; warehouse_id?: number }): Promise<PosShift[]> {
+    return this.sales.getPosShifts(params);
+  }
+
+  async getActivePosShift(userId?: string, warehouseId?: number): Promise<PosShift | null> {
+    return this.sales.getActivePosShift(userId, warehouseId);
+  }
+
+  async savePosShift(shift: Partial<PosShift>): Promise<PosShift> {
+    return this.sales.savePosShift(shift);
+  }
+
+  async closePosShift(id: number, closingBalance: number | string, notes?: string): Promise<PosShift> {
+    return this.sales.closePosShift(id, closingBalance, notes);
+  }
+
+  async deletePosShift(id: number): Promise<boolean> {
+    return this.sales.deletePosShift(id);
+  }
+
+  // ==========================================
+  // Procurement & Suppliers
+  // ==========================================
+  async getSuppliers(params?: QueryParams): Promise<Supplier[]> {
+    return this.procurement.getSuppliers(params);
+  }
+
+  async getSupplierById(id: number): Promise<Supplier | null> {
+    return this.procurement.getSupplierById(id);
+  }
+
+  async saveSupplier(sup: Partial<Supplier>): Promise<Supplier> {
+    return this.procurement.saveSupplier(sup);
+  }
+
+  async deleteSupplier(id: number): Promise<boolean> {
+    return this.procurement.deleteSupplier(id);
+  }
+
+  async getPurchaseOrders(params?: QueryParams): Promise<PurchaseOrder[]> {
+    return this.procurement.getPurchaseOrders(params);
+  }
+
+  async getPurchaseOrderById(id: number): Promise<PurchaseOrder | null> {
+    return this.procurement.getPurchaseOrderById(id);
+  }
+
+  async getPurchaseOrderItems(purchaseOrderId?: number): Promise<PurchaseOrderItem[]> {
+    return this.procurement.getPurchaseOrderItems(purchaseOrderId);
+  }
+
+  async savePurchaseOrder(po: Partial<PurchaseOrder>, items?: Partial<PurchaseOrderItem>[]): Promise<PurchaseOrder> {
+    return this.procurement.savePurchaseOrder(po, items);
+  }
+
+  async deletePurchaseOrder(id: number): Promise<boolean> {
+    return this.procurement.deletePurchaseOrder(id);
   }
 
   // ==========================================
   // Accounting & Financials (Phase 1)
   // ==========================================
-
   async getExpenseCategories(params?: QueryParams): Promise<ExpenseCategory[]> {
-    try {
-      const query: Record<string, any> = {
-        sort: ['id'],
-      };
-      if (params?.status) query['filter[status][_eq]'] = params.status;
-      if (params?.search) query['filter[title][_icontains]'] = params.search;
-
-      const items = await directusClient.getItems<ExpenseCategory>('expense_categories', query);
-      if (items.length === 0) {
-        return await this.localAdapter.getExpenseCategories(params);
-      }
-      return items;
-    } catch {
-      return await this.localAdapter.getExpenseCategories(params);
-    }
+    return this.accounting.getExpenseCategories(params);
   }
 
   async saveExpenseCategory(cat: Partial<ExpenseCategory>): Promise<ExpenseCategory> {
-    const localSaved = await this.localAdapter.saveExpenseCategory(cat);
-    try {
-      const directusPayload: Record<string, any> = {
-        title: cat.title || 'سرفصل هزینه',
-        code: cat.code || null,
-        icon: cat.icon || 'Receipt',
-        status: cat.status || 'active',
-      };
-      if (cat.organization_id) {
-        directusPayload.organization_id = Number(typeof cat.organization_id === 'object' ? (cat.organization_id as any).id : cat.organization_id);
-      }
-
-      if (cat.id && typeof cat.id === 'number' && cat.id < 1000000000) {
-        const updated = await directusClient.updateItem<ExpenseCategory>('expense_categories', cat.id, directusPayload);
-        const merged = { ...localSaved, ...updated };
-        await this.localAdapter.saveExpenseCategory(merged);
-        return merged;
-      }
-      const created = await directusClient.createItem<ExpenseCategory>('expense_categories', directusPayload);
-      if (localSaved.id && localSaved.id !== created.id) {
-        await this.localAdapter.deleteExpenseCategory(localSaved.id);
-      }
-      const merged = { ...localSaved, ...created };
-      await this.localAdapter.saveExpenseCategory(merged);
-      return merged;
-    } catch (err) {
-      console.error('[CloudAdapter] Error saving expense category to cloud:', err);
-      StorageSyncManager.enqueue({ action: cat.id ? 'UPDATE' : 'CREATE', collection: 'expense_categories', payload: localSaved });
-      return localSaved;
-    }
+    return this.accounting.saveExpenseCategory(cat);
   }
 
   async deleteExpenseCategory(id: number): Promise<boolean> {
-    const deleted = await this.localAdapter.deleteExpenseCategory(id);
-    try {
-      await directusClient.deleteItem('expense_categories', id);
-    } catch {
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'expense_categories', payload: { id } });
-    }
-    return deleted;
+    return this.accounting.deleteExpenseCategory(id);
   }
 
   async getExpenses(params?: QueryParams): Promise<Expense[]> {
-    try {
-      const query: Record<string, any> = {
-        sort: ['-expense_date', '-id'],
-        fields: ['*', 'category_id.*'],
-      };
-      const orgId = normalizeId(params?.organization_id);
-      if (orgId) query['filter[organization_id][_eq]'] = orgId;
-      if (params?.category_id) query['filter[category_id][_eq]'] = params.category_id;
-      if (params?.search) query['filter[title][_icontains]'] = params.search;
-
-      const items = await directusClient.getItems<Expense>('expenses', query);
-      const localItems = await this.localAdapter.getExpenses(params);
-
-      if (!items || items.length === 0) {
-        return localItems;
-      }
-
-      const mergedMap = new Map<number, Expense>();
-      localItems.forEach((it) => mergedMap.set(it.id, it));
-      items.forEach((exp) => {
-        const cat = typeof exp.category_id === 'object' ? (exp.category_id as any) : null;
-        mergedMap.set(exp.id, {
-          ...exp,
-          category_title: cat?.title || exp.category_title || 'سایر هزینه‌ها',
-          category_code: cat?.code || exp.category_code,
-          category_icon: cat?.icon || exp.category_icon || 'Receipt',
-        });
-      });
-
-      return Array.from(mergedMap.values()).sort((a, b) => (b.id || 0) - (a.id || 0));
-    } catch {
-      return await this.localAdapter.getExpenses(params);
-    }
+    return this.accounting.getExpenses(params);
   }
 
   async saveExpense(exp: Partial<Expense>): Promise<Expense> {
-    const localSaved = await this.localAdapter.saveExpense(exp);
-    try {
-      const catId = typeof exp.category_id === 'object' && exp.category_id !== null
-        ? Number((exp.category_id as any).id)
-        : (exp.category_id ? Number(exp.category_id) : null);
-
-      const accId = typeof exp.account_id === 'object' && exp.account_id !== null
-        ? Number((exp.account_id as any).id)
-        : (exp.account_id ? Number(exp.account_id) : null);
-
-      let pm: string = 'cash';
-      if (exp.payment_method === 'bank_account' || exp.payment_method === 'card_transfer' || exp.payment_method === 'bank') {
-        pm = 'bank';
-      } else if (exp.payment_method === 'pos') {
-        pm = 'pos';
-      } else if (exp.payment_method === 'cheque') {
-        pm = 'cheque';
-      } else if (exp.payment_method === 'credit') {
-        pm = 'credit';
-      }
-
-      const noteParts: string[] = [];
-      if (exp.paid_to) noteParts.push(`دریافت‌کننده: ${exp.paid_to}`);
-      if (exp.reference_code) noteParts.push(`کد پیگیری: ${exp.reference_code}`);
-      if (exp.description) noteParts.push(exp.description);
-      if (exp.notes && exp.notes !== exp.description) noteParts.push(exp.notes);
-
-      const directusPayload: Record<string, any> = {
-        title: exp.title || 'هزینه جاری',
-        amount: Number(exp.amount) || 0,
-        category_id: catId,
-        payment_method: pm,
-        notes: noteParts.length > 0 ? noteParts.join(' | ') : null,
-      };
-
-      if (exp.organization_id) {
-        directusPayload.organization_id = Number(typeof exp.organization_id === 'object' ? (exp.organization_id as any).id : exp.organization_id);
-      }
-      if (accId) {
-        directusPayload.account_id = accId;
-      }
-      if (exp.expense_date) {
-        const dateStr = String(exp.expense_date);
-        directusPayload.expense_date = dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`;
-      }
-      if (exp.receipt_attachment) {
-        directusPayload.receipt_attachment = exp.receipt_attachment;
-      }
-
-      if (exp.id && typeof exp.id === 'number' && exp.id < 1000000000) {
-        const updated = await directusClient.updateItem<Expense>('expenses', exp.id, directusPayload);
-        const merged = { ...localSaved, ...updated };
-        await this.localAdapter.saveExpense(merged);
-        return merged;
-      }
-
-      const created = await directusClient.createItem<Expense>('expenses', directusPayload);
-      if (localSaved.id && localSaved.id !== created.id) {
-        await this.localAdapter.deleteExpense(localSaved.id);
-      }
-      const merged = { ...localSaved, ...created };
-      await this.localAdapter.saveExpense(merged);
-      return merged;
-    } catch (err) {
-      console.error('[CloudAdapter] Error saving expense to cloud:', err);
-      StorageSyncManager.enqueue({ action: exp.id ? 'UPDATE' : 'CREATE', collection: 'expenses', payload: localSaved });
-      return localSaved;
-    }
+    return this.accounting.saveExpense(exp);
   }
 
   async deleteExpense(id: number): Promise<boolean> {
-    const deleted = await this.localAdapter.deleteExpense(id);
-    try {
-      await directusClient.deleteItem('expenses', id);
-    } catch {
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'expenses', payload: { id } });
-    }
-    return deleted;
+    return this.accounting.deleteExpense(id);
   }
 
   async getPersonTransactions(params?: QueryParams): Promise<PersonTransaction[]> {
-    try {
-      const query: Record<string, any> = {
-        sort: ['-transaction_date', '-id'],
-        fields: ['*', 'customer_id.*', 'supplier_id.*', 'order_id.*', 'purchase_order_id.*'],
-      };
-      if (params?.type) query['filter[party_type][_eq]'] = params.type;
-      if (params?.search) query['filter[description][_icontains]'] = params.search;
-
-      const items = await directusClient.getItems<PersonTransaction>('person_transactions', query);
-      return items.map((tx) => {
-        const cust = typeof tx.customer_id === 'object' ? (tx.customer_id as any) : null;
-        const sup = typeof tx.supplier_id === 'object' ? (tx.supplier_id as any) : null;
-        const ord = typeof tx.order_id === 'object' ? (tx.order_id as any) : null;
-        const po = typeof tx.purchase_order_id === 'object' ? (tx.purchase_order_id as any) : null;
-        return {
-          ...tx,
-          party_name: cust?.name || sup?.name || tx.party_name || '',
-          order_number: ord?.order_number || tx.order_number,
-          purchase_number: po?.purchase_number || tx.purchase_number,
-        };
-      });
-    } catch {
-      return await this.localAdapter.getPersonTransactions(params);
-    }
+    return this.accounting.getPersonTransactions(params);
   }
 
   async savePersonTransaction(tx: Partial<PersonTransaction>): Promise<PersonTransaction> {
-    try {
-      if (tx.id) {
-        return await directusClient.updateItem<PersonTransaction>('person_transactions', tx.id, tx);
-      }
-      return await directusClient.createItem<PersonTransaction>('person_transactions', tx);
-    } catch {
-      const saved = await this.localAdapter.savePersonTransaction(tx);
-      StorageSyncManager.enqueue({ action: tx.id ? 'UPDATE' : 'CREATE', collection: 'person_transactions', payload: saved });
-      return saved;
-    }
+    return this.accounting.savePersonTransaction(tx);
   }
 
   async deletePersonTransaction(id: number): Promise<boolean> {
-    try {
-      await directusClient.deleteItem('person_transactions', id);
-      return true;
-    } catch {
-      const deleted = await this.localAdapter.deletePersonTransaction(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'person_transactions', payload: { id } });
-      return deleted;
-    }
+    return this.accounting.deletePersonTransaction(id);
   }
 
   async getProfitLossSummary(params?: QueryParams): Promise<ProfitLossSummary> {
-    return await this.localAdapter.getProfitLossSummary(params);
+    return this.accounting.getProfitLossSummary(params);
   }
 
   // ==========================================
   // Accounting & Treasury (Phase 2)
   // ==========================================
+  async reconcileOrdersWithTreasury(organizationId?: number): Promise<void> {
+    return this.accounting.reconcileOrdersWithTreasury(organizationId);
+  }
 
-  async getFinancialAccounts(params?: QueryParams): Promise<FinancialAccount[]> {
-    try {
-      const query: Record<string, any> = {
-        sort: ['id'],
-        fields: ['*', 'warehouse_id.*'],
-      };
-      if (params?.status) query['filter[status][_eq]'] = params.status;
-      if (params?.type) query['filter[type][_eq]'] = params.type;
-      if (params?.search) query['filter[name][_icontains]'] = params.search;
-
-      const items = await directusClient.getItems<FinancialAccount>('financial_accounts', query);
-      if (items.length === 0) {
-        return await this.localAdapter.getFinancialAccounts(params);
-      }
-      return items.map((acc) => {
-        const wh = typeof acc.warehouse_id === 'object' && acc.warehouse_id ? (acc.warehouse_id as any) : null;
-        return {
-          ...acc,
-          warehouse_name: wh?.name || acc.warehouse_name,
-        };
-      });
-    } catch {
-      return await this.localAdapter.getFinancialAccounts(params);
-    }
+  async getFinancialAccounts(params?: QueryParams & { skipReconcile?: boolean }): Promise<FinancialAccount[]> {
+    return this.accounting.getFinancialAccounts(params);
   }
 
   async getFinancialAccountById(id: number): Promise<FinancialAccount | null> {
-    try {
-      return await directusClient.getItemById<FinancialAccount>('financial_accounts', id);
-    } catch {
-      return await this.localAdapter.getFinancialAccountById(id);
-    }
+    return this.accounting.getFinancialAccountById(id);
   }
 
   async saveFinancialAccount(account: Partial<FinancialAccount>): Promise<FinancialAccount> {
-    try {
-      if (account.id) {
-        return await directusClient.updateItem<FinancialAccount>('financial_accounts', account.id, account);
-      }
-      return await directusClient.createItem<FinancialAccount>('financial_accounts', account);
-    } catch {
-      const saved = await this.localAdapter.saveFinancialAccount(account);
-      StorageSyncManager.enqueue({ action: account.id ? 'UPDATE' : 'CREATE', collection: 'financial_accounts', payload: saved });
-      return saved;
-    }
+    return this.accounting.saveFinancialAccount(account);
   }
 
   async deleteFinancialAccount(id: number): Promise<boolean> {
-    try {
-      await directusClient.deleteItem('financial_accounts', id);
-      return true;
-    } catch {
-      const deleted = await this.localAdapter.deleteFinancialAccount(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'financial_accounts', payload: { id } });
-      return deleted;
-    }
+    return this.accounting.deleteFinancialAccount(id);
   }
 
   async getTreasuryTransactions(params?: QueryParams): Promise<TreasuryTransaction[]> {
-    try {
-      const query: Record<string, any> = {
-        sort: ['-transaction_date', '-id'],
-        fields: ['*', 'source_account_id.*', 'destination_account_id.*'],
-      };
-      if (params?.type) query['filter[type][_eq]'] = params.type;
-      if (params?.search) query['filter[description][_icontains]'] = params.search;
-
-      const items = await directusClient.getItems<TreasuryTransaction>('treasury_transactions', query);
-      return items.map((tx) => {
-        const src = typeof tx.source_account_id === 'object' ? (tx.source_account_id as any) : null;
-        const dst = typeof tx.destination_account_id === 'object' ? (tx.destination_account_id as any) : null;
-        return {
-          ...tx,
-          source_account_name: src?.name || tx.source_account_name,
-          destination_account_name: dst?.name || tx.destination_account_name,
-        };
-      });
-    } catch {
-      return await this.localAdapter.getTreasuryTransactions(params);
-    }
+    return this.accounting.getTreasuryTransactions(params);
   }
 
   async saveTreasuryTransaction(tx: Partial<TreasuryTransaction>): Promise<TreasuryTransaction> {
-    try {
-      if (tx.id) {
-        return await directusClient.updateItem<TreasuryTransaction>('treasury_transactions', tx.id, tx);
-      }
-      return await directusClient.createItem<TreasuryTransaction>('treasury_transactions', tx);
-    } catch {
-      const saved = await this.localAdapter.saveTreasuryTransaction(tx);
-      StorageSyncManager.enqueue({ action: tx.id ? 'UPDATE' : 'CREATE', collection: 'treasury_transactions', payload: saved });
-      return saved;
-    }
+    return this.accounting.saveTreasuryTransaction(tx);
   }
 
   async deleteTreasuryTransaction(id: number): Promise<boolean> {
-    try {
-      await directusClient.deleteItem('treasury_transactions', id);
-      return true;
-    } catch {
-      const deleted = await this.localAdapter.deleteTreasuryTransaction(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'treasury_transactions', payload: { id } });
-      return deleted;
-    }
+    return this.accounting.deleteTreasuryTransaction(id);
   }
 
   async getCheques(params?: QueryParams): Promise<Cheque[]> {
-    try {
-      const query: Record<string, any> = {
-        sort: ['due_date', 'id'],
-        fields: ['*', 'customer_id.*', 'supplier_id.*', 'target_account_id.*'],
-      };
-      if (params?.status) query['filter[status][_eq]'] = params.status;
-      if (params?.type) query['filter[type][_eq]'] = params.type;
-      if (params?.search) query['filter[sayad_id][_icontains]'] = params.search;
-
-      const items = await directusClient.getItems<Cheque>('cheques', query);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      return items.map((chk) => {
-        const cust = typeof chk.customer_id === 'object' ? (chk.customer_id as any) : null;
-        const sup = typeof chk.supplier_id === 'object' ? (chk.supplier_id as any) : null;
-        const acc = typeof chk.target_account_id === 'object' ? (chk.target_account_id as any) : null;
-
-        let daysUntilDue = 0;
-        let isOverdue = false;
-        if (chk.due_date) {
-          const dueDate = new Date(chk.due_date);
-          dueDate.setHours(0, 0, 0, 0);
-          daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-          isOverdue = daysUntilDue < 0 && chk.status !== 'cleared' && chk.status !== 'cancelled';
-        }
-
-        return {
-          ...chk,
-          customer_name: cust?.name || chk.customer_name,
-          supplier_name: sup?.name || chk.supplier_name,
-          target_account_name: acc?.name || chk.target_account_name,
-          days_until_due: daysUntilDue,
-          is_overdue: isOverdue,
-        };
-      });
-    } catch {
-      return await this.localAdapter.getCheques(params);
-    }
+    return this.accounting.getCheques(params);
   }
 
   async getChequeById(id: number): Promise<Cheque | null> {
-    try {
-      return await directusClient.getItemById<Cheque>('cheques', id);
-    } catch {
-      return await this.localAdapter.getChequeById(id);
-    }
+    return this.accounting.getChequeById(id);
   }
 
   async saveCheque(cheque: Partial<Cheque>): Promise<Cheque> {
-    try {
-      if (cheque.id) {
-        return await directusClient.updateItem<Cheque>('cheques', cheque.id, cheque);
-      }
-      return await directusClient.createItem<Cheque>('cheques', cheque);
-    } catch {
-      const saved = await this.localAdapter.saveCheque(cheque);
-      StorageSyncManager.enqueue({ action: cheque.id ? 'UPDATE' : 'CREATE', collection: 'cheques', payload: saved });
-      return saved;
-    }
+    return this.accounting.saveCheque(cheque);
   }
 
   async deleteCheque(id: number): Promise<boolean> {
-    try {
-      await directusClient.deleteItem('cheques', id);
-      return true;
-    } catch {
-      const deleted = await this.localAdapter.deleteCheque(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'cheques', payload: { id } });
-      return deleted;
-    }
+    return this.accounting.deleteCheque(id);
   }
 
   async updateChequeStatus(id: number, status: ChequeStatus, targetAccountId?: number): Promise<Cheque> {
-    try {
-      const payload: Partial<Cheque> = { status };
-      if (targetAccountId) payload.target_account_id = targetAccountId;
-      return await directusClient.updateItem<Cheque>('cheques', id, payload);
-    } catch {
-      return await this.localAdapter.updateChequeStatus(id, status, targetAccountId);
-    }
+    return this.accounting.updateChequeStatus(id, status, targetAccountId);
   }
 
   // ==========================================
-  // Phase 3: Landed Cost & Tax / VAT Reports
+  // Landed Costs & VAT (Phase 3)
   // ==========================================
-
   async getLandedCosts(params?: QueryParams): Promise<LandedCost[]> {
-    try {
-      const costs = await directusClient.getItems<LandedCost>('landed_costs', {
-        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-        search: params?.search,
-      });
-
-      // Enrich with local joined data
-      const purchaseOrders = await this.getPurchaseOrders();
-      const suppliers = await this.getSuppliers();
-      const allocations = await this.getLandedCostAllocations();
-
-      return costs.map((cost) => {
-        const poId = typeof cost.purchase_order_id === 'object' ? (cost.purchase_order_id as any)?.id : cost.purchase_order_id;
-        const po = purchaseOrders.find((p) => p.id === Number(poId));
-        let supName = '';
-        if (po) {
-          const supId = typeof po.supplier_id === 'object' ? (po.supplier_id as any)?.id : po.supplier_id;
-          const sup = suppliers.find((s) => s.id === Number(supId));
-          supName = sup?.name || po.supplier_name || '';
-        }
-
-        const costAllocations = allocations.filter((a) => {
-          const cId = typeof a.landed_cost_id === 'object' ? (a.landed_cost_id as any)?.id : a.landed_cost_id;
-          return Number(cId) === cost.id;
-        });
-
-        return {
-          ...cost,
-          purchase_number: po?.purchase_number || '',
-          supplier_name: supName,
-          purchase_total: po?.total || 0,
-          allocations_count: costAllocations.length,
-        };
-      });
-    } catch {
-      return await this.localAdapter.getLandedCosts(params);
-    }
+    return this.accounting.getLandedCosts(params);
   }
 
   async getLandedCostById(id: number): Promise<LandedCost | null> {
-    try {
-      const cost = await directusClient.getItemById<LandedCost>('landed_costs', id);
-      if (!cost) return null;
-      return cost;
-    } catch {
-      return await this.localAdapter.getLandedCostById(id);
-    }
+    return this.accounting.getLandedCostById(id);
   }
 
   async saveLandedCost(cost: Partial<LandedCost>, allocations?: Partial<LandedCostAllocation>[]): Promise<LandedCost> {
-    try {
-      let saved: LandedCost;
-      if (cost.id) {
-        saved = await directusClient.updateItem<LandedCost>('landed_costs', cost.id, cost);
-      } else {
-        saved = await directusClient.createItem<LandedCost>('landed_costs', cost);
-      }
-
-      if (allocations && allocations.length > 0) {
-        for (const alloc of allocations) {
-          const payload = {
-            ...alloc,
-            landed_cost_id: saved.id,
-          };
-          if (alloc.id) {
-            await directusClient.updateItem<LandedCostAllocation>('landed_cost_allocations', alloc.id, payload);
-          } else {
-            await directusClient.createItem<LandedCostAllocation>('landed_cost_allocations', payload);
-          }
-        }
-      }
-
-      return saved;
-    } catch {
-      const saved = await this.localAdapter.saveLandedCost(cost, allocations);
-      StorageSyncManager.enqueue({ action: cost.id ? 'UPDATE' : 'CREATE', collection: 'landed_costs', payload: saved });
-      return saved;
-    }
+    return this.accounting.saveLandedCost(cost, allocations);
   }
 
   async deleteLandedCost(id: number): Promise<boolean> {
-    try {
-      await directusClient.deleteItem('landed_costs', id);
-      return true;
-    } catch {
-      const deleted = await this.localAdapter.deleteLandedCost(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'landed_costs', payload: { id } });
-      return deleted;
-    }
+    return this.accounting.deleteLandedCost(id);
   }
 
   async getLandedCostAllocations(landedCostId?: number, purchaseOrderId?: number): Promise<LandedCostAllocation[]> {
-    try {
-      let allocations = await directusClient.getItems<LandedCostAllocation>('landed_cost_allocations', {
-        filter: landedCostId ? { landed_cost_id: { _eq: landedCostId } } : undefined,
-      });
-
-      const poItems = await this.getPurchaseOrderItems();
-      const variants = await this.getVariants();
-      const products = await this.getProducts();
-
-      return allocations.map((alloc) => {
-        const item = poItems.find((pi) => pi.id === alloc.purchase_order_item_id);
-        let variant: ProductVariant | undefined;
-        let product: Product | undefined;
-        if (item) {
-          const vId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
-          variant = variants.find((v) => v.id === Number(vId));
-          if (variant) {
-            const pId = typeof variant.product_id === 'object' ? (variant.product_id as any)?.id : variant.product_id;
-            product = products.find((p) => p.id === Number(pId));
-          }
-        }
-
-        return {
-          ...alloc,
-          variant_id: variant?.id,
-          sku: variant?.sku || '',
-          product_title: product?.title || '',
-          variant_name: variant ? `${product?.title || ''} - ${variant.sku || ''}` : '',
-          quantity: item?.quantity_ordered || item?.quantity_received || 1,
-          base_unit_cost: item?.unit_cost || 0,
-          base_total: item?.total || 0,
-        };
-      });
-    } catch {
-      return await this.localAdapter.getLandedCostAllocations(landedCostId, purchaseOrderId);
-    }
+    return this.accounting.getLandedCostAllocations(landedCostId, purchaseOrderId);
   }
 
   async saveLandedCostAllocation(allocation: Partial<LandedCostAllocation>): Promise<LandedCostAllocation> {
-    try {
-      if (allocation.id) {
-        return await directusClient.updateItem<LandedCostAllocation>('landed_cost_allocations', allocation.id, allocation);
-      }
-      return await directusClient.createItem<LandedCostAllocation>('landed_cost_allocations', allocation);
-    } catch {
-      return await this.localAdapter.saveLandedCostAllocation(allocation);
-    }
+    return this.accounting.saveLandedCostAllocation(allocation);
   }
 
   async applyLandedCostToVariants(landedCostId: number): Promise<{ updatedVariantsCount: number }> {
-    return await this.localAdapter.applyLandedCostToVariants(landedCostId);
+    return this.accounting.applyLandedCostToVariants(landedCostId);
   }
 
   async getVatReport(params?: { organizationId?: number; year?: number; quarter?: 1 | 2 | 3 | 4 }): Promise<VatReportSummary> {
-    return await this.localAdapter.getVatReport(params);
+    return this.accounting.getVatReport(params);
   }
 
-  // POS Shifts (شیفت‌های صندوق)
-  async getPosShifts(params?: QueryParams & { user_id?: string; status?: PosShiftStatus; warehouse_id?: number }): Promise<PosShift[]> {
-    const orgId = params?.organization_id || (typeof window !== 'undefined' ? localStorage.getItem('tankhor_active_org_id') : null);
-    if (!orgId) return [];
-
-    const numOrgId = Number(orgId);
-    if (isNaN(numOrgId) || numOrgId <= 0) return [];
-
-    const query: any = {
-      sort: '-id',
-      fields: ['*'],
-    };
-
-    if (params?.user_id) {
-      query.filter = query.filter || {};
-      query.filter.user_id = { _eq: params.user_id };
-    }
-    if (params?.status) {
-      query.filter = query.filter || {};
-      query.filter.status = { _eq: params.status };
-    }
-    if (params?.warehouse_id) {
-      query.filter = query.filter || {};
-      query.filter.warehouse_id = { _eq: Number(params.warehouse_id) };
-    }
-
-    try {
-      const items = await directusClient.getItems<any>('pos_shifts', query);
-      if (Array.isArray(items) && items.length > 0) {
-        // Hydrate and mirror to local storage
-        for (const item of items) {
-          const normalizedItem: PosShift = {
-            ...item,
-            organization_id: numOrgId,
-            status: Array.isArray(item.status) ? item.status[0] : (item.status || 'open'),
-          };
-          await this.localAdapter.savePosShift(normalizedItem);
-        }
-        return await this.localAdapter.getPosShifts(params);
-      }
-      return await this.localAdapter.getPosShifts(params);
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] getPosShifts failed, using local adapter:', err?.message || err);
-      return await this.localAdapter.getPosShifts(params);
-    }
-  }
-
-  async getActivePosShift(userId?: string, warehouseId?: number): Promise<PosShift | null> {
-    try {
-      const shifts = await this.getPosShifts({ status: 'open' });
-      if (userId && warehouseId) {
-        const match = shifts.find((s) => {
-          const whId = typeof s.warehouse_id === 'object' ? (s.warehouse_id as any)?.id : s.warehouse_id;
-          const uMatch = s.user_id === userId || (s as any).user_email === userId;
-          return uMatch && Number(whId) === Number(warehouseId);
-        });
-        if (match) return match;
-      }
-      if (userId) {
-        const userShift = shifts.find((s) => s.user_id === userId || (s as any).user_email === userId);
-        return userShift || null;
-      }
-      if (warehouseId) {
-        const whShift = shifts.find((s) => {
-          const whId = typeof s.warehouse_id === 'object' ? (s.warehouse_id as any)?.id : s.warehouse_id;
-          return Number(whId) === Number(warehouseId);
-        });
-        return whShift || null;
-      }
-      return shifts.length > 0 ? shifts[0] : null;
-    } catch {
-      return await this.localAdapter.getActivePosShift(userId, warehouseId);
-    }
-  }
-
-  async savePosShift(shift: Partial<PosShift>): Promise<PosShift> {
-    try {
-      if (shift.id) {
-        const updated = await directusClient.updateItem<PosShift>('pos_shifts', shift.id, shift);
-        const result = { ...shift, ...updated };
-        await this.localAdapter.savePosShift(result);
-        return result;
-      } else {
-        const created = await directusClient.createItem<PosShift>('pos_shifts', shift);
-        const result = { ...shift, ...created };
-        await this.localAdapter.savePosShift(result);
-        return result;
-      }
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] savePosShift failed, fallback to local & sync:', err?.message || err);
-      const saved = await this.localAdapter.savePosShift(shift);
-      StorageSyncManager.enqueue({ action: shift.id ? 'UPDATE' : 'CREATE', collection: 'pos_shifts', payload: saved });
-      return saved;
-    }
-  }
-
-  async closePosShift(id: number, closingBalance: number | string, notes?: string): Promise<PosShift> {
-    try {
-      const updated = await directusClient.updateItem<PosShift>('pos_shifts', id, {
-        closing_balance: String(closingBalance),
-        status: 'closed',
-        closed_at: new Date().toISOString(),
-      });
-      await this.localAdapter.closePosShift(id, closingBalance, notes);
-      return updated;
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] closePosShift failed, fallback to local & sync:', err?.message || err);
-      const updated = await this.localAdapter.closePosShift(id, closingBalance, notes);
-      StorageSyncManager.enqueue({ action: 'UPDATE', collection: 'pos_shifts', payload: updated });
-      return updated;
-    }
-  }
-
-  async deletePosShift(id: number): Promise<boolean> {
-    try {
-      await directusClient.deleteItem('pos_shifts', id);
-      await this.localAdapter.deletePosShift(id);
-      return true;
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] deletePosShift failed, fallback to local & sync:', err?.message || err);
-      await this.localAdapter.deletePosShift(id);
-      StorageSyncManager.enqueue({ action: 'DELETE', collection: 'pos_shifts', payload: { id } });
-      return true;
-    }
-  }
-
-  // WooCommerce Integration (ماژول همگام‌سازی ووکامرس)
+  // ==========================================
+  // WooCommerce Integration
+  // ==========================================
   async getWooCommerceSettings(params?: QueryParams): Promise<WooCommerceSettings | null> {
-    try {
-      const items = await directusClient.getItems<WooCommerceSettings>('woocommerce_settings', {
-        filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
-        limit: 1,
-      });
-      if (Array.isArray(items) && items.length > 0) {
-        await this.localAdapter.saveWooCommerceSettings(items[0]);
-        return items[0];
-      }
-      return await this.localAdapter.getWooCommerceSettings(params);
-    } catch {
-      return await this.localAdapter.getWooCommerceSettings(params);
-    }
+    return this.woocommerce.getWooCommerceSettings(params);
   }
 
   async saveWooCommerceSettings(settings: Partial<WooCommerceSettings>): Promise<WooCommerceSettings> {
-    try {
-      if (settings.id) {
-        const updated = await directusClient.updateItem<WooCommerceSettings>('woocommerce_settings', settings.id, settings);
-        const result = { ...settings, ...updated };
-        await this.localAdapter.saveWooCommerceSettings(result);
-        return result;
-      } else {
-        const created = await directusClient.createItem<WooCommerceSettings>('woocommerce_settings', settings);
-        const result = { ...settings, ...created };
-        await this.localAdapter.saveWooCommerceSettings(result);
-        return result;
-      }
-    } catch (err: any) {
-      console.warn('[CloudDirectusAdapter] saveWooCommerceSettings fallback to local:', err?.message || err);
-      const saved = await this.localAdapter.saveWooCommerceSettings(settings);
-      StorageSyncManager.enqueue({ action: settings.id ? 'UPDATE' : 'CREATE', collection: 'woocommerce_settings', payload: saved });
-      return saved;
-    }
+    return this.woocommerce.saveWooCommerceSettings(settings);
   }
 
   async getWooCommerceLogs(params?: QueryParams & { limit?: number }): Promise<WooCommerceLog[]> {
-    try {
-      const items = await directusClient.getItems<WooCommerceLog>('woocommerce_logs', {
-        sort: '-id',
-        limit: params?.limit || 50,
-      });
-      if (Array.isArray(items) && items.length > 0) {
-        for (const item of items) {
-          await this.localAdapter.addWooCommerceLog(item);
-        }
-        return await this.localAdapter.getWooCommerceLogs(params);
-      }
-      return await this.localAdapter.getWooCommerceLogs(params);
-    } catch {
-      return await this.localAdapter.getWooCommerceLogs(params);
-    }
+    return this.woocommerce.getWooCommerceLogs(params);
   }
 
   async addWooCommerceLog(log: Partial<WooCommerceLog>): Promise<WooCommerceLog> {
-    try {
-      const created = await directusClient.createItem<WooCommerceLog>('woocommerce_logs', log);
-      const result = { ...log, ...created } as WooCommerceLog;
-      await this.localAdapter.addWooCommerceLog(result);
-      return result;
-    } catch {
-      return await this.localAdapter.addWooCommerceLog(log);
-    }
+    return this.woocommerce.addWooCommerceLog(log);
   }
 
   async getIntegrationMappings(params?: QueryParams & { entity_type?: string }): Promise<IntegrationMapping[]> {
-    try {
-      const query: any = {};
-      if (params?.entity_type) {
-        query.filter = { entity_type: { _eq: params.entity_type } };
-      }
-      const items = await directusClient.getItems<IntegrationMapping>('woocommerce_mappings', query);
-      if (Array.isArray(items) && items.length > 0) {
-        for (const item of items) {
-          await this.localAdapter.saveIntegrationMapping(item);
-        }
-        return await this.localAdapter.getIntegrationMappings(params);
-      }
-      return await this.localAdapter.getIntegrationMappings(params);
-    } catch {
-      return await this.localAdapter.getIntegrationMappings(params);
-    }
+    return this.woocommerce.getIntegrationMappings(params);
   }
 
   async saveIntegrationMapping(mapping: Partial<IntegrationMapping>): Promise<IntegrationMapping> {
-    try {
-      if (mapping.id) {
-        const updated = await directusClient.updateItem<IntegrationMapping>('woocommerce_mappings', mapping.id, mapping);
-        const result = { ...mapping, ...updated };
-        await this.localAdapter.saveIntegrationMapping(result);
-        return result;
-      } else {
-        const created = await directusClient.createItem<IntegrationMapping>('woocommerce_mappings', mapping);
-        const result = { ...mapping, ...created };
-        await this.localAdapter.saveIntegrationMapping(result);
-        return result;
-      }
-    } catch {
-      return await this.localAdapter.saveIntegrationMapping(mapping);
-    }
+    return this.woocommerce.saveIntegrationMapping(mapping);
   }
 }

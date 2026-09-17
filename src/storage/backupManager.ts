@@ -45,6 +45,10 @@ export const BACKUP_COLLECTIONS = [
   'cheques',
   'landed_costs',
   'landed_cost_allocations',
+  'pos_shifts',
+  'woocommerce_settings',
+  'woocommerce_logs',
+  'woocommerce_mappings',
 ] as const;
 
 export type BackupCollectionKey = typeof BACKUP_COLLECTIONS[number];

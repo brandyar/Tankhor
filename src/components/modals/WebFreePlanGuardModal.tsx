@@ -7,6 +7,7 @@ import { useProjectSettings } from '../../hooks/useProjectSettings';
 import { Button } from '../ui/Button';
 import { UpgradeToProModal } from './UpgradeToProModal';
 import { PaymentResultModal } from './PaymentResultModal';
+import { APP_VERSION } from '../../utils/version';
 import {
   Download,
   Sparkles,
@@ -17,20 +18,18 @@ import {
   Building2,
   LogOut,
   ChevronDown,
-  ShieldAlert,
   Smartphone,
-  ExternalLink,
   Laptop,
   ArrowDownToLine,
   RefreshCw,
-  Lock,
   CreditCard,
+  Layers,
 } from 'lucide-react';
 
 export const WebFreePlanGuardModal: React.FC = () => {
   const { organizations, activeOrganization, selectOrganization, refreshOrganizations } = useOrganization();
-  const { logout, isCloudAuthenticated, openLoginModal } = useAuth();
-  const { settings, loading: settingsLoading } = useProjectSettings();
+  const { logout } = useAuth();
+  const { settings } = useProjectSettings();
 
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,18 +44,17 @@ export const WebFreePlanGuardModal: React.FC = () => {
     setError(null);
 
     try {
-      // Live online verification with Directus
       const res = await directusClient.checkOrganizationPlan();
       if (res && (res.isPro || res.plan === 'pro')) {
         await refreshOrganizations();
         storageManager.setMode('cloud_synced');
         setSuccess(true);
       } else {
-        setError('اشتراک این سازمان روی سرور ابری تن‌خور همچنان «رایگان (Free)» است. در صورتی که اشتراک Pro را تهیه کرده‌اید، چند لحظه دیگر بررسی مجدد را بزنید یا با پشتیبانی تماس بگیرید.');
+        setError('اشتراک سازمان همچنان در وضعیت «رایگان» است. در صورت پرداخت، لطفاً چند لحظه بعد مجدداً بررسی را بزنید.');
         setIsChecking(false);
       }
     } catch (err: any) {
-      setError(err?.message || 'خطا در ارتباط با سرور دایرکتوس. لطفاً اتصال اینترنت خود را بررسی نمایید.');
+      setError(err?.message || 'خطا در برقراری ارتباط با سرور. لطفاً اتصال اینترنت خود را بررسی کنید.');
       setIsChecking(false);
     }
   };
@@ -85,13 +83,12 @@ export const WebFreePlanGuardModal: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      setDownloadNote(`در حال شروع دانلود نسخه ${platform === 'windows' ? 'ویندوز' : platform === 'mac' ? 'مک' : 'اندروید'}...`);
+      setDownloadNote(`دانلود نسخه ${platform === 'windows' ? 'ویندوز' : platform === 'mac' ? 'مک' : 'اندروید'} آغاز شد.`);
       setTimeout(() => setDownloadNote(null), 5000);
       return;
     }
 
-    // Fallback if URL is not yet configured in Directus project_settings
-    const fallbackContent = `TANKHOR Official Setup - ${platform.toUpperCase()}\n\nلینک مستقیم دریافت نسخه ${platform} از دایرکتوس به زودی بارگذاری می‌شود.\nOfficial Repository & Releases: https://tankhor.com/download`;
+    const fallbackContent = `TANKHOR Official Setup - ${platform.toUpperCase()}\n\nلینک مستقیم دریافت نسخه ${platform} از سرور به زودی بارگذاری می‌شود.\nOfficial Repository & Releases: https://tankhor.com/download`;
     const blob = new Blob([fallbackContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -101,94 +98,102 @@ export const WebFreePlanGuardModal: React.FC = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setDownloadNote(`فایل راهنمای نصب نسخه ${platform === 'windows' ? 'ویندوز' : platform === 'mac' ? 'مک' : 'اندروید'} دریافت شد.`);
+    setDownloadNote(`راهنمای نصب نسخه ${platform === 'windows' ? 'ویندوز' : platform === 'mac' ? 'مک' : 'اندروید'} دریافت شد.`);
     setTimeout(() => setDownloadNote(null), 5000);
   };
 
   return (
     <div
       id="web-free-guard-viewport"
-      className="min-h-screen w-full bg-neutral-900/95 flex items-center justify-center p-4 sm:p-6 backdrop-blur-md overflow-y-auto"
+      className="min-h-screen w-full bg-slate-950/80 dark:bg-black/85 flex items-center justify-center p-4 sm:p-8 backdrop-blur-md overflow-y-auto"
     >
       <div
         id="web-free-guard-card"
-        className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col my-auto animate-scale-up"
+        className="w-full max-w-4xl bg-white dark:bg-[#12141a] rounded-3xl shadow-2xl border border-slate-200 dark:border-neutral-800 overflow-hidden flex flex-col my-auto transition-all"
       >
-        {/* Banner Header */}
-        <div className="relative bg-gradient-to-r from-neutral-950 via-neutral-900 to-blue-950 text-white p-6 sm:p-8">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold tracking-wide uppercase text-amber-300 bg-amber-400/15 px-3 py-1 rounded-full border border-amber-400/30 flex items-center gap-1.5">
-                <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-                محدودیت نسخه وب در پلن رایگان (Free)
-              </span>
+        {/* Header Section with Generous Negative Space */}
+        <div className="p-8 sm:p-10 border-b border-slate-100 dark:border-neutral-800/80 bg-slate-50/50 dark:bg-[#161922]/50">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 flex items-center justify-center font-black text-lg shadow-sm">
+                ت
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  انتخاب نحوه استفاده از تن‌خور
+                </h1>
+                <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
+                  حساب کاربری شما فعال است • پلن فعلی سازمان: <strong className="text-slate-800 dark:text-neutral-200 font-bold">رایگان (Free)</strong>
+                </p>
+              </div>
             </div>
 
-            {/* Current Active Org & User info */}
-            <div className="flex items-center gap-2 text-xs text-neutral-300">
-              <span>سازمان انتخابی:</span>
-              <strong className="text-white bg-white/10 px-2 py-0.5 rounded-lg font-mono">
+            {/* Active Organization Info */}
+            <div className="flex items-center gap-2 self-start sm:self-auto bg-white dark:bg-[#1c202c] border border-slate-200 dark:border-neutral-700/70 px-3.5 py-1.5 rounded-2xl shadow-xs">
+              <Building2 className="w-4 h-4 text-slate-400 dark:text-neutral-500" />
+              <span className="text-xs text-slate-500 dark:text-neutral-400">سازمان:</span>
+              <span className="text-xs font-bold text-slate-800 dark:text-neutral-200">
                 {activeOrganization?.name || 'سازمان من'}
-              </strong>
+              </span>
             </div>
           </div>
 
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-            استفاده از سامانه تحت وب، ویژه نسخه حرفه‌ای (Pro) است
-          </h1>
-          <p className="text-xs sm:text-sm text-neutral-300 mt-2 leading-relaxed max-w-2xl">
-            شما با موفقیت وارد شدید. در نسخه وب تن‌خور، دسترسی به پنل مدیریت نیازمند پلن <strong className="text-white font-bold">Pro</strong> است. جهت استفاده کاملاً رایگان، لطفاً <strong className="text-emerald-300">نسخه دسکتاپ یا اندروید</strong> را دانلود و نصب نمایید.
+          <p className="text-sm text-slate-600 dark:text-neutral-300 leading-relaxed max-w-3xl pt-1">
+            نرم‌افزار مدیریت فروش و انبار تن‌خور به صورت <strong className="text-emerald-600 dark:text-emerald-400 font-bold">کاملاً رایگان و نامحدود</strong> روی ویندوز، مک و اندروید قابل استفاده است. در صورت تمایل به استفاده از همین پنل تحت وب و اتصال ابری، می‌توانید سازمان خود را به پلن <strong className="text-indigo-600 dark:text-indigo-400 font-bold">Pro</strong> ارتقا دهید.
           </p>
         </div>
 
-        {/* Content Body: Two Primary Options */}
-        <div className="p-6 sm:p-8 space-y-6">
+        {/* Content Body: 2 Clear Columns with Ample Breathing Room */}
+        <div className="p-8 sm:p-10 space-y-8">
           {error && (
-            <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-2xl flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-              <span>{error}</span>
+            <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs rounded-2xl flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 shrink-0 text-red-600 dark:text-red-400" />
+              <span className="leading-relaxed">{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-2xl flex items-center gap-2.5 font-bold">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-xs rounded-2xl flex items-center gap-3 font-medium">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <div>
-                <p>پلن سازمان شما با موفقیت به Pro ارتقا یافت!</p>
-                <p className="font-normal text-[11px] text-emerald-700 mt-0.5">در حال بارگذاری مجدد و راه‌اندازی میزکار ابری...</p>
+                <p className="font-bold text-sm">پلن سازمان با موفقیت به Pro ارتقا یافت!</p>
+                <p className="text-xs opacity-90 mt-0.5">در حال انتقال به میزکار ابری...</p>
               </div>
             </div>
           )}
 
           {downloadNote && (
-            <div className="p-3 bg-blue-50 border border-blue-200 text-blue-800 text-xs rounded-2xl flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-blue-800 dark:text-blue-300 text-xs rounded-2xl flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
               <span>{downloadNote}</span>
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Option 1: Native Apps (100% Free with SQLite) */}
-            <div className="flex flex-col justify-between p-5 rounded-2xl bg-neutral-50 border-2 border-neutral-200 hover:border-neutral-300 transition-all space-y-4">
-              <div className="space-y-2.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+            {/* Option 1: Native Apps (100% Free) */}
+            <div className="flex flex-col justify-between p-7 sm:p-8 rounded-3xl bg-slate-50/70 dark:bg-[#161922] border border-slate-200/90 dark:border-neutral-800 hover:border-slate-300 dark:hover:border-neutral-700 transition-all space-y-6">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-neutral-900 text-white flex items-center justify-center shadow-xs">
-                    <Monitor className="w-5 h-5 text-white" />
+                  <div className="w-12 h-12 rounded-2xl bg-white dark:bg-[#202534] border border-slate-200/80 dark:border-neutral-700/60 text-slate-800 dark:text-white flex items-center justify-center shadow-xs">
+                    <Monitor className="w-6 h-6 text-slate-800 dark:text-white" />
                   </div>
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800/60 px-3 py-1 rounded-full">
                     ۱۰۰٪ رایگان
                   </span>
                 </div>
-                <h3 className="text-sm font-bold text-neutral-900">
-                  دانلود نرم‌افزار تن‌خور (ویندوز / مک / اندروید)
-                </h3>
-                <p className="text-xs text-neutral-600 leading-relaxed">
-                  نسخه‌های دسکتاپ و موبایل با پایگاه داده پرسرعت <strong className="text-neutral-900">SQLite</strong> روی دستگاه شما کاملاً رایگان، نامحدود و آفلاین اجرا می‌شوند.
-                </p>
+
+                <div className="space-y-1.5">
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                    دانلود رایگان نرم‌افزار
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-neutral-400 leading-relaxed">
+                    نسخه دسکتاپ و موبایل با پایگاه داده محلی روی سیستم شما به صورت کاملاً آفلاین، نامحدود و رایگان اجرا می‌شود.
+                  </p>
+                </div>
               </div>
 
-              {/* Download Buttons for OS / Mobile */}
-              <div className="space-y-2 pt-2 border-t border-neutral-200/60">
+              {/* Download Buttons */}
+              <div className="space-y-2.5 pt-2">
                 {/* Windows Download */}
                 <a
                   href={settings.windows_setup || '#'}
@@ -201,20 +206,20 @@ export const WebFreePlanGuardModal: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   download={settings.windows_setup ? undefined : 'Tankhor-Desktop-Setup.exe'}
-                  className="w-full flex items-center justify-between px-3.5 py-2.5 bg-white hover:bg-neutral-100 border border-neutral-200 rounded-xl text-xs font-bold text-neutral-800 transition-colors cursor-pointer shadow-2xs group text-decoration-none"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-[#1d222f] hover:bg-slate-100 dark:hover:bg-[#242a3a] border border-slate-200 dark:border-neutral-700 rounded-2xl text-xs font-bold text-slate-800 dark:text-white transition-all cursor-pointer shadow-xs group"
                 >
-                  <span className="flex items-center gap-2">
-                    <Laptop className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                  <span className="flex items-center gap-2.5">
+                    <Laptop className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
                     <span>دانلود نسخه ویندوز (Windows)</span>
                   </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-mono text-neutral-400">.exe</span>
-                    <ArrowDownToLine className="w-3.5 h-3.5 text-neutral-500 group-hover:translate-y-0.5 transition-transform" />
+                  <div className="flex items-center gap-1.5 text-slate-400 dark:text-neutral-500">
+                    <span className="text-[11px] font-mono">.exe</span>
+                    <ArrowDownToLine className="w-4 h-4 group-hover:translate-y-0.5 transition-transform text-slate-600 dark:text-neutral-300" />
                   </div>
                 </a>
 
-                {/* macOS & Android Grid */}
-                <div className="grid grid-cols-2 gap-2">
+                {/* macOS & Android Row */}
+                <div className="grid grid-cols-2 gap-2.5">
                   <a
                     href={settings.macos_setup || '#'}
                     onClick={(e) => {
@@ -226,9 +231,9 @@ export const WebFreePlanGuardModal: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     download={settings.macos_setup ? undefined : 'Tankhor-Desktop.dmg'}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-white hover:bg-neutral-100 border border-neutral-200 rounded-xl text-[11px] font-bold text-neutral-700 transition-colors cursor-pointer shadow-2xs group text-decoration-none"
+                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 bg-white dark:bg-[#1d222f] hover:bg-slate-100 dark:hover:bg-[#242a3a] border border-slate-200 dark:border-neutral-700 rounded-2xl text-xs font-semibold text-slate-700 dark:text-neutral-200 transition-all cursor-pointer shadow-xs group"
                   >
-                    <Download className="w-3.5 h-3.5 text-neutral-500 group-hover:scale-110 transition-transform" />
+                    <Download className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400 group-hover:scale-110 transition-transform" />
                     <span>نسخه مک (macOS)</span>
                   </a>
 
@@ -243,42 +248,46 @@ export const WebFreePlanGuardModal: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     download={(settings.adnroid_setup || settings.android_setup) ? undefined : 'Tankhor-Android.apk'}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-[11px] font-bold text-emerald-800 transition-colors cursor-pointer shadow-2xs group text-decoration-none"
+                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 bg-white dark:bg-[#1d222f] hover:bg-slate-100 dark:hover:bg-[#242a3a] border border-slate-200 dark:border-neutral-700 rounded-2xl text-xs font-semibold text-slate-700 dark:text-neutral-200 transition-all cursor-pointer shadow-xs group"
                   >
-                    <Smartphone className="w-3.5 h-3.5 text-emerald-600 group-hover:scale-110 transition-transform" />
-                    <span>نسخه اندروید (Android)</span>
+                    <Smartphone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+                    <span>نسخه اندروید</span>
                   </a>
                 </div>
               </div>
             </div>
 
             {/* Option 2: Upgrade to Pro Plan */}
-            <div className="flex flex-col justify-between p-5 rounded-2xl bg-gradient-to-b from-blue-50/60 to-indigo-50/40 border-2 border-blue-200 hover:border-blue-300 transition-all space-y-4">
-              <div className="space-y-2.5">
+            <div className="flex flex-col justify-between p-7 sm:p-8 rounded-3xl bg-indigo-50/40 dark:bg-[#171a27] border border-indigo-200/80 dark:border-indigo-900/60 hover:border-indigo-300 dark:hover:border-indigo-800 transition-all space-y-6">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md">
-                    <Sparkles className="w-5 h-5 text-amber-300" />
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
+                    <Cloud className="w-6 h-6 text-white" />
                   </div>
-                  <span className="text-[11px] font-bold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full">
-                    پلن حرفه‌ای Pro
+                  <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800/60 px-3 py-1 rounded-full flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                    پلن ابری Pro
                   </span>
                 </div>
-                <h3 className="text-sm font-bold text-neutral-900">
-                  ارتقا سازمان به پلن Pro
-                </h3>
-                <p className="text-xs text-neutral-600 leading-relaxed">
-                  دسترسی نامحدود به پنل تحت وب، همگام‌سازی ابری زنده بین چندین شعبه، و اتصال نامحدود حساب‌های پرسنل.
-                </p>
+
+                <div className="space-y-1.5">
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                    فعال‌سازی پنل ابری و تحت وب
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-neutral-400 leading-relaxed">
+                    دسترسی آنلاین به همین پنل مرورگر، همگام‌سازی ابری زنده بین چندین دستگاه و اتصال نامحدود حساب‌های کاربران.
+                  </p>
+                </div>
               </div>
 
               {/* Upgrade Actions */}
-              <div className="pt-2 border-t border-blue-100 space-y-2">
+              <div className="space-y-2.5 pt-2">
                 <Button
                   type="button"
                   variant="primary"
                   onClick={() => setIsUpgradeModalOpen(true)}
                   icon={<CreditCard className="w-4 h-4" />}
-                  className="w-full justify-center text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md py-2.5 cursor-pointer"
+                  className="w-full justify-center text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-2xl shadow-sm cursor-pointer"
                 >
                   ارتقا به پلن Pro و پرداخت آنلاین
                 </Button>
@@ -289,7 +298,7 @@ export const WebFreePlanGuardModal: React.FC = () => {
                   onClick={handleCheckPlanOnline}
                   isLoading={isChecking}
                   icon={<RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin' : ''}`} />}
-                  className="w-full justify-center text-xs font-medium py-2 bg-white hover:bg-neutral-50 text-neutral-700 border-neutral-200 cursor-pointer"
+                  className="w-full justify-center text-xs font-medium py-2.5 rounded-2xl bg-white dark:bg-[#1d222f] hover:bg-slate-50 dark:hover:bg-[#242a3a] text-slate-700 dark:text-neutral-300 border-slate-200 dark:border-neutral-700 cursor-pointer"
                 >
                   بررسی مجدد وضعیت اشتراک
                 </Button>
@@ -297,23 +306,23 @@ export const WebFreePlanGuardModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Footer Controls: Switch Organization or Logout */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-neutral-100">
-            {organizations.length > 1 && (
+          {/* Footer Controls: Organization Switcher & Logout */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-100 dark:border-neutral-800/80">
+            {organizations.length > 1 ? (
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setShowOrgSelector(!showOrgSelector)}
-                  className="flex items-center gap-1.5 text-xs text-neutral-700 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+                  className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#1c202c] hover:bg-slate-200 dark:hover:bg-[#242a3a] px-3.5 py-2 rounded-xl transition-colors cursor-pointer"
                 >
-                  <Building2 className="w-3.5 h-3.5 text-neutral-500" />
+                  <Building2 className="w-3.5 h-3.5 text-slate-500 dark:text-neutral-400" />
                   <span>تغییر سازمان انتخابی</span>
-                  <ChevronDown className="w-3 h-3" />
+                  <ChevronDown className="w-3 h-3 opacity-70" />
                 </button>
 
                 {showOrgSelector && (
-                  <div className="absolute start-0 bottom-full mb-2 w-64 bg-white rounded-2xl shadow-xl border border-neutral-200 p-1.5 z-20 space-y-1">
-                    <p className="px-2.5 py-1 text-[11px] font-bold text-neutral-500">انتخاب سازمان:</p>
+                  <div className="absolute start-0 bottom-full mb-2 w-72 bg-white dark:bg-[#1a1d26] rounded-2xl shadow-2xl border border-slate-200 dark:border-neutral-700 p-2 z-30 space-y-1">
+                    <p className="px-3 py-1.5 text-[11px] font-bold text-slate-400 dark:text-neutral-500">انتخاب سازمان:</p>
                     {organizations.map((org) => (
                       <button
                         key={org.id}
@@ -322,10 +331,10 @@ export const WebFreePlanGuardModal: React.FC = () => {
                           selectOrganization(org.id);
                           setShowOrgSelector(false);
                         }}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs text-start transition-colors cursor-pointer ${
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-start transition-colors cursor-pointer ${
                           org.id === activeOrganization?.id
-                            ? 'bg-neutral-900 text-white font-bold'
-                            : 'hover:bg-neutral-100 text-neutral-700'
+                            ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold'
+                            : 'hover:bg-slate-100 dark:hover:bg-[#242a3a] text-slate-700 dark:text-neutral-300'
                         }`}
                       >
                         <span className="truncate">{org.name}</span>
@@ -335,14 +344,19 @@ export const WebFreePlanGuardModal: React.FC = () => {
                   </div>
                 )}
               </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-neutral-500">
+                <Layers className="w-4 h-4" />
+                <span>تن‌خور نسخه v{APP_VERSION}</span>
+              </div>
             )}
 
             <button
               type="button"
               onClick={() => logout()}
-              className="flex items-center gap-1.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-xl transition-colors cursor-pointer font-bold ms-auto"
+              className="flex items-center gap-2 text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 px-3.5 py-2 rounded-xl transition-colors cursor-pointer ms-auto"
             >
-              <LogOut className="w-3.5 h-3.5 text-red-600" />
+              <LogOut className="w-4 h-4" />
               <span>خروج از حساب کاربری</span>
             </button>
           </div>
