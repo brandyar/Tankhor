@@ -40,6 +40,7 @@ import {
   SlidersHorizontal,
   HardDrive,
   UserCheck,
+  Globe,
 } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -48,7 +49,7 @@ interface SettingsViewProps {
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ activeSubRoute = 'settings/org', onNavigate }) => {
-  const { t, isPersian } = useTranslation();
+  const { t, locale, setLocale, isPersian } = useTranslation();
   const { activeOrganization, isOwner, userRole, refreshOrganizations, permissions } = useOrganization();
   const { theme, setTheme } = useTheme();
   const {
@@ -619,6 +620,56 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ activeSubRoute = 'se
                 {theme === 'system' && (
                   <Badge variant="neutral" className="mt-3 text-[10px]">
                     {t('settings.themeActive')}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </Card>
+
+          {/* System Language & Direction Settings */}
+          <Card
+            title={t('settings.languageTitle', 'زبان و جهت چیدمان سامانه (Language & Direction)')}
+            subtitle={t('settings.languageSubtitle', 'انتخاب زبان رابط کاربری، قلم نگارش و جهت چیدمان راست‌به‌چپ (RTL) یا چپ‌به‌راست (LTR)')}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Persian Option */}
+              <div
+                onClick={() => setLocale('fa')}
+                className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center ${
+                  locale === 'fa'
+                    ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-500 ring-2 ring-emerald-500/20 shadow-md'
+                    : 'bg-white dark:bg-[#14161c] border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                }`}
+              >
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
+                  <Globe className="w-6 h-6" />
+                </div>
+                <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.langPersian', 'فارسی (Persian - FA)')}</h4>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{t('settings.langPersianDesc', 'چیدمان راست‌به‌چپ (RTL)، قلم استاندارد وزیرمتن و تقویم خورشیدی (پیش‌فرض)')}</p>
+                {locale === 'fa' && (
+                  <Badge variant="success" className="mt-3 text-[10px]">
+                    {t('settings.langActive', 'فعال')}
+                  </Badge>
+                )}
+              </div>
+
+              {/* English Option */}
+              <div
+                onClick={() => setLocale('en')}
+                className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center ${
+                  locale === 'en'
+                    ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-500 ring-2 ring-blue-500/20 shadow-md'
+                    : 'bg-white dark:bg-[#14161c] border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                }`}
+              >
+                <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
+                  <Globe className="w-6 h-6" />
+                </div>
+                <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{t('settings.langEnglish', 'English (انگلیسی - EN)')}</h4>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{t('settings.langEnglishDesc', 'چیدمان چپ‌به‌راست (LTR)، استاندارد بین‌المللی و تقویم میلادی')}</p>
+                {locale === 'en' && (
+                  <Badge variant="info" className="mt-3 text-[10px]">
+                    {t('settings.langActive', 'فعال')}
                   </Badge>
                 )}
               </div>

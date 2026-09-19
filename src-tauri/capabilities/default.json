@@ -5,6 +5,7 @@
   "windows": ["*"],
   "permissions": [
     "core:default",
+    "core:webview:allow-print",
     "opener:default",
     "sql:default",
     "sql:allow-load",

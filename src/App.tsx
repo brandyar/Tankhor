@@ -96,6 +96,7 @@ const AuthenticatedApp: React.FC = () => {
       case 'inventory/transfers':
         return permissions.canManageInventory;
       case 'products/all':
+      case 'products/create':
       case 'products/variants':
       case 'products/categories':
       case 'products/collections':
@@ -108,6 +109,7 @@ const AuthenticatedApp: React.FC = () => {
         return permissions.canViewProducts;
       case 'purchasing/suppliers':
       case 'purchasing/orders':
+      case 'purchasing/orders/create':
         return permissions.canViewPurchasing;
       case 'accounting':
       case 'accounting/dashboard':
@@ -145,6 +147,8 @@ const AuthenticatedApp: React.FC = () => {
         return <DashboardView onNavigate={setCurrentRoute} />;
       case 'products/all':
         return <ProductsView />;
+      case 'products/create':
+        return <ProductsView initialCreateMode={true} />;
       case 'products/variants':
         return <VariantsView />;
       case 'products/categories':
@@ -209,6 +213,8 @@ const AuthenticatedApp: React.FC = () => {
         return <SuppliersView />;
       case 'purchasing/orders':
         return <PurchaseOrdersView />;
+      case 'purchasing/orders/create':
+        return <PurchaseOrdersView initialCreateMode={true} />;
       case 'accounting':
       case 'accounting/dashboard':
       case 'accounting/expenses':

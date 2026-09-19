@@ -1,3 +1,5 @@
+import { isTauriEnvironment } from '../storage';
+
 export interface PrintOptions {
   title?: string;
   extraStyles?: string;
@@ -42,16 +44,15 @@ export function printHtml(htmlContent: string, options?: PrintOptions): void {
     styleEl.innerHTML = `
       @media screen {
         #tankhor-active-print-portal {
-          display: none !important;
-          visibility: hidden !important;
-          height: 0 !important;
-          width: 0 !important;
-          overflow: hidden !important;
-          position: absolute !important;
-          left: -99999px !important;
-          top: -99999px !important;
+          position: fixed !important;
+          left: -100000px !important;
+          top: 0 !important;
+          width: 800px !important;
+          height: auto !important;
+          overflow: visible !important;
           opacity: 0 !important;
           pointer-events: none !important;
+          z-index: -99999 !important;
         }
       }
 
@@ -206,16 +207,33 @@ export function printHtml(htmlContent: string, options?: PrintOptions): void {
     // Fallback cleanup after 2 minutes
     setTimeout(cleanup, 120000);
 
-    // 5. Trigger window.print() after a brief tick to ensure DOM & SVG elements are fully computed
-    setTimeout(() => {
-      try {
-        window.focus();
-        window.print();
-      } catch (printErr) {
-        console.error('[PrintHelper] window.print() failed:', printErr);
-        cleanup();
+    // 5. Trigger print: In Desktop/Tauri environment, call native print_window.
+    // In Web environment or as fallback, call window.print().
+    const executePrint = async () => {
+      let tauriNativePrinted = false;
+
+      if (isTauriEnvironment()) {
+        try {
+          const { invoke } = await import('@tauri-apps/api/core');
+          await invoke('print_window');
+          tauriNativePrinted = true;
+        } catch (tauriErr) {
+          console.warn('[PrintHelper] Tauri native print_window failed, falling back to window.print():', tauriErr);
+        }
       }
-    }, 60);
+
+      if (!tauriNativePrinted) {
+        try {
+          window.focus();
+          window.print();
+        } catch (printErr) {
+          console.error('[PrintHelper] window.print() failed:', printErr);
+          cleanup();
+        }
+      }
+    };
+
+    setTimeout(executePrint, 150);
 
   } catch (err) {
     console.error('[PrintHelper] Error initiating print:', err);

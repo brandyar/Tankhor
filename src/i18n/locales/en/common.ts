@@ -113,4 +113,13 @@ export const commonEn = {
   returnToDashboard: 'Return to Dashboard',
   checkingSession: 'Checking user session...',
   loadingData: 'Loading data...',
+  quickSearch: 'Quick Search Pages...',
+  quickSearchShortcut: 'Ctrl K',
+  quickSearchTitle: 'Quick Page Search & Jump',
+  quickSearchPlaceholder: 'Type a page name or action to jump...',
+  quickSearchNoResults: 'No pages or actions matched your search',
+  quickSearchNavigateHint: 'Select and jump to page',
+  quickSearchCloseHint: 'Close',
+  quickSearchRecentPages: 'Frequent & Key Pages',
+  quickSearchQuickActions: 'Quick Actions',
 };

@@ -113,4 +113,13 @@ export const commonFa = {
   returnToDashboard: 'بازگشت به پیشخوان اصلی',
   checkingSession: 'در حال بررسی نشست کاربری...',
   loadingData: 'در حال دریافت داده‌ها...',
+  quickSearch: 'جستجوی سریع صفحات...',
+  quickSearchShortcut: 'Ctrl K',
+  quickSearchTitle: 'جستجوی سریع و دسترسی به صفحات',
+  quickSearchPlaceholder: 'عنوان صفحه یا عملیات مورد نظر را جستجو کنید...',
+  quickSearchNoResults: 'هیچ صفحه یا عملیاتی با این عبارت یافت نشد',
+  quickSearchNavigateHint: 'انتخاب و ورود به صفحه',
+  quickSearchCloseHint: 'بستن',
+  quickSearchRecentPages: 'صفحات و بخش‌های پرکاربرد',
+  quickSearchQuickActions: 'عملیات سریع',
 };

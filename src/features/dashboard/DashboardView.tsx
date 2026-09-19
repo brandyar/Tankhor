@@ -10,7 +10,8 @@ import { formatCurrency, formatDate, toPersianDigits } from '../../utils/formatt
 import {
   ShoppingBag, Shirt, DollarSign, AlertTriangle,
   Plus, ArrowUpRight, ArrowDownLeft, RefreshCw, CheckCircle2,
-  Calendar, BarChart3, TrendingUp, Sparkles, HardDriveDownload, HardDriveUpload
+  Calendar, BarChart3, TrendingUp, Sparkles, HardDriveDownload, HardDriveUpload,
+  ShoppingCart, PackagePlus, FileText, Truck, ArrowLeft, ArrowRight
 } from 'lucide-react';
 import { BackupManager } from '../../storage/backupManager';
 import {
@@ -216,62 +217,140 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
   return (
     <div className="space-y-6">
-      {/* 1. Vercel Ambient Hero Banner */}
-      <div className="relative overflow-hidden bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-800 rounded-xl p-6 sm:p-8 shadow-vercel-sm bg-mesh-gradient transition-colors">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2 max-w-2xl">
-            <div className="flex items-center gap-3">
-              <img
-                src="/logo-dark.png"
-                alt="تن‌خور"
-                className="h-7 w-auto object-contain shrink-0 dark:hidden"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
-              <img
-                src="/logo-light.png"
-                alt="تن‌خور"
-                className="h-7 w-auto object-contain shrink-0 hidden dark:block"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
-              <span className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-neutral-900 text-white font-medium">
-                TANKHOR PLATFORM
-              </span>
-              <span className="font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
-                {activeOrganization?.name || t('dashboard.defaultOrgName')}
-              </span>
+      {/* 1. Top Metric Ribbon (KPIs) - 4 report blocks moved to top */}
+      <DashboardMetricsRibbon
+        totalProducts={products.length}
+        totalVariants={variants.length}
+        totalStockCount={totalStockCount}
+        totalValue={totalValue}
+        lowStockCount={lowStockCount}
+        outOfStockCount={outOfStockCount}
+        totalOrdersCount={orders.length}
+        totalSalesRevenue={totalSalesRevenue}
+        averageOrderValue={averageOrderValue}
+        canViewFinancials={permissions.canViewFinancials}
+        activeOrganization={activeOrganization}
+        isPersian={isPersian}
+        onNavigate={onNavigate}
+      />
+
+      {/* 2. Four Operational Quick Access Blocks */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        {/* Quick Action 1: Create Order (ثبت سفارش) */}
+        <button
+          type="button"
+          onClick={() => onNavigate('orders/create')}
+          disabled={!permissions.canCreateOrders}
+          className={`group relative overflow-hidden text-start p-4 sm:p-5 rounded-xl border bg-white dark:bg-[#13151a] transition-all shadow-xs ${
+            permissions.canCreateOrders
+              ? 'hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md cursor-pointer border-neutral-200/80 dark:border-neutral-800'
+              : 'opacity-60 cursor-not-allowed border-neutral-200/60 dark:border-neutral-800/60'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/60 group-hover:scale-105 group-hover:bg-blue-600 group-hover:text-white dark:group-hover:bg-blue-600 dark:group-hover:text-white transition-all">
+              <ShoppingCart className="w-6 h-6 transition-colors" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight">
-              {t('dashboard.heroTitle')}
-            </h1>
-            <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
-              {t('dashboard.heroSubtitle')}
+            <span className="p-1.5 rounded-lg text-neutral-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/40 transition-colors">
+              {isPersian ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            </span>
+          </div>
+          <div className="mt-4">
+            <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              {t('dashboard.actionCreateOrder')}
+            </h3>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-1 leading-relaxed">
+              {t('dashboard.actionCreateOrderDesc')}
             </p>
           </div>
-          <div className="flex items-center gap-2.5 shrink-0">
-            {permissions.canCreateOrders && (
-              <Button
-                variant="primary"
-                onClick={() => onNavigate('orders/create')}
-                icon={<Plus className="w-4 h-4" />}
-              >
-                {t('dashboard.createOrder')}
-              </Button>
-            )}
-            {permissions.canEditProducts && (
-              <Button
-                variant="secondary"
-                onClick={() => onNavigate('products/all')}
-                icon={<Shirt className="w-4 h-4" />}
-              >
-                {t('dashboard.addProduct')}
-              </Button>
-            )}
+        </button>
+
+        {/* Quick Action 2: Create Product (ایجاد محصول) */}
+        <button
+          type="button"
+          onClick={() => onNavigate('products/create')}
+          disabled={!permissions.canEditProducts}
+          className={`group relative overflow-hidden text-start p-4 sm:p-5 rounded-xl border bg-white dark:bg-[#13151a] transition-all shadow-xs ${
+            permissions.canEditProducts
+              ? 'hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-md cursor-pointer border-neutral-200/80 dark:border-neutral-800'
+              : 'opacity-60 cursor-not-allowed border-neutral-200/60 dark:border-neutral-800/60'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/60 group-hover:scale-105 group-hover:bg-emerald-600 group-hover:text-white dark:group-hover:bg-emerald-600 dark:group-hover:text-white transition-all">
+              <PackagePlus className="w-6 h-6 transition-colors" />
+            </div>
+            <span className="p-1.5 rounded-lg text-neutral-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/40 transition-colors">
+              {isPersian ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            </span>
           </div>
-        </div>
+          <div className="mt-4">
+            <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+              {t('dashboard.actionCreateProduct')}
+            </h3>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-1 leading-relaxed">
+              {t('dashboard.actionCreateProductDesc')}
+            </p>
+          </div>
+        </button>
+
+        {/* Quick Action 3: Orders List (لیست سفارشات) */}
+        <button
+          type="button"
+          onClick={() => onNavigate('orders/all')}
+          disabled={!permissions.canViewOrders}
+          className={`group relative overflow-hidden text-start p-4 sm:p-5 rounded-xl border bg-white dark:bg-[#13151a] transition-all shadow-xs ${
+            permissions.canViewOrders
+              ? 'hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-md cursor-pointer border-neutral-200/80 dark:border-neutral-800'
+              : 'opacity-60 cursor-not-allowed border-neutral-200/60 dark:border-neutral-800/60'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-900/60 group-hover:scale-105 group-hover:bg-purple-600 group-hover:text-white dark:group-hover:bg-purple-600 dark:group-hover:text-white transition-all">
+              <FileText className="w-6 h-6 transition-colors" />
+            </div>
+            <span className="p-1.5 rounded-lg text-neutral-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 group-hover:bg-purple-50 dark:group-hover:bg-purple-950/40 transition-colors">
+              {isPersian ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            </span>
+          </div>
+          <div className="mt-4">
+            <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 tracking-tight group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+              {t('dashboard.actionOrdersList')}
+            </h3>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-1 leading-relaxed">
+              {t('dashboard.actionOrdersListDesc')}
+            </p>
+          </div>
+        </button>
+
+        {/* Quick Action 4: Purchase Order (ثبت سفارش خرید) */}
+        <button
+          type="button"
+          onClick={() => onNavigate('purchasing/orders/create')}
+          disabled={!permissions.canViewPurchasing}
+          className={`group relative overflow-hidden text-start p-4 sm:p-5 rounded-xl border bg-white dark:bg-[#13151a] transition-all shadow-xs ${
+            permissions.canViewPurchasing
+              ? 'hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-md cursor-pointer border-neutral-200/80 dark:border-neutral-800'
+              : 'opacity-60 cursor-not-allowed border-neutral-200/60 dark:border-neutral-800/60'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/60 group-hover:scale-105 group-hover:bg-amber-600 group-hover:text-white dark:group-hover:bg-amber-600 dark:group-hover:text-white transition-all">
+              <Truck className="w-6 h-6 transition-colors" />
+            </div>
+            <span className="p-1.5 rounded-lg text-neutral-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 group-hover:bg-amber-50 dark:group-hover:bg-amber-950/40 transition-colors">
+              {isPersian ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            </span>
+          </div>
+          <div className="mt-4">
+            <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 tracking-tight group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+              {t('dashboard.actionCreatePurchaseOrder')}
+            </h3>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-1 leading-relaxed">
+              {t('dashboard.actionCreatePurchaseOrderDesc')}
+            </p>
+          </div>
+        </button>
       </div>
 
       {/* Quick Start / Demo Data Banner if Database is Empty */}
@@ -326,22 +405,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
       )}
 
-      {/* 2. Top Metric Ribbon (KPIs) */}
-      <DashboardMetricsRibbon
-        totalProducts={products.length}
-        totalVariants={variants.length}
-        totalStockCount={totalStockCount}
-        totalValue={totalValue}
-        lowStockCount={lowStockCount}
-        outOfStockCount={outOfStockCount}
-        totalOrdersCount={orders.length}
-        totalSalesRevenue={totalSalesRevenue}
-        averageOrderValue={averageOrderValue}
-        canViewFinancials={permissions.canViewFinancials}
-        activeOrganization={activeOrganization}
-        isPersian={isPersian}
-      />
-
       {/* 3. Recharts Analytics Suite (Trends, Inflow/Outflow, Donut Distribution, Warehouse Allocation) */}
       <DashboardAnalyticsCharts
         timeRange={timeRange}
@@ -368,7 +431,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         isPersian={isPersian}
       />
 
-      {/* 5. Bottom Row: Recent Movements & Quick Action Sidebar */}
+      {/* 5. Bottom Row: Recent Movements & System Status */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Movements Table */}
         <div className="lg:col-span-2 space-y-4">
@@ -395,53 +458,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </Card>
         </div>
 
-        {/* Shortcuts & Status Sidebar */}
+        {/* System Status Sidebar */}
         <div className="space-y-6">
-          <Card title={t('dashboard.quickActions')}>
-            <div className="space-y-2">
-              {permissions.canCreateOrders && (
-                <Button
-                  variant="secondary"
-                  className="w-full justify-start text-xs font-medium"
-                  onClick={() => onNavigate('orders/create')}
-                  icon={<Plus className="w-4 h-4 text-neutral-700 dark:text-neutral-300" />}
-                >
-                  {t('dashboard.newOrder')}
-                </Button>
-              )}
-              {permissions.canEditProducts && (
-                <Button
-                  variant="secondary"
-                  className="w-full justify-start text-xs font-medium"
-                  onClick={() => onNavigate('products/all')}
-                  icon={<Shirt className="w-4 h-4 text-neutral-700 dark:text-neutral-300" />}
-                >
-                  {t('dashboard.addProduct')}
-                </Button>
-              )}
-              {permissions.canManageInventory && (
-                <Button
-                  variant="secondary"
-                  className="w-full justify-start text-xs font-medium"
-                  onClick={() => onNavigate('inventory/movements')}
-                  icon={<RefreshCw className="w-4 h-4 text-neutral-700 dark:text-neutral-300" />}
-                >
-                  {t('dashboard.newMovement')}
-                </Button>
-              )}
-              {permissions.canViewProducts && (
-                <Button
-                  variant="secondary"
-                  className="w-full justify-start text-xs font-medium"
-                  onClick={() => onNavigate('products/size-guides')}
-                  icon={<BarChart3 className="w-4 h-4 text-neutral-700 dark:text-neutral-300" />}
-                >
-                  {t('dashboard.sizeGuideTemplate')}
-                </Button>
-              )}
-            </div>
-          </Card>
-
           <Card title={t('dashboard.systemStatus')}>
             <div className="space-y-3 text-xs">
               <div className="flex items-start gap-2.5 p-3 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/50 text-emerald-900 dark:text-emerald-200">

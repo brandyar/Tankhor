@@ -36,7 +36,7 @@ export const DashboardStockAlerts: React.FC<DashboardStockAlertsProps> = ({
   const { t, isRtl } = useTranslation();
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div id="dashboard-stock-alerts" className="grid grid-cols-1 lg:grid-cols-2 gap-6 scroll-mt-6">
       {/* 1. Top High Demand / Best Performing Models */}
       <Card
         title={t('dashboard.topSellingModels')}

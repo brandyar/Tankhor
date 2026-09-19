@@ -18,7 +18,11 @@ import { confirmAction } from '../../utils/confirm';
 import { Plus, Search, Trash2, Edit, Layers, Filter, X, RefreshCw, FileSpreadsheet, Download, Upload } from 'lucide-react';
 import { exportProductsToExcel, parseProductsFromExcel } from '../../utils/excelUtils';
 
-export const ProductsView: React.FC = () => {
+interface ProductsViewProps {
+  initialCreateMode?: boolean;
+}
+
+export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = false }) => {
   const { t, locale } = useTranslation();
   const { activeOrganization, permissions } = useOrganization();
 
@@ -42,7 +46,7 @@ export const ProductsView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // View mode: 'list' | 'edit'
-  const [viewMode, setViewMode] = useState<'list' | 'edit'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'edit'>(initialCreateMode ? 'edit' : 'list');
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
 
   // Product Variants Modal

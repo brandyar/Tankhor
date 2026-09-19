@@ -35,7 +35,11 @@ import {
 } from 'lucide-react';
 import { useModuleAccess } from '../../hooks/useModuleAccess';
 
-export const PurchaseOrdersView: React.FC = () => {
+interface PurchaseOrdersViewProps {
+  initialCreateMode?: boolean;
+}
+
+export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialCreateMode = false }) => {
   const { t, locale } = useTranslation();
   const { activeOrganization } = useOrganization();
   const { hasAccess } = useModuleAccess();
@@ -51,7 +55,7 @@ export const PurchaseOrdersView: React.FC = () => {
   const [search, setSearch] = useState('');
 
   // Create Modal
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(initialCreateMode);
   const [supplierId, setSupplierId] = useState<number>(0);
   const [warehouseId, setWarehouseId] = useState<number>(0);
   const [notes, setNotes] = useState('');

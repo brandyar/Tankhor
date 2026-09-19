@@ -5,6 +5,7 @@ import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
 import { printElement } from '../../../utils/print';
+import { printOrderInvoice, OrderItemPrintData } from '../../../utils/orderInvoicePrint';
 import { CheckCircle2, FileText, Receipt, Printer } from 'lucide-react';
 
 export interface SavedOrderData {
@@ -43,9 +44,34 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
   if (!lastSavedOrder) return null;
 
   const triggerPrint = () => {
-    printElement('printable-create-order-invoice', {
-      title: `${t('orders.printInvoice')}_${lastSavedOrder?.order.order_number || 'draft'}`,
-    });
+    if (lastSavedOrder) {
+      const itemsData: OrderItemPrintData[] = lastSavedOrder.items.map((it, idx) => ({
+        id: idx + 1,
+        productTitle: it.productTitle,
+        sku: it.variant.sku || '',
+        colorName: it.variant.color_name,
+        sizeName: it.variant.size_name,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        discount: it.discount,
+        total: it.quantity * it.unitPrice - (it.discount || 0),
+      }));
+      printOrderInvoice(
+        {
+          ...lastSavedOrder.order,
+          customer_name: lastSavedOrder.customerName,
+          warehouse_name: lastSavedOrder.warehouseName,
+        } as any,
+        itemsData,
+        { name: organizationName || 'تن‌خور (TANKHOR)' } as any,
+        isPersian,
+        receiptType
+      );
+    } else {
+      printElement('printable-create-order-invoice', {
+        title: `${t('orders.printInvoice')}_draft`,
+      });
+    }
   };
 
   return (
