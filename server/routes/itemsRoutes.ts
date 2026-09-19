@@ -7,8 +7,12 @@ import {
   sanitizePayloadForDirectus,
 } from '../permissions';
 import { syncAndPersistFinancialAccountBalances } from '../accountingSync';
+import { DEFAULT_SYSTEM_MODULES } from '../../src/utils/license';
 
 export const itemsRouter = Router();
+
+// In-memory cache for tenant items queries to ride through momentary Directus 503 / Under pressure errors
+const tenantItemsCache = new Map<string, { data: any; timestamp: number }>();
 
 // Generic List items with injected Tenant Scope
 itemsRouter.get(
@@ -17,6 +21,7 @@ itemsRouter.get(
   async (req: AuthenticatedRequest, res: Response) => {
     const { collection } = req.params;
     const { userId, organizationId } = req.user!;
+    const orgIdNum = Number(organizationId);
 
     try {
       if (collection === 'project_settings') {
@@ -27,9 +32,12 @@ itemsRouter.get(
       }
 
       if (collection === 'system_modules') {
-        const items = await DirectusAdminClient.getItems('system_modules', req.query).catch(
+        let items = await DirectusAdminClient.getItems('system_modules', req.query).catch(
           () => []
         );
+        if (!items || items.length === 0) {
+          items = DEFAULT_SYSTEM_MODULES;
+        }
         return res.json({ data: items });
       }
 
@@ -38,7 +46,6 @@ itemsRouter.get(
         return res.json({ data: organizations });
       }
 
-      const orgIdNum = Number(organizationId);
       if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
         return res.status(403).json({ error: 'دسترسی غیرمجاز: سازمان فعال یافت نشد.' });
       }
@@ -216,9 +223,39 @@ itemsRouter.get(
         return res.json({ data: mapped });
       }
 
+      const cacheKey = `${collection}:${orgIdNum}:${JSON.stringify(req.query || {})}`;
+      if (Array.isArray(items)) {
+        tenantItemsCache.set(cacheKey, { data: items, timestamp: Date.now() });
+      }
+
       return res.json({ data: items });
     } catch (error: any) {
       console.error(`[API Proxy] Error fetching ${collection}:`, error.message);
+
+      const cacheKey = `${collection}:${orgIdNum}:${JSON.stringify(req.query || {})}`;
+      const cached = tenantItemsCache.get(cacheKey);
+      if (cached && Array.isArray(cached.data)) {
+        console.warn(`[API Proxy] Directus 503/error on ${collection}, serving ${cached.data.length} cached items.`);
+        return res.json({ data: cached.data });
+      }
+
+      // Resilient fallback for non-destructive read operations to prevent UI crash
+      const resilientCollections = [
+        'sizes',
+        'organization_modules',
+        'colors',
+        'categories',
+        'brands',
+        'collections',
+        'seasons',
+        'tags',
+        'size_groups',
+      ];
+      if (resilientCollections.includes(collection)) {
+        console.warn(`[API Proxy] Safe empty fallback for ${collection} due to upstream pressure: ${error.message}`);
+        return res.json({ data: [] });
+      }
+
       return res.status(500).json({ error: error.message || `Failed to fetch ${collection}` });
     }
   }

@@ -540,7 +540,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
           <div className="p-4 bg-slate-50 dark:bg-[#181a20] border border-slate-200/80 dark:border-neutral-800 rounded-xl space-y-3">
             <h4 className="text-xs font-bold text-slate-900 dark:text-neutral-100">{t('purchasing.selectItemsBoxTitle')}</h4>
             
-            <div className="flex flex-col sm:flex-row items-end gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2.5 sm:gap-2">
               <div className="flex-1 w-full">
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 mb-1">{t('purchasing.selectVariantLabel')}</label>
                 <select
@@ -567,23 +567,25 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
                 </select>
               </div>
 
-              <div className="w-28 sm:w-24">
-                <Input
-                  label={t('purchasing.quantityLabel')}
-                  type="number"
-                  min={1}
-                  value={itemQty}
-                  onChange={(e) => setItemQty(Number(e.target.value))}
-                />
-              </div>
+              <div className="grid grid-cols-2 sm:flex sm:items-end gap-2 w-full sm:w-auto">
+                <div className="w-full sm:w-24">
+                  <Input
+                    label={t('purchasing.quantityLabel')}
+                    type="number"
+                    min={1}
+                    value={itemQty}
+                    onChange={(e) => setItemQty(Number(e.target.value))}
+                  />
+                </div>
 
-              <div className="w-36 sm:w-32">
-                <Input
-                  label={t('purchasing.unitCostLabel')}
-                  type="number"
-                  value={itemCost}
-                  onChange={(e) => setItemCost(Number(e.target.value))}
-                />
+                <div className="w-full sm:w-32">
+                  <Input
+                    label={t('purchasing.unitCostLabel')}
+                    type="number"
+                    value={itemCost}
+                    onChange={(e) => setItemCost(Number(e.target.value))}
+                  />
+                </div>
               </div>
 
               <Button
@@ -591,7 +593,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
                 variant="secondary"
                 onClick={handleAddItem}
                 icon={<Plus className="w-4 h-4" />}
-                className="whitespace-nowrap"
+                className="w-full sm:w-auto whitespace-nowrap justify-center"
               >
                 {t('purchasing.addBtn')}
               </Button>

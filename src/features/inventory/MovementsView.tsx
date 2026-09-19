@@ -179,7 +179,7 @@ export const MovementsView: React.FC = () => {
       />
 
       <Card>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4">
           <div className="w-full sm:w-72">
             <Input
               placeholder={t('inventory.searchMovementsPlaceholder')}
@@ -189,11 +189,11 @@ export const MovementsView: React.FC = () => {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
             <select
               value={selectedWarehouseFilter}
               onChange={(e) => setSelectedWarehouseFilter(e.target.value ? Number(e.target.value) : '')}
-              className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-100 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              className="flex-1 sm:flex-initial bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-100 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
               <option value="">{t('inventory.allWarehousesOption')}</option>
               {warehouses.map((w, wIdx) => (
@@ -206,7 +206,7 @@ export const MovementsView: React.FC = () => {
             <select
               value={selectedTypeFilter}
               onChange={(e) => setSelectedTypeFilter(e.target.value as MovementType | '')}
-              className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-100 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              className="flex-1 sm:flex-initial bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-100 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
               <option value="">{t('inventory.allMovementTypes')}</option>
               <option value="purchase">{t('inventory.movementTypePurchase')}</option>

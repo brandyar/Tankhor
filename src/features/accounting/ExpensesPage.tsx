@@ -278,7 +278,7 @@ export const ExpensesPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-neutral-900 p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 bg-white dark:bg-neutral-900 p-3.5 sm:p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
         <div>
           <h2 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
             <Receipt className="w-5 h-5 text-rose-500" />
@@ -289,22 +289,23 @@ export const ExpensesPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsCategoryModalOpen(true)}
-            icon={<Layers className="w-4 h-4" />}
+            icon={<Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
           >
-            {t('accounting.expenseCategories')}
+            <span className="hidden sm:inline">{t('accounting.expenseCategories')}</span>
+            <span className="sm:hidden">سرفصل‌ها</span>
           </Button>
           <Button
             variant="primary"
             size="sm"
             onClick={handleOpenNewExpense}
-            icon={<Plus className="w-4 h-4" />}
+            icon={<Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
           >
-            {t('accounting.newExpense')}
+            <span>{t('accounting.newExpense')}</span>
           </Button>
         </div>
       </div>

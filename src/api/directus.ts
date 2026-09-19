@@ -171,6 +171,24 @@ class DirectusClient {
       if (!response.ok) {
         const errorMsg = data.errors?.[0]?.message || data.error || data.message || `Request failed with status ${response.status}`;
         
+        // Handle transient 503 Under Pressure or 429 Rate Limit from server
+        const isPressureOrRateLimit =
+          response.status === 503 ||
+          response.status === 429 ||
+          errorMsg.toLowerCase().includes('under pressure') ||
+          errorMsg.toLowerCase().includes('service_unavailable');
+
+        const retryCount = (options as any)._retryCount || 0;
+        if (isPressureOrRateLimit && retryCount < 2) {
+          const delayMs = (retryCount + 1) * 600;
+          console.warn(`[API Client] Server pressure on ${cleanEndpoint}, retrying in ${delayMs}ms (attempt ${retryCount + 1}/2)...`);
+          await new Promise((res) => setTimeout(res, delayMs));
+          return this.request<T>(endpoint, {
+            ...options,
+            _retryCount: retryCount + 1,
+          } as any);
+        }
+
         const isExpiredOrUnauthorized =
           response.status === 401 ||
           errorMsg.toLowerCase().includes('token expired') ||
@@ -295,6 +313,30 @@ class DirectusClient {
       }
     }
     return meData;
+  }
+
+  public async updateMe(data: {
+    first_name?: string;
+    last_name?: string;
+    title?: string;
+    avatar?: string;
+    password?: string;
+    current_password?: string;
+  }): Promise<any> {
+    try {
+      const res = await this.request('/auth/me', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      return res.user || res;
+    } catch (err: any) {
+      // Fallback directly to Directus users endpoint if BFF /auth/me throws
+      const res = await this.request('/users/me', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      return res.data || res;
+    }
   }
 
   public async getOrganizations(): Promise<any[]> {

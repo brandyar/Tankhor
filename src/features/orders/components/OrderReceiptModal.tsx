@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from '../../../i18n';
+import { useOrganization } from '../../../context/OrganizationContext';
 import { Order, OrderItem, ProductVariant } from '../../../types';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
@@ -39,6 +40,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
   organizationName,
 }) => {
   const { t, locale } = useTranslation();
+  const { activeOrganization } = useOrganization();
   const isPersian = locale === 'fa';
 
   if (!lastSavedOrder) return null;
@@ -63,7 +65,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
           warehouse_name: lastSavedOrder.warehouseName,
         } as any,
         itemsData,
-        { name: organizationName || 'تن‌خور (TANKHOR)' } as any,
+        activeOrganization || ({ name: organizationName || 'تن‌خور (TANKHOR)' } as any),
         isPersian,
         receiptType
       );

@@ -98,48 +98,143 @@ export class DirectusAdminClient {
     return headers;
   }
 
-  public static async request<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  // Internal concurrency limiter to prevent overwhelming Directus Fastify under-pressure detector
+  private static activeRequests = 0;
+  private static requestQueue: Array<() => void> = [];
+  private static readonly MAX_CONCURRENCY = 3;
+
+  private static async acquireSlot(): Promise<void> {
+    if (this.activeRequests < this.MAX_CONCURRENCY) {
+      this.activeRequests++;
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      this.requestQueue.push(resolve);
+    });
+    this.activeRequests++;
+  }
+
+  private static releaseSlot(): void {
+    this.activeRequests = Math.max(0, this.activeRequests - 1);
+    const next = this.requestQueue.shift();
+    if (next) {
+      next();
+    }
+  }
+
+  // Semi-static cache for endpoints like /items/system_modules and /items/project_settings
+  private static requestCache = new Map<string, { data: any; expiresAt: number }>();
+
+  public static async request<T = any>(endpoint: string, options: RequestInit = {}, maxRetries = 3): Promise<T> {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${this.getBaseUrl()}${cleanEndpoint}`;
+
+    // Check cache for GET requests on semi-static collections
+    const isGet = !options.method || options.method.toUpperCase() === 'GET';
+    const isCacheable = isGet && (cleanEndpoint.includes('/items/system_modules') || cleanEndpoint.includes('/items/project_settings'));
+    if (isCacheable) {
+      const cached = this.requestCache.get(cleanEndpoint);
+      if (cached && cached.expiresAt > Date.now()) {
+        return cached.data as T;
+      }
+    }
 
     // For public auth endpoints like /auth/login, do not attach admin token
     const isPublicAuth = cleanEndpoint.startsWith('/auth/login') || cleanEndpoint.startsWith('/auth/refresh');
     const baseHeaders = isPublicAuth ? { 'Content-Type': 'application/json' } : this.getHeaders();
 
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          ...baseHeaders,
-          ...(options.headers || {}),
-        },
-      });
+    let attempt = 0;
+    while (attempt <= maxRetries) {
+      attempt++;
+      await this.acquireSlot();
 
-      if (response.status === 204) {
-        return {} as T;
-      }
+      try {
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            ...baseHeaders,
+            ...(options.headers || {}),
+          },
+        });
 
-      const text = await response.text();
-      let data: any = {};
-      if (text && text.trim()) {
-        try {
-          data = JSON.parse(text);
-        } catch {
-          data = { message: text };
+        if (response.status === 204) {
+          return {} as T;
         }
-      }
 
-      if (!response.ok) {
-        const errorMsg = data.errors?.[0]?.message || data.message || `Directus request failed with status ${response.status}`;
-        console.error(`[DirectusAdminClient] Directus error on ${endpoint} (${response.status}):`, JSON.stringify(data));
-        throw new Error(errorMsg);
-      }
+        const text = await response.text();
+        let data: any = {};
+        if (text && text.trim()) {
+          try {
+            data = JSON.parse(text);
+          } catch {
+            data = { message: text };
+          }
+        }
 
-      return data.data !== undefined ? data.data : data;
-    } catch (error: any) {
-      console.error(`[DirectusAdminClient] Error on ${endpoint}:`, error.message);
-      throw error;
+        // Check for transient server pressure / rate limit errors
+        const isPressureOrRateLimit =
+          response.status === 503 ||
+          response.status === 429 ||
+          response.status === 502 ||
+          response.status === 504 ||
+          (data.errors && data.errors.some((e: any) =>
+            e.message?.toLowerCase().includes('under pressure') ||
+            e.extensions?.reason?.toLowerCase().includes('under pressure') ||
+            e.extensions?.code === 'SERVICE_UNAVAILABLE'
+          ));
+
+        if (isPressureOrRateLimit && attempt <= maxRetries) {
+          const delayMs = attempt * 350 + Math.floor(Math.random() * 200);
+          console.warn(
+            `[DirectusAdminClient] Directus 503/Pressure on ${cleanEndpoint}, retry attempt ${attempt}/${maxRetries} in ${delayMs}ms...`
+          );
+          await new Promise((res) => setTimeout(res, delayMs));
+          continue; // Retry
+        }
+
+        if (!response.ok) {
+          const errorMsg = data.errors?.[0]?.message || data.message || `Directus request failed with status ${response.status}`;
+          // Only log error if not retrying
+          if (attempt > maxRetries) {
+            console.error(`[DirectusAdminClient] Directus error on ${endpoint} (${response.status}):`, JSON.stringify(data));
+          }
+          throw new Error(errorMsg);
+        }
+
+        const result = (data.data !== undefined ? data.data : data) as T;
+
+        if (isCacheable) {
+          this.requestCache.set(cleanEndpoint, {
+            data: result,
+            expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes TTL
+          });
+        }
+
+        return result;
+      } catch (error: any) {
+        const isNetworkOrTimeout =
+          error.message?.includes('fetch failed') ||
+          error.message?.includes('ECONNRESET') ||
+          error.message?.includes('ETIMEDOUT') ||
+          error.message?.toLowerCase().includes('under pressure');
+
+        if (isNetworkOrTimeout && attempt <= maxRetries) {
+          const delayMs = attempt * 400 + Math.floor(Math.random() * 200);
+          console.warn(`[DirectusAdminClient] Network glitch on ${cleanEndpoint}: ${error.message}. Retrying in ${delayMs}ms...`);
+          await new Promise((res) => setTimeout(res, delayMs));
+          continue;
+        }
+
+        if (attempt > maxRetries) {
+          console.error(`[DirectusAdminClient] Error on ${endpoint} after ${maxRetries} retries:`, error.message);
+          throw error;
+        }
+      } finally {
+        this.releaseSlot();
+      }
     }
+
+    throw new Error(`[DirectusAdminClient] Request to ${endpoint} failed after ${maxRetries} retries.`);
   }
 
   public static getCollectionEndpoint(collection: string, suffix = ''): string {

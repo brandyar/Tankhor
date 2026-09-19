@@ -151,3 +151,17 @@ html.dark body {
   }
 }
 
+/* POS Fullscreen Scroll Lock */
+body.pos-fullscreen-active,
+html.pos-fullscreen-active {
+  overflow: hidden !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overscroll-behavior: none !important;
+}
+
+/* Ensure all modals always render above Fullscreen POS */
+.tankhor-modal-backdrop {
+  z-index: 100000 !important;
+}
+

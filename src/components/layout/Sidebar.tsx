@@ -47,7 +47,9 @@ import {
   Globe,
   Clock,
   LogOut,
+  User as UserIcon,
 } from 'lucide-react';
+import { UserProfileModal } from '../modals/UserProfileModal';
 
 interface SidebarProps {
   currentRoute: string;
@@ -120,6 +122,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // State for outward flyout popover in collapsed mode
   const [activeFlyout, setActiveFlyout] = useState<ActiveFlyout | null>(null);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // Lock body scroll when mobile drawer is open to prevent background scrolling
+  useEffect(() => {
+    if (isMobileOpen) {
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [isMobileOpen]);
 
   const toggleSection = (key: string) => {
     setOpenSections((prev) => ({
@@ -763,17 +777,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <>
               {/* User Profile Info Card */}
               {user && (
-                <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/5">
-                  <div className="w-7 h-7 rounded-lg bg-neutral-800 border border-neutral-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                    {user?.first_name ? user.first_name[0] : 'T'}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-neutral-200 truncate leading-tight">
-                      {user?.first_name} {user?.last_name}
-                    </p>
-                    <p className="text-[10px] text-neutral-500 font-mono truncate">
-                      {user?.email || (isCloudAuthenticated ? t('common.cloudSynced') : t('common.localOffline'))}
-                    </p>
+                <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/5 hover:bg-white/[0.08] transition-colors">
+                  <div
+                    onClick={() => setIsProfileModalOpen(true)}
+                    className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group"
+                    title={t('auth.editProfile', 'مشاهده و ویرایش مشخصات کاربر')}
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-neutral-800 border border-neutral-700 text-white font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden group-hover:border-blue-500 transition-colors">
+                      {user?.avatar ? (
+                        <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        user?.first_name ? user.first_name[0] : 'T'
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-neutral-200 truncate leading-tight group-hover:text-blue-400 transition-colors">
+                        {user?.first_name} {user?.last_name}
+                      </p>
+                      <p className="text-[10px] text-neutral-500 font-mono truncate">
+                        {user?.email || (isCloudAuthenticated ? t('common.cloudSynced') : t('common.localOffline'))}
+                      </p>
+                    </div>
                   </div>
                   <button
                     onClick={handleLogout}
@@ -804,10 +828,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="flex flex-col items-center gap-1.5 py-0.5">
               {user && (
                 <div
-                  className="w-8 h-8 rounded-lg bg-neutral-800 border border-neutral-700 text-white font-bold text-xs flex items-center justify-center shrink-0"
-                  title={`${user?.first_name || ''} ${user?.last_name || ''}`}
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="w-8 h-8 rounded-lg bg-neutral-800 border border-neutral-700 text-white font-bold text-xs flex items-center justify-center shrink-0 cursor-pointer hover:border-blue-500 transition-colors overflow-hidden"
+                  title={`${user?.first_name || ''} ${user?.last_name || ''} - ${t('auth.editProfile', 'ویرایش مشخصات')}`}
                 >
-                  {user?.first_name ? user.first_name[0] : 'T'}
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    user?.first_name ? user.first_name[0] : 'T'
+                  )}
                 </div>
               )}
               <button
@@ -823,6 +852,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
       </aside>
+
+      {/* User Profile & Password Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
     </>
   );
 };

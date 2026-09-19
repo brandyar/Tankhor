@@ -332,21 +332,21 @@ export const AccountingExportPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Format Selection Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         <button
           type="button"
           onClick={() => setExportFormat('moadian')}
-          className={`p-4 rounded-xl border text-start transition-all cursor-pointer ${
+          className={`p-3 sm:p-4 rounded-xl border text-start transition-all cursor-pointer ${
             exportFormat === 'moadian'
               ? 'border-neutral-900 dark:border-white bg-neutral-50 dark:bg-neutral-900/60 ring-1 ring-neutral-900 dark:ring-white'
               : 'border-neutral-200/80 dark:border-neutral-800 hover:border-neutral-400'
           }`}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <Building className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <span className="font-bold text-xs text-neutral-900 dark:text-white">سامانه مودیان</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+            <Building className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 shrink-0" />
+            <span className="font-bold text-xs text-neutral-900 dark:text-white line-clamp-1">سامانه مودیان</span>
           </div>
-          <p className="text-[11px] text-neutral-500 line-clamp-2">
+          <p className="text-[10px] sm:text-[11px] text-neutral-500 line-clamp-2">
             صورت معاملات فصلی ماده ۱۶۹ مکرر سازمان امور مالیاتی
           </p>
         </button>
@@ -354,17 +354,17 @@ export const AccountingExportPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setExportFormat('sepidar')}
-          className={`p-4 rounded-xl border text-start transition-all cursor-pointer ${
+          className={`p-3 sm:p-4 rounded-xl border text-start transition-all cursor-pointer ${
             exportFormat === 'sepidar'
               ? 'border-neutral-900 dark:border-white bg-neutral-50 dark:bg-neutral-900/60 ring-1 ring-neutral-900 dark:ring-white'
               : 'border-neutral-200/80 dark:border-neutral-800 hover:border-neutral-400'
           }`}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <FileSpreadsheet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            <span className="font-bold text-xs text-neutral-900 dark:text-white">سپیدار سیستم</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+            <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="font-bold text-xs text-neutral-900 dark:text-white line-clamp-1">سپیدار سیستم</span>
           </div>
-          <p className="text-[11px] text-neutral-500 line-clamp-2">
+          <p className="text-[10px] sm:text-[11px] text-neutral-500 line-clamp-2">
             سند حسابداری استاندارد با سرفصل‌های کدینگ معین سپیدار
           </p>
         </button>
@@ -372,17 +372,17 @@ export const AccountingExportPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setExportFormat('holo')}
-          className={`p-4 rounded-xl border text-start transition-all cursor-pointer ${
+          className={`p-3 sm:p-4 rounded-xl border text-start transition-all cursor-pointer ${
             exportFormat === 'holo'
               ? 'border-neutral-900 dark:border-white bg-neutral-50 dark:bg-neutral-900/60 ring-1 ring-neutral-900 dark:ring-white'
               : 'border-neutral-200/80 dark:border-neutral-800 hover:border-neutral-400'
           }`}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <FileCheck className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            <span className="font-bold text-xs text-neutral-900 dark:text-white">نرم‌افزار هلو</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+            <FileCheck className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400 shrink-0" />
+            <span className="font-bold text-xs text-neutral-900 dark:text-white line-clamp-1">نرم‌افزار هلو</span>
           </div>
-          <p className="text-[11px] text-neutral-500 line-clamp-2">
+          <p className="text-[10px] sm:text-[11px] text-neutral-500 line-clamp-2">
             ورود اطلاعات اسناد روزانه به نرم‌افزار حسابداری هلو
           </p>
         </button>
@@ -390,33 +390,33 @@ export const AccountingExportPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setExportFormat('journal')}
-          className={`p-4 rounded-xl border text-start transition-all cursor-pointer ${
+          className={`p-3 sm:p-4 rounded-xl border text-start transition-all cursor-pointer ${
             exportFormat === 'journal'
               ? 'border-neutral-900 dark:border-white bg-neutral-50 dark:bg-neutral-900/60 ring-1 ring-neutral-900 dark:ring-white'
               : 'border-neutral-200/80 dark:border-neutral-800 hover:border-neutral-400'
           }`}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <Layers className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            <span className="font-bold text-xs text-neutral-900 dark:text-white">دفتر روزنامه دوبل</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+            <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="font-bold text-xs text-neutral-900 dark:text-white line-clamp-1">دفتر روزنامه دوبل</span>
           </div>
-          <p className="text-[11px] text-neutral-500 line-clamp-2">
+          <p className="text-[10px] sm:text-[11px] text-neutral-500 line-clamp-2">
             آرتیکل‌های تراز شده بدهکار و بستانکار عمومی
           </p>
         </button>
       </div>
 
       {/* Filter & Export Action Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-neutral-50 dark:bg-neutral-900/40 p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800">
-        <div className="flex items-center gap-3">
-          <Calendar className="w-4 h-4 text-neutral-500" />
-          <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-neutral-50 dark:bg-neutral-900/40 p-3.5 sm:p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <Calendar className="w-4 h-4 text-neutral-500 shrink-0" />
+          <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 shrink-0">
             {t('accounting.exportDateRange')}:
           </span>
           <Select
             value={periodFilter}
             onChange={(e) => setPeriodFilter(e.target.value as any)}
-            className="w-44 h-9 text-xs"
+            className="w-full sm:w-44 h-9 text-xs"
           >
             <option value="month">{t('accounting.periodThisMonth')}</option>
             <option value="quarter">فصل جاری</option>
@@ -431,16 +431,16 @@ export const AccountingExportPage: React.FC = () => {
             size="sm"
             onClick={loadData}
             disabled={loading}
-            className="h-9 gap-1.5"
+            className="h-9 gap-1.5 flex-1 sm:flex-none justify-center"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>تازه‌سازی</span>
+            <span className="hidden sm:inline">تازه‌سازی</span>
           </Button>
 
           <Button
             onClick={handleExportCsv}
             size="sm"
-            className="h-9 gap-1.5"
+            className="h-9 gap-1.5 flex-1 sm:flex-none justify-center"
           >
             <Download className="w-4 h-4" />
             <span>{t('accounting.downloadCsvBtn')}</span>
@@ -450,7 +450,7 @@ export const AccountingExportPage: React.FC = () => {
 
       {/* Balance Indicator Banner */}
       <div
-        className={`p-4 rounded-xl border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs ${
+        className={`p-3.5 sm:p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
           isBalanced
             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
             : 'bg-red-500/10 border-red-500/30 text-red-800 dark:text-red-300'
@@ -459,12 +459,12 @@ export const AccountingExportPage: React.FC = () => {
         <div className="flex items-center gap-2 font-semibold">
           {isBalanced ? (
             <>
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{t('accounting.balancedJournal')}</span>
             </>
           ) : (
             <>
-              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
               <span>{t('accounting.unbalancedJournal')}</span>
             </>
           )}
@@ -473,7 +473,7 @@ export const AccountingExportPage: React.FC = () => {
           </span>
         </div>
 
-        <div className="flex items-center gap-6 font-mono font-bold">
+        <div className="flex items-center gap-4 sm:gap-6 font-mono font-bold">
           <div>
             <span className="text-neutral-500 text-[11px] ml-1">{t('accounting.totalDebit')}:</span>
             <span>{formatCurrency(totalDebit)}</span>

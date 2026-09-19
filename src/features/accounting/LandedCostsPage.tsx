@@ -435,48 +435,48 @@ export const LandedCostsPage: React.FC = () => {
       )}
 
       {/* Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-4 flex items-center justify-between border-neutral-200/80 dark:border-neutral-800">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <Card className="p-3.5 sm:p-4 flex items-center justify-between border-neutral-200/80 dark:border-neutral-800">
           <div>
             <p className="text-xs text-neutral-500 mb-1">{t('accounting.totalLandedCostAmount')}</p>
-            <p className="text-lg font-bold text-neutral-900 dark:text-white">
+            <p className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">
               {formatCurrency(totalLandedCostAmount)}
             </p>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300">
-            <Scale className="w-5 h-5" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 shrink-0">
+            <Scale className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
         </Card>
 
-        <Card className="p-4 flex items-center justify-between border-neutral-200/80 dark:border-neutral-800">
+        <Card className="p-3.5 sm:p-4 flex items-center justify-between border-neutral-200/80 dark:border-neutral-800">
           <div>
             <p className="text-xs text-neutral-500 mb-1">فاکتورهای خرید دارای سربار</p>
-            <p className="text-lg font-bold text-neutral-900 dark:text-white">
+            <p className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">
               {toPersianDigits(uniquePoCount)} <span className="text-xs font-normal text-neutral-400">سفارش</span>
             </p>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300">
-            <Truck className="w-5 h-5" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 shrink-0">
+            <Truck className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
         </Card>
 
-        <Card className="p-4 flex items-center justify-between border-neutral-200/80 dark:border-neutral-800">
+        <Card className="p-3.5 sm:p-4 flex items-center justify-between border-neutral-200/80 dark:border-neutral-800">
           <div>
             <p className="text-xs text-neutral-500 mb-1">سوابق تسهیم ثبت‌شده</p>
-            <p className="text-lg font-bold text-neutral-900 dark:text-white">
+            <p className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">
               {toPersianDigits(landedCosts.length)} <span className="text-xs font-normal text-neutral-400">رکورد</span>
             </p>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300">
-            <TrendingUp className="w-5 h-5" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 shrink-0">
+            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
         </Card>
       </div>
 
       {/* Toolbar & Filters */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex flex-1 items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-col sm:flex-row flex-1 items-stretch sm:items-center gap-2 sm:gap-3">
+          <div className="relative flex-1 max-w-full sm:max-w-sm">
             <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-neutral-400" />
             <Input
               value={search}
@@ -489,7 +489,7 @@ export const LandedCostsPage: React.FC = () => {
           <Select
             value={selectedCostType}
             onChange={(e) => setSelectedCostType(e.target.value)}
-            className="w-44 h-9 text-xs"
+            className="w-full sm:w-44 h-9 text-xs"
           >
             <option value="all">همه انواع هزینه‌ها</option>
             <option value="freight">{t('accounting.freight')}</option>
@@ -510,16 +510,16 @@ export const LandedCostsPage: React.FC = () => {
             icon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
             className="h-9 shrink-0 whitespace-nowrap"
           >
-            تازه‌سازی
+            <span className="hidden sm:inline">تازه‌سازی</span>
           </Button>
 
           <Button
             onClick={handleOpenNew}
             size="sm"
             icon={<Plus className="w-4 h-4" />}
-            className="h-9 shrink-0 whitespace-nowrap"
+            className="h-9 shrink-0 whitespace-nowrap flex-1 sm:flex-none justify-center"
           >
-            {t('accounting.newLandedCost')}
+            <span>{t('accounting.newLandedCost')}</span>
           </Button>
         </div>
       </div>

@@ -343,38 +343,38 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
   });
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="p-3.5 sm:p-6 max-w-7xl mx-auto space-y-5 sm:space-y-6 animate-fade-in" dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-800 pb-5">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20">
-            <Globe className="w-6 h-6" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-neutral-800 pb-4 sm:pb-5">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20 shrink-0">
+            <Globe className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-white tracking-tight">
+              <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">
                 {t('woocommerce.title', 'همگام‌سازی با ووکامرس (WooCommerce)')}
               </h1>
-              <Badge variant="success" className="text-xs">
+              <Badge variant="success" className="text-[10px] sm:text-xs">
                 {settings.site_url ? 'پیکربندی شده' : 'نیاز به تنظیمات'}
               </Badge>
             </div>
-            <p className="text-sm text-neutral-400 mt-0.5">
+            <p className="text-xs sm:text-sm text-neutral-400 mt-0.5 line-clamp-1 sm:line-clamp-none">
               {t('woocommerce.subtitle', 'اتصال دوطرفه تن‌خور با فروشگاه اینترنتی وردپرس: همگام‌سازی موجودی، قیمت‌ها و دریافت خودکار سفارشات')}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={loadData}
             disabled={loading}
-            className="text-xs border-neutral-700 hover:bg-neutral-800"
+            className="text-xs border-neutral-700 hover:bg-neutral-800 flex-1 sm:flex-initial justify-center h-8 sm:h-9"
           >
             <RefreshCw className={`w-3.5 h-3.5 ml-1.5 ${loading ? 'animate-spin' : ''}`} />
-            بروزرسانی داده‌ها
+            <span>بروزرسانی داده‌ها</span>
           </Button>
 
           <Button
@@ -382,10 +382,10 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
             size="sm"
             onClick={handleTestConnection}
             disabled={isTesting || !settings.site_url}
-            className="text-xs bg-violet-600 hover:bg-violet-500 text-white border-0"
+            className="text-xs bg-violet-600 hover:bg-violet-500 text-white border-0 flex-1 sm:flex-initial justify-center h-8 sm:h-9"
           >
             <ShieldCheck className={`w-3.5 h-3.5 ml-1.5 ${isTesting ? 'animate-spin' : ''}`} />
-            {isTesting ? 'در حال بررسی...' : 'بررسی اتصال ووکامرس'}
+            <span>{isTesting ? 'در حال بررسی...' : 'بررسی اتصال ووکامرس'}</span>
           </Button>
         </div>
       </div>
@@ -393,19 +393,19 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
       {/* Feedback Banner */}
       {feedbackMessage && (
         <div
-          className={`p-4 rounded-xl flex items-center justify-between border ${
+          className={`p-3.5 sm:p-4 rounded-xl flex items-center justify-between border ${
             feedbackMessage.isError
               ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
               : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
           }`}
         >
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-xs sm:text-sm">
             {feedbackMessage.isError ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
             <span>{feedbackMessage.text}</span>
           </div>
           <button
             onClick={() => setFeedbackMessage(null)}
-            className="text-xs opacity-70 hover:opacity-100 underline mr-4"
+            className="text-xs opacity-70 hover:opacity-100 underline mr-4 shrink-0"
           >
             بستن
           </button>
@@ -413,7 +413,7 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-neutral-800 gap-2 overflow-x-auto pb-px">
+      <div className="flex border-b border-neutral-800 gap-1 sm:gap-2 overflow-x-auto pb-px scrollbar-none">
         {[
           { key: 'overview' as const, label: t('woocommerce.overviewTab', 'پیشخوان همگام‌سازی'), icon: Boxes },
           { key: 'mappings' as const, label: t('woocommerce.mappingsTab', 'تطبیق کالاها و کد SKU'), icon: Layers },
@@ -426,14 +426,14 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 isActive
                   ? 'border-violet-500 text-violet-400 bg-violet-500/5'
                   : 'border-transparent text-neutral-400 hover:text-neutral-200 hover:border-neutral-700'
               }`}
             >
-              <Icon className="w-4 h-4" />
-              {tab.label}
+              <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span>{tab.label}</span>
               {tab.key === 'logs' && logs.length > 0 && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-800 text-neutral-300">
                   {toPersianDigits(logs.length)}
@@ -446,88 +446,88 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
 
       {/* Tab 1: Overview */}
       {activeTab === 'overview' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Quick Metrics */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-4 bg-neutral-900/60 border-neutral-800">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+            <Card className="p-3 sm:p-4 bg-neutral-900/60 border-neutral-800 space-y-1 sm:space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-neutral-400">وضعیت اتصال فروشگاه</span>
-                <Globe className="w-4 h-4 text-violet-400" />
+                <span className="text-[11px] sm:text-xs text-neutral-400 line-clamp-1">وضعیت اتصال فروشگاه</span>
+                <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-400 shrink-0" />
               </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-base font-bold text-white truncate max-w-[200px]" title={settings.site_url || 'تنظیم نشده'}>
+              <div className="flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-sm sm:text-base font-bold text-white truncate max-w-[150px] sm:max-w-[200px]" title={settings.site_url || 'تنظیم نشده'}>
                   {settings.site_url ? settings.site_url.replace(/^https?:\/\//, '') : 'تنظیم نشده'}
                 </span>
               </div>
-              <div className="mt-2 text-xs text-neutral-500 flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${settings.site_url ? 'bg-emerald-400' : 'bg-neutral-600'}`} />
-                {settings.site_url ? 'آماده همگام‌سازی' : 'نیازمند تکمیل آدرس'}
+              <div className="text-[10px] sm:text-xs text-neutral-500 flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${settings.site_url ? 'bg-emerald-400' : 'bg-neutral-600'}`} />
+                <span>{settings.site_url ? 'آماده همگام‌سازی' : 'نیازمند تکمیل آدرس'}</span>
               </div>
             </Card>
 
-            <Card className="p-4 bg-neutral-900/60 border-neutral-800">
+            <Card className="p-3 sm:p-4 bg-neutral-900/60 border-neutral-800 space-y-1 sm:space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-neutral-400">کل تنوع‌های کالا</span>
-                <Boxes className="w-4 h-4 text-blue-400" />
+                <span className="text-[11px] sm:text-xs text-neutral-400 line-clamp-1">کل تنوع‌های کالا</span>
+                <Boxes className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 shrink-0" />
               </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-white">{toPersianDigits(totalVariantsCount)}</span>
-                <span className="text-xs text-neutral-400">قلم</span>
+              <div className="flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-lg sm:text-2xl font-bold text-white">{toPersianDigits(totalVariantsCount)}</span>
+                <span className="text-[11px] sm:text-xs text-neutral-400">قلم</span>
               </div>
-              <div className="mt-2 text-xs text-emerald-400">
-                {toPersianDigits(withSkuCount)} دارای کد SKU جهت تطبیق
+              <div className="text-[10px] sm:text-xs text-emerald-400 line-clamp-1">
+                {toPersianDigits(withSkuCount)} دارای کد SKU
               </div>
             </Card>
 
-            <Card className="p-4 bg-neutral-900/60 border-neutral-800">
+            <Card className="p-3 sm:p-4 bg-neutral-900/60 border-neutral-800 space-y-1 sm:space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-neutral-400">انبار متصل فروش اینترنتی</span>
-                <ShoppingBag className="w-4 h-4 text-amber-400" />
+                <span className="text-[11px] sm:text-xs text-neutral-400 line-clamp-1">انبار متصل فروش</span>
+                <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
               </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-base font-bold text-white">
+              <div className="flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-sm sm:text-base font-bold text-white line-clamp-1">
                   {warehouses.find((w) => w.id === settings.warehouse_id)?.name || 'همه انبارها'}
                 </span>
               </div>
-              <div className="mt-2 text-xs text-neutral-500">
-                کسر خودکار موجودی از این انبار
+              <div className="text-[10px] sm:text-xs text-neutral-500 line-clamp-1">
+                کسر خودکار موجودی
               </div>
             </Card>
 
-            <Card className="p-4 bg-neutral-900/60 border-neutral-800">
+            <Card className="p-3 sm:p-4 bg-neutral-900/60 border-neutral-800 space-y-1 sm:space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-neutral-400">تعداد رویدادها و لاگ‌ها</span>
-                <Clock className="w-4 h-4 text-emerald-400" />
+                <span className="text-[11px] sm:text-xs text-neutral-400 line-clamp-1">رویدادها و لاگ‌ها</span>
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
               </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-white">{toPersianDigits(logs.length)}</span>
-                <span className="text-xs text-neutral-400">رکورد</span>
+              <div className="flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-lg sm:text-2xl font-bold text-white">{toPersianDigits(logs.length)}</span>
+                <span className="text-[11px] sm:text-xs text-neutral-400">رکورد</span>
               </div>
-              <div className="mt-2 text-xs text-neutral-500">
-                آخرین عملیات: {logs[0]?.date_created ? formatPersianDate(logs[0].date_created) : 'ندارد'}
+              <div className="text-[10px] sm:text-xs text-neutral-500 line-clamp-1">
+                آخرین: {logs[0]?.date_created ? formatPersianDate(logs[0].date_created) : 'ندارد'}
               </div>
             </Card>
           </div>
 
           {/* Core Action Triggers */}
-          <Card className="p-6 bg-gradient-to-br from-neutral-900 via-neutral-900/90 to-[#18181c] border-neutral-800">
-            <h2 className="text-base font-bold text-white mb-2 flex items-center gap-2">
+          <Card className="p-4 sm:p-6 bg-gradient-to-br from-neutral-900 via-neutral-900/90 to-[#18181c] border-neutral-800">
+            <h2 className="text-sm sm:text-base font-bold text-white mb-1.5 sm:mb-2 flex items-center gap-2">
               <ArrowUpDown className="w-4 h-4 text-violet-400" />
               عملیات همگام‌سازی دستی و آنی
             </h2>
-            <p className="text-xs text-neutral-400 mb-6">
+            <p className="text-xs text-neutral-400 mb-4 sm:mb-6">
               با استفاده از دکمه‌های زیر می‌توانید اطلاعات انبار و سفارشات را به سرعت بین تن‌خور و ووکامرس یکسان‌سازی نمایید:
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
               {/* Action 1: Sync Stock */}
-              <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-950/60 flex flex-col justify-between">
+              <div className="p-3.5 sm:p-4 rounded-xl border border-neutral-800 bg-neutral-950/60 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center gap-2 text-white font-medium text-sm">
+                  <div className="flex items-center gap-2 text-white font-medium text-xs sm:text-sm">
                     <Boxes className="w-4 h-4 text-blue-400 shrink-0" />
                     <span>ارسال موجودی انبار به سایت</span>
                   </div>
-                  <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
+                  <p className="text-[11px] sm:text-xs text-neutral-400 mt-2 leading-relaxed">
                     موجودی فعلی کالاها در انبار منتخب محاسبه شده و بر اساس SKU در فروشگاه ووکامرس بروزرسانی می‌شود.
                   </p>
                 </div>
@@ -537,20 +537,20 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                   onClick={handleSyncStock}
                   disabled={isSyncingStock || !settings.site_url}
                   icon={<Boxes className={`w-3.5 h-3.5 ${isSyncingStock ? 'animate-spin' : ''}`} />}
-                  className="mt-4 w-full justify-center bg-blue-600 hover:bg-blue-500 text-white text-xs border-0 cursor-pointer"
+                  className="mt-3.5 sm:mt-4 w-full justify-center bg-blue-600 hover:bg-blue-500 text-white text-xs border-0 cursor-pointer h-8 sm:h-9"
                 >
                   {isSyncingStock ? 'در حال ارسال موجودی...' : 'همگام‌سازی موجودی انبار'}
                 </Button>
               </div>
 
               {/* Action 2: Sync Prices */}
-              <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-950/60 flex flex-col justify-between">
+              <div className="p-3.5 sm:p-4 rounded-xl border border-neutral-800 bg-neutral-950/60 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center gap-2 text-white font-medium text-sm">
+                  <div className="flex items-center gap-2 text-white font-medium text-xs sm:text-sm">
                     <ArrowUpRight className="w-4 h-4 text-emerald-400 shrink-0" />
                     <span>ارسال قیمت‌های فروش به سایت</span>
                   </div>
-                  <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
+                  <p className="text-[11px] sm:text-xs text-neutral-400 mt-2 leading-relaxed">
                     آخرین قیمت‌های فروش تعریف شده برای تنوع‌ها به قیمت عادی (Regular Price) محصولات ووکامرس منتقل می‌گردد.
                   </p>
                 </div>
@@ -560,20 +560,20 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                   onClick={handleSyncPrices}
                   disabled={isSyncingPrices || !settings.site_url}
                   icon={<ArrowUpRight className={`w-3.5 h-3.5 ${isSyncingPrices ? 'animate-spin' : ''}`} />}
-                  className="mt-4 w-full justify-center border-neutral-700 hover:bg-neutral-800 text-white text-xs cursor-pointer"
+                  className="mt-3.5 sm:mt-4 w-full justify-center border-neutral-700 hover:bg-neutral-800 text-white text-xs cursor-pointer h-8 sm:h-9"
                 >
                   {isSyncingPrices ? 'در حال ارسال قیمت‌ها...' : 'همگام‌سازی قیمت‌ها'}
                 </Button>
               </div>
 
               {/* Action 3: Import Orders */}
-              <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-950/60 flex flex-col justify-between">
+              <div className="p-3.5 sm:p-4 rounded-xl border border-neutral-800 bg-neutral-950/60 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center gap-2 text-white font-medium text-sm">
+                  <div className="flex items-center gap-2 text-white font-medium text-xs sm:text-sm">
                     <ShoppingBag className="w-4 h-4 text-violet-400 shrink-0" />
                     <span>دریافت سفارشات ووکامرس</span>
                   </div>
-                  <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
+                  <p className="text-[11px] sm:text-xs text-neutral-400 mt-2 leading-relaxed">
                     سفارشات جدید و در حال پردازش سایت دریافت شده و به عنوان فاکتور فروش اینترنتی در تن‌خور درج می‌شوند.
                   </p>
                 </div>
@@ -583,7 +583,7 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                   onClick={handleImportOrders}
                   disabled={isImportingOrders || !settings.site_url}
                   icon={<ShoppingBag className={`w-3.5 h-3.5 ${isImportingOrders ? 'animate-spin' : ''}`} />}
-                  className="mt-4 w-full justify-center bg-violet-600 hover:bg-violet-500 text-white text-xs border-0 cursor-pointer"
+                  className="mt-3.5 sm:mt-4 w-full justify-center bg-violet-600 hover:bg-violet-500 text-white text-xs border-0 cursor-pointer h-8 sm:h-9"
                 >
                   {isImportingOrders ? 'در حال دریافت سفارشات...' : 'دریافت سفارشات آنلاین'}
                 </Button>
@@ -593,13 +593,13 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
 
           {/* Missing SKU Warning Card */}
           {missingSkuCount > 0 && (
-            <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div className="p-3.5 sm:p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 flex items-start gap-3">
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-sm font-bold text-amber-300">
+                <h3 className="text-xs sm:text-sm font-bold text-amber-300">
                   {toPersianDigits(missingSkuCount)} قلم کالا فاقد کد SKU یا بارکد هستند
                 </h3>
-                <p className="text-xs text-neutral-400 mt-1">
+                <p className="text-[11px] sm:text-xs text-neutral-400 mt-1">
                   ووکامرس تطبیق محصولات را از طریق فیلد SKU (شناسه محصول) انجام می‌دهد. برای اینکه موجودی و قیمت این کالاها به طور خودکار همگام شود، لطفاً در بخش محصولات برای آنها کد SKU اختصاص دهید.
                 </p>
                 <Button
@@ -618,14 +618,14 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
 
       {/* Tab 2: Settings */}
       {activeTab === 'settings' && (
-        <div className="space-y-6 max-w-4xl">
-          <Card className="p-6 bg-neutral-900/60 border-neutral-800">
-            <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+        <div className="space-y-4 sm:space-y-6 max-w-4xl">
+          <Card className="p-4 sm:p-6 bg-neutral-900/60 border-neutral-800">
+            <h2 className="text-sm sm:text-base font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
               <Settings className="w-4 h-4 text-violet-400" />
               تنظیمات احراز هویت REST API ووکامرس
             </h2>
 
-            <form onSubmit={handleSaveSettings} className="space-y-5">
+            <form onSubmit={handleSaveSettings} className="space-y-4 sm:space-y-5">
               {/* Site URL */}
               <div>
                 <label className="block text-xs font-medium text-neutral-300 mb-1.5">
@@ -637,16 +637,16 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                   value={settings.site_url || ''}
                   onChange={(e) => setSettings({ ...settings, site_url: e.target.value })}
                   dir="ltr"
-                  className="bg-neutral-950 border-neutral-800 text-left font-mono text-sm"
+                  className="bg-neutral-950 border-neutral-800 text-left font-mono text-xs sm:text-sm h-9 sm:h-10"
                   required
                 />
-                <p className="text-[11px] text-neutral-500 mt-1">
+                <p className="text-[10px] sm:text-[11px] text-neutral-500 mt-1">
                   آدرس کامل دامنه فروشگاه با https یا http (مثال: https://myshop.ir)
                 </p>
               </div>
 
               {/* Consumer Key & Secret */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-medium text-neutral-300 mb-1.5">
                     کلید مصرف‌کننده (Consumer Key) <span className="text-rose-400">*</span>
@@ -657,7 +657,7 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                     value={settings.consumer_key || ''}
                     onChange={(e) => setSettings({ ...settings, consumer_key: e.target.value })}
                     dir="ltr"
-                    className="bg-neutral-950 border-neutral-800 text-left font-mono text-sm"
+                    className="bg-neutral-950 border-neutral-800 text-left font-mono text-xs sm:text-sm h-9 sm:h-10"
                     required
                   />
                 </div>
@@ -672,15 +672,15 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                     value={settings.consumer_secret || ''}
                     onChange={(e) => setSettings({ ...settings, consumer_secret: e.target.value })}
                     dir="ltr"
-                    className="bg-neutral-950 border-neutral-800 text-left font-mono text-sm"
+                    className="bg-neutral-950 border-neutral-800 text-left font-mono text-xs sm:text-sm h-9 sm:h-10"
                     required
                   />
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-neutral-950 border border-neutral-800/80 text-xs text-neutral-400 space-y-1">
+              <div className="p-3 sm:p-3.5 rounded-xl bg-neutral-950 border border-neutral-800/80 text-[11px] sm:text-xs text-neutral-400 space-y-1">
                 <span className="font-semibold text-neutral-300 flex items-center gap-1.5">
-                  <HelpCircle className="w-3.5 h-3.5 text-violet-400" />
+                  <HelpCircle className="w-3.5 h-3.5 text-violet-400 shrink-0" />
                   نحوه دریافت کلیدها از وردپرس:
                 </span>
                 <p className="leading-relaxed">
@@ -689,7 +689,7 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
               </div>
 
               {/* Warehouse & Financial Account selectors */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-neutral-800">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 pt-3 border-t border-neutral-800">
                 <div>
                   <label className="block text-xs font-medium text-neutral-300 mb-1.5">
                     انبار متصل جهت بررسی موجودی و ثبت خروج
@@ -697,7 +697,7 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                   <select
                     value={settings.warehouse_id || ''}
                     onChange={(e) => setSettings({ ...settings, warehouse_id: e.target.value ? Number(e.target.value) : null })}
-                    className="w-full h-10 px-3 rounded-lg bg-neutral-950 border border-neutral-800 text-white text-sm focus:outline-none focus:border-violet-500"
+                    className="w-full h-9 sm:h-10 px-3 rounded-lg bg-neutral-950 border border-neutral-800 text-white text-xs sm:text-sm focus:outline-none focus:border-violet-500"
                   >
                     <option value="">همه انبارها (موجودی تجمیعی)</option>
                     {warehouses.map((w) => (
@@ -706,7 +706,7 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                       </option>
                     ))}
                   </select>
-                  <p className="text-[11px] text-neutral-500 mt-1">
+                  <p className="text-[10px] sm:text-[11px] text-neutral-500 mt-1">
                     موجودی ارسالی به سایت از این انبار استخراج می‌شود.
                   </p>
                 </div>
@@ -718,7 +718,7 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                   <select
                     value={settings.financial_account_id || ''}
                     onChange={(e) => setSettings({ ...settings, financial_account_id: e.target.value ? Number(e.target.value) : null })}
-                    className="w-full h-10 px-3 rounded-lg bg-neutral-950 border border-neutral-800 text-white text-sm focus:outline-none focus:border-violet-500"
+                    className="w-full h-9 sm:h-10 px-3 rounded-lg bg-neutral-950 border border-neutral-800 text-white text-xs sm:text-sm focus:outline-none focus:border-violet-500"
                   >
                     <option value="">بدون ثبت دریافت مالی خودکار</option>
                     {financialAccounts.map((a) => (
@@ -727,7 +727,7 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                       </option>
                     ))}
                   </select>
-                  <p className="text-[11px] text-neutral-500 mt-1">
+                  <p className="text-[10px] sm:text-[11px] text-neutral-500 mt-1">
                     در صورت انتخاب، مبالغ سفارشات آنلاین بلافاصله به این حساب بستانکار می‌شود.
                   </p>
                 </div>
@@ -737,46 +737,46 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
               <div className="pt-3 border-t border-neutral-800 space-y-3">
                 <h3 className="text-xs font-semibold text-neutral-300">رفتار و خودکارسازی</h3>
 
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-start sm:items-center gap-2.5 sm:gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={Boolean(settings.auto_sync_stock)}
                     onChange={(e) => setSettings({ ...settings, auto_sync_stock: e.target.checked })}
-                    className="rounded border-neutral-700 bg-neutral-900 text-violet-600 focus:ring-0 w-4 h-4"
+                    className="rounded border-neutral-700 bg-neutral-900 text-violet-600 focus:ring-0 w-4 h-4 mt-0.5 sm:mt-0"
                   />
                   <div>
                     <span className="text-xs font-medium text-white">ارسال خودکار تغییرات موجودی انبار</span>
-                    <p className="text-[11px] text-neutral-500">
+                    <p className="text-[10px] sm:text-[11px] text-neutral-500">
                       هنگام ثبت فاکتور یا ورود/خروج کالا، موجودی جدید در ووکامرس ثبت شود.
                     </p>
                   </div>
                 </label>
 
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-start sm:items-center gap-2.5 sm:gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={Boolean(settings.auto_sync_price)}
                     onChange={(e) => setSettings({ ...settings, auto_sync_price: e.target.checked })}
-                    className="rounded border-neutral-700 bg-neutral-900 text-violet-600 focus:ring-0 w-4 h-4"
+                    className="rounded border-neutral-700 bg-neutral-900 text-violet-600 focus:ring-0 w-4 h-4 mt-0.5 sm:mt-0"
                   />
                   <div>
                     <span className="text-xs font-medium text-white">ارسال خودکار تغییرات قیمت</span>
-                    <p className="text-[11px] text-neutral-500">
+                    <p className="text-[10px] sm:text-[11px] text-neutral-500">
                       با ویرایش قیمت کالا در تن‌خور، قیمت عادی محصول در ووکامرس بروزرسانی شود.
                     </p>
                   </div>
                 </label>
 
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-start sm:items-center gap-2.5 sm:gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={Boolean(settings.auto_import_orders)}
                     onChange={(e) => setSettings({ ...settings, auto_import_orders: e.target.checked })}
-                    className="rounded border-neutral-700 bg-neutral-900 text-violet-600 focus:ring-0 w-4 h-4"
+                    className="rounded border-neutral-700 bg-neutral-900 text-violet-600 focus:ring-0 w-4 h-4 mt-0.5 sm:mt-0"
                   />
                   <div>
                     <span className="text-xs font-medium text-white">دریافت خودکار سفارشات جدید (وب‌هوک)</span>
-                    <p className="text-[11px] text-neutral-500">
+                    <p className="text-[10px] sm:text-[11px] text-neutral-500">
                       به محض ثبت سفارش در سایت ووکامرس، فاکتور در تن‌خور ایجاد و موجودی کسر گردد.
                     </p>
                   </div>
@@ -784,12 +784,12 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
               </div>
 
               {/* Submit Buttons */}
-              <div className="flex items-center gap-3 pt-4 border-t border-neutral-800">
+              <div className="flex items-center gap-2.5 sm:gap-3 pt-4 border-t border-neutral-800">
                 <Button
                   type="submit"
                   variant="primary"
                   disabled={isSavingSettings}
-                  className="bg-violet-600 hover:bg-violet-500 text-white text-sm"
+                  className="bg-violet-600 hover:bg-violet-500 text-white text-xs sm:text-sm flex-1 sm:flex-initial justify-center h-8 sm:h-9"
                 >
                   {isSavingSettings ? 'در حال ذخیره...' : 'ذخیره تنظیمات'}
                 </Button>
@@ -799,7 +799,7 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                   variant="outline"
                   onClick={handleTestConnection}
                   disabled={isTesting || !settings.site_url}
-                  className="text-sm border-neutral-700 hover:bg-neutral-800"
+                  className="text-xs sm:text-sm border-neutral-700 hover:bg-neutral-800 flex-1 sm:flex-initial justify-center h-8 sm:h-9"
                 >
                   {isTesting ? 'در حال تست...' : 'تست اتصال'}
                 </Button>
@@ -808,16 +808,16 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
           </Card>
 
           {/* Webhook Configuration Card */}
-          <Card className="p-6 bg-neutral-900/60 border-neutral-800">
-            <h2 className="text-base font-bold text-white mb-2 flex items-center gap-2">
+          <Card className="p-4 sm:p-6 bg-neutral-900/60 border-neutral-800">
+            <h2 className="text-sm sm:text-base font-bold text-white mb-2 flex items-center gap-2">
               <ExternalLink className="w-4 h-4 text-emerald-400" />
               تنظیم وب‌هوک سفارشات لحظه‌ای در ووکامرس
             </h2>
-            <p className="text-xs text-neutral-400 leading-relaxed">
+            <p className="text-[11px] sm:text-xs text-neutral-400 leading-relaxed">
               برای اینکه به محض پرداخت یا ثبت هر سفارش در سایت ووکامرس، سفارش بدون تأخیر در تن‌خور ثبت شود، آدرس زیر را در وردپرس کپی کنید:
             </p>
 
-            <div className="mt-4 flex items-center gap-2">
+            <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <input
                 type="text"
                 readOnly
@@ -829,14 +829,14 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={handleCopyWebhook}
-                className="shrink-0 border-neutral-700 hover:bg-neutral-800 text-xs text-white"
+                className="shrink-0 border-neutral-700 hover:bg-neutral-800 text-xs text-white justify-center h-8 sm:h-9"
               >
-                {copiedWebhook ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedWebhook ? <Check className="w-3.5 h-3.5 text-emerald-400 ml-1.5" /> : <Copy className="w-3.5 h-3.5 ml-1.5" />}
                 {copiedWebhook ? 'کپی شد' : 'کپی لینک'}
               </Button>
             </div>
 
-            <div className="mt-4 p-3 rounded-lg bg-neutral-950 border border-neutral-800 text-xs text-neutral-400 space-y-1">
+            <div className="mt-3 sm:mt-4 p-3 rounded-lg bg-neutral-950 border border-neutral-800 text-[11px] sm:text-xs text-neutral-400 space-y-1">
               <span className="font-semibold text-neutral-300">مراحل در وردپرس:</span>
               <p>۱. منوی ووکامرس ➔ پیکربندی ➔ پیشرفته ➔ وب‌هوک‌ها ➔ افزودن وب‌هوک</p>
               <p>۲. وضعیت را روی <strong>«فعال»</strong> بگذارید.</p>
@@ -852,8 +852,8 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-bold text-white">تطبیق و شناسایی کالاها (SKU)</h2>
-              <p className="text-xs text-neutral-400">
+              <h2 className="text-sm sm:text-base font-bold text-white">تطبیق و شناسایی کالاها (SKU)</h2>
+              <p className="text-[11px] sm:text-xs text-neutral-400">
                 هر کالایی که در تن‌خور دارای کد SKU باشد با شناسه محصول متناظر در ووکامرس منطبق می‌شود.
               </p>
             </div>
@@ -863,7 +863,7 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                 placeholder="جستجو در عنوان یا SKU..."
                 value={searchMapping}
                 onChange={(e) => setSearchMapping(e.target.value)}
-                className="bg-neutral-900 border-neutral-800 text-sm h-9"
+                className="bg-neutral-900 border-neutral-800 text-xs sm:text-sm h-8 sm:h-9"
               />
             </div>
           </div>
@@ -873,12 +873,12 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
               <table className="w-full text-xs text-right">
                 <thead className="bg-neutral-950 border-b border-neutral-800 text-neutral-400">
                   <tr>
-                    <th className="py-3 px-4">شناسه</th>
-                    <th className="py-3 px-4">نام و تنوع کالا</th>
-                    <th className="py-3 px-4">کد SKU</th>
-                    <th className="py-3 px-4">بارکد</th>
-                    <th className="py-3 px-4">وضعیت تطبیق</th>
-                    <th className="py-3 px-4">قیمت در تن‌خور</th>
+                    <th className="py-2.5 sm:py-3 px-3 sm:px-4">شناسه</th>
+                    <th className="py-2.5 sm:py-3 px-3 sm:px-4">نام و تنوع کالا</th>
+                    <th className="py-2.5 sm:py-3 px-3 sm:px-4">کد SKU</th>
+                    <th className="py-2.5 sm:py-3 px-3 sm:px-4">بارکد</th>
+                    <th className="py-2.5 sm:py-3 px-3 sm:px-4">وضعیت تطبیق</th>
+                    <th className="py-2.5 sm:py-3 px-3 sm:px-4">قیمت در تن‌خور</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-800/60 text-neutral-300">
@@ -895,15 +895,15 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
 
                       return (
                         <tr key={v.id} className="hover:bg-neutral-800/30 transition-colors">
-                          <td className="py-3 px-4 text-neutral-500 font-mono">#{v.id}</td>
-                          <td className="py-3 px-4 font-medium text-white">{v.product_title || v.sku || `تنوع #${v.id}`}</td>
-                          <td className="py-3 px-4 font-mono text-neutral-300" dir="ltr">
+                          <td className="py-2.5 sm:py-3 px-3 sm:px-4 text-neutral-500 font-mono">#{v.id}</td>
+                          <td className="py-2.5 sm:py-3 px-3 sm:px-4 font-medium text-white">{v.product_title || v.sku || `تنوع #${v.id}`}</td>
+                          <td className="py-2.5 sm:py-3 px-3 sm:px-4 font-mono text-neutral-300" dir="ltr">
                             {v.sku || <span className="text-neutral-600">-</span>}
                           </td>
-                          <td className="py-3 px-4 font-mono text-neutral-400" dir="ltr">
+                          <td className="py-2.5 sm:py-3 px-3 sm:px-4 font-mono text-neutral-400" dir="ltr">
                             {v.barcode || <span className="text-neutral-600">-</span>}
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-2.5 sm:py-3 px-3 sm:px-4">
                             {hasSku ? (
                               <Badge variant="success" className="text-[10px]">
                                 <CheckCircle2 className="w-3 h-3 ml-1" />
@@ -915,7 +915,7 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                               </Badge>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-neutral-300">
+                          <td className="py-2.5 sm:py-3 px-3 sm:px-4 text-neutral-300">
                             {v.price ? `${toPersianDigits(Number(v.price).toLocaleString())} تومان` : '-'}
                           </td>
                         </tr>
@@ -932,10 +932,10 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
       {/* Tab 4: Logs */}
       {activeTab === 'logs' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3">
             <div>
-              <h2 className="text-base font-bold text-white">لاگ‌ها و وقایع همگام‌سازی</h2>
-              <p className="text-xs text-neutral-400">
+              <h2 className="text-sm sm:text-base font-bold text-white">لاگ‌ها و وقایع همگام‌سازی</h2>
+              <p className="text-[11px] sm:text-xs text-neutral-400">
                 تاریخچه تراکنش‌های ارسال موجودی، قیمت و دریافت سفارشات از ووکامرس
               </p>
             </div>
@@ -944,7 +944,7 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
               size="sm"
               onClick={loadData}
               icon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
-              className="text-xs border-neutral-700 hover:bg-neutral-800 cursor-pointer"
+              className="text-xs border-neutral-700 hover:bg-neutral-800 cursor-pointer h-8 sm:h-9"
             >
               بروزرسانی لاگ‌ها
             </Button>
@@ -955,11 +955,11 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
               <table className="w-full text-xs text-right">
                 <thead className="bg-neutral-950 border-b border-neutral-800 text-neutral-400">
                   <tr>
-                    <th className="py-3 px-4">زمان رویداد</th>
-                    <th className="py-3 px-4">نوع عملیات</th>
-                    <th className="py-3 px-4">جهت</th>
-                    <th className="py-3 px-4">وضعیت</th>
-                    <th className="py-3 px-4">توضیحات و جزئیات</th>
+                    <th className="py-2.5 sm:py-3 px-3 sm:px-4">زمان رویداد</th>
+                    <th className="py-2.5 sm:py-3 px-3 sm:px-4">نوع عملیات</th>
+                    <th className="py-2.5 sm:py-3 px-3 sm:px-4">جهت</th>
+                    <th className="py-2.5 sm:py-3 px-3 sm:px-4">وضعیت</th>
+                    <th className="py-2.5 sm:py-3 px-3 sm:px-4">توضیحات و جزئیات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-800/60 text-neutral-300">
@@ -974,10 +974,10 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                       const isSuccess = log.status === 'success' || log.status === 'info';
                       return (
                         <tr key={log.id} className="hover:bg-neutral-800/30 transition-colors">
-                          <td className="py-3 px-4 text-neutral-400 whitespace-nowrap">
+                          <td className="py-2.5 sm:py-3 px-3 sm:px-4 text-neutral-400 whitespace-nowrap">
                             {formatPersianDate(log.date_created)}
                           </td>
-                          <td className="py-3 px-4 font-medium text-white whitespace-nowrap">
+                          <td className="py-2.5 sm:py-3 px-3 sm:px-4 font-medium text-white whitespace-nowrap">
                             {log.action === 'sync_stock' && 'همگام‌سازی موجودی'}
                             {log.action === 'sync_prices' && 'همگام‌سازی قیمت‌ها'}
                             {log.action === 'import_orders' && 'دریافت سفارشات'}
@@ -985,7 +985,7 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                             {log.action === 'test_connection' && 'تست اتصال'}
                             {!['sync_stock', 'sync_prices', 'import_orders', 'webhook_order', 'test_connection'].includes(log.action) && log.action}
                           </td>
-                          <td className="py-3 px-4 whitespace-nowrap">
+                          <td className="py-2.5 sm:py-3 px-3 sm:px-4 whitespace-nowrap">
                             {log.direction === 'inbound' ? (
                               <span className="flex items-center gap-1 text-violet-400">
                                 <ArrowDownLeft className="w-3.5 h-3.5" />
@@ -998,12 +998,12 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
                               </span>
                             )}
                           </td>
-                          <td className="py-3 px-4 whitespace-nowrap">
+                          <td className="py-2.5 sm:py-3 px-3 sm:px-4 whitespace-nowrap">
                             <Badge variant={isSuccess ? 'success' : 'error'} className="text-[10px]">
                               {isSuccess ? 'موفق' : 'خطا'}
                             </Badge>
                           </td>
-                          <td className="py-3 px-4 text-neutral-300 leading-relaxed">
+                          <td className="py-2.5 sm:py-3 px-3 sm:px-4 text-neutral-300 leading-relaxed">
                             {log.message}
                           </td>
                         </tr>

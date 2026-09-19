@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '../../../i18n';
 import { PosShift } from '../../../types';
 import { Button } from '../../../components/ui/Button';
-import { Receipt, Clock, Printer, UserPlus, RotateCcw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Receipt, Clock, Printer, UserPlus, RotateCcw, CheckCircle2, AlertCircle, Maximize2 } from 'lucide-react';
 
 interface CreateOrderHeaderProps {
   activeShift: PosShift | null;
@@ -13,6 +13,7 @@ interface CreateOrderHeaderProps {
   cartLength: number;
   scannerToast: { type: 'success' | 'error'; message: string } | null;
   errorMsg: string | null;
+  onToggleFullscreenPos?: () => void;
 }
 
 export const CreateOrderHeader: React.FC<CreateOrderHeaderProps> = ({
@@ -24,20 +25,21 @@ export const CreateOrderHeader: React.FC<CreateOrderHeaderProps> = ({
   cartLength,
   scannerToast,
   errorMsg,
+  onToggleFullscreenPos,
 }) => {
   const { t, locale } = useTranslation();
   const isPersian = locale === 'fa';
 
   return (
     <>
-      <div className="bg-white dark:bg-[#13151a] border border-[#ebebeb] dark:border-neutral-800 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-white dark:bg-[#13151a] border border-[#ebebeb] dark:border-neutral-800 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-[#171717] dark:bg-neutral-800 text-white flex items-center justify-center shrink-0 shadow-xs">
-            <Receipt className="w-5 h-5 text-emerald-400" />
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-[#171717] dark:bg-neutral-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-[#171717] dark:text-neutral-100">{t('orders.posTitle')}</h1>
+              <h1 className="text-base sm:text-lg font-bold text-[#171717] dark:text-neutral-100">{t('orders.posTitle')}</h1>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 font-bold">
                 {t('orders.posOnline')}
               </span>
@@ -48,7 +50,21 @@ export const CreateOrderHeader: React.FC<CreateOrderHeaderProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-start sm:justify-end">
+          {/* Fullscreen POS Mode Trigger Button */}
+          {onToggleFullscreenPos && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onToggleFullscreenPos}
+              icon={<Maximize2 className="w-3.5 h-3.5 text-emerald-400" />}
+              className="bg-neutral-900 hover:bg-black text-white dark:bg-neutral-100 dark:hover:bg-white dark:text-neutral-900 border border-neutral-800 dark:border-neutral-300 font-bold shadow-xs"
+              title={t('orders.fullscreenPosHint')}
+            >
+              <span>{t('orders.fullscreenPos')}</span>
+            </Button>
+          )}
+
           {/* POS Shift Management Trigger Button */}
           <Button
             variant={activeShift ? 'primary' : 'outline'}
@@ -60,10 +76,10 @@ export const CreateOrderHeader: React.FC<CreateOrderHeaderProps> = ({
             {activeShift ? (
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                <span>{isPersian ? `شیفت باز #${activeShift.id}` : `Open Shift #${activeShift.id}`}</span>
+                <span>{isPersian ? `شیفت #${activeShift.id}` : `Shift #${activeShift.id}`}</span>
               </span>
             ) : (
-              <span>{isPersian ? 'افتتاح شیفت صندوق' : 'Open POS Shift'}</span>
+              <span>{isPersian ? 'شیفت' : 'Shift'}</span>
             )}
           </Button>
 
@@ -74,7 +90,8 @@ export const CreateOrderHeader: React.FC<CreateOrderHeaderProps> = ({
             disabled={cartLength === 0}
             icon={<Printer className="w-3.5 h-3.5 text-emerald-600" />}
           >
-            {t('orders.previewPrintInvoice')}
+            <span className="hidden sm:inline">{t('orders.previewPrintInvoice')}</span>
+            <span className="sm:hidden">پیش‌نمایش</span>
           </Button>
 
           <Button
@@ -83,7 +100,8 @@ export const CreateOrderHeader: React.FC<CreateOrderHeaderProps> = ({
             onClick={onOpenCustomerModal}
             icon={<UserPlus className="w-3.5 h-3.5 text-indigo-600" />}
           >
-            {t('orders.quickCustomer')}
+            <span className="hidden sm:inline">{t('orders.quickCustomer')}</span>
+            <span className="sm:hidden">مشتری</span>
           </Button>
 
           <Button
@@ -94,7 +112,8 @@ export const CreateOrderHeader: React.FC<CreateOrderHeaderProps> = ({
             className="text-red-600 hover:bg-red-50 border-red-200"
             icon={<RotateCcw className="w-3.5 h-3.5" />}
           >
-            {t('orders.clearInvoice')}
+            <span className="hidden sm:inline">{t('orders.clearInvoice')}</span>
+            <span className="sm:hidden">پاک‌کردن</span>
           </Button>
         </div>
       </div>

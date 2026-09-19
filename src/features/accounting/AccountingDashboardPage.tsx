@@ -84,15 +84,15 @@ export const AccountingDashboardPage: React.FC<AccountingDashboardPageProps> = (
   return (
     <div className="space-y-6">
       {/* Top Action & Period Filter Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-neutral-900/80 p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 bg-white dark:bg-neutral-900/80 p-3.5 sm:p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
             {t('accounting.periodAll')}:
           </span>
-          <div className="inline-flex rounded-lg bg-neutral-100 dark:bg-neutral-800 p-1">
+          <div className="inline-flex rounded-lg bg-neutral-100 dark:bg-neutral-800 p-0.5 sm:p-1">
             <button
               onClick={() => setPeriod('all')}
-              className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${
+              className={`px-2.5 sm:px-3 py-1 text-xs rounded-md font-medium transition-all ${
                 period === 'all'
                   ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-xs'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
@@ -102,7 +102,7 @@ export const AccountingDashboardPage: React.FC<AccountingDashboardPageProps> = (
             </button>
             <button
               onClick={() => setPeriod('month')}
-              className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${
+              className={`px-2.5 sm:px-3 py-1 text-xs rounded-md font-medium transition-all ${
                 period === 'month'
                   ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-xs'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
@@ -112,7 +112,7 @@ export const AccountingDashboardPage: React.FC<AccountingDashboardPageProps> = (
             </button>
             <button
               onClick={() => setPeriod('year')}
-              className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${
+              className={`px-2.5 sm:px-3 py-1 text-xs rounded-md font-medium transition-all ${
                 period === 'year'
                   ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-xs'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
@@ -123,7 +123,7 @@ export const AccountingDashboardPage: React.FC<AccountingDashboardPageProps> = (
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {onOpenNewExpense && (
             <Button
               variant="outline"
@@ -131,7 +131,8 @@ export const AccountingDashboardPage: React.FC<AccountingDashboardPageProps> = (
               onClick={onOpenNewExpense}
               icon={<Plus className="w-3.5 h-3.5" />}
             >
-              {t('accounting.newExpense')}
+              <span className="hidden sm:inline">{t('accounting.newExpense')}</span>
+              <span className="sm:hidden">هزینه جدید</span>
             </Button>
           )}
           {onOpenNewTransaction && (
@@ -141,7 +142,8 @@ export const AccountingDashboardPage: React.FC<AccountingDashboardPageProps> = (
               onClick={onOpenNewTransaction}
               icon={<Wallet className="w-3.5 h-3.5" />}
             >
-              {t('accounting.newTransaction')}
+              <span className="hidden sm:inline">{t('accounting.newTransaction')}</span>
+              <span className="sm:hidden">سند جدید</span>
             </Button>
           )}
           <Button
@@ -155,88 +157,88 @@ export const AccountingDashboardPage: React.FC<AccountingDashboardPageProps> = (
       </div>
 
       {/* Main KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* 1. Total Revenue */}
-        <Card className="p-4 border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+        <Card className="p-3 sm:p-4 border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            <span className="text-[11px] sm:text-xs font-medium text-neutral-500 dark:text-neutral-400">
               {t('accounting.totalRevenue')}
             </span>
-            <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/40">
-              <ShoppingBag className="w-4 h-4" />
+            <div className="p-1.5 sm:p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/40">
+              <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
+          <div className="mt-2 sm:mt-3">
+            <h3 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">
               {loading ? '...' : formatCurrency(summary?.total_revenue || 0)}
             </h3>
-            <p className="text-[11px] text-neutral-500 mt-1">
+            <p className="text-[10px] sm:text-[11px] text-neutral-500 mt-1 line-clamp-1">
               مجموع فاکتورهای فروش قطعی
             </p>
           </div>
         </Card>
 
         {/* 2. COGS (بهای تمام‌شده) */}
-        <Card className="p-4 border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+        <Card className="p-3 sm:p-4 border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            <span className="text-[11px] sm:text-xs font-medium text-neutral-500 dark:text-neutral-400">
               {t('accounting.totalCogs')}
             </span>
-            <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/40">
-              <Truck className="w-4 h-4" />
+            <div className="p-1.5 sm:p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/40">
+              <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
+          <div className="mt-2 sm:mt-3">
+            <h3 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">
               {loading ? '...' : formatCurrency(summary?.total_cogs || 0)}
             </h3>
-            <p className="text-[11px] text-neutral-500 mt-1">
+            <p className="text-[10px] sm:text-[11px] text-neutral-500 mt-1 line-clamp-1">
               بهای خرید کالاهای فروخته‌شده
             </p>
           </div>
         </Card>
 
         {/* 3. Operating Expenses */}
-        <Card className="p-4 border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+        <Card className="p-3 sm:p-4 border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            <span className="text-[11px] sm:text-xs font-medium text-neutral-500 dark:text-neutral-400">
               {t('accounting.totalExpenses')}
             </span>
-            <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/40">
-              <Receipt className="w-4 h-4" />
+            <div className="p-1.5 sm:p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/40">
+              <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-lg font-bold text-rose-600 dark:text-rose-400">
+          <div className="mt-2 sm:mt-3">
+            <h3 className="text-base sm:text-lg font-bold text-rose-600 dark:text-rose-400">
               {loading ? '...' : formatCurrency(summary?.total_expenses || 0)}
             </h3>
-            <p className="text-[11px] text-neutral-500 mt-1">
-              هزینه‌های جاری، اجاره، حقوق و تنخواه
+            <p className="text-[10px] sm:text-[11px] text-neutral-500 mt-1 line-clamp-1">
+              هزینه‌های جاری و حقوق
             </p>
           </div>
         </Card>
 
         {/* 4. Net Operating Profit */}
-        <Card className={`p-4 border ${
+        <Card className={`p-3 sm:p-4 border ${
           isNetProfitable
             ? 'border-emerald-200/80 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/10'
             : 'border-rose-200/80 dark:border-rose-800/60 bg-rose-50/20 dark:bg-rose-950/10'
         }`}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            <span className="text-[11px] sm:text-xs font-medium text-neutral-500 dark:text-neutral-400">
               {t('accounting.netProfit')}
             </span>
-            <div className={`p-2 rounded-lg border ${
+            <div className={`p-1.5 sm:p-2 rounded-lg border ${
               isNetProfitable
                 ? 'bg-emerald-100/60 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-300/60 dark:border-emerald-700/50'
                 : 'bg-rose-100/60 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 border-rose-300/60 dark:border-rose-700/50'
             }`}>
-              {isNetProfitable ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+              {isNetProfitable ? <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <TrendingDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </div>
           </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-2">
-              <h3 className={`text-lg font-bold ${
+          <div className="mt-2 sm:mt-3">
+            <div className="flex flex-wrap items-baseline gap-1.5">
+              <h3 className={`text-base sm:text-lg font-bold ${
                 isNetProfitable ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
               }`}>
                 {loading ? '...' : formatCurrency(summary?.net_profit || 0)}
@@ -245,7 +247,7 @@ export const AccountingDashboardPage: React.FC<AccountingDashboardPageProps> = (
                 {toPersianDigits(summary?.net_margin_percentage?.toFixed(1) || 0)}%
               </Badge>
             </div>
-            <p className="text-[11px] text-neutral-500 mt-1">
+            <p className="text-[10px] sm:text-[11px] text-neutral-500 mt-1 line-clamp-1">
               سود ناخالص: {formatCurrency(summary?.gross_profit || 0)}
             </p>
           </div>

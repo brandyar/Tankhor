@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import multer from 'multer';
 import { DirectusAdminClient } from '../directusAdmin';
 import { requireAuth, AuthenticatedRequest, verifyToken } from '../auth';
+import { DEFAULT_SYSTEM_MODULES } from '../../src/utils/license';
 
 const upload = multer({ limits: { fileSize: 15 * 1024 * 1024 } }); // 15MB
 
@@ -89,10 +90,13 @@ publicRouter.get('/project-settings', async (req, res) => {
 // Public System Modules Catalog (for module pricing, metadata, and licensing info)
 publicRouter.get('/system-modules', async (req, res) => {
   try {
-    const items = await DirectusAdminClient.getItems('system_modules', req.query).catch(() => []);
+    let items = await DirectusAdminClient.getItems('system_modules', req.query).catch(() => []);
+    if (!items || items.length === 0) {
+      items = DEFAULT_SYSTEM_MODULES;
+    }
     return res.json({ data: items });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || 'Failed to fetch system modules' });
+    return res.json({ data: DEFAULT_SYSTEM_MODULES });
   }
 });
 

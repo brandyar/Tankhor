@@ -105,8 +105,8 @@ export const TaxReportsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Filter & Print Controls */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-neutral-50 dark:bg-neutral-900/40 p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 print:hidden">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 bg-neutral-50 dark:bg-neutral-900/40 p-3.5 sm:p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 print:hidden">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-neutral-500" />
             <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
@@ -115,7 +115,7 @@ export const TaxReportsPage: React.FC = () => {
             <Select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="w-28 h-9 text-xs"
+              className="w-24 sm:w-28 h-9 text-xs"
             >
               {locale === 'fa' ? (
                 <>
@@ -140,7 +140,7 @@ export const TaxReportsPage: React.FC = () => {
             <Select
               value={selectedQuarter}
               onChange={(e) => setSelectedQuarter(Number(e.target.value) as any)}
-              className="w-48 h-9 text-xs"
+              className="w-36 sm:w-48 h-9 text-xs"
             >
               <option value={1}>{t('accounting.spring')}</option>
               <option value={2}>{t('accounting.summer')}</option>
@@ -156,16 +156,16 @@ export const TaxReportsPage: React.FC = () => {
             size="sm"
             onClick={loadData}
             disabled={loading}
-            className="h-9 gap-1.5"
+            className="h-9 gap-1.5 flex-1 sm:flex-none justify-center"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>تازه‌سازی</span>
+            <span className="hidden sm:inline">تازه‌سازی</span>
           </Button>
 
           <Button
             onClick={handlePrint}
             size="sm"
-            className="h-9 gap-1.5"
+            className="h-9 gap-1.5 flex-1 sm:flex-none justify-center"
           >
             <Printer className="w-4 h-4" />
             <span>{t('accounting.printTaxReport')}</span>
@@ -174,7 +174,7 @@ export const TaxReportsPage: React.FC = () => {
       </div>
 
       {/* Official Tax Summary Header for Print / Display */}
-      <Card id="tax-report-printable-area" className="p-6 border-neutral-200/80 dark:border-neutral-800 space-y-6">
+      <Card id="tax-report-printable-area" className="p-4 sm:p-6 border-neutral-200/80 dark:border-neutral-800 space-y-5 sm:space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-neutral-200/80 dark:border-neutral-800 gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -196,67 +196,67 @@ export const TaxReportsPage: React.FC = () => {
         </div>
 
         {/* 4 Core Tax KPI Blocks */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
           {/* 1. Taxable Sales */}
-          <div className="p-4 rounded-lg bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800 space-y-1">
+          <div className="p-3 sm:p-4 rounded-lg bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800 space-y-1">
             <div className="flex items-center justify-between text-neutral-500 text-xs">
-              <span>{t('accounting.salesTaxable')}</span>
-              <ArrowUpRight className="w-4 h-4 text-neutral-400" />
+              <span className="line-clamp-1">{t('accounting.salesTaxable')}</span>
+              <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-400 shrink-0" />
             </div>
-            <p className="text-lg font-bold text-neutral-900 dark:text-white">
+            <p className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">
               {formatCurrency(vatReport?.salesTaxableAmount || (vatReport as any)?.taxable_sales || 0)}
             </p>
-            <span className="text-[11px] text-neutral-400 block">
+            <span className="text-[10px] sm:text-[11px] text-neutral-400 block line-clamp-1">
               تعداد: {toPersianDigits(vatReport?.ordersCount || (vatReport as any)?.sales_count || 0)} فاکتور فروش
             </span>
           </div>
 
           {/* 2. Output VAT (Collected from customers) */}
-          <div className="p-4 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-800/40 space-y-1">
+          <div className="p-3 sm:p-4 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-800/40 space-y-1">
             <div className="flex items-center justify-between text-blue-700 dark:text-blue-400 text-xs font-semibold">
-              <span>{t('accounting.salesVat')}</span>
-              <TrendingUp className="w-4 h-4" />
+              <span className="line-clamp-1">{t('accounting.salesVat')}</span>
+              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             </div>
-            <p className="text-lg font-bold text-blue-950 dark:text-blue-100">
+            <p className="text-base sm:text-lg font-bold text-blue-950 dark:text-blue-100">
               {formatCurrency(vatReport?.salesVatAmount || (vatReport as any)?.vat_collected || 0)}
             </p>
-            <span className="text-[11px] text-blue-600/70 dark:text-blue-400/60 block">
+            <span className="text-[10px] sm:text-[11px] text-blue-600/70 dark:text-blue-400/60 block line-clamp-1">
               مالیات وصول‌شده از خریداران
             </span>
           </div>
 
           {/* 3. Taxable Purchases */}
-          <div className="p-4 rounded-lg bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800 space-y-1">
+          <div className="p-3 sm:p-4 rounded-lg bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200/80 dark:border-neutral-800 space-y-1">
             <div className="flex items-center justify-between text-neutral-500 text-xs">
-              <span>{t('accounting.purchasesTaxable')}</span>
-              <ArrowDownLeft className="w-4 h-4 text-neutral-400" />
+              <span className="line-clamp-1">{t('accounting.purchasesTaxable')}</span>
+              <ArrowDownLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-400 shrink-0" />
             </div>
-            <p className="text-lg font-bold text-neutral-900 dark:text-white">
+            <p className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">
               {formatCurrency(vatReport?.purchasesTaxableAmount || (vatReport as any)?.taxable_purchases || 0)}
             </p>
-            <span className="text-[11px] text-neutral-400 block">
+            <span className="text-[10px] sm:text-[11px] text-neutral-400 block line-clamp-1">
               تعداد: {toPersianDigits(vatReport?.purchasesCount || (vatReport as any)?.purchases_count || 0)} فاکتور خرید
             </span>
           </div>
 
           {/* 4. Input VAT Credit */}
-          <div className="p-4 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 space-y-1">
+          <div className="p-3 sm:p-4 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 space-y-1">
             <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
-              <span>{t('accounting.purchasesVat')}</span>
-              <TrendingDown className="w-4 h-4" />
+              <span className="line-clamp-1">{t('accounting.purchasesVat')}</span>
+              <TrendingDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             </div>
-            <p className="text-lg font-bold text-emerald-950 dark:text-emerald-100">
+            <p className="text-base sm:text-lg font-bold text-emerald-950 dark:text-emerald-100">
               {formatCurrency(vatReport?.purchasesVatAmount || (vatReport as any)?.vat_paid || 0)}
             </p>
-            <span className="text-[11px] text-emerald-600/70 dark:text-emerald-400/60 block">
-              اعتبار مالیاتی پرداختی به تامین‌کننده
+            <span className="text-[10px] sm:text-[11px] text-emerald-600/70 dark:text-emerald-400/60 block line-clamp-1">
+              اعتبار مالیاتی پرداختی
             </span>
           </div>
         </div>
 
         {/* Final Net Tax Payable / Credit Banner */}
         <div
-          className={`p-4 rounded-xl border flex flex-col sm:flex-row items-center justify-between gap-4 ${
+          className={`p-3.5 sm:p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 ${
             (vatReport?.netVatPayable || (vatReport as any)?.net_vat_payable || 0) > 0
               ? 'bg-amber-500/10 border-amber-500/30 text-amber-950 dark:text-amber-200'
               : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-200'

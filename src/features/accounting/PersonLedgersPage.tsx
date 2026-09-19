@@ -258,7 +258,7 @@ export const PersonLedgersPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-neutral-900 p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 bg-white dark:bg-neutral-900 p-3.5 sm:p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
         <div>
           <h2 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
             <Users className="w-5 h-5 text-indigo-500" />
@@ -274,9 +274,9 @@ export const PersonLedgersPage: React.FC = () => {
             variant="primary"
             size="sm"
             onClick={() => handleOpenNewTransaction()}
-            icon={<Plus className="w-4 h-4" />}
+            icon={<Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
           >
-            {t('accounting.newTransaction')}
+            <span>{t('accounting.newTransaction')}</span>
           </Button>
         </div>
       </div>
@@ -423,30 +423,30 @@ export const PersonLedgersPage: React.FC = () => {
           {selectedParty ? (
             <>
               {/* Selected Party Summary Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/70 dark:border-neutral-700/60">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 p-3.5 sm:p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/70 dark:border-neutral-700/60">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900">
-                    {selectedParty.type === 'customer' ? <User className="w-5 h-5" /> : <Building className="w-5 h-5" />}
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-neutral-900 dark:white text-white dark:text-neutral-900">
+                    {selectedParty.type === 'customer' ? <User className="w-4 h-4 sm:w-5 sm:h-5" /> : <Building className="w-4 h-4 sm:w-5 sm:h-5" />}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-base font-bold text-neutral-900 dark:text-white">
+                      <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white">
                         {selectedParty.name}
                       </h3>
                       <Badge variant={selectedParty.type === 'customer' ? 'default' : 'neutral'}>
                         {selectedParty.type === 'customer' ? 'مشتری' : 'تامین‌کننده'}
                       </Badge>
                     </div>
-                    <p className="text-xs text-neutral-500 font-mono mt-0.5">
+                    <p className="text-[11px] sm:text-xs text-neutral-500 font-mono mt-0.5">
                       شماره تماس: {selectedParty.phone || 'ثبت نشده'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="text-end">
-                    <span className="text-[11px] text-neutral-500">مانده حساب نهایی:</span>
-                    <div className={`text-base font-bold font-mono ${
+                <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2.5 sm:gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-neutral-200 dark:border-neutral-700">
+                  <div className="text-start sm:text-end">
+                    <span className="text-[10px] sm:text-[11px] text-neutral-500 block">مانده حساب نهایی:</span>
+                    <div className={`text-sm sm:text-base font-bold font-mono ${
                       selectedParty.balance > 0
                         ? 'text-emerald-600 dark:text-emerald-400'
                         : selectedParty.balance < 0
@@ -454,7 +454,7 @@ export const PersonLedgersPage: React.FC = () => {
                         : 'text-neutral-500'
                     }`}>
                       {formatCurrency(Math.abs(selectedParty.balance))}
-                      <span className="text-xs font-normal ms-1">
+                      <span className="text-[11px] sm:text-xs font-normal ms-1">
                         ({selectedParty.balance > 0 ? 'بدهکار' : selectedParty.balance < 0 ? 'بستانکار' : 'بی‌حساب'})
                       </span>
                     </div>
@@ -474,7 +474,7 @@ export const PersonLedgersPage: React.FC = () => {
                       onClick={() => handleOpenNewTransaction(selectedParty)}
                       icon={<Plus className="w-3.5 h-3.5" />}
                     >
-                      ثبت تراکنش
+                      <span>ثبت تراکنش</span>
                     </Button>
                   </div>
                 </div>

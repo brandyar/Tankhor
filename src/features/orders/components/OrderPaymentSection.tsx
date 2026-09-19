@@ -133,57 +133,57 @@ export const OrderPaymentSection: React.FC<OrderPaymentSectionProps> = ({
       {/* Payment Method Selector Cards */}
       <div className="space-y-1.5 pt-1">
         <label className="block text-xs font-bold text-[#171717] dark:text-neutral-200">{t('orders.paymentMethodPos')}</label>
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={() => onPaymentTypeChange('pos')}
-            className={`py-2 px-1 rounded-xl border text-center transition-all ${
+            className={`py-2 px-2 rounded-xl border text-center transition-all ${
               paymentType === 'pos'
                 ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
                 : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
             }`}
           >
             <CreditCard className="w-4 h-4 mx-auto mb-1" />
-            <span className="text-[10px] font-bold block">{t('orders.posTerminal')}</span>
+            <span className="text-[11px] sm:text-[10px] font-bold block">{t('orders.posTerminal')}</span>
           </button>
 
           <button
             type="button"
             onClick={() => onPaymentTypeChange('cash')}
-            className={`py-2 px-1 rounded-xl border text-center transition-all ${
+            className={`py-2 px-2 rounded-xl border text-center transition-all ${
               paymentType === 'cash'
                 ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
                 : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
             }`}
           >
             <DollarSign className="w-4 h-4 mx-auto mb-1" />
-            <span className="text-[10px] font-bold block">{t('orders.cash')}</span>
+            <span className="text-[11px] sm:text-[10px] font-bold block">{t('orders.cash')}</span>
           </button>
 
           <button
             type="button"
             onClick={() => onPaymentTypeChange('card_to_card')}
-            className={`py-2 px-1 rounded-xl border text-center transition-all ${
+            className={`py-2 px-2 rounded-xl border text-center transition-all ${
               paymentType === 'card_to_card'
                 ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
                 : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
             }`}
           >
             <Tag className="w-4 h-4 mx-auto mb-1" />
-            <span className="text-[10px] font-bold block">{t('orders.cardToCard')}</span>
+            <span className="text-[11px] sm:text-[10px] font-bold block">{t('orders.cardToCard')}</span>
           </button>
 
           <button
             type="button"
             onClick={() => onPaymentTypeChange('credit')}
-            className={`py-2 px-1 rounded-xl border text-center transition-all ${
+            className={`py-2 px-2 rounded-xl border text-center transition-all ${
               paymentType === 'credit'
                 ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 border-[#171717] dark:border-neutral-100 shadow-xs'
                 : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
             }`}
           >
             <User className="w-4 h-4 mx-auto mb-1" />
-            <span className="text-[10px] font-bold block">{t('orders.storeCredit')}</span>
+            <span className="text-[11px] sm:text-[10px] font-bold block">{t('orders.storeCredit')}</span>
           </button>
         </div>
       </div>

@@ -497,7 +497,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
         title={t('orders.title')}
         subtitle={t('orders.subtitle')}
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <input
               type="file"
               ref={fileInputRef}
@@ -507,24 +507,29 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
             />
             <Button
               variant="outline"
+              size="sm"
               onClick={() => fileInputRef.current?.click()}
-              icon={<Upload className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />}
+              icon={<Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 dark:text-neutral-400" />}
             >
-              ورود اکسل
+              <span className="hidden sm:inline">ورود اکسل</span>
+              <span className="sm:hidden">ورود</span>
             </Button>
             <Button
               variant="outline"
+              size="sm"
               onClick={handleExportExcel}
-              icon={<FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+              icon={<FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400" />}
             >
-              خروجی اکسل
+              <span className="hidden sm:inline">خروجی اکسل</span>
+              <span className="sm:hidden">خروجی</span>
             </Button>
             {permissions.canCreateOrders && (
               <Button
+                size="sm"
                 onClick={onNavigateToCreate}
-                icon={<Plus className="w-4 h-4" />}
+                icon={<Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               >
-                {t('orders.createOrder')}
+                <span>{t('orders.createOrder')}</span>
               </Button>
             )}
           </div>
@@ -532,8 +537,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
       />
 
       {/* Filter Toolbar */}
-      <Card className="p-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+      <Card className="p-3.5 sm:p-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="w-full sm:w-72">
             <Input
               placeholder={t('orders.searchProductVariant')}

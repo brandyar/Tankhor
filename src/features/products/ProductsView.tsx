@@ -53,6 +53,8 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
   const [activeProductForVariants, setActiveProductForVariants] = useState<Product | null>(null);
   const [isVariantsModalOpen, setIsVariantsModalOpen] = useState(false);
 
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
   const isPersian = locale === 'fa';
 
   const loadData = async () => {
@@ -364,7 +366,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
         title={t('navigation.allProducts')}
         subtitle={t('products.subtitle')}
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <input
               type="file"
               ref={fileInputRef}
@@ -374,20 +376,24 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
             />
             <Button
               variant="outline"
+              size="sm"
               onClick={() => fileInputRef.current?.click()}
-              icon={<Upload className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />}
+              icon={<Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 dark:text-neutral-400" />}
             >
-              ورود اکسل
+              <span className="hidden sm:inline">ورود اکسل</span>
+              <span className="sm:hidden">ورود</span>
             </Button>
             <Button
               variant="outline"
+              size="sm"
               onClick={handleExportExcel}
-              icon={<FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+              icon={<FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400" />}
             >
-              خروجی اکسل
+              <span className="hidden sm:inline">خروجی اکسل</span>
+              <span className="sm:hidden">خروجی</span>
             </Button>
             {permissions.canEditProducts && (
-              <Button onClick={handleOpenNewProduct} icon={<Plus className="w-4 h-4" />}>
+              <Button size="sm" onClick={handleOpenNewProduct} icon={<Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}>
                 {t('common.create')}
               </Button>
             )}
@@ -400,7 +406,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
         <div className="space-y-3 mb-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5">
             {/* Search Input */}
-            <div className="lg:col-span-2">
+            <div className="sm:col-span-2 lg:col-span-2">
               <Input
                 placeholder={t('common.search')}
                 value={search}
@@ -410,7 +416,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
             </div>
 
             {/* Category Filter */}
-            <div>
+            <div className="sm:col-span-1 lg:col-span-2">
               <select
                 value={selectedCategoryFilter}
                 onChange={(e) => setSelectedCategoryFilter(e.target.value ? Number(e.target.value) : '')}
@@ -456,13 +462,16 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
                 ))}
               </select>
             </div>
+          </div>
 
-            {/* Season Filter */}
-            <div>
+          {/* Color & Season Filters & Filter Reset Row */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-slate-100 dark:border-neutral-800">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Season */}
               <select
                 value={selectedSeasonFilter}
                 onChange={(e) => setSelectedSeasonFilter(e.target.value ? Number(e.target.value) : '')}
-                className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-200 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-800 dark:text-neutral-200 text-xs px-3 py-1.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
                 <option value="">{t('products.allSeasons')}</option>
                 {seasons.map((s, sIdx) => (
@@ -471,28 +480,26 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
                   </option>
                 ))}
               </select>
-            </div>
-          </div>
 
-          {/* Color Filter & Filter Reset Row */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-neutral-800">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-600 dark:text-neutral-300 flex items-center gap-1">
-                <Filter className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span>{t('products.filterColor')}</span>
-              </span>
-              <select
-                value={selectedColorFilter}
-                onChange={(e) => setSelectedColorFilter(e.target.value ? Number(e.target.value) : '')}
-                className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-800 dark:text-neutral-200 text-xs px-3 py-1.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-              >
-                <option value="">{t('products.allColors')}</option>
-                {colors.map((c, cIdx) => (
-                  <option key={`prod_color_${c.id}_${cIdx}`} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              {/* Color */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-600 dark:text-neutral-300 flex items-center gap-1">
+                  <Filter className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span className="hidden sm:inline">{t('products.filterColor')}</span>
+                </span>
+                <select
+                  value={selectedColorFilter}
+                  onChange={(e) => setSelectedColorFilter(e.target.value ? Number(e.target.value) : '')}
+                  className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-800 dark:text-neutral-200 text-xs px-3 py-1.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                >
+                  <option value="">{t('products.allColors')}</option>
+                  {colors.map((c, cIdx) => (
+                    <option key={`prod_color_${c.id}_${cIdx}`} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {hasActiveFilters && (

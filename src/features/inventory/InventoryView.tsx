@@ -271,7 +271,7 @@ export const InventoryView: React.FC = () => {
         title={t('inventory.title')}
         subtitle={t('inventory.subtitle')}
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <input
               type="file"
               ref={fileInputRef}
@@ -281,83 +281,89 @@ export const InventoryView: React.FC = () => {
             />
             <Button
               variant="outline"
+              size="sm"
               onClick={() => fileInputRef.current?.click()}
-              icon={<Upload className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />}
+              icon={<Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 dark:text-neutral-400" />}
             >
-              ورود اکسل
+              <span className="hidden sm:inline">ورود اکسل</span>
+              <span className="sm:hidden">ورود</span>
             </Button>
             <Button
               variant="outline"
+              size="sm"
               onClick={handleExportExcel}
-              icon={<FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+              icon={<FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400" />}
             >
-              خروجی اکسل
+              <span className="hidden sm:inline">خروجی اکسل</span>
+              <span className="sm:hidden">خروجی</span>
             </Button>
             <Button
+              size="sm"
               onClick={() => setIsAdjustmentModalOpen(true)}
-              icon={<RefreshCw className="w-4 h-4" />}
+              icon={<RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             >
-              {t('inventory.stockAdjustment')}
+              <span className="hidden sm:inline">{t('inventory.stockAdjustment')}</span>
+              <span className="sm:hidden">تعدیل موجودی</span>
             </Button>
           </div>
         }
       />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
         <Card className="hover:shadow-vercel-md transition-shadow">
           <div className="flex items-center justify-between">
-            <p className="caption-mono text-neutral-500 dark:text-neutral-400">{t('inventory.quantityOnHand')}</p>
-            <Package className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+            <p className="caption-mono text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400">{t('inventory.quantityOnHand')}</p>
+            <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
-          <p className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-2">
+          <p className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-1.5 sm:mt-2">
             {isPersian ? toPersianDigits(totalQuantity) : totalQuantity}
           </p>
         </Card>
 
         <Card className="hover:shadow-vercel-md transition-shadow">
           <div className="flex items-center justify-between">
-            <p className="caption-mono text-neutral-500 dark:text-neutral-400">{t('inventory.quantityAvailable')}</p>
-            <Package className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+            <p className="caption-mono text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400">{t('inventory.quantityAvailable')}</p>
+            <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
-          <p className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-2">
+          <p className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-1.5 sm:mt-2">
             {isPersian ? toPersianDigits(totalAvailable) : totalAvailable}
           </p>
         </Card>
 
         <Card className="hover:shadow-vercel-md transition-shadow">
           <div className="flex items-center justify-between">
-            <p className="caption-mono text-neutral-500 dark:text-neutral-400">{t('inventory.quantityReserved')}</p>
-            <RefreshCw className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+            <p className="caption-mono text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400">{t('inventory.quantityReserved')}</p>
+            <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
-          <p className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-2">
+          <p className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-1.5 sm:mt-2">
             {isPersian ? toPersianDigits(totalReserved) : totalReserved}
           </p>
         </Card>
 
         <Card className="hover:shadow-vercel-md transition-shadow">
           <div className="flex items-center justify-between">
-            <p className="caption-mono text-neutral-500 dark:text-neutral-400">{t('inventory.reasonDamage')}</p>
-            <AlertTriangle className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+            <p className="caption-mono text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400">{t('inventory.reasonDamage')}</p>
+            <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
-          <p className="text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-2">
+          <p className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight font-mono mt-1.5 sm:mt-2">
             {isPersian ? toPersianDigits(totalDamaged) : totalDamaged}
           </p>
         </Card>
 
-        <Card className="hover:shadow-vercel-md transition-shadow bg-amber-50/20 dark:bg-amber-950/20 border-amber-200/80 dark:border-amber-800/50">
+        <Card className="hover:shadow-vercel-md transition-shadow bg-amber-50/20 dark:bg-amber-950/20 border-amber-200/80 dark:border-amber-800/50 col-span-2 sm:col-span-2 md:col-span-1 lg:col-span-1">
           <div className="flex items-center justify-between">
-            <p className="caption-mono text-amber-800 dark:text-amber-300">{t('inventory.statusLowStock')}</p>
-            <ShieldAlert className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+            <p className="caption-mono text-[11px] sm:text-xs text-amber-800 dark:text-amber-300">{t('inventory.statusLowStock')}</p>
+            <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-700 dark:text-amber-400" />
           </div>
-          <p className="text-2xl font-extrabold text-amber-900 dark:text-amber-200 tracking-tight font-mono mt-2">
+          <p className="text-xl sm:text-2xl font-extrabold text-amber-900 dark:text-amber-200 tracking-tight font-mono mt-1.5 sm:mt-2">
             {isPersian ? toPersianDigits(lowStockCount) : lowStockCount}
           </p>
         </Card>
       </div>
 
       <Card>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4">
           <div className="w-full sm:w-80">
             <Input
               placeholder={t('common.search')}
@@ -367,11 +373,11 @@ export const InventoryView: React.FC = () => {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
             <select
               value={selectedWarehouseFilter}
               onChange={(e) => setSelectedWarehouseFilter(e.target.value ? Number(e.target.value) : '')}
-              className="bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-100 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              className="flex-1 sm:flex-initial bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-100 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
               <option value="">{t('inventory.allWarehouses')}</option>
               {warehouses.map((w, wIdx) => (

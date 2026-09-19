@@ -45,10 +45,12 @@ export class CloudSalesStorage {
   async saveOrder(order: Partial<Order>, items?: Partial<OrderItem>[]): Promise<Order> {
     try {
       const payload: any = { ...order };
+      const shiftId = (order as any).pos_shift_id;
       delete payload.customer_name;
       delete payload.warehouse_name;
       delete payload.items_count;
       delete payload.items;
+      delete payload.pos_shift_id; // Keep cloud payload clean from non-Directus fields
 
       let savedOrder: Order;
       if (payload.id) {
@@ -72,8 +74,9 @@ export class CloudSalesStorage {
         }
       }
 
-      await this.base.localAdapter.saveOrder(savedOrder, items);
-      return savedOrder;
+      const orderWithShift = { ...savedOrder, pos_shift_id: shiftId };
+      await this.base.localAdapter.saveOrder(orderWithShift, items);
+      return orderWithShift;
     } catch (err: any) {
       console.warn('[CloudSalesStorage] Cloud saveOrder failed, using local adapter:', err?.message || err);
       const saved = await this.base.localAdapter.saveOrder(order, items);
@@ -176,6 +179,22 @@ export class CloudSalesStorage {
     }
 
     try {
+      // Sync recent orders into local storage cache to ensure shift order totals calculate accurately
+      try {
+        const cloudOrders = await this.base.client.getItems<Order>('orders', {
+          filter: { organization_id: { _eq: numOrgId } },
+          sort: '-id',
+          limit: 150,
+        });
+        if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
+          for (const co of cloudOrders) {
+            await this.base.localAdapter.saveOrder(co);
+          }
+        }
+      } catch {
+        // Non-blocking sync attempt
+      }
+
       const items = await this.base.client.getItems<any>('pos_shifts', query);
       if (Array.isArray(items) && items.length > 0) {
         for (const item of items) {

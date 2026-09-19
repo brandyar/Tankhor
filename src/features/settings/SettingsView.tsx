@@ -17,6 +17,7 @@ import { ModulesManagementCard } from './ModulesManagementCard';
 import { UpgradeToProModal } from '../../components/modals/UpgradeToProModal';
 import { checkDesktopUpdate } from '../../utils/updater';
 import { getCurrentAppVersion, APP_VERSION } from '../../utils/version';
+import { ProductImage } from '../../components/ui/ProductImage';
 import {
   Database,
   Cloud,
@@ -41,6 +42,10 @@ import {
   HardDrive,
   UserCheck,
   Globe,
+  Phone,
+  Smartphone,
+  MapPin,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -381,6 +386,69 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ activeSubRoute = 'se
                 </div>
               )}
 
+              {/* Organization Header with Logo & Brand Name */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50/90 dark:bg-[#181a20] border border-neutral-200/80 dark:border-neutral-800">
+                <div className="flex items-center gap-4">
+                  <div
+                    onClick={() => isOwner && setIsEditOrgOpen(true)}
+                    className={`w-16 h-16 rounded-2xl bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-700/80 p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-xs relative group ${isOwner ? 'cursor-pointer hover:border-blue-500 transition-colors' : ''}`}
+                    title={isOwner ? t('settings.orgLogoChange', 'تغییر یا بارگذاری لوگو') : undefined}
+                  >
+                    {activeOrganization?.logo ? (
+                      <ProductImage
+                        src={activeOrganization.logo}
+                        alt={activeOrganization.name}
+                        className="w-full h-full object-contain rounded-xl"
+                        fallbackText={activeOrganization?.name ? activeOrganization.name[0] : 'T'}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-bold text-xl rounded-xl">
+                        {activeOrganization?.name ? activeOrganization.name[0] : 'T'}
+                      </div>
+                    )}
+                    {isOwner && (
+                      <div className="absolute inset-0 bg-neutral-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold rounded-xl backdrop-blur-2xs">
+                        <Edit3 className="w-4 h-4" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
+                        {activeOrganization?.name || '-'}
+                      </h3>
+                      <Badge variant={activeOrganization?.status === 'active' ? 'success' : 'neutral'}>
+                        {activeOrganization?.status === 'active' ? t('settings.statusActive') : activeOrganization?.status || '-'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono dir-ltr text-start">
+                        @{activeOrganization?.slug || '-'}
+                      </p>
+                      <span className="text-[11px] text-neutral-400">•</span>
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                        {activeOrganization?.logo ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">✓ {t('settings.orgLogoLabel', 'لوگوی رسمی')} ثبت شده</span>
+                        ) : (
+                          <span className="text-amber-600 dark:text-amber-400 font-medium">! {t('settings.orgLogoLabel', 'لوگوی رسمی')} تنظیم نشده</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {isOwner && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditOrgOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 rounded-xl transition-colors cursor-pointer self-start sm:self-center shrink-0 shadow-2xs"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>{activeOrganization?.logo ? t('settings.orgLogoChange', 'تغییر لوگو') : t('settings.orgLogoUploadBtn', 'بارگذاری لوگو')}</span>
+                  </button>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-neutral-50/70 dark:bg-[#181a20] border border-neutral-200/80 dark:border-neutral-800">
                 <div className="space-y-1">
                   <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">{t('settings.orgName')}</span>
@@ -409,6 +477,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ activeSubRoute = 'se
                   <p className="text-xs font-mono text-neutral-800 dark:text-neutral-200 flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
                     <span>{activeOrganization?.timezone || 'Asia/Tehran'}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Contact Information (Phone, Mobile, Address) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 rounded-xl bg-neutral-50/70 dark:bg-[#181a20] border border-neutral-200/80 dark:border-neutral-800">
+                <div className="space-y-1">
+                  <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5 text-neutral-400" />
+                    <span>{t('settings.orgPhone', 'تلفن ثابت سازمان')}</span>
+                  </span>
+                  <p className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200 dir-ltr text-start">
+                    {activeOrganization?.phone || '-'}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium flex items-center gap-1">
+                    <Smartphone className="w-3.5 h-3.5 text-neutral-400" />
+                    <span>{t('settings.orgMobile', 'شماره همراه سازمان')}</span>
+                  </span>
+                  <p className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200 dir-ltr text-start">
+                    {activeOrganization?.mobile || '-'}
+                  </p>
+                </div>
+
+                <div className="space-y-1 sm:col-span-2 lg:col-span-1">
+                  <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-neutral-400" />
+                    <span>{t('settings.orgAddress', 'نشانی و آدرس سازمان')}</span>
+                  </span>
+                  <p className="text-xs font-medium text-neutral-800 dark:text-neutral-200 line-clamp-2">
+                    {activeOrganization?.address || '-'}
                   </p>
                 </div>
               </div>

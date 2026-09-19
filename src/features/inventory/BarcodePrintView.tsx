@@ -320,24 +320,26 @@ export const BarcodePrintView: React.FC = () => {
           title={t('inventory.barcodePrintTitle')}
           subtitle={t('inventory.barcodePrintSubtitle')}
           actions={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleGenerateAllMissingBarcodes}
-                icon={<Sparkles className="w-4 h-4 text-amber-600" />}
+                icon={<Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />}
               >
-                {t('inventory.generateBarcodesForMissing')}
+                <span className="hidden sm:inline">{t('inventory.generateBarcodesForMissing')}</span>
+                <span className="sm:hidden">تولید بارکدهای ناقص</span>
               </Button>
               <Button
                 variant="primary"
                 size="sm"
                 onClick={handlePrint}
                 disabled={totalPrintLabels === 0}
-                icon={<Printer className="w-4 h-4" />}
+                icon={<Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
               >
-                {t('inventory.printLabelsBtn')} ({isPersian ? toPersianDigits(totalPrintLabels) : totalPrintLabels})
+                <span>{t('inventory.printLabelsBtn')}</span>
+                <span className="ms-1">({isPersian ? toPersianDigits(totalPrintLabels) : totalPrintLabels})</span>
               </Button>
             </div>
           }

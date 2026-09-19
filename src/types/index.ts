@@ -14,6 +14,9 @@ export interface Organization {
   name: string;
   slug: string;
   logo?: string | null;
+  phone?: string | null;
+  mobile?: string | null;
+  address?: string | null;
   currency: string; // e.g. 'TOMAN', 'IRR', 'USD'
   timezone: string;
   plan: PlanType;

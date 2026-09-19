@@ -47,6 +47,9 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
  * Securely resolve all full Organization objects that a user belongs to.
  * Strictly checks organization_users memberships and prevents tenant leakage.
  */
+// In-memory fallback cache for user organizations to survive transient Directus under-pressure spikes
+const userOrgsCache = new Map<string, { activeOrganization: any; organizations: any[]; timestamp: number }>();
+
 export async function getUserOrganizations(userId: string, targetActiveOrgId?: number, userEmail?: string): Promise<{ activeOrganization: any; organizations: any[] }> {
   try {
     // 1. Fetch memberships from organization_users strictly for this userId / email
@@ -66,13 +69,15 @@ export async function getUserOrganizations(userId: string, targetActiveOrgId?: n
         },
         fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id', 'warehouse_id', 'financial_account_id', 'can_change_warehouse', 'user_id.id', 'user_id.email'],
       });
-    } catch {
+    } catch (err: any) {
+      console.warn('[getUserOrganizations] First membership fetch attempt failed:', err.message);
       try {
         memberships = await DirectusAdminClient.getItems('organization_users', {
           filter: { user_id: { _eq: userId } },
           fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id', 'warehouse_id', 'financial_account_id', 'can_change_warehouse'],
         });
-      } catch {
+      } catch (err2: any) {
+        console.warn('[getUserOrganizations] Second membership fetch attempt failed:', err2.message);
         memberships = [];
       }
     }
@@ -144,12 +149,34 @@ export async function getUserOrganizations(userId: string, targetActiveOrgId?: n
       activeOrg = uniqueOrgs[0];
     }
 
+    if (uniqueOrgs.length > 0) {
+      const result = { activeOrganization: activeOrg, organizations: uniqueOrgs };
+      userOrgsCache.set(userId, { ...result, timestamp: Date.now() });
+      return result;
+    }
+
+    // If Directus returned empty due to momentary pressure or network glitch, check cache
+    const cached = userOrgsCache.get(userId);
+    if (cached && cached.organizations.length > 0) {
+      console.warn(`[getUserOrganizations] Directus returned no organizations for user ${userId}, serving from cache.`);
+      let fallbackActive = cached.activeOrganization;
+      if (targetActiveOrgId) {
+        fallbackActive = cached.organizations.find((o) => Number(o.id) === Number(targetActiveOrgId)) || fallbackActive;
+      }
+      return { activeOrganization: fallbackActive, organizations: cached.organizations };
+    }
+
     return {
       activeOrganization: activeOrg,
       organizations: uniqueOrgs,
     };
   } catch (error: any) {
     console.error('[getUserOrganizations Error]:', error);
+    const cached = userOrgsCache.get(userId);
+    if (cached && cached.organizations.length > 0) {
+      console.warn(`[getUserOrganizations] Directus error for user ${userId}, serving from cache.`);
+      return { activeOrganization: cached.activeOrganization, organizations: cached.organizations };
+    }
     return { activeOrganization: null, organizations: [] };
   }
 }
@@ -486,6 +513,81 @@ authRouter.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Respon
   } catch (error: any) {
     console.error('[Auth /me Error]:', error);
     return res.status(500).json({ error: error.message || 'خطا در دریافت مشخصات کاربر' });
+  }
+});
+
+// Update Current User Profile & Password directly in Directus
+authRouter.patch('/me', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { userId } = req.user!;
+    const { first_name, last_name, title, avatar, password, current_password } = req.body;
+
+    // 1. Fetch current user from Directus
+    const currentUser = await DirectusAdminClient.request(`/users/${userId}`).catch(() => null);
+    if (!currentUser) {
+      return res.status(404).json({ error: 'کاربر در دایرکتوس یافت نشد.' });
+    }
+
+    const updatePayload: Record<string, any> = {};
+    if (first_name !== undefined) updatePayload.first_name = String(first_name).trim();
+    if (last_name !== undefined) updatePayload.last_name = String(last_name).trim();
+    if (title !== undefined) updatePayload.title = String(title).trim();
+    if (avatar !== undefined) updatePayload.avatar = avatar;
+
+    // 2. If password change is requested
+    if (password && typeof password === 'string' && password.trim().length > 0) {
+      const cleanPass = password.trim();
+      if (cleanPass.length < 6) {
+        return res.status(400).json({ error: 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.' });
+      }
+
+      // If current password provided, verify against Directus login
+      if (current_password) {
+        try {
+          const directusBaseUrl = DirectusAdminClient.getBaseUrl();
+          const verifyRes = await fetch(`${directusBaseUrl}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: currentUser.email,
+              password: current_password,
+              mode: 'json',
+            }),
+          });
+          if (!verifyRes.ok) {
+            return res.status(400).json({ error: 'رمز عبور فعلی وارد شده نادرست است.' });
+          }
+        } catch (authErr: any) {
+          console.warn('[Auth PATCH /me] Password check warning:', authErr?.message);
+        }
+      }
+
+      updatePayload.password = cleanPass;
+    }
+
+    // 3. Save updates into Directus
+    const updatedUser = await DirectusAdminClient.request(`/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updatePayload),
+    });
+
+    const finalUser = updatedUser?.data || updatedUser || currentUser;
+
+    return res.json({
+      success: true,
+      message: 'مشخصات کاربر با موفقیت در دایرکتوس بروزرسانی شد.',
+      user: {
+        id: finalUser.id || userId,
+        email: finalUser.email || currentUser.email,
+        first_name: finalUser.first_name ?? updatePayload.first_name ?? currentUser.first_name,
+        last_name: finalUser.last_name ?? updatePayload.last_name ?? currentUser.last_name,
+        avatar: finalUser.avatar ?? updatePayload.avatar ?? currentUser.avatar,
+        title: finalUser.title ?? updatePayload.title ?? currentUser.title,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Auth PATCH /me Error]:', error);
+    return res.status(500).json({ error: error.message || 'خطا در بروزرسانی مشخصات کاربر' });
   }
 });
 

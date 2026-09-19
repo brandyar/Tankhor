@@ -29,6 +29,7 @@ import { OrderCartTable, CartLine } from './components/OrderCartTable';
 import { OrderPaymentSection, POSPaymentType } from './components/OrderPaymentSection';
 import { OrderReceiptModal, SavedOrderData } from './components/OrderReceiptModal';
 import { QuickCustomerModal } from './components/QuickCustomerModal';
+import { FullscreenPosTerminal } from './components/FullscreenPosTerminal';
 
 export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onOrderCreated }) => {
   const { t, locale } = useTranslation();
@@ -37,6 +38,9 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
   const isPersian = locale === 'fa';
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+
+  // Fullscreen POS Mode State
+  const [isFullscreenPos, setIsFullscreenPos] = useState(false);
 
   // User membership & branch lock resolution
   const currentUserMember = useMemo(() => {
@@ -545,6 +549,19 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         actualPaymentStatus = 'paid';
       }
 
+      // Ensure we resolve the active shift for this cashier / warehouse if not yet in state
+      let currentShift = activeShift;
+      if (!currentShift && storageManager.getActivePosShift) {
+        try {
+          currentShift = await storageManager.getActivePosShift(user?.id || user?.email, selectedWarehouseId);
+          if (currentShift) {
+            setActiveShift(currentShift);
+          }
+        } catch {
+          // ignore
+        }
+      }
+
       const orderData: Partial<Order> = {
         organization_id: orgId,
         customer_id: selectedCustomerId || undefined,
@@ -558,8 +575,8 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         tax: taxAmount,
         total: grandTotal,
         payment_method: paymentType,
-        user_created: user?.id,
-        pos_shift_id: activeShift?.id || undefined,
+        user_created: user?.id || user?.email,
+        pos_shift_id: currentShift?.id || undefined,
         notes: `[${t('orders.paymentMethod')}: ${
           paymentType === 'pos'
             ? t('orders.posTerminal')
@@ -568,7 +585,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             : paymentType === 'card_to_card'
             ? t('orders.cardToCard')
             : t('orders.storeCredit')
-        }]${activeShift ? ` [${isPersian ? `شیفت #${activeShift.id}` : `Shift #${activeShift.id}`}]` : ''} ${orderNotes}`.trim(),
+        }]${currentShift ? ` [${isPersian ? `شیفت #${currentShift.id}` : `Shift #${currentShift.id}`}]` : ''} ${orderNotes}`.trim(),
       };
 
       const orderItems: Partial<OrderItem>[] = cart.map((c) => ({
@@ -715,13 +732,26 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         items: [...cart],
       });
 
+      // Refresh active shift stats immediately so live session totals and drawer balance update
+      if (storageManager.getActivePosShift) {
+        try {
+          const refreshedShift = await storageManager.getActivePosShift(user?.id || user?.email, selectedWarehouseId);
+          if (refreshedShift) {
+            setActiveShift(refreshedShift);
+          }
+        } catch {
+          // ignore
+        }
+      }
+
       setIsReceiptModalOpen(true);
       setCart([]);
       setOrderNotes('');
       setExtraDiscount(0);
       setCashReceived(0);
 
-      if (onOrderCreated) onOrderCreated();
+      // We do NOT redirect to 'orders/all' here, allowing the cashier to print or close the receipt
+      // and remain right inside the POS terminal (including Fullscreen POS mode) seamlessly.
     } catch (err) {
       console.error('[CreateOrderView] Error saving POS order:', err);
       setErrorMsg(t('orders.orderSaveError'));
@@ -753,20 +783,96 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
   return (
     <div className="space-y-5 font-sans">
-      {/* Top Action Header Bar */}
-      <CreateOrderHeader
-        activeShift={activeShift}
-        onOpenShiftModal={() => setIsShiftModalOpen(true)}
-        onPreviewPrint={handlePreviewPrint}
-        onOpenCustomerModal={() => setIsAddCustomerModalOpen(true)}
-        onClearCart={handleClearCart}
-        cartLength={cart.length}
-        scannerToast={scannerToast}
-        errorMsg={errorMsg}
-      />
+      {/* Fullscreen Dedicated POS Terminal (Overlay Mode with Generous Negative Space) */}
+      {isFullscreenPos && (
+        <FullscreenPosTerminal
+          onClose={() => setIsFullscreenPos(false)}
+          activeShift={activeShift}
+          onOpenShiftModal={() => setIsShiftModalOpen(true)}
+          onOpenCustomerModal={() => setIsAddCustomerModalOpen(true)}
+          customers={customers}
+          selectedCustomerId={selectedCustomerId}
+          setSelectedCustomerId={setSelectedCustomerId}
+          warehouses={warehouses}
+          selectedWarehouseId={selectedWarehouseId}
+          setSelectedWarehouseId={(newWhId) => {
+            setSelectedWarehouseId(newWhId);
+            if (cart.length > 0) {
+              const exceeding = cart.filter((c) => c.quantity > getVariantAvailableStock(c.variant.id, newWhId));
+              if (exceeding.length > 0) {
+                showToast(
+                  'error',
+                  `توجه: موجودی ${exceeding.length} قلم از کالاهای سبد خرید در انبار انتخابی کافی نیست.`
+                );
+              }
+            }
+          }}
+          isWarehouseLocked={isWarehouseLocked}
+          categories={categories}
+          selectedCategoryId={selectedCategoryId}
+          setSelectedCategoryId={setSelectedCategoryId}
+          filteredVariants={filteredVariants}
+          products={products}
+          getVariantAvailableStock={getVariantAvailableStock}
+          cart={cart}
+          onAddToCart={handleAddToCart}
+          onUpdateQty={handleUpdateQty}
+          onRemoveLine={handleRemoveLine}
+          onClearCart={handleClearCart}
+          barcodeQuery={barcodeQuery}
+          setBarcodeQuery={setBarcodeQuery}
+          onBarcodeSubmit={handleBarcodeSubmit}
+          productSearch={productSearch}
+          setProductSearch={setProductSearch}
+          subtotal={subtotal}
+          extraDiscount={extraDiscount}
+          setExtraDiscount={setExtraDiscount}
+          totalDiscount={totalDiscount}
+          hasTax={hasTax}
+          setHasTax={setHasTax}
+          taxAmount={taxAmount}
+          grandTotal={grandTotal}
+          paymentType={paymentType}
+          onPaymentTypeChange={handlePaymentTypeChange}
+          cashReceived={cashReceived}
+          setCashReceived={setCashReceived}
+          cashChange={cashChange}
+          financialAccounts={financialAccounts}
+          selectedAccountId={selectedAccountId}
+          setSelectedAccountId={setSelectedAccountId}
+          isAccountLocked={isAccountLocked}
+          hasAccounting={hasAccounting}
+          isSaving={isSaving}
+          onSubmitOrder={handleSubmitOrder}
+          onPreviewPrint={handlePreviewPrint}
+          organizationName={activeOrganization?.name}
+          userName={
+            user?.first_name || user?.last_name
+              ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
+              : user?.email
+          }
+          scannerToast={scannerToast}
+          errorMsg={errorMsg}
+        />
+      )}
 
-      {/* Main POS Interface Split (7 Columns Catalog | 5 Columns Invoice Terminal) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      {/* Standard POS View (Hidden when in Fullscreen POS mode to eliminate background scrolling) */}
+      <div className={isFullscreenPos ? 'hidden' : 'space-y-5'}>
+        {/* Top Action Header Bar */}
+        <CreateOrderHeader
+          activeShift={activeShift}
+          onOpenShiftModal={() => setIsShiftModalOpen(true)}
+          onPreviewPrint={handlePreviewPrint}
+          onOpenCustomerModal={() => setIsAddCustomerModalOpen(true)}
+          onClearCart={handleClearCart}
+          cartLength={cart.length}
+          scannerToast={scannerToast}
+          errorMsg={errorMsg}
+          onToggleFullscreenPos={() => setIsFullscreenPos(true)}
+        />
+
+        {/* Main POS Interface Split (7 Columns Catalog | 5 Columns Invoice Terminal) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Left Side: Product Catalog & Barcode Scanner (7 cols) */}
         <OrderQuickProductGrid
           barcodeInputRef={barcodeInputRef}
@@ -844,6 +950,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             />
           </form>
         </div>
+      </div>
       </div>
 
       {/* Quick Customer Creation Modal */}

@@ -1,6 +1,7 @@
 import { Order, Organization } from '../types';
 import { formatCurrency, formatDate, toPersianDigits } from './formatters';
 import { printHtml } from './print';
+import { mediaManager } from './mediaManager';
 
 export interface OrderItemPrintData {
   id?: number;
@@ -19,10 +20,14 @@ export function generateOrderInvoiceHtml(
   items: OrderItemPrintData[],
   organization?: Organization | null,
   isPersian: boolean = true,
-  format: 'standard' | 'thermal' = 'standard'
+  format: 'standard' | 'thermal' = 'standard',
+  resolvedLogoUrl?: string
 ): string {
   const orgName = organization?.name || 'تن‌خور (TANKHOR)';
-  const orgPhone = (organization as any)?.phone || '';
+  const orgPhone = organization?.phone || '';
+  const orgMobile = organization?.mobile || '';
+  const orgAddress = organization?.address || '';
+  const logoSrc = resolvedLogoUrl || (organization?.logo ? mediaManager.getDisplayUrlSync(organization.logo) : '');
   const orderNumber = order.order_number || `ORD-${order.id}`;
   const orderDate = formatDate(order.date_created, isPersian);
   const customerName = order.customer_name || (isPersian ? 'مشتری حضوری (عمومی)' : 'Walk-in Customer');
@@ -55,8 +60,16 @@ export function generateOrderInvoiceHtml(
     return `
       <div style="width: 78mm; max-width: 78mm; margin: 0 auto; padding: 4mm 2mm; font-family: Vazirmatn, system-ui, sans-serif; direction: rtl; color: #000; font-size: 11px; line-height: 1.4;">
         <div style="text-align: center; border-bottom: 1.5px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
+          ${logoSrc ? `<div style="margin-bottom: 5px;"><img src="${logoSrc}" alt="Logo" style="max-height: 40px; max-width: 100px; object-fit: contain; margin: 0 auto;" /></div>` : ''}
           <h2 style="font-size: 14px; font-weight: 900; margin: 0 0 3px 0;">${orgName}</h2>
-          ${orgPhone ? `<div style="font-size: 10px; margin-bottom: 2px;">تلفن: ${toPersianDigits(orgPhone)}</div>` : ''}
+          ${(orgPhone || orgMobile) ? `
+            <div style="font-size: 9.5px; color: #222; margin-bottom: 2px;">
+              ${orgPhone ? `<span>تلفن: ${toPersianDigits(orgPhone)}</span>` : ''}
+              ${(orgPhone && orgMobile) ? ' - ' : ''}
+              ${orgMobile ? `<span>همراه: ${toPersianDigits(orgMobile)}</span>` : ''}
+            </div>
+          ` : ''}
+          ${orgAddress ? `<div style="font-size: 9px; color: #444; margin-bottom: 3px; line-height: 1.3;">${orgAddress}</div>` : ''}
           <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">رسید فروشگاهی</div>
           <div style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 4px; font-family: monospace;">
             <span>شماره: ${orderNumber}</span>
@@ -141,12 +154,31 @@ export function generateOrderInvoiceHtml(
     <div style="max-width: 210mm; margin: 0 auto; padding: 10mm 8mm; font-family: Vazirmatn, system-ui, sans-serif; direction: rtl; color: #0f172a; font-size: 12px; line-height: 1.5; background: #fff;">
       <!-- Invoice Header -->
       <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 14px;">
-        <div>
-          <h1 style="font-size: 18px; font-weight: 900; margin: 0 0 4px 0; color: #0f172a;">صورتحساب فروش کالا و خدمات</h1>
-          <div style="font-size: 13px; font-weight: bold; color: #334155;">${orgName}</div>
-          ${orgPhone ? `<div style="font-size: 11px; color: #64748b; margin-top: 2px;">تلفن تماس: ${toPersianDigits(orgPhone)}</div>` : ''}
+        <div style="display: flex; align-items: center; gap: 14px;">
+          ${logoSrc ? `
+            <div style="width: 70px; height: 70px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 4px; background: #ffffff; display: flex; align-items: center; justify-content: center; shrink-0; overflow: hidden;">
+              <img src="${logoSrc}" alt="Logo" style="max-height: 62px; max-width: 62px; object-fit: contain;" />
+            </div>
+          ` : ''}
+          <div>
+            <h1 style="font-size: 18px; font-weight: 900; margin: 0 0 4px 0; color: #0f172a;">صورتحساب فروش کالا و خدمات</h1>
+            <div style="font-size: 13.5px; font-weight: bold; color: #1e293b;">${orgName}</div>
+            ${(orgPhone || orgMobile) ? `
+              <div style="font-size: 11px; color: #475569; margin-top: 2px;">
+                ${orgPhone ? `<span>تلفن تماس: <strong>${toPersianDigits(orgPhone)}</strong></span>` : ''}
+                ${(orgPhone && orgMobile) ? ' | ' : ''}
+                ${orgMobile ? `<span>همراه: <strong>${toPersianDigits(orgMobile)}</strong></span>` : ''}
+              </div>
+            ` : ''}
+            ${orgAddress ? `
+              <div style="font-size: 10.5px; color: #64748b; margin-top: 2px; max-width: 500px;">
+                نشانی: ${orgAddress}
+              </div>
+            ` : ''}
+          </div>
         </div>
-        <div style="text-align: left; font-size: 11px; space-y: 2px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; background: #f8fafc;">
+
+        <div style="text-align: left; font-size: 11px; space-y: 2px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; background: #f8fafc; shrink-0;">
           <div><strong>شماره فاکتور:</strong> <span style="font-family: monospace; font-weight: bold;">${orderNumber}</span></div>
           <div><strong>تاریخ صدور:</strong> <span style="font-family: monospace;">${orderDate}</span></div>
         </div>
@@ -223,14 +255,22 @@ export function generateOrderInvoiceHtml(
   `;
 }
 
-export function printOrderInvoice(
+export async function printOrderInvoice(
   order: Order,
   items: OrderItemPrintData[],
   organization?: Organization | null,
   isPersian: boolean = true,
   format: 'standard' | 'thermal' = 'standard'
-): void {
-  const html = generateOrderInvoiceHtml(order, items, organization, isPersian, format);
+): Promise<void> {
+  let resolvedLogoUrl = '';
+  if (organization?.logo) {
+    try {
+      resolvedLogoUrl = await mediaManager.getDisplayUrl(organization.logo);
+    } catch {
+      resolvedLogoUrl = mediaManager.getDisplayUrlSync(organization.logo);
+    }
+  }
+  const html = generateOrderInvoiceHtml(order, items, organization, isPersian, format, resolvedLogoUrl);
   printHtml(html, {
     title: `فاکتور_${order.order_number || order.id}`,
     extraStyles: `

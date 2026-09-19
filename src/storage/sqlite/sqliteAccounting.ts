@@ -1187,24 +1187,63 @@ export class SqliteAccountingStorage {
         const usr = users.find((u) => u.user_id === shift.user_id || u.email === shift.user_id);
 
         const shiftStart = shift.opened_at ? new Date(shift.opened_at).getTime() : 0;
-        const shiftEnd = shift.closed_at ? new Date(shift.closed_at).getTime() : Date.now();
+        const shiftEnd = shift.closed_at ? new Date(shift.closed_at).getTime() : 0;
 
         const shiftOrders = orders.filter((o) => {
-          if ((o as any).pos_shift_id && Number((o as any).pos_shift_id) === Number(shift.id)) {
+          // 1. Direct pos_shift_id match
+          const oShiftId = (o as any).pos_shift_id;
+          if (oShiftId && Number(oShiftId) === Number(shift.id)) {
             return true;
           }
-          const oWhId = typeof o.warehouse_id === 'object' ? (o.warehouse_id as any)?.id : o.warehouse_id;
-          if (whId && Number(oWhId) !== Number(whId)) return false;
 
+          // 2. Check notes for explicit shift reference [شیفت #X] or [Shift #X]
+          const notesStr = String((o as any).notes || '');
+          if (notesStr.includes(`شیفت #${shift.id}`) || notesStr.includes(`Shift #${shift.id}`)) {
+            return true;
+          }
+
+          // 3. If the order explicitly specifies a DIFFERENT pos_shift_id, don't associate with this shift
+          if (oShiftId && Number(oShiftId) !== Number(shift.id)) {
+            return false;
+          }
+
+          // 4. Warehouse match: if shift is tied to a specific warehouse
+          const oWhId = typeof o.warehouse_id === 'object' ? (o.warehouse_id as any)?.id : o.warehouse_id;
+          if (whId && oWhId && Number(oWhId) !== Number(whId)) {
+            return false;
+          }
+
+          // 5. Organization match
+          const oOrgId = typeof o.organization_id === 'object' ? (o.organization_id as any)?.id : o.organization_id;
+          const sOrgId = typeof shift.organization_id === 'object' ? (shift.organization_id as any)?.id : shift.organization_id;
+          if (sOrgId && oOrgId && Number(oOrgId) !== Number(sOrgId)) {
+            return false;
+          }
+
+          // 6. User match (permissive so UUID vs email differences don't reject legitimate shift orders)
           if (shift.user_id) {
-            const oUser = (o as any).user_created || (o as any).user_id;
-            if (oUser && oUser !== shift.user_id) {
-              return false;
+            const oUser = String((o as any).user_created || (o as any).user_id || '').trim();
+            const sUser = String(shift.user_id).trim();
+            const sEmail = String((shift as any).user_email || usr?.email || '').trim();
+            if (oUser && sUser && oUser !== sUser && oUser !== sEmail && !sUser.includes(oUser) && !oUser.includes(sUser)) {
+              if (usr && (usr.user_id === oUser || usr.email === oUser)) {
+                // matched via organization_users
+              } else {
+                return false;
+              }
             }
           }
 
+          // 7. Time window match (with 60-second grace period for clock drift)
           const oTime = o.date_created ? new Date(o.date_created).getTime() : 0;
-          return oTime >= shiftStart && oTime <= shiftEnd;
+          if (shiftStart > 0 && oTime > 0 && oTime < shiftStart - 60000) {
+            return false;
+          }
+          if (shiftEnd > 0 && oTime > 0 && oTime > shiftEnd + 60000) {
+            return false;
+          }
+
+          return true;
         });
 
         let totalSales = 0;
@@ -1214,6 +1253,8 @@ export class SqliteAccountingStorage {
         let creditSales = 0;
 
         for (const ord of shiftOrders) {
+          if (ord.status === 'cancelled') continue;
+
           const ordTotal = Number(ord.total) || 0;
           totalSales += ordTotal;
           const pMethod = String((ord as any).payment_method || (ord as any).payment_type || (ord as any).notes || '').toLowerCase();
@@ -1223,6 +1264,7 @@ export class SqliteAccountingStorage {
             posSales += ordTotal;
           } else if (pMethod.includes('card') || pMethod.includes('کارت')) {
             cardSales += ordTotal;
+            posSales += ordTotal; // Electronic card-to-card also counted in electronic card sales
           } else if (pMethod.includes('credit') || pMethod.includes('نسیه')) {
             creditSales += ordTotal;
           } else {
@@ -1241,7 +1283,7 @@ export class SqliteAccountingStorage {
           total_pos_amount: posSales,
           total_card_amount: cardSales,
           total_credit_amount: creditSales,
-          total_orders_count: shiftOrders.length,
+          total_orders_count: shiftOrders.filter((o) => o.status !== 'cancelled').length,
         };
       })
       .sort((a, b) => {
@@ -1253,26 +1295,28 @@ export class SqliteAccountingStorage {
 
   async getActivePosShift(userId?: string, warehouseId?: number): Promise<PosShift | null> {
     const shifts = await this.getPosShifts({ status: 'open' });
+    if (!shifts || shifts.length === 0) return null;
+
     if (userId && warehouseId) {
       const match = shifts.find((s) => {
         const whId = typeof s.warehouse_id === 'object' ? (s.warehouse_id as any)?.id : s.warehouse_id;
-        const uMatch = s.user_id === userId || (s as any).user_email === userId;
+        const uMatch = s.user_id === userId || (s as any).user_email === userId || String(s.user_id) === String(userId);
         return uMatch && Number(whId) === Number(warehouseId);
       });
       if (match) return match;
-    }
-    if (userId) {
-      const userShift = shifts.find((s) => s.user_id === userId || (s as any).user_email === userId);
-      return userShift || null;
     }
     if (warehouseId) {
       const whShift = shifts.find((s) => {
         const whId = typeof s.warehouse_id === 'object' ? (s.warehouse_id as any)?.id : s.warehouse_id;
         return Number(whId) === Number(warehouseId);
       });
-      return whShift || null;
+      if (whShift) return whShift;
     }
-    return shifts.length > 0 ? shifts[0] : null;
+    if (userId) {
+      const userShift = shifts.find((s) => s.user_id === userId || (s as any).user_email === userId || String(s.user_id) === String(userId));
+      if (userShift) return userShift;
+    }
+    return shifts[0] || null;
   }
 
   async savePosShift(shiftData: Partial<PosShift>): Promise<PosShift> {

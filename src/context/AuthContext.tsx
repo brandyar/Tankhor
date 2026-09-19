@@ -55,6 +55,14 @@ interface AuthContextType {
   register: RegisterFunction;
   loginOfflineGuest: () => void;
   logout: () => Promise<void>;
+  updateUserProfile: (data: {
+    first_name?: string;
+    last_name?: string;
+    title?: string;
+    avatar?: string;
+    password?: string;
+    current_password?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -407,6 +415,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserProfile = async (data: {
+    first_name?: string;
+    last_name?: string;
+    title?: string;
+    avatar?: string;
+    password?: string;
+    current_password?: string;
+  }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      let updatedUser: any = null;
+      if (isCloudAuthenticated && directusClient.getToken()) {
+        updatedUser = await directusClient.updateMe(data);
+      } else {
+        // Offline / Local storage profile update
+        updatedUser = {
+          first_name: data.first_name,
+          last_name: data.last_name,
+          title: data.title,
+          avatar: data.avatar,
+        };
+      }
+      const mergedUser: User = {
+        ...(user || {}),
+        ...(updatedUser || {}),
+        first_name: data.first_name !== undefined ? data.first_name : user?.first_name,
+        last_name: data.last_name !== undefined ? data.last_name : user?.last_name,
+        title: data.title !== undefined ? data.title : user?.title,
+        avatar: data.avatar !== undefined ? data.avatar : user?.avatar,
+        id: user?.id || updatedUser?.id || 'local_user',
+        email: user?.email || updatedUser?.email || '',
+      };
+      setUser(mergedUser);
+      try {
+        const cachedRaw = localStorage.getItem(CACHED_USER_KEY);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          localStorage.setItem(CACHED_USER_KEY, JSON.stringify({ ...cached, ...mergedUser }));
+        } else {
+          localStorage.setItem(CACHED_USER_KEY, JSON.stringify(mergedUser));
+        }
+      } catch {}
+      return { success: true };
+    } catch (err: any) {
+      console.error('[AuthContext] Update Profile Failed:', err);
+      return { success: false, error: err?.message || 'خطا در بروزرسانی مشخصات کاربر' };
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -422,6 +478,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         loginOfflineGuest,
         logout,
+        updateUserProfile,
       }}
     >
       {children}

@@ -347,7 +347,7 @@ export const ChequesPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header & Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <div>
           <h2 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -358,10 +358,10 @@ export const ChequesPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           <button
             onClick={() => handleOpenNewCheque('issued')}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer shadow-xs"
+            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer shadow-xs"
           >
             <ArrowUpRight className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
             <span>ثبت چک پرداختی</span>
@@ -369,7 +369,7 @@ export const ChequesPage: React.FC = () => {
 
           <button
             onClick={() => handleOpenNewCheque('received')}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-neutral-900 transition-colors cursor-pointer shadow-xs"
+            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-neutral-900 transition-colors cursor-pointer shadow-xs"
           >
             <Plus className="w-4 h-4" />
             <span>{t('accounting.newCheque')} (دریافتی)</span>
@@ -379,7 +379,7 @@ export const ChequesPage: React.FC = () => {
 
       {/* Due Date Alert Banner */}
       {stats.dueAlertsCount > 0 && (
-        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-between gap-4">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
               <AlertTriangle className="w-5 h-5" />
@@ -396,7 +396,7 @@ export const ChequesPage: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('alerts')}
-            className="px-3 py-1.5 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors shrink-0 cursor-pointer shadow-xs"
+            className="w-full sm:w-auto px-3 py-1.5 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors shrink-0 cursor-pointer shadow-xs text-center"
           >
             مشاهده چک‌های هشدار
           </button>
@@ -404,50 +404,50 @@ export const ChequesPage: React.FC = () => {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
-          <div className="flex items-center justify-between text-neutral-500 mb-2">
-            <span className="text-xs font-medium">{t('accounting.totalReceivedAmount')}</span>
-            <ArrowDownLeft className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
+          <div className="flex items-center justify-between text-neutral-500 mb-1.5 sm:mb-2">
+            <span className="text-[11px] sm:text-xs font-medium line-clamp-1">{t('accounting.totalReceivedAmount')}</span>
+            <ArrowDownLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           </div>
-          <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-            {formatCurrency(stats.totalReceived)} <span className="text-xs font-normal text-neutral-500">{t('accounting.toman')}</span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
-          <div className="flex items-center justify-between text-neutral-500 mb-2">
-            <span className="text-xs font-medium">{t('accounting.totalIssuedAmount')}</span>
-            <ArrowUpRight className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-          </div>
-          <div className="text-lg font-bold text-amber-600 dark:text-amber-400">
-            {formatCurrency(stats.totalIssued)} <span className="text-xs font-normal text-neutral-500">{t('accounting.toman')}</span>
+          <div className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400">
+            {formatCurrency(stats.totalReceived)} <span className="text-[10px] sm:text-xs font-normal text-neutral-500">{t('accounting.toman')}</span>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
-          <div className="flex items-center justify-between text-neutral-500 mb-2">
-            <span className="text-xs font-medium">{t('accounting.pendingClearingAmount')}</span>
-            <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
+          <div className="flex items-center justify-between text-neutral-500 mb-1.5 sm:mb-2">
+            <span className="text-[11px] sm:text-xs font-medium line-clamp-1">{t('accounting.totalIssuedAmount')}</span>
+            <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400 shrink-0" />
           </div>
-          <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-            {formatCurrency(stats.pendingClearing)} <span className="text-xs font-normal text-neutral-500">{t('accounting.toman')}</span>
+          <div className="text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400">
+            {formatCurrency(stats.totalIssued)} <span className="text-[10px] sm:text-xs font-normal text-neutral-500">{t('accounting.toman')}</span>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
-          <div className="flex items-center justify-between text-neutral-500 mb-2">
-            <span className="text-xs font-medium">{t('accounting.bouncedAmount')}</span>
-            <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+        <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
+          <div className="flex items-center justify-between text-neutral-500 mb-1.5 sm:mb-2">
+            <span className="text-[11px] sm:text-xs font-medium line-clamp-1">{t('accounting.pendingClearingAmount')}</span>
+            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400 shrink-0" />
           </div>
-          <div className="text-lg font-bold text-red-600 dark:text-red-400">
-            {formatCurrency(stats.bounced)} <span className="text-xs font-normal text-neutral-500">{t('accounting.toman')}</span>
+          <div className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400">
+            {formatCurrency(stats.pendingClearing)} <span className="text-[10px] sm:text-xs font-normal text-neutral-500">{t('accounting.toman')}</span>
+          </div>
+        </div>
+
+        <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
+          <div className="flex items-center justify-between text-neutral-500 mb-1.5 sm:mb-2">
+            <span className="text-[11px] sm:text-xs font-medium line-clamp-1">{t('accounting.bouncedAmount')}</span>
+            <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600 dark:text-red-400 shrink-0" />
+          </div>
+          <div className="text-base sm:text-lg font-bold text-red-600 dark:text-red-400">
+            {formatCurrency(stats.bounced)} <span className="text-[10px] sm:text-xs font-normal text-neutral-500">{t('accounting.toman')}</span>
           </div>
         </div>
       </div>
 
       {/* Filter Tabs & Search Bar */}
-      <div className="space-y-3 bg-white dark:bg-neutral-900 p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800">
+      <div className="space-y-3 bg-white dark:bg-neutral-900 p-3.5 sm:p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
             {[

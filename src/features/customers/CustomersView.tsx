@@ -238,29 +238,32 @@ export const CustomersView: React.FC = () => {
         title={t('customers.title')}
         subtitle={t('customers.subtitle')}
         action={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={handleExportExcel}
-              icon={<Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+              icon={<Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400" />}
             >
-              {t('customers.exportExcel')}
+              <span className="hidden sm:inline">{t('customers.exportExcel')}</span>
+              <span className="sm:hidden">خروجی</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={handleImportExcelClick}
               disabled={isImporting}
-              icon={<Upload className={`w-4 h-4 text-indigo-600 dark:text-indigo-400 ${isImporting ? 'animate-bounce' : ''}`} />}
+              icon={<Upload className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600 dark:text-indigo-400 ${isImporting ? 'animate-bounce' : ''}`} />}
             >
-              {isImporting ? 'در حال ورود...' : t('customers.importExcel')}
+              <span className="hidden sm:inline">{isImporting ? 'در حال ورود...' : t('customers.importExcel')}</span>
+              <span className="sm:hidden">{isImporting ? '...' : 'ورود'}</span>
             </Button>
             <Button
+              size="sm"
               onClick={() => handleOpenModal()}
-              icon={<Plus className="w-4 h-4" />}
+              icon={<Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             >
-              {t('customers.addNewCustomer')}
+              <span>{t('customers.addNewCustomer')}</span>
             </Button>
           </div>
         }

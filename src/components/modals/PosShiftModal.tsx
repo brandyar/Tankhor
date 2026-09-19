@@ -74,10 +74,13 @@ export const PosShiftModal: React.FC<PosShiftModalProps> = ({
       shiftHistory.find(
         (s) =>
           s.status === 'open' &&
-          ((currentUserId && s.user_id === currentUserId) ||
+          ((currentUserId && (s.user_id === currentUserId || String(s.user_id) === String(currentUserId))) ||
             (currentUserEmail &&
-              (s.user_id === currentUserEmail || (s as any).user_email === currentUserEmail)))
-      ) || null
+              (s.user_id === currentUserEmail || (s as any).user_email === currentUserEmail)) ||
+            !s.user_id)
+      ) ||
+      shiftHistory.find((s) => s.status === 'open') ||
+      null
     );
   }, [shiftHistory, currentUserId, currentUserEmail]);
 
