@@ -490,13 +490,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Main Sidebar Panel */}
       <aside
         className={`
-          fixed lg:sticky top-0 z-40
+          fixed lg:static top-0 bottom-0 ${isRtl ? 'right-0' : 'left-0'} z-50 lg:z-30
           bg-[#0f121a] text-neutral-300 flex flex-col shrink-0 select-none
           border-e border-neutral-800/80
           transition-all duration-300 ease-in-out
           ${isMobileOpen ? 'translate-x-0' : (isRtl ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0')}
           ${isCollapsed ? 'w-[72px]' : 'w-64 lg:w-[260px]'}
-          h-screen
+          h-full max-h-screen
         `}
       >
         {/* Header with App Logo and Collapse Toggle */}

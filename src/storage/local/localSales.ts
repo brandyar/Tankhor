@@ -448,7 +448,7 @@ export class LocalSalesStorage {
 
     items = items.filter((i) => {
       const oId = typeof i.order_id === 'number' ? i.order_id : Number((i.order_id as any)?.id || (i as any).order_id);
-      return oId === orderId;
+      return Number(oId) === Number(orderId);
     });
 
     return items.map((item) => {

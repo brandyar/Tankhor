@@ -113,10 +113,20 @@ export const ReportsView: React.FC = () => {
           validOrders.map(async (o) => {
             if (!o || !o.id) return;
             try {
+              if (Array.isArray((o as any).items) && (o as any).items.length > 0) {
+                itemsMap[o.id] = (o as any).items;
+                return;
+              }
               const items = await adapter.getOrderItems(o.id);
-              itemsMap[o.id] = Array.isArray(items) ? items.filter((item): item is OrderItem => Boolean(item && item.id)) : [];
+              if (Array.isArray(items) && items.length > 0) {
+                itemsMap[o.id] = items.filter((item): item is OrderItem => Boolean(item && (item.id || item.variant_id || (item as any).product_variant_id)));
+              } else if (Array.isArray((o as any).items) && (o as any).items.length > 0) {
+                itemsMap[o.id] = (o as any).items;
+              } else {
+                itemsMap[o.id] = [];
+              }
             } catch {
-              itemsMap[o.id] = [];
+              itemsMap[o.id] = Array.isArray((o as any).items) ? (o as any).items : [];
             }
           })
         );
@@ -151,12 +161,17 @@ export const ReportsView: React.FC = () => {
     let totalSoldQty = 0;
     let totalSalesRev = 0;
 
+    const activeOrders = (orders || []).filter((o) => o && o.id && o.status !== 'cancelled');
+
     allOrderItems.forEach((item) => {
       if (!item) return;
-      const vId = getEntityId(item.variant_id);
-      const variant = vId !== undefined ? variantMap.get(vId) : undefined;
-      const qty = item.quantity || 1;
-      const rev = item.total || (item.unit_price * qty);
+      const vId = getEntityId(item.variant_id) ?? getEntityId((item as any).variant) ?? getEntityId((item as any).product_variant_id);
+      const variant = vId !== undefined ? variantMap.get(vId) : (variants || []).find((v) => v.sku && (v.sku === item.variant_sku || v.sku === (item as any).sku));
+
+      const qty = Number(item.quantity) || 1;
+      const unitPrice = Number(item.unit_price) || Number((item as any).price) || Number((item as any).unitPrice) || (variant?.price ? Number(variant.price) : 0);
+      const discount = Number(item.discount) || 0;
+      const rev = Number(item.total) > 0 ? Number(item.total) : Math.max(0, (unitPrice * qty) - discount);
 
       totalSoldQty += qty;
       totalSalesRev += rev;
@@ -165,7 +180,7 @@ export const ReportsView: React.FC = () => {
         // Size aggregation
         const szId = getEntityId(variant.size_id);
         const szObj = szId !== undefined ? sizeMap.get(szId) : null;
-        const sizeName = szObj?.name || variant.size_name || t('reports.unknownLabel', 'سایز نامشخص');
+        const sizeName = szObj?.name || variant.size_name || (item as any).size_name || (item as any).size || t('reports.unknownLabel', 'سایز نامشخص');
         if (!sizeStats[sizeName]) {
           sizeStats[sizeName] = { name: sizeName, id: szObj?.id, qty: 0, revenue: 0 };
         }
@@ -175,7 +190,7 @@ export const ReportsView: React.FC = () => {
         // Color aggregation
         const clrId = getEntityId(variant.color_id);
         const clrObj = clrId !== undefined ? colorMap.get(clrId) : null;
-        const colorName = clrObj?.name || variant.color_name || t('reports.unknownLabel', 'رنگ نامشخص');
+        const colorName = clrObj?.name || variant.color_name || (item as any).color_name || (item as any).color || t('reports.unknownLabel', 'رنگ نامشخص');
         if (!colorStats[colorName]) {
           colorStats[colorName] = { name: colorName, hex: clrObj?.hex || '#94a3b8', id: clrObj?.id, qty: 0, revenue: 0 };
         }
@@ -185,7 +200,7 @@ export const ReportsView: React.FC = () => {
         // Variant aggregation
         const pId = getEntityId(variant.product_id);
         const prod = pId !== undefined ? productMap.get(pId) : (variant.product_id && typeof variant.product_id === 'object' ? variant.product_id : undefined);
-        const prodTitle = prod?.title || variant.product_title || t('reports.defaultProductTitle', 'کالا');
+        const prodTitle = prod?.title || variant.product_title || (item as any).product_title || (item as any).title || t('reports.defaultProductTitle', 'کالا');
         if (!variantStats[variant.id]) {
           variantStats[variant.id] = {
             sku: variant.sku || '',
@@ -201,6 +216,14 @@ export const ReportsView: React.FC = () => {
       }
     });
 
+    // Fallback if item-level revenue was not found or 0, calculate directly from active orders
+    const ordersTotalSum = activeOrders.reduce((sum, o) => sum + (Number(o.total) || Number(o.subtotal) || 0), 0);
+    const calculatedRevenue = totalSalesRev > 0 ? totalSalesRev : ordersTotalSum;
+
+    // Fallback units sold count if individual items were not tracked
+    const ordersUnitsCount = activeOrders.reduce((sum, o) => sum + (Number((o as any).items_count) || (Array.isArray((o as any).items) ? (o as any).items.length : 1)), 0);
+    const calculatedUnitsSold = totalSoldQty > 0 ? totalSoldQty : (ordersTotalSum > 0 ? ordersUnitsCount : 0);
+
     // Convert to sorted arrays
     const sortedSizes = Object.values(sizeStats).sort((a, b) => b.qty - a.qty);
     const sortedColors = Object.values(colorStats).sort((a, b) => b.qty - a.qty);
@@ -210,10 +233,10 @@ export const ReportsView: React.FC = () => {
       sortedSizes,
       sortedColors,
       sortedVariants,
-      totalSoldQty,
-      totalSalesRev,
+      totalSoldQty: calculatedUnitsSold,
+      totalSalesRev: calculatedRevenue,
     };
-  }, [allOrderItems, variantMap, sizeMap, colorMap, productMap, t]);
+  }, [allOrderItems, orders, variantMap, sizeMap, colorMap, productMap, variants, t]);
 
   // -------------------------------------------------------------
   // 2. DEAD STOCK ANALYSIS COMPUTATION

@@ -115,7 +115,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
 
   return (
     <>
-      <header className="h-16 bg-white/95 dark:bg-[#0f121a]/95 backdrop-blur-md border-b border-neutral-200/80 dark:border-neutral-800/80 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-30 transition-colors">
+      <header className="h-16 min-h-[64px] shrink-0 w-full bg-white dark:bg-[#0f121a] border-b border-neutral-200/80 dark:border-neutral-800/80 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 transition-colors z-20">
         {/* Left / Start: Mobile Sidebar Toggle (Hidden on Desktop) & Organization Switcher Dropdown */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {/* Mobile Sidebar Toggle (Hidden on Desktop since sidebar has its own button) */}
@@ -124,7 +124,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
               onClick={onToggleSidebar}
               title={t('common.toggleSidebar')}
               aria-label={t('common.toggleSidebar')}
-              className="lg:hidden min-w-[40px] min-h-[40px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-xl text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              className="lg:hidden min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors cursor-pointer"
             >
               <Menu className="w-5 h-5 shrink-0" />
             </button>
@@ -134,13 +134,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
           <div className="relative" ref={orgMenuRef}>
             <button
               onClick={() => setIsOrgMenuOpen(!isOrgMenuOpen)}
-              className="flex items-center gap-1.5 sm:gap-2 bg-neutral-100/90 dark:bg-neutral-800/80 hover:bg-neutral-200/70 dark:hover:bg-neutral-700/80 rounded-xl px-2.5 sm:px-3 py-1.5 border border-neutral-200/90 dark:border-neutral-700/80 transition-all cursor-pointer focus:outline-none shadow-2xs min-h-[38px]"
+              className="flex items-center gap-2 bg-neutral-100/90 dark:bg-neutral-800/60 hover:bg-neutral-200/70 dark:hover:bg-neutral-800 rounded-xl px-3 py-2 border border-neutral-200/90 dark:border-neutral-700/60 transition-all cursor-pointer focus:outline-none shadow-2xs min-h-[40px]"
             >
               <div className="w-5 h-5 rounded-lg bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 flex items-center justify-center shrink-0">
-                <Building2 className="w-3 h-3" />
+                <Building2 className="w-3.5 h-3.5" />
               </div>
               <div className="text-start pe-0.5 sm:pe-1">
-                <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 block truncate max-w-[95px] xs:max-w-[130px] sm:max-w-[180px]">
+                <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 block truncate max-w-[100px] xs:max-w-[140px] sm:max-w-[190px]">
                   {activeOrganization?.name || t('common.selectOrg')}
                 </span>
               </div>
@@ -220,24 +220,24 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
           <button
             type="button"
             onClick={() => setIsQuickSearchOpen(true)}
-            className="w-full flex items-center justify-between gap-1.5 sm:gap-2 bg-neutral-100/90 dark:bg-neutral-800/80 hover:bg-neutral-200/80 dark:hover:bg-neutral-700/80 rounded-xl px-2.5 sm:px-3 py-1.5 border border-neutral-200/90 dark:border-neutral-700/80 transition-all cursor-pointer text-start shadow-2xs group min-h-[38px]"
+            className="w-full flex items-center justify-between gap-2 bg-neutral-100/90 dark:bg-neutral-800/60 hover:bg-neutral-200/80 dark:hover:bg-neutral-800 rounded-xl px-3 py-2 border border-neutral-200/90 dark:border-neutral-700/60 transition-all cursor-pointer text-start shadow-2xs group min-h-[40px]"
             title={`${t('common.quickSearchTitle', 'جستجوی سریع صفحات')} (Ctrl+K)`}
           >
-            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              <Search className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-700 dark:group-hover:text-neutral-300 shrink-0" />
-              <span className="text-xs text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-800 dark:group-hover:text-neutral-200 truncate">
+            <div className="flex items-center gap-2 min-w-0">
+              <Search className="w-4 h-4 text-neutral-400 dark:text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-200 shrink-0" />
+              <span className="text-xs text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-800 dark:group-hover:text-neutral-200 truncate font-medium">
                 <span className="hidden xs:inline">{t('common.quickSearch', 'جستجوی سریع صفحات...')}</span>
                 <span className="xs:hidden">{t('common.search', 'جستجو...')}</span>
               </span>
             </div>
-            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-md bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 shadow-2xs shrink-0">
+            <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-[10px] font-mono font-medium rounded-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 shadow-2xs shrink-0">
               Ctrl K
             </kbd>
           </button>
         </div>
 
         {/* Right / End: Cloud Sync Icon & Theme Switcher */}
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Cloud Sync & Storage Mode Icon Button */}
           <button
             onClick={() => {
@@ -257,12 +257,12 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                 ? t('common.cloudLoginRequired')
                 : `${t('common.localOffline')} - ${t('common.switchToCloud', 'اتصال به سرور ابری')}`
             }
-            className={`relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border transition-all cursor-pointer shadow-2xs ${
+            className={`relative flex items-center justify-center w-10 h-10 rounded-xl border transition-all cursor-pointer shadow-2xs ${
               pendingCount > 0
                 ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/60'
                 : mode === 'cloud_synced' && isCloudAuthenticated
                 ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 hover:bg-blue-100/80 dark:hover:bg-blue-900/50'
-                : 'text-neutral-600 dark:text-neutral-300 bg-neutral-50/80 dark:bg-neutral-800/80 border-neutral-200/90 dark:border-neutral-700/80 hover:bg-neutral-100 dark:hover:bg-neutral-700'
+                : 'text-neutral-600 dark:text-neutral-300 bg-neutral-50/80 dark:bg-neutral-800/60 border-neutral-200/90 dark:border-neutral-700/60 hover:bg-neutral-100 dark:hover:bg-neutral-700/80'
             }`}
           >
             {syncing ? (
@@ -275,12 +275,12 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
 
             {/* Notification Dot or Pending Counter */}
             {pendingCount > 0 ? (
-              <span className="absolute -top-1 -end-1 min-w-[16px] h-4 px-1 rounded-full bg-amber-500 text-white text-[9px] font-bold font-mono flex items-center justify-center shadow-xs">
+              <span className="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[9px] font-bold font-mono flex items-center justify-center shadow-xs">
                 {pendingCount > 99 ? '99+' : pendingCount}
               </span>
             ) : (
               <span
-                className={`absolute bottom-0 end-0 w-2 h-2 rounded-full ring-2 ring-white dark:ring-[#0f121a] ${
+                className={`absolute bottom-1 end-1 w-2 h-2 rounded-full ring-2 ring-white dark:ring-[#0f121a] ${
                   mode === 'cloud_synced' && isCloudAuthenticated
                     ? 'bg-blue-500'
                     : 'bg-emerald-500'
@@ -294,7 +294,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
             <button
               onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
               title={`${t('common.theme')}: ${theme === 'dark' ? t('common.themeDark') : theme === 'light' ? t('common.themeLight') : t('common.themeSystem')}`}
-              className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-neutral-200/80 dark:border-neutral-700/80 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200 transition-colors cursor-pointer shadow-2xs"
+              className="flex items-center justify-center w-10 h-10 rounded-xl border border-neutral-200/80 dark:border-neutral-700/60 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 text-neutral-700 dark:text-neutral-200 transition-colors cursor-pointer shadow-2xs"
             >
               {theme === 'dark' ? (
                 <Moon className="w-4 h-4 text-indigo-400" />
