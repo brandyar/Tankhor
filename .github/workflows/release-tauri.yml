@@ -316,8 +316,8 @@ jobs:
           export PATH="/usr/local/lib/android/sdk/cmdline-tools/latest/bin:/usr/local/lib/android/sdk/platform-tools:/usr/local/lib/android/sdk/build-tools/34.0.0:$PATH"
           export NDK_HOME="/usr/local/lib/android/sdk/ndk/26.1.10909125"
           
-          # Build target for aarch64 (modern 64-bit phones) and armv7 (32-bit compatibility) in a single bundle
-          npx tauri android build --apk --target aarch64,armv7 || npx tauri android build --apk --target aarch64
+          # Build target for aarch64 (modern 64-bit phones) and armv7 (32-bit compatibility)
+          npx tauri android build --apk --target aarch64 --target armv7 || npx tauri android build --apk --target aarch64
 
       - name: Zipalign & Sign Single Universal Android APK
         run: |
@@ -352,16 +352,45 @@ jobs:
           fi
 
           echo "Locating built APK files..."
-          # Find all produced APKs sorted by size descending (universal APK is the largest)
-          APK_FILES=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -not -name "*unaligned*" -not -name "*signed*" | xargs ls -S 2>/dev/null || find src-tauri/gen/android/app/build/outputs/apk -name "*.apk")
-          echo "Found candidate APKs:"
-          echo "$APK_FILES"
+          # Locate all produced APK files in gen/android outputs (excluding unaligned and already final-signed)
+          RAW_APK_FILES=$(find src-tauri/gen/android -type f -name "*.apk" 2>/dev/null | grep -v "unaligned" | grep -v "\-signed\.apk" || true)
+          if [ -z "$RAW_APK_FILES" ]; then
+            RAW_APK_FILES=$(find src-tauri -type f -name "*.apk" 2>/dev/null | grep -v "unaligned" | grep -v "\-signed\.apk" || true)
+          fi
 
-          # Pick the primary Universal / release APK (first and largest)
-          PRIMARY_APK=$(echo "$APK_FILES" | head -n 1)
-          if [ -z "$PRIMARY_APK" ] || [ ! -f "$PRIMARY_APK" ]; then
+          echo "Found candidate APKs:"
+          echo "$RAW_APK_FILES"
+
+          if [ -z "$RAW_APK_FILES" ]; then
             echo "Error: No APK file was found to sign!"
+            echo "Inspecting build directory hierarchy:"
+            find src-tauri/gen/android/app/build -maxdepth 5 2>/dev/null || true
             exit 1
+          fi
+
+          # Sort APKs by size descending safely using xargs -r
+          SORTED_APKS=$(echo "$RAW_APK_FILES" | xargs -r ls -S 2>/dev/null || echo "$RAW_APK_FILES")
+
+          # Select primary APK: prioritize universal release, then standard release, or largest APK
+          PRIMARY_APK=""
+          for candidate in $SORTED_APKS; do
+            if echo "$candidate" | grep -qi "universal.*release"; then
+              PRIMARY_APK="$candidate"
+              break
+            fi
+          done
+
+          if [ -z "$PRIMARY_APK" ]; then
+            for candidate in $SORTED_APKS; do
+              if echo "$candidate" | grep -qi "release"; then
+                PRIMARY_APK="$candidate"
+                break
+              fi
+            done
+          fi
+
+          if [ -z "$PRIMARY_APK" ]; then
+            PRIMARY_APK=$(echo "$SORTED_APKS" | head -n 1)
           fi
 
           echo "Selected primary Universal APK: $PRIMARY_APK"
