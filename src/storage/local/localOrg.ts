@@ -6,7 +6,8 @@ import {
   OrganizationUser,
   Subscription,
   SystemModule,
-  OrganizationModule
+  OrganizationModule,
+  Feedback
 } from '../../types';
 import { DEFAULT_SYSTEM_MODULES } from '../../utils/license';
 import { directusClient } from '../../api/directus';
@@ -295,5 +296,38 @@ export class LocalOrgStorage {
     const updated = list.filter((m) => m.id !== id);
     this.base.setItem('organization_modules', updated);
     return true;
+  }
+
+  // Feedbacks
+  async getFeedbacks(params?: QueryParams): Promise<Feedback[]> {
+    return this.base.getItem<Feedback>('feedbacks', []);
+  }
+
+  async submitFeedback(feedback: Partial<Feedback>): Promise<Feedback> {
+    const list = this.base.getItem<Feedback>('feedbacks', []);
+    const newFeedback: Feedback = {
+      id: this.base.generateUniqueId(list as Array<{ id: string | number }>),
+      subject: feedback.subject || 'بازخورد',
+      message: feedback.message || '',
+      status: feedback.status || 'unread',
+      user_id: feedback.user_id || null,
+      date_created: new Date().toISOString(),
+      ...feedback,
+    };
+    list.unshift(newFeedback);
+    this.base.setItem('feedbacks', list);
+
+    // Immediately submit to Directus API gateway
+    try {
+      await directusClient.submitFeedback({
+        subject: newFeedback.subject,
+        message: newFeedback.message,
+        user_id: newFeedback.user_id,
+      });
+    } catch (e: any) {
+      console.warn('[LocalOrg] Directus direct submission notice:', e?.message);
+    }
+
+    return newFeedback;
   }
 }

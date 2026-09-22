@@ -9,7 +9,8 @@ import {
   FinancialAccount, TreasuryTransaction, Cheque, ChequeStatus,
   LandedCost, LandedCostAllocation, VatReportSummary,
   PosShift, PosShiftStatus,
-  WooCommerceSettings, WooCommerceLog, IntegrationMapping
+  WooCommerceSettings, WooCommerceLog, IntegrationMapping,
+  Feedback
 } from '../types';
 
 export type StorageMode = 'local_offline' | 'cloud_synced';
@@ -214,4 +215,8 @@ export interface IStorageProvider {
   addWooCommerceLog?(log: Partial<WooCommerceLog>): Promise<WooCommerceLog>;
   getIntegrationMappings?(params?: QueryParams & { entity_type?: string }): Promise<IntegrationMapping[]>;
   saveIntegrationMapping?(mapping: Partial<IntegrationMapping>): Promise<IntegrationMapping>;
+
+  // Feedback & Feature Suggestions (ثبت و ارسال بازخورد)
+  submitFeedback?(feedback: Partial<Feedback>): Promise<Feedback>;
+  getFeedbacks?(params?: QueryParams): Promise<Feedback[]>;
 }

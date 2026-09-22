@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from '../../i18n';
 import { useOrganization } from '../../context/OrganizationContext';
 import { storageManager } from '../../storage';
@@ -9,7 +9,7 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Product, Category, Collection, Season, SizeGuideTemplate, Color, Size, Brand, ProductVariant } from '../../types';
-import { toPersianDigits, formatDate, normalizeId } from '../../utils/formatters';
+import { toPersianDigits, formatDate, normalizeId, matchesSearchQuery } from '../../utils/formatters';
 import { ProductEditView } from './ProductEditView';
 import { ProductVariantsModal } from './ProductVariantsModal';
 import { ProductImage } from '../../components/ui/ProductImage';
@@ -26,7 +26,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
   const { t, locale } = useTranslation();
   const { activeOrganization, permissions } = useOrganization();
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [rawProducts, setRawProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
@@ -64,7 +64,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
       const orgId = activeOrganization?.id;
 
       const [pList, cList, colList, seaList, bList, sgList, colorList, sizeList, vList] = await Promise.all([
-        adapter.getProducts({ organization_id: orgId, search }),
+        adapter.getProducts({ organization_id: orgId }),
         adapter.getCategories({ organization_id: orgId }),
         adapter.getCollections({ organization_id: orgId }),
         adapter.getSeasons({ organization_id: orgId }),
@@ -75,6 +75,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
         adapter.getVariants({ organization_id: orgId }),
       ]);
 
+      setRawProducts(pList);
       setCategories(cList);
       setCollections(colList);
       setSeasons(seaList);
@@ -83,50 +84,6 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
       setColors(colorList);
       setSizes(sizeList);
       setAllVariants(vList);
-
-      let filteredProducts = pList;
-
-      // Filter by Category
-      if (selectedCategoryFilter) {
-        filteredProducts = filteredProducts.filter((p) => (normalizeId(p.category_id) || Number(p.category_id)) === Number(selectedCategoryFilter));
-      }
-
-      // Filter by Brand
-      if (selectedBrandFilter) {
-        filteredProducts = filteredProducts.filter((p) => {
-          const brandVal = typeof p.brand === 'string' ? p.brand : p.brand?.name || (typeof p.brand_id === 'object' ? (p.brand_id as any)?.name : '');
-          if (typeof p.brand_id === 'number') {
-            const matchedBrand = bList.find((b) => b.id === p.brand_id);
-            if (matchedBrand && matchedBrand.name === selectedBrandFilter) return true;
-          }
-          return brandVal === selectedBrandFilter;
-        });
-      }
-
-      // Filter by Collection
-      if (selectedCollectionFilter) {
-        filteredProducts = filteredProducts.filter((p) => (normalizeId(p.collection_id) || Number(p.collection_id)) === Number(selectedCollectionFilter));
-      }
-
-      // Filter by Season
-      if (selectedSeasonFilter) {
-        filteredProducts = filteredProducts.filter((p) => (normalizeId(p.season_id) || Number(p.season_id)) === Number(selectedSeasonFilter));
-      }
-
-      // Filter by Color (Products with at least one variant of selected color)
-      if (selectedColorFilter) {
-        const matchingProductIds = new Set<number>();
-        vList.forEach((v) => {
-          const cId = normalizeId(v.color_id);
-          if (cId === Number(selectedColorFilter)) {
-            const pId = normalizeId(v.product_id);
-            if (pId) matchingProductIds.add(pId);
-          }
-        });
-        filteredProducts = filteredProducts.filter((p) => matchingProductIds.has(normalizeId(p.id) || Number(p.id)));
-      }
-
-      setProducts(filteredProducts);
     } catch (err) {
       console.error('[ProductsView] Error loading products data:', err);
     } finally {
@@ -140,7 +97,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
       const deletedId = e?.detail?.deletedId;
       if (deletedId !== undefined) {
         const normDelId = normalizeId(deletedId) || Number(deletedId);
-        setProducts((prev) => prev.filter((p) => (normalizeId(p.id) || Number(p.id)) !== normDelId && p.id !== deletedId));
+        setRawProducts((prev) => prev.filter((p) => (normalizeId(p.id) || Number(p.id)) !== normDelId && p.id !== deletedId));
       }
       loadData();
     };
@@ -148,14 +105,130 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
     return () => {
       window.removeEventListener('tankhor_products_changed', handleProductsChange);
     };
+  }, [activeOrganization]);
+
+  // Client-side search and filtering using high-precision Persian/Arabic normalization
+  const filteredProducts = useMemo(() => {
+    let list = rawProducts;
+
+    // 1. Search Query
+    if (search && search.trim()) {
+      const term = search.trim();
+      list = list.filter((p) => {
+        const pId = normalizeId(p.id) || Number(p.id);
+
+        // Brand name resolution
+        const brandName =
+          typeof p.brand === 'string'
+            ? p.brand
+            : p.brand?.name ||
+              (typeof p.brand_id === 'object' ? (p.brand_id as any)?.name : '') ||
+              (typeof p.brand_id === 'number' ? brands.find((b) => b.id === p.brand_id)?.name : '') ||
+              '';
+
+        // Category name resolution
+        const catId = normalizeId(p.category_id) || Number(p.category_id);
+        const catName = categories.find((c) => (normalizeId(c.id) || Number(c.id)) === catId)?.name || '';
+
+        // Collection name resolution
+        const colId = normalizeId(p.collection_id) || Number(p.collection_id);
+        const colName = collections.find((c) => (normalizeId(c.id) || Number(c.id)) === colId)?.name || '';
+
+        // Season name resolution
+        const seaId = normalizeId(p.season_id) || Number(p.season_id);
+        const seaName = seasons.find((s) => (normalizeId(s.id) || Number(s.id)) === seaId)?.name || '';
+
+        // Variants info (SKU, barcode, color name, size name)
+        const pVariants = allVariants.filter((v) => (normalizeId(v.product_id) || Number(v.product_id)) === pId);
+        const variantTexts = pVariants
+          .map((v) => {
+            const colorName =
+              colors.find((c) => (normalizeId(c.id) || Number(c.id)) === (normalizeId(v.color_id) || Number(v.color_id)))?.name ||
+              v.color_name ||
+              '';
+            const sizeName =
+              sizes.find((s) => (normalizeId(s.id) || Number(s.id)) === (normalizeId(v.size_id) || Number(v.size_id)))?.name ||
+              v.size_name ||
+              '';
+            return `${v.sku || ''} ${v.barcode || ''} ${colorName} ${sizeName}`;
+          })
+          .join(' ');
+
+        return matchesSearchQuery(
+          term,
+          p.title,
+          p.slug,
+          (p as any).sku,
+          (p as any).barcode,
+          (p as any).code,
+          p.description,
+          p.tags,
+          brandName,
+          catName,
+          colName,
+          seaName,
+          variantTexts
+        );
+      });
+    }
+
+    // 2. Category Filter
+    if (selectedCategoryFilter) {
+      list = list.filter((p) => (normalizeId(p.category_id) || Number(p.category_id)) === Number(selectedCategoryFilter));
+    }
+
+    // 3. Brand Filter
+    if (selectedBrandFilter) {
+      list = list.filter((p) => {
+        const brandVal =
+          typeof p.brand === 'string' ? p.brand : p.brand?.name || (typeof p.brand_id === 'object' ? (p.brand_id as any)?.name : '');
+        if (typeof p.brand_id === 'number') {
+          const matchedBrand = brands.find((b) => b.id === p.brand_id);
+          if (matchedBrand && matchedBrand.name === selectedBrandFilter) return true;
+        }
+        return brandVal === selectedBrandFilter;
+      });
+    }
+
+    // 4. Collection Filter
+    if (selectedCollectionFilter) {
+      list = list.filter((p) => (normalizeId(p.collection_id) || Number(p.collection_id)) === Number(selectedCollectionFilter));
+    }
+
+    // 5. Season Filter
+    if (selectedSeasonFilter) {
+      list = list.filter((p) => (normalizeId(p.season_id) || Number(p.season_id)) === Number(selectedSeasonFilter));
+    }
+
+    // 6. Color Filter
+    if (selectedColorFilter) {
+      const matchingProductIds = new Set<number>();
+      allVariants.forEach((v) => {
+        const cId = normalizeId(v.color_id);
+        if (cId === Number(selectedColorFilter)) {
+          const pId = normalizeId(v.product_id);
+          if (pId) matchingProductIds.add(pId);
+        }
+      });
+      list = list.filter((p) => matchingProductIds.has(normalizeId(p.id) || Number(p.id)));
+    }
+
+    return list;
   }, [
-    activeOrganization,
+    rawProducts,
     search,
     selectedCategoryFilter,
     selectedBrandFilter,
     selectedCollectionFilter,
     selectedSeasonFilter,
     selectedColorFilter,
+    allVariants,
+    categories,
+    brands,
+    collections,
+    seasons,
+    colors,
+    sizes,
   ]);
 
   const handleOpenNewProduct = () => {
@@ -178,7 +251,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
       const normId = normalizeId(id) || Number(id);
       try {
         // Optimistically remove from state immediately for instant UI update on desktop & web
-        setProducts((prev) => prev.filter((p) => (normalizeId(p.id) || Number(p.id)) !== normId && p.id !== id));
+        setRawProducts((prev) => prev.filter((p) => (normalizeId(p.id) || Number(p.id)) !== normId && p.id !== id));
         const adapter = storageManager.getAdapter();
         await adapter.deleteProduct(normId);
         await loadData();
@@ -321,7 +394,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
 
   const handleExportExcel = () => {
     exportProductsToExcel(
-      products,
+      filteredProducts,
       allVariants,
       categories,
       brands,
@@ -406,13 +479,24 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
         <div className="space-y-3 mb-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5">
             {/* Search Input */}
-            <div className="sm:col-span-2 lg:col-span-2">
+            <div className="sm:col-span-2 lg:col-span-2 relative">
               <Input
-                placeholder={t('common.search')}
+                placeholder={t('products.searchPlaceholder', 'جستجو در نام، کد مدل، بارکد، رنگ، سایز، برند و...')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 icon={<Search className="w-4 h-4" />}
+                className={search ? 'pe-8' : ''}
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute inset-y-0 end-0 pe-2.5 flex items-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
+                  title={t('common.clear') || 'پاک کردن'}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Category Filter */}
@@ -518,7 +602,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
 
         <DataTable
           columns={columns}
-          data={products}
+          data={filteredProducts}
           keyExtractor={(p) => p.id}
           isLoading={isLoading}
           actions={(p) => (

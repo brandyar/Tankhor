@@ -49,6 +49,7 @@ export const BACKUP_COLLECTIONS = [
   'woocommerce_settings',
   'woocommerce_logs',
   'woocommerce_mappings',
+  'feedbacks',
 ] as const;
 
 export type BackupCollectionKey = typeof BACKUP_COLLECTIONS[number];

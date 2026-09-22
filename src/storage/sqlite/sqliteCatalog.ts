@@ -1,6 +1,6 @@
 import { QueryParams } from '../types';
 import { SqliteStorageBase } from './sqliteBase';
-import { normalizeId } from '../../utils/formatters';
+import { normalizeId, matchesSearchQuery } from '../../utils/formatters';
 import {
   Product,
   ProductVariant,
@@ -29,18 +29,19 @@ export class SqliteCatalogStorage {
     const orgId = this.base.getActiveOrgId(params);
     let items = await this.base.getItems<Product>('products', orgId);
 
-    if (params?.search) {
-      const term = params.search.toLowerCase();
-      items = items.filter((p) => {
-        const titleMatch = p.title.toLowerCase().includes(term);
-        const brandName = typeof p.brand === 'string' ? p.brand : p.brand?.name || (typeof p.brand_id === 'object' ? (p.brand_id as any)?.name : '');
-        const brandMatch = brandName ? brandName.toLowerCase().includes(term) : false;
-        return titleMatch || brandMatch;
-      });
-    }
-
     const variants = await this.base.getItems<ProductVariant>('product_variants', orgId);
     const inventoryItems = await this.base.getItems<InventoryItem>('inventory_items', orgId);
+
+    if (params?.search && params.search.trim()) {
+      const searchTerm = params.search.trim();
+      items = items.filter((p) => {
+        const pId = normalizeId(p.id) || Number(p.id);
+        const pVariants = variants.filter((v) => (normalizeId(v.product_id) || Number(v.product_id)) === pId);
+        const variantTexts = pVariants.map((v) => `${v.sku || ''} ${v.barcode || ''} ${v.color_name || ''} ${v.size_name || ''}`).join(' ');
+        const brandName = typeof p.brand === 'string' ? p.brand : p.brand?.name || (typeof p.brand_id === 'object' ? (p.brand_id as any)?.name : '');
+        return matchesSearchQuery(searchTerm, p.title, (p as any).sku, (p as any).barcode, p.slug, p.description, p.tags, brandName, variantTexts);
+      });
+    }
 
     return items.map((p) => {
       const pVariants = variants.filter((v) => normalizeId(v.product_id) === p.id);

@@ -6,6 +6,7 @@ import {
   Subscription,
   SystemModule,
   OrganizationModule,
+  Feedback,
 } from '../../types';
 
 export class CloudOrgStorage {
@@ -260,6 +261,43 @@ export class CloudOrgStorage {
       const deleted = await this.base.localAdapter.deleteOrganizationModule(id);
       this.base.syncManager.enqueue({ action: 'DELETE', collection: 'organization_modules', payload: { id } });
       return deleted;
+    }
+  }
+
+  // Feedbacks
+  async getFeedbacks(params?: QueryParams): Promise<Feedback[]> {
+    try {
+      const filter: any = {};
+      if (params?.status) {
+        filter.status = { _eq: params.status };
+      }
+      return await this.base.client.getItems<Feedback>('feedbacks', {
+        filter,
+        sort: '-id',
+      });
+    } catch {
+      return await this.base.localAdapter.getFeedbacks(params);
+    }
+  }
+
+  async submitFeedback(feedback: Partial<Feedback>): Promise<Feedback> {
+    const payload: any = {
+      subject: feedback.subject || 'بازخورد',
+      message: feedback.message || '',
+      status: feedback.status || 'unread',
+      user_id: feedback.user_id || null,
+    };
+    try {
+      const created = await this.base.client.submitFeedback(payload);
+      const resData = created?.data || created || payload;
+      // Cache the result into local offline storage without triggering a second network submission
+      const list = this.base.localAdapter.getItem<Feedback>('feedbacks', []);
+      list.unshift(resData);
+      this.base.localAdapter.setItem('feedbacks', list);
+      return resData;
+    } catch (err) {
+      console.warn('[CloudOrgStorage] submitFeedback fallback to local storage:', err);
+      return await this.base.localAdapter.submitFeedback(feedback);
     }
   }
 }

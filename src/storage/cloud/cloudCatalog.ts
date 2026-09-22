@@ -1,5 +1,6 @@
 import { CloudStorageBase, UUID_REGEX } from './cloudBase';
 import { QueryParams } from '../types';
+import { matchesSearchQuery } from '../../utils/formatters';
 import {
   Category,
   Collection,
@@ -38,7 +39,7 @@ export class CloudCatalogStorage {
         }).catch(() => []),
       ]);
 
-      return products.map((p) => {
+      let mappedProducts = products.map((p) => {
         const pVariants = variants.filter((v) => {
           const pId = typeof v.product_id === 'number' ? v.product_id : (v.product_id as any)?.id;
           return pId === p.id;
@@ -56,6 +57,22 @@ export class CloudCatalogStorage {
           total_stock: totalStock,
         };
       });
+
+      if (params?.search && params.search.trim()) {
+        const searchTerm = params.search.trim();
+        mappedProducts = mappedProducts.filter((p) => {
+          const pId = typeof p.id === 'number' ? p.id : (p as any)?.id;
+          const pVariants = variants.filter((v) => {
+            const pvId = typeof v.product_id === 'number' ? v.product_id : (v.product_id as any)?.id;
+            return pvId === pId;
+          });
+          const variantTexts = pVariants.map((v) => `${v.sku || ''} ${v.barcode || ''} ${v.color_name || ''} ${v.size_name || ''}`).join(' ');
+          const brandName = typeof p.brand === 'string' ? p.brand : p.brand?.name || (typeof p.brand_id === 'object' ? (p.brand_id as any)?.name : '');
+          return matchesSearchQuery(searchTerm, p.title, p.slug, p.description, p.tags, brandName, variantTexts);
+        });
+      }
+
+      return mappedProducts;
     } catch {
       return this.base.localAdapter.getProducts(params);
     }

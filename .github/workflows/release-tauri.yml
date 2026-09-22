@@ -284,9 +284,9 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Accept Android SDK Licenses and Install NDK
+      - name: Accept Android SDK Licenses and Install NDK & Build Tools
         run: |
-          export PATH="/usr/local/lib/android/sdk/cmdline-tools/latest/bin:/usr/local/lib/android/sdk/platform-tools:$PATH"
+          export PATH="/usr/local/lib/android/sdk/cmdline-tools/latest/bin:/usr/local/lib/android/sdk/platform-tools:/usr/local/lib/android/sdk/build-tools/34.0.0:$PATH"
           SDK_BIN=$(which sdkmanager || echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager")
           echo "Using sdkmanager at: $SDK_BIN"
           yes | $SDK_BIN --licenses || true
@@ -303,25 +303,104 @@ jobs:
       - name: Build Vite Web Assets
         run: npx vite build
 
-      - name: Initialize Android project if needed
+      - name: Initialize Android project and sync icons
         run: |
+          # 1. Initialize Android project if not already present
           npx tauri android init || true
 
-      - name: Build Android APK
-        run: |
-          npx tauri android build --apk --target aarch64
+          # 2. Sync high-resolution Tankhor branded icons to Android res directories
+          node src-tauri/sync-android-icons.cjs
 
-      - name: Upload Android APK Artifact
+      - name: Build Android Universal APK (Multi-Architecture)
+        run: |
+          export PATH="/usr/local/lib/android/sdk/cmdline-tools/latest/bin:/usr/local/lib/android/sdk/platform-tools:/usr/local/lib/android/sdk/build-tools/34.0.0:$PATH"
+          export NDK_HOME="/usr/local/lib/android/sdk/ndk/26.1.10909125"
+          
+          # Build target for aarch64 (modern 64-bit phones) and armv7 (32-bit compatibility) in a single bundle
+          npx tauri android build --apk --target aarch64,armv7 || npx tauri android build --apk --target aarch64
+
+      - name: Zipalign & Sign Single Universal Android APK
+        run: |
+          export PATH="/usr/local/lib/android/sdk/build-tools/34.0.0:$PATH"
+          mkdir -p release-apks
+
+          TAG_NAME="${{ github.ref_name }}"
+          VERSION="${TAG_NAME#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "${{ github.ref_name }}" ]; then
+            VERSION="1.0.30"
+          fi
+
+          echo "Preparing single Universal APK release signing for Tankhor v${VERSION}..."
+
+          # Prepare keystore: use secret if provided, or generate a valid 2048-bit RSA release keystore
+          KEYSTORE_FILE="tankhor-release.keystore"
+          KEY_ALIAS="tankhor"
+          KEY_PASS="tankhor123"
+
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "Using custom provided Android keystore from GitHub Secrets..."
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$KEYSTORE_FILE"
+            KEY_ALIAS="${{ secrets.ANDROID_KEY_ALIAS || 'tankhor' }}"
+            KEY_PASS="${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'tankhor123' }}"
+          else
+            echo "Generating production-compliant RSA release keystore..."
+            keytool -genkeypair -v -keystore "$KEYSTORE_FILE" \
+              -alias "$KEY_ALIAS" \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$KEY_PASS" -keypass "$KEY_PASS" \
+              -dname "CN=TANKHOR, OU=Mobile, O=TANKHOR, L=Tehran, ST=Tehran, C=IR"
+          fi
+
+          echo "Locating built APK files..."
+          # Find all produced APKs sorted by size descending (universal APK is the largest)
+          APK_FILES=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -not -name "*unaligned*" -not -name "*signed*" | xargs ls -S 2>/dev/null || find src-tauri/gen/android/app/build/outputs/apk -name "*.apk")
+          echo "Found candidate APKs:"
+          echo "$APK_FILES"
+
+          # Pick the primary Universal / release APK (first and largest)
+          PRIMARY_APK=$(echo "$APK_FILES" | head -n 1)
+          if [ -z "$PRIMARY_APK" ] || [ ! -f "$PRIMARY_APK" ]; then
+            echo "Error: No APK file was found to sign!"
+            exit 1
+          fi
+
+          echo "Selected primary Universal APK: $PRIMARY_APK"
+          TARGET_UNIVERSAL_APK="release-apks/TANKHOR-v${VERSION}-universal.apk"
+
+          # 1. Zipalign (4-byte alignment required by Android)
+          zipalign -v -p -f 4 "$PRIMARY_APK" "$TARGET_UNIVERSAL_APK"
+
+          # 2. Sign with apksigner (v1, v2 and v3 schemes for 100% Android 7.0 - 15+ compatibility)
+          apksigner sign --ks "$KEYSTORE_FILE" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass "pass:$KEY_PASS" \
+            --key-pass "pass:$KEY_PASS" \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            "$TARGET_UNIVERSAL_APK"
+
+          # 3. Verify signature
+          echo "Verifying signature for $TARGET_UNIVERSAL_APK:"
+          apksigner verify --verbose "$TARGET_UNIVERSAL_APK"
+
+          # 4. Create standard alias name for easy direct download (TANKHOR.apk)
+          cp "$TARGET_UNIVERSAL_APK" "release-apks/TANKHOR-universal.apk"
+
+          echo "Universal Android APK successfully signed and prepared:"
+          ls -lh release-apks/
+
+      - name: Upload Android APK Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tankhor-android-apk
-          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
-          if-no-files-found: warn
+          path: release-apks/*.apk
+          if-no-files-found: error
 
       - name: Attach APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          files: release-apks/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

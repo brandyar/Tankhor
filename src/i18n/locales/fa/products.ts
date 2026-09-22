@@ -55,6 +55,7 @@ export const productsFa = {
   productUpdatedSuccess: 'اطلاعات محصول با موفقیت به‌روزرسانی شد.',
   productDeletedSuccess: 'محصول با موفقیت حذف گردید.',
   confirmDeleteProduct: 'آیا از حذف این محصول و کلیه تنوع‌های آن اطمینان دارید؟',
+  searchPlaceholder: 'جستجو در نام، کد مدل، بارکد، رنگ، سایز، برند، دسته‌بندی و...',
 
   // Categories
   categoriesTitle: 'مدیریت دسته‌بندی‌ها',

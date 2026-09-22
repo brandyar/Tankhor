@@ -10,7 +10,8 @@ import {
   FinancialAccount, TreasuryTransaction, Cheque, ChequeStatus,
   LandedCost, LandedCostAllocation, VatReportSummary,
   PosShift, PosShiftStatus,
-  WooCommerceSettings, WooCommerceLog, IntegrationMapping
+  WooCommerceSettings, WooCommerceLog, IntegrationMapping,
+  Feedback
 } from '../types';
 import { LocalOfflineAdapter } from './localAdapter';
 import {
@@ -634,5 +635,16 @@ export class CloudDirectusAdapter implements IStorageProvider {
 
   async saveIntegrationMapping(mapping: Partial<IntegrationMapping>): Promise<IntegrationMapping> {
     return this.woocommerce.saveIntegrationMapping(mapping);
+  }
+
+  // ==========================================
+  // Feedback & Feature Suggestions
+  // ==========================================
+  async getFeedbacks(params?: QueryParams): Promise<Feedback[]> {
+    return this.org.getFeedbacks(params);
+  }
+
+  async submitFeedback(feedback: Partial<Feedback>): Promise<Feedback> {
+    return this.org.submitFeedback(feedback);
   }
 }

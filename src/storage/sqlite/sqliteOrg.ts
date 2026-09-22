@@ -7,6 +7,7 @@ import {
   Subscription,
   SystemModule,
   OrganizationModule,
+  Feedback,
 } from '../../types';
 import { DEFAULT_SYSTEM_MODULES } from '../../utils/license';
 import { directusClient } from '../../api/directus';
@@ -251,5 +252,37 @@ export class SqliteOrgStorage {
 
   async deleteOrganizationModule(id: number): Promise<boolean> {
     return this.base.deleteItem('organization_modules', id);
+  }
+
+  // Feedbacks
+  async getFeedbacks(params?: QueryParams): Promise<Feedback[]> {
+    return this.base.getItems<Feedback>('feedbacks');
+  }
+
+  async submitFeedback(feedback: Partial<Feedback>): Promise<Feedback> {
+    const list = await this.base.getItems<Feedback>('feedbacks');
+    const newFeedback: Feedback = {
+      id: this.base.generateUniqueId(list),
+      subject: feedback.subject || 'بازخورد',
+      message: feedback.message || '',
+      status: feedback.status || 'unread',
+      user_id: feedback.user_id || null,
+      date_created: new Date().toISOString(),
+      ...feedback,
+    };
+    await this.base.saveItem('feedbacks', newFeedback);
+
+    // Immediately submit to Directus API gateway
+    try {
+      await directusClient.submitFeedback({
+        subject: newFeedback.subject,
+        message: newFeedback.message,
+        user_id: newFeedback.user_id,
+      });
+    } catch (e: any) {
+      console.warn('[SqliteOrg] Directus direct submission notice:', e?.message);
+    }
+
+    return newFeedback;
   }
 }

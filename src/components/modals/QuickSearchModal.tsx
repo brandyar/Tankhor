@@ -48,6 +48,7 @@ import {
   Plus,
   CornerDownLeft,
   SlidersHorizontal,
+  MessageSquare,
 } from 'lucide-react';
 
 interface QuickSearchModalProps {
@@ -56,6 +57,7 @@ interface QuickSearchModalProps {
   onNavigate: (route: string) => void;
   onSyncNow?: () => void;
   onOpenCreateOrg?: () => void;
+  onOpenFeedback?: () => void;
 }
 
 interface SearchableItem {
@@ -76,6 +78,7 @@ export const QuickSearchModal: React.FC<QuickSearchModalProps> = ({
   onNavigate,
   onSyncNow,
   onOpenCreateOrg,
+  onOpenFeedback,
 }) => {
   const { t, locale } = useTranslation();
   const { permissions, isOwner } = useOrganization();
@@ -554,8 +557,21 @@ export const QuickSearchModal: React.FC<QuickSearchModalProps> = ({
             },
           ]
         : []),
+      ...(onOpenFeedback
+        ? [
+            {
+              id: 'act_send_feedback',
+              title: t('common.feedback', 'ارسال بازخورد'),
+              category: t('common.quickSearchQuickActions', 'عملیات سریع'),
+              keywords: ['بازخورد', 'پیشنهاد', 'گزارش مشکل', 'باگ', 'انتقاد', 'نظرات', 'پیام', 'ایده', 'feedback', 'bug', 'suggestion'],
+              icon: MessageSquare,
+              action: onOpenFeedback,
+              visible: true,
+            },
+          ]
+        : []),
     ].filter((item) => item.visible !== false);
-  }, [t, permissions, isOwner, hasBarcode, hasAccounting, hasWooCommerce, isDesktop, setTheme, onSyncNow, onOpenCreateOrg]);
+  }, [t, permissions, isOwner, hasBarcode, hasAccounting, hasWooCommerce, isDesktop, setTheme, onSyncNow, onOpenCreateOrg, onOpenFeedback]);
 
   // Persian string normalizer for search
   const normalize = (str: string) => {

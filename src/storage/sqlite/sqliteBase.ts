@@ -54,6 +54,7 @@ export const SQLITE_COLLECTIONS = [
   'woocommerce_settings',
   'woocommerce_logs',
   'woocommerce_mappings',
+  'feedbacks',
 ] as const;
 
 export class SqliteStorageBase {

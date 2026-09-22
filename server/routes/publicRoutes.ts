@@ -274,3 +274,39 @@ publicRouter.get('/assets/:id', async (req, res) => {
     return res.status(500).send('Failed to proxy asset');
   }
 });
+
+// Feedback Submission Endpoint (ثبت و ارسال بازخورد کاربران)
+publicRouter.post('/feedback', async (req, res) => {
+  try {
+    const { subject, message, user_id } = req.body;
+    if (!subject || !message) {
+      return res.status(400).json({ error: 'موضوع و متن پیام بازخورد الزامی است.' });
+    }
+
+    let resolvedUserId: string | null = user_id || null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const user = verifyToken(token);
+      if (user && user.userId) {
+        resolvedUserId = user.userId;
+      }
+    }
+
+    const payload: any = {
+      subject: String(subject).trim().slice(0, 255),
+      message: String(message).trim(),
+      status: 'unread',
+    };
+
+    if (resolvedUserId) {
+      payload.user_id = resolvedUserId;
+    }
+
+    const created = await DirectusAdminClient.createItem('feedbacks', payload);
+    return res.status(201).json({ success: true, data: created });
+  } catch (error: any) {
+    console.error('[proxy] /feedback error:', error?.message);
+    return res.status(500).json({ error: error?.message || 'خطا در ثبت بازخورد' });
+  }
+});

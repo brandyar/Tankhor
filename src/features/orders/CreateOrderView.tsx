@@ -20,7 +20,7 @@ import { FinancialAccount } from '../../types/accounting';
 import { useModuleAccess } from '../../hooks/useModuleAccess';
 import { PosShiftModal } from '../../components/modals/PosShiftModal';
 import { confirmAction } from '../../utils/confirm';
-import { toPersianDigits } from '../../utils/formatters';
+import { toPersianDigits, matchesSearchQuery } from '../../utils/formatters';
 
 // Sub-components
 import { CreateOrderHeader } from './components/CreateOrderHeader';
@@ -770,15 +770,19 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
       if (prodCatId !== selectedCategoryId) return false;
     }
 
-    const title = prod.title.toLowerCase();
-    const sku = (v.sku || '').toLowerCase();
-    const barcode = (v.barcode || '').toLowerCase();
-    const color = (v.color_name || '').toLowerCase();
-    const size = (v.size_name || '').toLowerCase();
-    const q = productSearch.toLowerCase().trim();
-
-    if (!q) return true;
-    return title.includes(q) || sku.includes(q) || barcode.includes(q) || color.includes(q) || size.includes(q);
+    if (!productSearch.trim()) return true;
+    return matchesSearchQuery(
+      productSearch,
+      prod.title,
+      prod.slug,
+      (prod as any).sku,
+      (prod as any).barcode,
+      (prod as any).code,
+      v.sku,
+      v.barcode,
+      v.color_name,
+      v.size_name
+    );
   });
 
   return (

@@ -501,5 +501,17 @@ export interface OrganizationModule {
   included_in_pro?: boolean;
 }
 
+export type FeedbackStatus = 'read' | 'unread';
+
+export interface Feedback {
+  id?: number;
+  user_id?: string | null;
+  subject: string;
+  message: string;
+  status?: FeedbackStatus;
+  date_created?: string;
+  user_email?: string;
+}
+
 export * from './accounting';
 export * from './woocommerce';

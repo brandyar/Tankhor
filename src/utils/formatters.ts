@@ -141,3 +141,47 @@ export function normalizeId(val: any): number | undefined {
   }
   return undefined;
 }
+
+/**
+ * Normalizes Persian and English text for fuzzy and robust searching:
+ * - Converts Arabic characters (ي، ك، ة، أ، إ، آ، ؤ، ئ) to Persian equivalents (ی، ک، ه، ا، و، ی)
+ * - Converts Persian & Arabic numerals (۰-۹، ٠-٩) to English digits (0-9)
+ * - Strips zero-width non-joiners (نیم‌فاصله‌ها \u200c), diacritics, and excessive whitespaces
+ * - Lowercases English text
+ */
+export function normalizeSearchText(str?: string | number | null): string {
+  if (str === undefined || str === null) return '';
+  return String(str)
+    .toLowerCase()
+    .replace(/[يى]/g, 'ی')
+    .replace(/[ك]/g, 'ک')
+    .replace(/[ة]/g, 'ه')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/[ؤ]/g, 'و')
+    .replace(/[ئ]/g, 'ی')
+    .replace(/[\u064B-\u065F\u0670]/g, '') // remove Arabic diacritics (fatha, damma, kasra, tanwin, tashdid)
+    .replace(/[\u200C\u200B\u200D\uFEFF]/g, ' ') // replace ZWNJ/ZWSP with space
+    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+    .replace(/[-_/\\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Checks if a search query matches one or more target strings using multi-token matching.
+ * Every word in the query must match part of the combined normalized target string.
+ */
+export function matchesSearchQuery(
+  query?: string | null,
+  ...targets: Array<string | number | undefined | null>
+): boolean {
+  if (!query) return true;
+  const normQuery = normalizeSearchText(query);
+  if (!normQuery) return true;
+
+  const queryTokens = normQuery.split(' ').filter(Boolean);
+  const combinedTarget = normalizeSearchText(targets.filter((t) => t !== undefined && t !== null).join(' '));
+
+  return queryTokens.every((token) => combinedTarget.includes(token));
+}

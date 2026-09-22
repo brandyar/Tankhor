@@ -54,6 +54,7 @@ import {
   WooCommerceSettings,
   WooCommerceLog,
   IntegrationMapping,
+  Feedback,
 } from '../types';
 
 export class LocalOfflineAdapter implements IStorageProvider {
@@ -688,5 +689,16 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   saveIntegrationMapping(mapping: Partial<IntegrationMapping>): Promise<IntegrationMapping> {
     return this.wooCommerceStorage.saveIntegrationMapping(mapping);
+  }
+
+  // ==========================================
+  // Feedback & Feature Suggestions
+  // ==========================================
+  getFeedbacks(params?: QueryParams): Promise<Feedback[]> {
+    return this.orgStorage.getFeedbacks(params);
+  }
+
+  submitFeedback(feedback: Partial<Feedback>): Promise<Feedback> {
+    return this.orgStorage.submitFeedback(feedback);
   }
 }

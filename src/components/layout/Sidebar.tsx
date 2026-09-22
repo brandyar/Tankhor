@@ -48,8 +48,10 @@ import {
   Clock,
   LogOut,
   User as UserIcon,
+  MessageSquare,
 } from 'lucide-react';
 import { UserProfileModal } from '../modals/UserProfileModal';
+import { FeedbackModal } from '../modals/FeedbackModal';
 
 interface SidebarProps {
   currentRoute: string;
@@ -123,6 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [activeFlyout, setActiveFlyout] = useState<ActiveFlyout | null>(null);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   // Lock body scroll when mobile drawer is open to prevent background scrolling
   useEffect(() => {
@@ -143,6 +146,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const isRouteActive = (route: string) => {
+    if (route === 'action:feedback') return false;
     if (currentRoute === route) return true;
     if (route === 'settings/org' && currentRoute === 'settings') return true;
     if (route === 'sales/woocommerce' && (currentRoute === 'woocommerce' || currentRoute === 'orders/woocommerce')) return true;
@@ -271,12 +275,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       key: 'settings',
       label: t('navigation.settingsGroup', 'تنظیمات'),
       icon: Settings,
-      visible: permissions.canManageOrgSettings || permissions.canManageUsers,
+      visible: true,
       items: [
-        { route: 'settings/org', label: t('navigation.settingsGeneral', 'پروفایل و اطلاعات سازمان'), icon: Building2, visible: true },
+        { route: 'settings/org', label: t('navigation.settingsGeneral', 'پروفایل و اطلاعات سازمان'), icon: Building2, visible: permissions.canManageOrgSettings || isOwner },
         { route: 'settings/members', label: t('navigation.settingsMembers', 'اعضا و سطوح دسترسی'), icon: Users, visible: permissions.canManageUsers || isOwner },
-        { route: 'settings/modules', label: t('navigation.settingsModules', 'مدیریت ماژول‌ها و لایسنس‌ها'), icon: Boxes, visible: true },
-        { route: 'settings/sync', label: t('navigation.settingsSync', 'پایگاه‌داده و پشتیبان‌گیری'), icon: HardDrive, visible: true },
+        { route: 'settings/modules', label: t('navigation.settingsModules', 'مدیریت ماژول‌ها و لایسنس‌ها'), icon: Boxes, visible: permissions.canManageOrgSettings || isOwner },
+        { route: 'settings/sync', label: t('navigation.settingsSync', 'پایگاه‌داده و پشتیبان‌گیری'), icon: HardDrive, visible: permissions.canManageOrgSettings || isOwner },
         { route: 'settings/appearance', label: t('navigation.settingsAppearance', 'ظاهر و تم سامانه'), icon: Palette, visible: true },
         ...(isDesktop
           ? [
@@ -288,6 +292,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               },
             ]
           : []),
+        {
+          route: 'action:feedback',
+          label: t('common.feedback', 'ارسال بازخورد'),
+          icon: MessageSquare,
+          visible: true,
+        },
       ].filter((i) => i.visible !== false),
     },
   ];
@@ -356,6 +366,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [activeFlyout]);
 
   const handleNavClick = (route: string) => {
+    if (route === 'action:feedback') {
+      setIsFeedbackModalOpen(true);
+      setActiveFlyout(null);
+      if (onMobileClose) {
+        onMobileClose();
+      }
+      return;
+    }
     onNavigate(route);
     setActiveFlyout(null);
     if (onMobileClose) {
@@ -857,6 +875,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <UserProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
+      />
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => setIsFeedbackModalOpen(false)}
       />
     </>
   );

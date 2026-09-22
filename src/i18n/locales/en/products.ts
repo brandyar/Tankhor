@@ -55,6 +55,7 @@ export const productsEn = {
   productUpdatedSuccess: 'Product details updated successfully.',
   productDeletedSuccess: 'Product removed successfully.',
   confirmDeleteProduct: 'Are you sure you want to delete this product and all its variants?',
+  searchPlaceholder: 'Search name, model code, SKU, barcode, color, size, brand...',
 
   // Categories
   categoriesTitle: 'Categories',

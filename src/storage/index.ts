@@ -226,6 +226,20 @@ class StorageManagerSingleton {
     }
     return mapping;
   }
+
+  public async submitFeedback(feedback: any) {
+    if (this.activeAdapter.submitFeedback) {
+      return this.activeAdapter.submitFeedback(feedback);
+    }
+    return feedback;
+  }
+
+  public async getFeedbacks(params?: any) {
+    if (this.activeAdapter.getFeedbacks) {
+      return this.activeAdapter.getFeedbacks(params);
+    }
+    return [];
+  }
 }
 
 export const storageManager = new StorageManagerSingleton();

@@ -903,6 +903,50 @@ class DirectusClient {
       android_setup: null,
     };
   }
+
+  public async submitFeedback(feedback: {
+    subject: string;
+    message: string;
+    user_id?: string | null;
+  }): Promise<any> {
+    try {
+      // 1. Try sending via BFF proxy endpoint /feedback
+      return await this.request('/feedback', {
+        method: 'POST',
+        body: JSON.stringify(feedback),
+      });
+    } catch (err: any) {
+      console.warn('[DirectusClient] /feedback BFF endpoint failed, attempting direct Directus submission:', err?.message);
+      // 2. Direct fallback to live Directus API (https://api.tankhor.com/items/feedbacks)
+      try {
+        const directUrl = 'https://api.tankhor.com/items/feedbacks';
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        const token = this.getToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        const response = await fetch(directUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            subject: feedback.subject,
+            message: feedback.message,
+            user_id: feedback.user_id || undefined,
+            status: 'unread',
+          }),
+        });
+        if (response.ok) {
+          const json = await response.json();
+          return json?.data || json;
+        }
+      } catch (directErr: any) {
+        console.warn('[DirectusClient] Direct fallback also failed:', directErr?.message);
+      }
+      throw err;
+    }
+  }
 }
 
 export const directusClient = new DirectusClient();

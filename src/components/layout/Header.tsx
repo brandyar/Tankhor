@@ -9,7 +9,8 @@ import { LoginModal } from '../../features/auth/LoginModal';
 import { CreateOrganizationModal } from '../../features/organizations/CreateOrganizationModal';
 import { UpgradeToProModal } from '../modals/UpgradeToProModal';
 import { QuickSearchModal } from '../modals/QuickSearchModal';
-import { Building2, Search, Database, RefreshCw, CheckCircle2, Menu, Cloud, ChevronDown, Plus, Sun, Moon, Monitor } from 'lucide-react';
+import { FeedbackModal } from '../modals/FeedbackModal';
+import { Building2, Search, Database, RefreshCw, CheckCircle2, Menu, Cloud, ChevronDown, Plus, Sun, Moon, Monitor, MessageSquare } from 'lucide-react';
 
 interface HeaderProps {
   onToggleSidebar?: () => void;
@@ -30,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
   const [isCreateOrgOpen, setIsCreateOrgOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   const orgMenuRef = useRef<HTMLDivElement>(null);
   const themeMenuRef = useRef<HTMLDivElement>(null);
@@ -380,6 +382,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
         }}
         onSyncNow={handleSyncNow}
         onOpenCreateOrg={() => setIsCreateOrgOpen(true)}
+        onOpenFeedback={() => setIsFeedbackModalOpen(true)}
+      />
+
+      {/* User Feedback & Feature Suggestion Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => setIsFeedbackModalOpen(false)}
       />
     </>
   );

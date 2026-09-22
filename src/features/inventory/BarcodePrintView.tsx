@@ -9,7 +9,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
-import { formatCurrency, toPersianDigits } from '../../utils/formatters';
+import { formatCurrency, toPersianDigits, matchesSearchQuery } from '../../utils/formatters';
 import { printElement } from '../../utils/print';
 import { generateBarcodeSvg, generateRandomBarcode } from '../../utils/barcode';
 import { useModuleAccess } from '../../hooks/useModuleAccess';
@@ -117,11 +117,15 @@ export const BarcodePrintView: React.FC = () => {
     return variants.filter((v) => {
       // Search
       if (search.trim()) {
-        const term = search.toLowerCase();
-        const matchSku = v.sku.toLowerCase().includes(term);
-        const matchBarcode = v.barcode && v.barcode.toLowerCase().includes(term);
-        const matchTitle = v.product_title && v.product_title.toLowerCase().includes(term);
-        if (!matchSku && !matchBarcode && !matchTitle) return false;
+        const match = matchesSearchQuery(
+          search,
+          v.sku,
+          v.barcode,
+          v.product_title,
+          v.color_name,
+          v.size_name
+        );
+        if (!match) return false;
       }
 
       // Product filter
