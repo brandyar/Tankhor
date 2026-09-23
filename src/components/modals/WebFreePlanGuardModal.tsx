@@ -32,11 +32,32 @@ export const WebFreePlanGuardModal: React.FC = () => {
   const { settings } = useProjectSettings();
 
   const [isChecking, setIsChecking] = useState(false);
+  const [isActivatingTrial, setIsActivatingTrial] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showOrgSelector, setShowOrgSelector] = useState(false);
   const [downloadNote, setDownloadNote] = useState<string | null>(null);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
+  const handleStartTrial = async () => {
+    if (!activeOrganization) return;
+    setIsActivatingTrial(true);
+    setError(null);
+    try {
+      const res = await directusClient.startFreeTrial(activeOrganization.id);
+      if (res && (res.isPro || res.plan === 'pro')) {
+        await refreshOrganizations();
+        storageManager.setMode('cloud_synced');
+        setSuccess(true);
+      } else {
+        setError('خطا در فعال‌سازی تست رایگان.');
+        setIsActivatingTrial(false);
+      }
+    } catch (err: any) {
+      setError(err?.message || 'خطا در فعال‌سازی تست رایگان.');
+      setIsActivatingTrial(false);
+    }
+  };
 
   const handleCheckPlanOnline = async () => {
     if (!activeOrganization) return;
@@ -282,26 +303,57 @@ export const WebFreePlanGuardModal: React.FC = () => {
 
               {/* Upgrade Actions */}
               <div className="space-y-2.5 pt-2">
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={() => setIsUpgradeModalOpen(true)}
-                  icon={<CreditCard className="w-4 h-4" />}
-                  className="w-full justify-center text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-2xl shadow-sm cursor-pointer"
-                >
-                  ارتقا به پلن Pro و پرداخت آنلاین
-                </Button>
+                {!activeOrganization?.has_used_trial ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={handleStartTrial}
+                      isLoading={isActivatingTrial}
+                      icon={<Sparkles className="w-4 h-4 text-amber-300 fill-amber-300" />}
+                      className="w-full justify-center text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl shadow-sm cursor-pointer"
+                    >
+                      شروع تست ۱۴ روزه رایگان Pro
+                    </Button>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCheckPlanOnline}
-                  isLoading={isChecking}
-                  icon={<RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin' : ''}`} />}
-                  className="w-full justify-center text-xs font-medium py-2.5 rounded-2xl bg-white dark:bg-[#1d222f] hover:bg-slate-50 dark:hover:bg-[#242a3a] text-slate-700 dark:text-neutral-300 border-slate-200 dark:border-neutral-700 cursor-pointer"
-                >
-                  بررسی مجدد وضعیت اشتراک
-                </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsUpgradeModalOpen(true)}
+                      icon={<CreditCard className="w-4 h-4" />}
+                      className="w-full justify-center text-xs font-semibold py-2.5 rounded-2xl bg-white dark:bg-[#1d222f] hover:bg-slate-50 dark:hover:bg-[#242a3a] text-slate-700 dark:text-neutral-300 border-slate-200 dark:border-neutral-700 cursor-pointer"
+                    >
+                      مشاهده قیمت‌ها و خرید اشتراک
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-900/40 text-[11px] text-amber-800 dark:text-amber-300 text-center leading-relaxed">
+                      مهلت تست ۱۴ روزه رایگان این سازمان به پایان رسیده است. جهت دسترسی به پنل تحت وب، اشتراک Pro را تمدید نمایید.
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={() => setIsUpgradeModalOpen(true)}
+                      icon={<CreditCard className="w-4 h-4" />}
+                      className="w-full justify-center text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-2xl shadow-sm cursor-pointer"
+                    >
+                      ارتقا به پلن Pro و پرداخت آنلاین
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCheckPlanOnline}
+                      isLoading={isChecking}
+                      icon={<RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin' : ''}`} />}
+                      className="w-full justify-center text-xs font-medium py-2 rounded-2xl bg-white dark:bg-[#1d222f] hover:bg-slate-50 dark:hover:bg-[#242a3a] text-slate-700 dark:text-neutral-300 border-slate-200 dark:border-neutral-700 cursor-pointer"
+                    >
+                      بررسی مجدد وضعیت اشتراک
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>

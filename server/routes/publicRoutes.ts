@@ -310,3 +310,112 @@ publicRouter.post('/feedback', async (req, res) => {
     return res.status(500).json({ error: error?.message || 'خطا در ثبت بازخورد' });
   }
 });
+
+// Public Online Catalog Endpoint (دریافت داده‌های ویترین و محصولات عمومی برند)
+publicRouter.get('/public-catalog/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    if (!slug) {
+      return res.status(400).json({ error: 'شناسه برند یا نام فروشگاه الزامی است.' });
+    }
+
+    // 1. Fetch organization
+    let orgs: any[] = [];
+    try {
+      orgs = await DirectusAdminClient.getItems('organizations', {
+        filter: {
+          _or: [{ slug: { _eq: slug } }, { id: { _eq: slug } }],
+        },
+        limit: 1,
+      });
+    } catch {
+      // ignore
+    }
+
+    if (!orgs || orgs.length === 0) {
+      return res.status(404).json({ error: 'فروشگاه یا برند مورد نظر یافت نشد.' });
+    }
+
+    const org = orgs[0];
+    const orgId = org.id;
+
+    // 2. Fetch published products & categories
+    const [products, categories, templates, measurements, values, sizes] = await Promise.all([
+      DirectusAdminClient.getItems('products', {
+        filter: {
+          organization_id: { _eq: orgId },
+          status: { _neq: 'archived' },
+        },
+        limit: 100,
+      }).catch(() => []),
+      DirectusAdminClient.getItems('categories', {
+        filter: { organization_id: { _eq: orgId } },
+        limit: 100,
+      }).catch(() => []),
+      DirectusAdminClient.getItems('size_guide_templates', {
+        filter: { organization_id: { _eq: orgId } },
+        limit: 50,
+      }).catch(() => []),
+      DirectusAdminClient.getItems('size_guide_measurements', {
+        filter: { organization_id: { _eq: orgId } },
+        limit: 100,
+      }).catch(() => []),
+      DirectusAdminClient.getItems('size_guide_values', {
+        filter: { organization_id: { _eq: orgId } },
+        limit: 500,
+      }).catch(() => []),
+      DirectusAdminClient.getItems('sizes', {
+        filter: { organization_id: { _eq: orgId } },
+        limit: 100,
+      }).catch(() => []),
+    ]);
+
+    return res.json({
+      organization: {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        phone: org.phone,
+        logo: org.logo,
+        settings: org.settings || {},
+      },
+      products,
+      categories,
+      sizeGuides: {
+        templates,
+        measurements,
+        values,
+        sizes,
+      },
+    });
+  } catch (error: any) {
+    console.error('[proxy] /public-catalog error:', error?.message);
+    return res.status(500).json({ error: error?.message || 'خطا در بارگذاری کاتالوگ' });
+  }
+});
+
+// Public Catalog Customer Inquiry Submission
+publicRouter.post('/public-catalog/inquiry', async (req, res) => {
+  try {
+    const { organization_id, product_id, product_title, size_name, customer_name, customer_phone, note } = req.body;
+    if (!customer_phone) {
+      return res.status(400).json({ error: 'شماره تماس مشتری الزامی است.' });
+    }
+
+    // Try creating a feedback or direct customer inquiry entry
+    try {
+      await DirectusAdminClient.createItem('feedbacks', {
+        subject: `استعلام خرید کاتالوگ: ${product_title || 'کالا'} (${size_name || 'سایز نامشخص'})`,
+        message: `مشتری: ${customer_name || 'نامشخص'}\nتلفن: ${customer_phone}\nتوضیحات: ${note || '-'}\nکد کالا: ${product_id || '-'}`,
+        status: 'unread',
+      });
+    } catch {
+      // non-blocking
+    }
+
+    return res.status(201).json({ success: true, message: 'درخواست خرید با موفقیت ثبت شد.' });
+  } catch (error: any) {
+    console.error('[proxy] /public-catalog/inquiry error:', error?.message);
+    return res.status(500).json({ error: error?.message || 'خطا در ثبت درخواست' });
+  }
+});

@@ -403,14 +403,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // Ignore network errors
     } finally {
-      storageManager.setMode('local_offline');
-      localStorage.removeItem(CACHED_USER_KEY);
-      localStorage.removeItem('tankhor_active_org_id');
-      localStorage.removeItem('tankhor_directus_token');
-      localStorage.removeItem('tankhor_directus_refresh_token');
-      setUser(null);
-      setIsCloudAuthenticated(false);
-      storageManager.setMode('local_offline');
+      clearAllSessionData();
       setIsLoading(false);
     }
   };

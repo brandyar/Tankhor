@@ -29,6 +29,8 @@ import { SuppliersView } from './features/purchasing/SuppliersView';
 import { PurchaseOrdersView } from './features/purchasing/PurchaseOrdersView';
 import { AccountingView } from './features/accounting/AccountingView';
 import { WooCommercePage } from './features/woocommerce/WooCommercePage';
+import { OnlineCatalogAdminView } from './features/online-catalog/OnlineCatalogAdminView';
+import { PublicCatalogView } from './features/online-catalog/public/PublicCatalogView';
 import { SettingsView } from './features/settings/SettingsView';
 import { ReportsView } from './features/reports/ReportsView';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
@@ -80,10 +82,15 @@ const AuthenticatedApp: React.FC = () => {
       case 'orders/create':
         return permissions.canCreateOrders;
       case 'orders/all':
+      case 'sales/catalog':
+      case 'sales/catalog/products':
+      case 'sales/catalog/size-engine':
+      case 'catalog':
+      case 'online_catalog':
       case 'sales/woocommerce':
       case 'orders/woocommerce':
       case 'woocommerce':
-        return permissions.canViewOrders;
+        return permissions.canViewOrders || permissions.canViewProducts;
       case 'customers/all':
         return permissions.canViewCustomers;
       case 'inventory/overview':
@@ -184,6 +191,25 @@ const AuthenticatedApp: React.FC = () => {
         return <OrdersView onNavigateToCreate={() => setCurrentRoute('orders/create')} />;
       case 'orders/create':
         return <CreateOrderView onOrderCreated={() => setCurrentRoute('orders/all')} />;
+      case 'sales/catalog':
+      case 'sales/catalog/products':
+      case 'sales/catalog/size-engine':
+      case 'catalog':
+      case 'online_catalog': {
+        const tab = currentRoute.includes('products')
+          ? 'products'
+          : currentRoute.includes('size-engine')
+          ? 'size-engine'
+          : 'overview';
+        return (
+          <OnlineCatalogAdminView
+            initialTab={tab}
+            onTabChange={(newTab) => {
+              setCurrentRoute(newTab === 'overview' ? 'sales/catalog' : `sales/catalog/${newTab}`);
+            }}
+          />
+        );
+      }
       case 'sales/woocommerce':
       case 'sales/woocommerce/overview':
       case 'sales/woocommerce/mappings':
@@ -256,7 +282,35 @@ const AuthenticatedApp: React.FC = () => {
   );
 };
 
+const getPublicCatalogSlug = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname;
+  if (path.startsWith('/c/')) {
+    return path.replace('/c/', '').split('/')[0] || null;
+  }
+  if (path.startsWith('/catalog/')) {
+    return path.replace('/catalog/', '').split('/')[0] || null;
+  }
+  const params = new URLSearchParams(window.location.search);
+  const qCatalog = params.get('catalog') || params.get('c');
+  if (qCatalog) return qCatalog;
+
+  const hash = window.location.hash;
+  if (hash.startsWith('#/c/')) {
+    return hash.replace('#/c/', '').split('/')[0] || null;
+  }
+  if (hash.startsWith('#/catalog/')) {
+    return hash.replace('#/catalog/', '').split('/')[0] || null;
+  }
+  return null;
+};
+
 const MainAppContent: React.FC = () => {
+  const publicCatalogSlug = getPublicCatalogSlug();
+  if (publicCatalogSlug) {
+    return <PublicCatalogView organizationSlug={publicCatalogSlug} />;
+  }
+
   const { isAuthenticated, isLoading } = useAuth();
   const { t } = useTranslation();
 

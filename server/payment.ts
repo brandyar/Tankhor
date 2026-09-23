@@ -643,6 +643,95 @@ paymentRouter.post('/test-activate-module', requireAuth, async (req: Authenticat
 });
 
 /**
+ * Start 14-Day Free Trial for Pro Plan
+ * POST /api/payment/start-trial
+ */
+paymentRouter.post('/start-trial', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { userId, organizationId, email } = req.user!;
+    const orgIdNum = Number(req.body?.organization_id || req.body?.organizationId || organizationId);
+
+    if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
+      return res.status(400).json({ error: 'شناسه سازمان مشخص نشده است.' });
+    }
+
+    // Verify user membership in organization
+    const orgMembers = await DirectusAdminClient.getItems('organization_users', {
+      filter: {
+        organization_id: { _eq: orgIdNum },
+        user_id: { _eq: userId },
+        status: { _eq: 'active' },
+      },
+    });
+
+    if (!orgMembers || orgMembers.length === 0) {
+      return res.status(403).json({ error: 'شما به این سازمان دسترسی ندارید.' });
+    }
+
+    // Fetch fresh organization
+    const org: any = await DirectusAdminClient.getItemById('organizations', orgIdNum);
+    if (!org) {
+      return res.status(404).json({ error: 'سازمان یافت نشد.' });
+    }
+
+    // Check if organization has already used its trial
+    if (org.has_used_trial) {
+      return res.status(400).json({
+        error: 'این سازمان قبلاً از مهلت ۱۴ روزه تست رایگان استفاده کرده است.',
+        has_used_trial: true,
+      });
+    }
+
+    const now = new Date();
+    const trialDays = 14;
+    const trialEndsAt = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
+
+    // 1. Update organization in Directus
+    await DirectusAdminClient.updateItem('organizations', orgIdNum, {
+      plan: 'pro',
+      has_used_trial: true,
+      trial_ends_at: trialEndsAt.toISOString(),
+      date_updated: now.toISOString(),
+    });
+
+    // 2. Create entry in subscriptions collection
+    let createdSub: any = null;
+    try {
+      createdSub = await DirectusAdminClient.createItem('subscriptions', {
+        organization_id: orgIdNum,
+        start_date: now.toISOString(),
+        end_date: trialEndsAt.toISOString(),
+        transaction_amount: '0 تومان (تست ۱۴ روزه رایگان)',
+        Transaction_id: `TRIAL-14D-${orgIdNum}-${Date.now().toString(36).toUpperCase()}`,
+        user_created: userId || undefined,
+        date_created: now.toISOString(),
+      });
+    } catch (subErr: any) {
+      console.warn('[start-trial] Could not insert subscriptions record:', subErr?.message);
+    }
+
+    const updatedOrg: any = await DirectusAdminClient.getItemById('organizations', orgIdNum);
+
+    console.log(`[start-trial] 14-day free trial activated for org #${orgIdNum} (${updatedOrg?.name}) by user ${email || userId}`);
+
+    return res.json({
+      success: true,
+      message: 'مهلت تست ۱۴ روزه رایگان پلن حرفه‌ای (Pro) با موفقیت فعال شد!',
+      plan: 'pro',
+      isPro: true,
+      isTrial: true,
+      trialDaysRemaining: 14,
+      trialEndsAt: trialEndsAt.toISOString(),
+      organization: updatedOrg,
+      subscription: createdSub,
+    });
+  } catch (error: any) {
+    console.error('[payment /start-trial Error]:', error);
+    return res.status(500).json({ error: error.message || 'خطا در فعال‌سازی تست رایگان' });
+  }
+});
+
+/**
  * Get active subscription and history for the organization
  * GET /api/payment/subscriptions
  */
@@ -654,6 +743,8 @@ paymentRouter.get('/subscriptions', requireAuth, async (req: AuthenticatedReques
     if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
       return res.status(400).json({ error: 'شناسه سازمان نامعتبر است.' });
     }
+
+    const org: any = await DirectusAdminClient.getItemById('organizations', orgIdNum).catch(() => null);
 
     const subscriptions = await DirectusAdminClient.getItems('subscriptions', {
       filter: { organization_id: { _eq: orgIdNum } },
@@ -681,10 +772,18 @@ paymentRouter.get('/subscriptions', requireAuth, async (req: AuthenticatedReques
       remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
     }
 
+    const isTrial = Boolean(
+      (activeSub && String(activeSub.Transaction_id || '').startsWith('TRIAL-')) ||
+      (org?.trial_ends_at && new Date(org.trial_ends_at) > now)
+    );
+
     return res.json({
       subscriptions,
       activeSubscription: activeSub,
-      isPro: !!activeSub,
+      isPro: org?.plan === 'pro' || !!activeSub,
+      isTrial,
+      hasUsedTrial: Boolean(org?.has_used_trial),
+      trialEndsAt: org?.trial_ends_at || null,
       remainingDays,
     });
   } catch (error: any) {

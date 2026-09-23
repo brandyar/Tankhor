@@ -16,6 +16,9 @@ export const authFa = {
   alreadyHaveAccount: 'قبلاً ثبت‌نام کرده‌اید؟ ورود',
   dontHaveAccount: 'حساب کاربری ندارید؟ ثبت‌نام رایگان',
   logout: 'خروج از حساب',
+  logoutConfirm: 'آیا مطمئن هستید که می‌خواهید از حساب کاربری خود خارج شوید؟',
+  logoutNote: 'برای ورود مجدد به ایمیل و کلمه عبور خود نیاز خواهید داشت.',
+  loggingOut: 'در حال خروج...',
   welcomeBack: 'خوش آمدید،',
   selectOrganization: 'انتخاب سازمان فعال',
 };

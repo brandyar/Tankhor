@@ -628,29 +628,78 @@ authRouter.post('/switch-org', requireAuth, async (req: AuthenticatedRequest, re
   }
 });
 
-// Check live organization plan status directly from Directus
+// Check live organization plan status directly from Directus with trial support & auto-downgrade
 authRouter.get('/check-plan', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { userId, organizationId, email } = req.user!;
-    const orgIdNum = Number(organizationId);
+    const orgIdNum = Number(req.query.organization_id || organizationId);
     if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
       return res.status(400).json({ error: 'سازمان فعالی مشخص نشده است.' });
     }
 
     // Always fetch fresh organization directly from Directus Admin
-    const org = await DirectusAdminClient.getItemById('organizations', orgIdNum);
+    const org: any = await DirectusAdminClient.getItemById('organizations', orgIdNum);
     if (!org) {
       return res.status(404).json({ error: 'سازمان یافت نشد.' });
     }
 
+    const now = new Date();
+    let currentPlan = org.plan || 'free';
+    let isTrial = false;
+    let trialDaysRemaining = 0;
+    let trialExpired = false;
+
+    // 1. Check if organization has any active paid subscription
+    const existingSubs: any[] = await DirectusAdminClient.getItems('subscriptions', {
+      filter: { organization_id: { _eq: orgIdNum } },
+      sort: '-end_date',
+      limit: 10,
+    }).catch(() => []);
+
+    const activePaidSub = existingSubs.find((s: any) => {
+      if (!s.end_date) return false;
+      const notTrial = !String(s.Transaction_id || '').startsWith('TRIAL-');
+      return notTrial && new Date(s.end_date) > now;
+    });
+
+    // 2. Check trial status
+    if (org.trial_ends_at) {
+      const trialEnd = new Date(org.trial_ends_at);
+      if (trialEnd > now) {
+        isTrial = true;
+        trialDaysRemaining = Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      } else {
+        trialExpired = true;
+      }
+    }
+
+    // 3. Auto-downgrade logic:
+    // If organization plan is 'pro' but has NO active paid subscription and trial is expired (or has used trial and not active)
+    if (currentPlan === 'pro' && !activePaidSub) {
+      if (trialExpired || (org.has_used_trial && !isTrial)) {
+        console.log(`[check-plan] Organization #${orgIdNum} trial has expired. Reverting plan to 'free'`);
+        await DirectusAdminClient.updateItem('organizations', orgIdNum, {
+          plan: 'free',
+          date_updated: now.toISOString(),
+        }).catch((err) => console.error('[check-plan] Failed to update org plan to free:', err));
+        currentPlan = 'free';
+        org.plan = 'free';
+      }
+    }
+
+    const isPro = currentPlan === 'pro';
     const { activeOrganization, organizations } = await getUserOrganizations(userId, orgIdNum, email);
-    const isPro = org.plan === 'pro';
 
     return res.json({
       success: true,
       organizationId: orgIdNum,
-      plan: org.plan || 'free',
+      plan: currentPlan,
       isPro,
+      isTrial: isPro && isTrial,
+      trialDaysRemaining,
+      trialEndsAt: org.trial_ends_at || null,
+      hasUsedTrial: Boolean(org.has_used_trial),
+      trialExpired,
       organization: org,
       activeOrganization: activeOrganization || org,
       organizations,
@@ -658,6 +707,95 @@ authRouter.get('/check-plan', requireAuth, async (req: AuthenticatedRequest, res
   } catch (error: any) {
     console.error('[Auth /check-plan Error]:', error);
     return res.status(500).json({ error: error.message || 'خطا در بررسی وضعیت اشتراک از سرور' });
+  }
+});
+
+// Activate 14-day free trial for Pro plan
+authRouter.post('/start-trial', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { userId, organizationId, email } = req.user!;
+    const orgIdNum = Number(req.body?.organization_id || req.body?.organizationId || organizationId);
+
+    if (!orgIdNum || isNaN(orgIdNum) || orgIdNum <= 0) {
+      return res.status(400).json({ error: 'شناسه سازمان مشخص نشده است.' });
+    }
+
+    // Verify user membership in organization
+    const orgMembers = await DirectusAdminClient.getItems('organization_users', {
+      filter: {
+        organization_id: { _eq: orgIdNum },
+        user_id: { _eq: userId },
+        status: { _eq: 'active' },
+      },
+    });
+
+    if (!orgMembers || orgMembers.length === 0) {
+      return res.status(403).json({ error: 'شما به این سازمان دسترسی ندارید.' });
+    }
+
+    // Fetch fresh organization
+    const org: any = await DirectusAdminClient.getItemById('organizations', orgIdNum);
+    if (!org) {
+      return res.status(404).json({ error: 'سازمان یافت نشد.' });
+    }
+
+    // Check if organization has already used its trial
+    if (org.has_used_trial) {
+      return res.status(400).json({
+        error: 'این سازمان قبلاً از مهلت ۱۴ روزه تست رایگان استفاده کرده است.',
+        has_used_trial: true,
+      });
+    }
+
+    const now = new Date();
+    const trialDays = 14;
+    const trialEndsAt = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
+
+    // 1. Update organization in Directus
+    await DirectusAdminClient.updateItem('organizations', orgIdNum, {
+      plan: 'pro',
+      has_used_trial: true,
+      trial_ends_at: trialEndsAt.toISOString(),
+      date_updated: now.toISOString(),
+    });
+
+    // 2. Create entry in subscriptions collection
+    let createdSub: any = null;
+    try {
+      createdSub = await DirectusAdminClient.createItem('subscriptions', {
+        organization_id: orgIdNum,
+        start_date: now.toISOString(),
+        end_date: trialEndsAt.toISOString(),
+        transaction_amount: '0 تومان (تست ۱۴ روزه رایگان)',
+        Transaction_id: `TRIAL-14D-${orgIdNum}-${Date.now().toString(36).toUpperCase()}`,
+        user_created: userId || undefined,
+        date_created: now.toISOString(),
+      });
+    } catch (subErr: any) {
+      console.warn('[start-trial] Could not insert subscriptions record:', subErr?.message);
+    }
+
+    const updatedOrg: any = await DirectusAdminClient.getItemById('organizations', orgIdNum);
+    const { activeOrganization, organizations } = await getUserOrganizations(userId, orgIdNum, email);
+
+    console.log(`[start-trial] 14-day free trial activated for org #${orgIdNum} (${updatedOrg?.name}) by user ${email || userId}`);
+
+    return res.json({
+      success: true,
+      message: 'مهلت تست ۱۴ روزه رایگان پلن حرفه‌ای (Pro) با موفقیت فعال شد!',
+      plan: 'pro',
+      isPro: true,
+      isTrial: true,
+      trialDaysRemaining: 14,
+      trialEndsAt: trialEndsAt.toISOString(),
+      organization: updatedOrg,
+      activeOrganization: activeOrganization || updatedOrg,
+      organizations,
+      subscription: createdSub,
+    });
+  } catch (error: any) {
+    console.error('[Auth /start-trial Error]:', error);
+    return res.status(500).json({ error: error.message || 'خطا در فعال‌سازی تست رایگان' });
   }
 });
 

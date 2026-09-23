@@ -16,6 +16,9 @@ export const authEn = {
   alreadyHaveAccount: 'Already have an account? Sign In',
   dontHaveAccount: "Don't have an account? Sign Up Free",
   logout: 'Sign Out',
+  logoutConfirm: 'Are you sure you want to sign out of your account?',
+  logoutNote: 'You will need your email and password to sign back in.',
+  loggingOut: 'Signing out...',
   welcomeBack: 'Welcome back,',
   selectOrganization: 'Select Active Organization',
 };

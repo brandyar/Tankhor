@@ -30,6 +30,7 @@ import {
   RefreshCw,
   Lock,
   Globe,
+  Store,
 } from 'lucide-react';
 
 interface PurchaseModuleModalProps {
@@ -138,6 +139,8 @@ export const PurchaseModuleModal: React.FC<PurchaseModuleModalProps> = ({
         return <HeartHandshake className="w-7 h-7 text-rose-500" />;
       case 'woocommerce':
         return <Globe className="w-7 h-7 text-violet-500" />;
+      case 'online_catalog':
+        return <Store className="w-7 h-7 text-indigo-500" />;
       default:
         return <Boxes className="w-7 h-7 text-amber-500" />;
     }

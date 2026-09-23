@@ -218,7 +218,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                           required
                           value={userPhone}
                           onChange={(e) => setUserPhone(e.target.value)}
-                          placeholder="۰9۱۲3456789"
+                          placeholder="09123456789"
                           className="w-full ps-9 pe-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
                         />
                       </div>

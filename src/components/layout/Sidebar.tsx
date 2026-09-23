@@ -47,8 +47,11 @@ import {
   Globe,
   Clock,
   LogOut,
+  RefreshCw,
   User as UserIcon,
   MessageSquare,
+  Store,
+  Sparkles,
 } from 'lucide-react';
 import { UserProfileModal } from '../modals/UserProfileModal';
 import { FeedbackModal } from '../modals/FeedbackModal';
@@ -108,6 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const hasBarcodeAccess = hasAccess('barcode');
   const hasAccountingAccess = hasAccess('accounting');
   const hasWooCommerceAccess = hasAccess('woocommerce');
+  const hasOnlineCatalogAccess = hasAccess('online_catalog');
   const isDesktop = isTauriEnvironment();
 
   // State to track open expandable sections in expanded mode
@@ -117,6 +121,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     products: false,
     purchasing: false,
     accounting: false,
+    online_catalog: false,
     woocommerce: false,
     settings: false,
   });
@@ -126,6 +131,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Lock body scroll when mobile drawer is open to prevent background scrolling
   useEffect(() => {
@@ -151,6 +158,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (route === 'settings/org' && currentRoute === 'settings') return true;
     if (route === 'sales/woocommerce' && (currentRoute === 'woocommerce' || currentRoute === 'orders/woocommerce')) return true;
     if (route.startsWith('sales/woocommerce') && currentRoute.startsWith(route)) return true;
+    if (route === 'sales/catalog' && (currentRoute === 'catalog' || currentRoute === 'online_catalog')) return true;
+    if (route.startsWith('sales/catalog') && currentRoute === route) return true;
     if (route.startsWith('accounting') && currentRoute === route) return true;
     return false;
   };
@@ -255,6 +264,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       isSingle: true,
       visible: permissions.canViewOrders || permissions.canViewFinancials,
     },
+    ...(hasOnlineCatalogAccess
+      ? [
+          {
+            key: 'online_catalog',
+            label: t('navigation.onlineCatalog', 'کاتالوگ دیجیتال'),
+            icon: Store,
+            visible: permissions.canViewProducts || permissions.canViewOrders,
+            items: [
+              { route: 'sales/catalog', label: t('navigation.catalogOverview', 'تنظیمات کاتالوگ'), icon: Store, visible: permissions.canViewProducts },
+              { route: 'sales/catalog/products', label: t('navigation.catalogProducts', 'کالاهای ویترین'), icon: Layers, visible: permissions.canViewProducts },
+              { route: 'sales/catalog/size-engine', label: t('navigation.catalogSizeEngine', 'شبیه‌ساز راهنمای سایز'), icon: Sparkles, visible: permissions.canViewProducts },
+            ].filter((i) => i.visible !== false),
+          },
+        ]
+      : []),
     ...(hasWooCommerceAccess
       ? [
           {
@@ -340,6 +364,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       visible: true,
     });
   }
+  if (!hasOnlineCatalogAccess && (permissions.canViewProducts || permissions.canViewOrders)) {
+    lockedSections.push({
+      key: 'locked-online_catalog',
+      label: t('navigation.onlineCatalog', 'کاتالوگ دیجیتال'),
+      icon: Store,
+      route: 'sales/catalog',
+      badge: t('navigation.moduleBadge', 'ماژول'),
+      isLocked: true,
+      isSingle: true,
+      visible: true,
+    });
+  }
 
   // Auto-expand section containing currentRoute in expanded mode
   useEffect(() => {
@@ -381,11 +417,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  const handleLogout = async () => {
-    if (window.confirm(t('auth.logoutConfirm', 'آیا مطمئن هستید که می‌خواهید از حساب کاربری خارج شوید؟'))) {
+  const handleLogoutClick = () => {
+    setIsLogoutModalOpen(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    setIsLoggingOut(true);
+    try {
       await logout();
+      setIsLogoutModalOpen(false);
+      if (onMobileClose) {
+        onMobileClose();
+      }
+    } catch (err) {
+      console.error('[Sidebar] Logout error:', err);
+    } finally {
+      setIsLoggingOut(false);
     }
   };
+
+  const handleLogout = handleLogoutClick;
 
   // Outward flyout handlers for collapsed mode
   const handleMouseEnter = (
@@ -882,6 +933,62 @@ export const Sidebar: React.FC<SidebarProps> = ({
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
       />
+
+      {/* Logout Confirmation Modal */}
+      {isLogoutModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={() => !isLoggingOut && setIsLogoutModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white dark:bg-[#181a20] p-6 shadow-2xl border border-neutral-200 dark:border-neutral-800 animate-in zoom-in-95 duration-150 text-start"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50">
+                <LogOut className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
+                  {t('auth.logout', 'خروج از حساب کاربری')}
+                </h3>
+                <p className="mt-1.5 text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                  {t('auth.logoutConfirm', 'آیا مطمئن هستید که می‌خواهید از حساب کاربری خود خارج شوید؟')}
+                </p>
+                <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+                  {t('auth.logoutNote', 'برای ورود مجدد به ایمیل و کلمه عبور خود نیاز خواهید داشت.')}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsLogoutModalOpen(false)}
+                disabled={isLoggingOut}
+                className="rounded-xl border border-neutral-300 dark:border-neutral-700 px-4 py-2 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {t('common.cancel', 'انصراف')}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLogout}
+                disabled={isLoggingOut}
+                className="flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+              >
+                {isLoggingOut ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <LogOut className="h-4 w-4" />
+                )}
+                <span>{isLoggingOut ? t('auth.loggingOut', 'در حال خروج...') : t('auth.logout', 'خروج از حساب')}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

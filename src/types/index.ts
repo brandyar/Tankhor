@@ -20,6 +20,8 @@ export interface Organization {
   currency: string; // e.g. 'TOMAN', 'IRR', 'USD'
   timezone: string;
   plan: PlanType;
+  has_used_trial?: boolean | null;
+  trial_ends_at?: string | null;
   status: Status;
   date_created?: string;
   date_updated?: string;

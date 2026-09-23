@@ -333,4 +333,16 @@ export const DEFAULT_SYSTEM_MODULES: SystemModule[] = [
     included_in_pro: false,
     status: 'published',
   },
+  {
+    id: 4,
+    name: 'کاتالوگ دیجیتال',
+    slug: 'online_catalog',
+    description: 'ویترین اینترنتی و کاتالوگ دیجیتال اختصاصی، موتور هوشمند پیشنهاد سایز مشتری بر اساس ابعاد و استایل، دریافت سفارش و اشتراک‌گذاری سریع با QR کد',
+    icon: 'globe',
+    price_ir: '780000',
+    price_usd: '24',
+    is_standalone_purchasable: true,
+    included_in_pro: false,
+    status: 'published',
+  },
 ];

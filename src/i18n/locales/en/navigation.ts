@@ -61,4 +61,8 @@ export const navigationEn = {
   wcMappings: 'Product & SKU Mappings',
   wcLogs: 'Sync Events & Logs',
   wcSettings: 'API Keys & Settings',
+  onlineCatalog: 'Digital Catalog',
+  catalogOverview: 'Catalog Settings',
+  catalogProducts: 'Showcase Products',
+  catalogSizeEngine: 'Size Finder Simulator',
 };

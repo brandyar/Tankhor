@@ -386,7 +386,7 @@ export const LoginModal: React.FC = () => {
                       ref={phoneRef}
                       value={userPhone}
                       onChange={(e) => setUserPhone(e.target.value)}
-                      placeholder="۰9۱۲3456789"
+                      placeholder="09123456789"
                       className="w-full ps-8 pe-2.5 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-mono text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
                     />
                   </div>

@@ -10,7 +10,8 @@ import { CreateOrganizationModal } from '../../features/organizations/CreateOrga
 import { UpgradeToProModal } from '../modals/UpgradeToProModal';
 import { QuickSearchModal } from '../modals/QuickSearchModal';
 import { FeedbackModal } from '../modals/FeedbackModal';
-import { Building2, Search, Database, RefreshCw, CheckCircle2, Menu, Cloud, ChevronDown, Plus, Sun, Moon, Monitor, MessageSquare } from 'lucide-react';
+import { Building2, Search, Database, RefreshCw, CheckCircle2, Menu, Cloud, ChevronDown, Plus, Sun, Moon, Monitor, MessageSquare, Sparkles } from 'lucide-react';
+import { toPersianDigits } from '../../utils/formatters';
 
 interface HeaderProps {
   onToggleSidebar?: () => void;
@@ -35,6 +36,15 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
 
   const orgMenuRef = useRef<HTMLDivElement>(null);
   const themeMenuRef = useRef<HTMLDivElement>(null);
+
+  const isTrialActive = Boolean(
+    activeOrganization?.plan === 'pro' &&
+    activeOrganization?.trial_ends_at &&
+    new Date(activeOrganization.trial_ends_at).getTime() > Date.now()
+  );
+  const trialDaysRemaining = isTrialActive && activeOrganization?.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(activeOrganization.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -240,6 +250,39 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
 
         {/* Right / End: Cloud Sync Icon & Theme Switcher */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Trial Pro Badge Indicator or Upgrade Button */}
+          {isTrialActive ? (
+            <button
+              type="button"
+              onClick={() => setIsUpgradeModalOpen(true)}
+              title="مشاهده جزئیات مهلت تست یا ارتقا به اشتراک Pro"
+              className="hidden sm:inline-flex items-center gap-2 h-10 px-3 rounded-xl border border-neutral-200/90 dark:border-neutral-700/60 bg-neutral-50/90 dark:bg-neutral-900/60 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 text-xs font-medium transition-all cursor-pointer shadow-2xs group"
+            >
+              <span className="flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="font-semibold text-neutral-900 dark:text-neutral-100">تست Pro</span>
+              </span>
+              {trialDaysRemaining !== null && (
+                <span className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 border-s border-neutral-200 dark:border-neutral-700/80 ps-2 ms-0.5">
+                  {toPersianDigits(trialDaysRemaining)} روز
+                </span>
+              )}
+            </button>
+          ) : activeOrganization?.plan !== 'pro' ? (
+            <button
+              type="button"
+              onClick={() => setIsUpgradeModalOpen(true)}
+              title="ارتقا به پلن حرفه‌ای (Pro)"
+              className="hidden sm:inline-flex items-center gap-2 h-10 px-3 rounded-xl border border-neutral-200/90 dark:border-neutral-700/60 bg-neutral-50/90 dark:bg-neutral-900/60 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 text-xs font-medium transition-all cursor-pointer shadow-2xs group"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 group-hover:text-blue-500 transition-colors shrink-0" />
+              <span>{activeOrganization?.has_used_trial ? 'ارتقا به Pro' : 'تست رایگان Pro'}</span>
+            </button>
+          ) : null}
+
           {/* Cloud Sync & Storage Mode Icon Button */}
           <button
             onClick={() => {

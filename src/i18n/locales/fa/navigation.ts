@@ -61,4 +61,8 @@ export const navigationFa = {
   wcMappings: 'تطبیق کالاها و تنوع‌ها',
   wcLogs: 'گزارش و لاگ‌های رویداد',
   wcSettings: 'تنظیمات و اتصال',
+  onlineCatalog: 'کاتالوگ دیجیتال',
+  catalogOverview: 'تنظیمات کاتالوگ',
+  catalogProducts: 'کالاهای ویترین',
+  catalogSizeEngine: 'موتور راهنمای سایز',
 };

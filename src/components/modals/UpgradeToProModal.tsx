@@ -85,6 +85,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
   const [selectedMonths, setSelectedMonths] = useState<number>(3);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const [isActivatingTrial, setIsActivatingTrial] = useState(false);
   const [isTestActivating, setIsTestActivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -256,6 +257,49 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
   };
 
   /**
+   * Activate 14-Day Free Trial
+   */
+  const handleStartTrial = async () => {
+    if (!activeOrganization) return;
+    if (!isCloudAuthenticated) {
+      openLoginModal();
+      return;
+    }
+    setIsActivatingTrial(true);
+    setError(null);
+    try {
+      const res = await directusClient.startFreeTrial(activeOrganization.id);
+      if (res && (res.isPro || res.plan === 'pro')) {
+        await refreshOrganizations();
+        storageManager.setMode('cloud_synced');
+        setSuccess(true);
+        setSubscriptionDetails({
+          Transaction_id: 'هدیه ویژه تن‌خور (تست ۱۴ روزه)',
+          transaction_amount: '۰ تومان (رایگان)',
+        });
+      } else {
+        setError('خطا در فعال‌سازی تست رایگان.');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'خطا در فعال‌سازی مهلت تست رایگان.');
+    } finally {
+      setIsActivatingTrial(false);
+    }
+  };
+
+  // Trial status calculations
+  const now = Date.now();
+  const trialDaysRemaining = activeOrganization?.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(activeOrganization.trial_ends_at).getTime() - now) / (1000 * 60 * 60 * 24)))
+    : null;
+  const isTrialActive = Boolean(
+    activeOrganization?.plan === 'pro' &&
+    activeOrganization?.trial_ends_at &&
+    new Date(activeOrganization.trial_ends_at).getTime() > now
+  );
+  const canStartTrial = !activeOrganization?.has_used_trial && activeOrganization?.plan !== 'pro';
+
+  /**
    * Start local-to-cloud data migration
    */
   const handleStartMigration = async () => {
@@ -333,8 +377,18 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
             <span className="text-neutral-700 dark:text-neutral-300">
               سازمان فعال: <strong className="text-neutral-900 dark:text-neutral-100">{activeOrganization?.name || 'سازمان من'}</strong>
             </span>
-            <span className="px-2.5 py-0.5 rounded-full font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
-              پلن فعلی: {activeOrganization?.plan === 'pro' ? 'حرفه‌ای (Pro)' : 'رایگان (Free)'}
+            <span className={`px-2.5 py-0.5 rounded-full font-bold border ${
+              isTrialActive
+                ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+                : activeOrganization?.plan === 'pro'
+                ? 'bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800/60'
+                : 'bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
+            }`}>
+              {isTrialActive
+                ? `تست Pro (${toPersianDigits(trialDaysRemaining ?? 0)} روز باقی‌مانده)`
+                : activeOrganization?.plan === 'pro'
+                ? 'حرفه‌ای (Pro)'
+                : 'رایگان (Free)'}
             </span>
           </div>
 
@@ -526,6 +580,41 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
 
           {!success && !migrationDone && !waitingPayment && (
             <>
+              {/* 14-Day Free Trial Promotion Banner */}
+              {canStartTrial && (
+                <div className="relative overflow-hidden p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-blue-500/15 dark:from-emerald-950/50 dark:via-teal-950/40 dark:to-blue-950/50 border-2 border-emerald-500/40 dark:border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                  <div className="flex items-start sm:items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                      <Sparkles className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-xs sm:text-sm font-black text-emerald-950 dark:text-emerald-100">
+                          هدیه ویژه تن‌خور: تست ۱۴ روزه رایگان اشتراک Pro
+                        </h4>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white">
+                          بدون نیاز به کارت بانکی
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800/90 dark:text-emerald-300/80 mt-1 leading-relaxed">
+                        دسترسی فوری به پنل ابری تحت وب، همگام‌سازی نامحدود بین دستگاه‌ها و پرسنل نامحدود به مدت ۲ هفته کامل.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={handleStartTrial}
+                    isLoading={isActivatingTrial}
+                    icon={<Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />}
+                    className="w-full sm:w-auto text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 cursor-pointer shadow-sm py-2.5 px-4"
+                  >
+                    شروع فوری تست ۱۴ روزه
+                  </Button>
+                </div>
+              )}
+
               {/* Plan Selection Cards */}
               <div className="space-y-2.5">
                 <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center justify-between">

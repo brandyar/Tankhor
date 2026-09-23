@@ -57,8 +57,9 @@
      4. **Catalog & Products (محصولات و کاتالوگ)**: Products, Variants, Size Guides, Attributes/Categories/Brands/Collections (Submenu)
      5. **Purchasing & Procurement (تدارکات و خرید)**: Purchase Orders, Suppliers
      6. **Accounting & Treasury (حسابداری و مالی)**: Hierarchical main menu and submenus after activation (Dashboard, Expenses, Accounts & Cashboxes, Person Ledgers, Cheques, Landed Costs, Tax Reports, Accounting Software Export)
-     7. **WooCommerce Sync (فروشگاه آنلاین ووکامرس)**: Displayed right before Settings when activated, providing seamless store connection, inventory sync, and order import
-     8. **Settings (تنظیمات)**: Organization & User Management, Cloud Sync & Storage
+     7. **Digital Catalog (کاتالوگ دیجیتال)**: Displayed under Sales & Orders when active (Catalog Settings [تنظیمات کاتالوگ], Showcase Products [کالاهای ویترین], Size Finder Simulator [شبیه‌ساز راهنمای سایز])
+     8. **WooCommerce Sync (فروشگاه آنلاین ووکامرس)**: Displayed right before Settings when activated, providing seamless store connection, inventory sync, and order import
+     9. **Settings (تنظیمات)**: Organization & User Management, Cloud Sync & Storage
    - Submenus support responsive collapsible states and auto-expansion based on the active route.
    - **Settings Sub-menu Structure**: Settings is organized into modular dedicated sub-menus:
      - `settings/org`: Organization profile, currency, and general information
@@ -69,7 +70,7 @@
      - `settings/updater`: Desktop version checks and one-click auto-updater (Desktop only)
    - **Dynamic Module Placement in Sidebar**:
      - Modules not yet purchased/activated automatically move to the bottom group (*ماژول‌ها و افزونه‌ها*) with subtle inactive styling and a clean *ماژول* badge.
-     - Once purchased or unlocked via Pro, modules immediately return to their native workflow section (e.g. *تولید و چاپ بارکد* under *انبار و موجودی*، *حسابداری و مالی* به عنوان منوی جامع، و *فروشگاه آنلاین ووکامرس* قبل از تنظیمات).
+     - Once purchased or unlocked via Pro, modules immediately return to their native workflow section (e.g. *تولید و چاپ بارکد* under *انبار و موجودی*، *کاتالوگ دیجیتال* under *فروش و سفارشات*، *حسابداری و مالی* به عنوان منوی جامع، و *فروشگاه آنلاین ووکامرس* قبل از تنظیمات).
      - **Offline/Free Store Synchronization**: The WooCommerce integration module is fully functional in offline/local desktop storage (SQLite) as well as Cloud mode, allowing both free tier and Pro users to purchase and activate it standalone without requiring an active cloud subscription.
 
 7. **Modular Add-ons & Cryptographic Licensing (`useModuleAccess`)**:
@@ -122,7 +123,7 @@
     - Design system controls (such as `Select.tsx`) implement defensive fallback guards to handle both declarative `options` arrays and arbitrary `children` elements safely.
 
 14. **Automated Desktop Releases & Self-Updater**:
-    - Current App Version: `1.0.31`.
+    - Current App Version: `1.1.0`.
     - Automated multi-platform releases built via GitHub Actions (`/.github/workflows/release-tauri.yml`).
     - Windows desktop builds use NSIS target (`bundle.targets: ["nsis", "app", "dmg"]`) with `windows.installMode: "passive"` for seamless in-place updates.
     - Desktop auto-update system powered by Tauri Updater (`tauri-plugin-updater`) and GitHub Releases with dedicated `latest.json` manifest.
@@ -144,6 +145,14 @@
     - Prevents broken image links when referencing raw Directus File UUIDs, Base64 strings, or local IndexedDB/blob URLs.
     - Automatically provides elegant placeholder iconography, fallback text initials, and loading states across both offline/desktop and cloud setups.
 
+18. **Digital Catalog & Dynamic Size Recommendation Engine (`online_catalog`)**:
+    - **Digital Showcase**: Responsive public catalog (`/c/:slug`), dynamic QR code generator, WhatsApp order dispatch, and direct purchase inquiry flow.
+    - **Garment-to-Body Dynamic Sizing**:
+      - Calculates size recommendations strictly using the active product's assigned Size Guide Template measurements (`size_guide_templates` -> `size_guide_measurements`).
+      - Supports dual input: Direct tailor tape measurements (cm) or anthropometric height/weight estimation.
+      - Incorporates user fit preferences (`snug`, `regular`, `relaxed`) with custom ease tolerances across dimensions (chest, waist, hips, inseam, etc.).
+    - **Apparel Showcase Presentation**: High-contrast imagery (`aspect-[3/4]`), zero emojis, and minimalist design complying with `DESIGN.md`.
+
 ---
 
 ## 📂 Key Code Structure
@@ -158,6 +167,10 @@
 - `/src/storage/cloud/`: Modular Directus Cloud domain providers (`cloudOrg.ts`, `cloudCatalog.ts`, `cloudInventory.ts`, `cloudSales.ts`, `cloudProcurement.ts`, `cloudAccounting.ts`, `cloudWooCommerce.ts`, `cloudSystem.ts`)
 - `/src/storage/mediaManager.ts`: Offline media caching, blob storage, and image URL resolution
 - `/src/components/ui/ProductImage.tsx`: Unified image rendering component with Directus asset resolution and fallback
+- `/src/features/online-catalog/`: Digital Catalog suite (Admin management, live preview, dynamic size engine simulator, and public customer-facing catalog)
+- `/src/features/online-catalog/engine/sizeRecommendationEngine.ts`: Garment-to-body size matching & anthropometric tolerance calculation engine
+- `/src/features/online-catalog/components/SmartSizeFinderModal.tsx`: Customer-facing smart size finder modal with dynamic template-driven inputs
+- `/src/features/online-catalog/public/PublicCatalogView.tsx`: Responsive public catalog showcase with high-res imagery, quick search, and WhatsApp order generator
 - `/src/storage/syncManager.ts`: Sync manager for offline changes
 - `/src/storage/backupManager.ts`: Automated 1-click JSON backup, restore & demo data seeding engine
 - `/src/api/directus.ts`: Directus API client with desktop/web support

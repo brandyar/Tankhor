@@ -642,16 +642,22 @@ class DirectusClient {
     return res.organization || res.activeOrganization;
   }
 
-  public async checkOrganizationPlan(): Promise<{
+  public async checkOrganizationPlan(organizationId?: number): Promise<{
     success: boolean;
     organizationId: number;
     plan: 'free' | 'pro';
     isPro: boolean;
+    isTrial?: boolean;
+    trialDaysRemaining?: number;
+    trialEndsAt?: string | null;
+    hasUsedTrial?: boolean;
+    trialExpired?: boolean;
     organization: any;
     activeOrganization: any;
     organizations: any[];
   }> {
-    const res = await this.request<any>('/auth/check-plan');
+    const qs = organizationId ? `?organization_id=${organizationId}` : '';
+    const res = await this.request<any>(`/auth/check-plan${qs}`);
     if (res && res.activeOrganization) {
       // Update cached user profile in localStorage
       if (typeof window !== 'undefined') {
@@ -663,6 +669,44 @@ class DirectusClient {
             cached.active_organization = res.activeOrganization;
             if (Array.isArray(res.organizations) && res.organizations.length > 0) {
               cached.organizations = res.organizations;
+            }
+            localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(cached));
+          } catch {}
+        }
+      }
+    }
+    return res;
+  }
+
+  public async startFreeTrial(organizationId?: number): Promise<{
+    success: boolean;
+    message: string;
+    plan: 'pro';
+    isPro: boolean;
+    isTrial: boolean;
+    trialDaysRemaining: number;
+    trialEndsAt: string;
+    organization: any;
+    activeOrganization?: any;
+    subscription?: any;
+  }> {
+    const res = await this.request<any>('/payment/start-trial', {
+      method: 'POST',
+      body: JSON.stringify({ organizationId }),
+    });
+    if (res && res.organization) {
+      if (typeof window !== 'undefined') {
+        const cachedRaw = localStorage.getItem('tankhor_cached_user_profile');
+        if (cachedRaw) {
+          try {
+            const cached = JSON.parse(cachedRaw);
+            cached.activeOrganization = res.organization;
+            cached.active_organization = res.organization;
+            if (Array.isArray(cached.organizations)) {
+              const idx = cached.organizations.findIndex((o: any) => o.id === res.organization.id);
+              if (idx !== -1) {
+                cached.organizations[idx] = res.organization;
+              }
             }
             localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(cached));
           } catch {}
