@@ -11,7 +11,8 @@ import {
   ShoppingBag, Shirt, DollarSign, AlertTriangle,
   Plus, ArrowUpRight, ArrowDownLeft, RefreshCw, CheckCircle2,
   Calendar, BarChart3, TrendingUp, Sparkles, HardDriveDownload, HardDriveUpload,
-  ShoppingCart, PackagePlus, FileText, Truck, ArrowLeft, ArrowRight
+  ShoppingCart, PackagePlus, FileText, Truck, ArrowLeft, ArrowRight,
+  Compass, HelpCircle
 } from 'lucide-react';
 import { BackupManager } from '../../storage/backupManager';
 import {
@@ -24,6 +25,7 @@ import {
 import { DashboardMetricsRibbon } from './DashboardMetricsRibbon';
 import { DashboardAnalyticsCharts } from './DashboardAnalyticsCharts';
 import { DashboardStockAlerts } from './DashboardStockAlerts';
+import { useOnboardingTour } from '../onboarding';
 
 interface DashboardViewProps {
   onNavigate: (route: string) => void;
@@ -32,6 +34,12 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const { t, locale } = useTranslation();
   const { activeOrganization, permissions, refreshOrganizations } = useOrganization();
+
+  // Initialize Onboarding Tour with auto-start for first-time users
+  const { startTour } = useOnboardingTour({
+    autoStartTour: 'dashboard',
+    autoStartDelayMs: 900,
+  });
 
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
@@ -217,25 +225,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
   return (
     <div className="space-y-6">
-      {/* 1. Top Metric Ribbon (KPIs) - 4 report blocks moved to top */}
-      <DashboardMetricsRibbon
-        totalProducts={products.length}
-        totalVariants={variants.length}
-        totalStockCount={totalStockCount}
-        totalValue={totalValue}
-        lowStockCount={lowStockCount}
-        outOfStockCount={outOfStockCount}
-        totalOrdersCount={orders.length}
-        totalSalesRevenue={totalSalesRevenue}
-        averageOrderValue={averageOrderValue}
-        canViewFinancials={permissions.canViewFinancials}
-        activeOrganization={activeOrganization}
-        isPersian={isPersian}
-        onNavigate={onNavigate}
-      />
+      {/* Dashboard Header Bar with Minimalist Help Icon Trigger */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-neutral-100 tracking-tight">
+            {t('navigation.dashboard', 'پیشخوان')}
+          </h1>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 font-medium">
+            {activeOrganization?.name ? `${activeOrganization.name} · ${t('common.appSubtitle')}` : t('common.appSubtitle')}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => startTour('dashboard', { force: true })}
+            title={t('onboarding.startTour', 'تور راهنمای داشبورد')}
+            aria-label={t('onboarding.startTour', 'تور راهنمای داشبورد')}
+            className="w-9 h-9 rounded-xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#13151a] hover:bg-neutral-50 dark:hover:bg-neutral-800/80 text-neutral-500 hover:text-blue-600 dark:text-neutral-400 dark:hover:text-blue-400 flex items-center justify-center transition-all shadow-2xs cursor-pointer group"
+          >
+            <HelpCircle className="w-4 h-4 transition-transform group-hover:scale-110" />
+          </button>
+        </div>
+      </div>
+
+      {/* 1. Top Metric Ribbon (KPIs) */}
+      <div id="tour-dashboard-ribbon">
+        <DashboardMetricsRibbon
+          totalProducts={products.length}
+          totalVariants={variants.length}
+          totalStockCount={totalStockCount}
+          totalValue={totalValue}
+          lowStockCount={lowStockCount}
+          outOfStockCount={outOfStockCount}
+          totalOrdersCount={orders.length}
+          totalSalesRevenue={totalSalesRevenue}
+          averageOrderValue={averageOrderValue}
+          canViewFinancials={permissions.canViewFinancials}
+          activeOrganization={activeOrganization}
+          isPersian={isPersian}
+          onNavigate={onNavigate}
+        />
+      </div>
 
       {/* 2. Four Operational Quick Access Blocks */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      <div id="tour-quick-actions" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {/* Quick Action 1: Create Order (ثبت سفارش) */}
         <button
           type="button"
@@ -406,18 +439,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       )}
 
       {/* 3. Recharts Analytics Suite (Trends, Inflow/Outflow, Donut Distribution, Warehouse Allocation) */}
-      <DashboardAnalyticsCharts
-        timeRange={timeRange}
-        onTimeRangeChange={setTimeRange}
-        salesData={salesData}
-        inventoryFlowData={inventoryFlowData}
-        categoryStockData={categoryStockData}
-        stockHealthData={stockHealthData}
-        warehouseStockData={warehouseStockData}
-        canViewFinancials={permissions.canViewFinancials}
-        activeOrganization={activeOrganization}
-        isPersian={isPersian}
-      />
+      <div id="tour-analytics-charts">
+        <DashboardAnalyticsCharts
+          timeRange={timeRange}
+          onTimeRangeChange={setTimeRange}
+          salesData={salesData}
+          inventoryFlowData={inventoryFlowData}
+          categoryStockData={categoryStockData}
+          stockHealthData={stockHealthData}
+          warehouseStockData={warehouseStockData}
+          canViewFinancials={permissions.canViewFinancials}
+          activeOrganization={activeOrganization}
+          isPersian={isPersian}
+        />
+      </div>
 
       {/* 4. High-Demand Products & Critical Low-Stock Alerts */}
       <DashboardStockAlerts

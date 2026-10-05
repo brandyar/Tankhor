@@ -658,6 +658,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 return (
                   <button
                     key={section.key}
+                    id={`tour-nav-${section.key}`}
+                    data-tour={`nav-${section.key}`}
                     onClick={() => handleNavClick(section.route!)}
                     onMouseEnter={(e) => handleMouseEnter(section.key, section.label, e, undefined, true, section.route)}
                     onMouseLeave={handleMouseLeave}
@@ -676,6 +678,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               return (
                 <button
                   key={section.key}
+                  id={`tour-nav-${section.key}`}
+                  data-tour={`nav-${section.key}`}
                   onClick={() => handleNavClick(section.route!)}
                   className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
                     isActive
@@ -701,6 +705,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               return (
                 <button
                   key={section.key}
+                  id={`tour-nav-${section.key}`}
+                  data-tour={`nav-${section.key}`}
                   onClick={() => {
                     if (visibleItems.length > 0) {
                       handleNavClick(visibleItems[0].route);
@@ -722,7 +728,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             // Expanded Mode Rendering (Vercel-Inspired Screenshot Style)
             return (
-              <div key={section.key} className="space-y-1">
+              <div key={section.key} id={`tour-nav-${section.key}`} data-tour={`nav-${section.key}`} className="space-y-1">
                 <button
                   type="button"
                   onClick={() => toggleSection(section.key)}

@@ -126,7 +126,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
   const totalCategoryStock = categoryStockData.reduce((acc, c) => acc + c.value, 0);
 
   return (
-    <div className="space-y-6">
+    <div id="tour-analytics-charts" className="space-y-6">
       {/* Time Range Filter Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-[#13151a] p-3 sm:p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs transition-colors">
         <div className="flex items-center gap-2 text-xs font-bold text-neutral-800 dark:text-neutral-200">

@@ -153,6 +153,16 @@
       - Incorporates user fit preferences (`snug`, `regular`, `relaxed`) with custom ease tolerances across dimensions (chest, waist, hips, inseam, etc.).
     - **Apparel Showcase Presentation**: High-contrast imagery (`aspect-[3/4]`), zero emojis, and minimalist design complying with `DESIGN.md`.
 
+19. **Interactive Onboarding Tour Architecture (`onboardingManager` & `Driver.js`)**:
+    - **First-Time Guided Onboarding**: Automatic, non-intrusive guided tour on the user's initial visit to introduce core system capabilities (Dashboard KPIs, Quick Actions, Products & Variants, Multi-Warehouse Inventory, Orders & Customers, Analytics, and Organization/Cloud Sync).
+    - **Modular & Extensible Registry (`tourRegistry`)**:
+      - Domain tours are defined modularly (`TourDefinition`) in `/src/features/onboarding/tours/` allowing future domain-specific tours (e.g. Products, Inventory, Accounting).
+      - Controlled via `useOnboardingTour` hook with auto-start delays, DOM element fallback guards, and manual restart actions.
+    - **Persistence & Scoping**: Completion state is strictly persisted per organization in LocalStorage (`tankhor_tour_seen_${tourName}_${orgId}`) preventing unwanted recurring popups.
+    - **RTL & Design System Alignment**:
+      - Driver.js popovers styled to match Tankhor's minimalist aesthetic (Vazirmatn typography, zero pill slop, WCAG contrast, dark/light themes).
+      - Step indicators and navigation formatted with localized Persian digits (`مرحله ۱ از ۷`) and standard action buttons («بعدی»، «قبلی»، «رد کردن»، «شروع کار»).
+
 ---
 
 ## 📂 Key Code Structure
@@ -167,6 +177,7 @@
 - `/src/storage/cloud/`: Modular Directus Cloud domain providers (`cloudOrg.ts`, `cloudCatalog.ts`, `cloudInventory.ts`, `cloudSales.ts`, `cloudProcurement.ts`, `cloudAccounting.ts`, `cloudWooCommerce.ts`, `cloudSystem.ts`)
 - `/src/storage/mediaManager.ts`: Offline media caching, blob storage, and image URL resolution
 - `/src/components/ui/ProductImage.tsx`: Unified image rendering component with Directus asset resolution and fallback
+- `/src/features/onboarding/`: Interactive guided tour suite (`onboardingManager.ts`, `useOnboardingTour.ts`, `tours/dashboardTour.ts`, `tours/index.ts`, `types.ts`)
 - `/src/features/online-catalog/`: Digital Catalog suite (Admin management, live preview, dynamic size engine simulator, and public customer-facing catalog)
 - `/src/features/online-catalog/engine/sizeRecommendationEngine.ts`: Garment-to-body size matching & anthropometric tolerance calculation engine
 - `/src/features/online-catalog/components/SmartSizeFinderModal.tsx`: Customer-facing smart size finder modal with dynamic template-driven inputs

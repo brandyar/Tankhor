@@ -143,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
           )}
 
           {/* Interactive Organization Dropdown */}
-          <div className="relative" ref={orgMenuRef}>
+          <div className="relative" id="tour-header-org" ref={orgMenuRef}>
             <button
               onClick={() => setIsOrgMenuOpen(!isOrgMenuOpen)}
               className="flex items-center gap-2 bg-neutral-100/90 dark:bg-neutral-800/60 hover:bg-neutral-200/70 dark:hover:bg-neutral-800 rounded-xl px-3 py-2 border border-neutral-200/90 dark:border-neutral-700/60 transition-all cursor-pointer focus:outline-none shadow-2xs min-h-[40px]"

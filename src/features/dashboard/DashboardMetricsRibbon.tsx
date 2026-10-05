@@ -38,7 +38,7 @@ export const DashboardMetricsRibbon: React.FC<DashboardMetricsRibbonProps> = ({
   const { t } = useTranslation();
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+    <div id="tour-dashboard-ribbon" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
       {/* 1. Total Products & Catalog */}
       <div
         role="button"

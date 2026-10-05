@@ -165,3 +165,175 @@ html.pos-fullscreen-active {
   z-index: 100000 !important;
 }
 
+/* ========================================================= */
+/* Driver.js Minimalist RTL & Dark-Mode Theme for Tankhor   */
+/* ========================================================= */
+.tankhor-driver-popover.driver-popover {
+  background-color: #ffffff;
+  color: #171717;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  max-width: 360px;
+  min-width: 290px;
+  font-family: 'Vazirmatn', system-ui, sans-serif !important;
+  z-index: 100002 !important;
+}
+
+html.dark .tankhor-driver-popover.driver-popover {
+  background-color: #13151b;
+  color: #f3f4f6;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 35px -5px rgba(0, 0, 0, 0.5), 0 10px 15px -6px rgba(0, 0, 0, 0.4);
+}
+
+.tankhor-driver-rtl.driver-popover {
+  direction: rtl;
+  text-align: right;
+}
+
+.tankhor-driver-ltr.driver-popover {
+  direction: ltr;
+  text-align: left;
+}
+
+.tankhor-driver-popover .driver-popover-title {
+  font-family: 'Vazirmatn', system-ui, sans-serif !important;
+  font-size: 0.925rem;
+  font-weight: 800;
+  line-height: 1.4;
+  margin-bottom: 0.5rem;
+  color: #0f172a;
+}
+
+html.dark .tankhor-driver-popover .driver-popover-title {
+  color: #f8fafc;
+}
+
+.tankhor-driver-popover .driver-popover-description {
+  font-family: 'Vazirmatn', system-ui, sans-serif !important;
+  font-size: 0.775rem;
+  line-height: 1.6;
+  color: #475569;
+}
+
+html.dark .tankhor-driver-popover .driver-popover-description {
+  color: #94a3b8;
+}
+
+.tankhor-driver-popover .driver-popover-text-body {
+  margin: 0;
+  line-height: 1.65;
+}
+
+.tankhor-driver-popover .driver-popover-step-indicator {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 0.675rem;
+  font-family: 'Vazirmatn', monospace !important;
+  color: #94a3b8;
+  letter-spacing: 0.025em;
+  font-weight: 600;
+}
+
+html.dark .tankhor-driver-popover .driver-popover-step-indicator {
+  border-top-color: rgba(255, 255, 255, 0.06);
+  color: #64748b;
+}
+
+.tankhor-driver-popover .driver-popover-footer {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tankhor-driver-rtl .driver-popover-footer {
+  flex-direction: row-reverse;
+}
+
+.tankhor-driver-popover .driver-popover-close-btn {
+  color: #94a3b8;
+  font-size: 1.1rem;
+  padding: 0.25rem;
+  transition: color 0.15s ease;
+}
+
+.tankhor-driver-popover .driver-popover-close-btn:hover {
+  color: #0f172a;
+}
+
+html.dark .tankhor-driver-popover .driver-popover-close-btn:hover {
+  color: #ffffff;
+}
+
+.tankhor-driver-popover .driver-popover-next-btn {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  border-radius: 0.5rem !important;
+  padding: 0.375rem 0.875rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  border: none !important;
+  text-shadow: none !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+  font-family: 'Vazirmatn', sans-serif !important;
+}
+
+.tankhor-driver-popover .driver-popover-next-btn:hover {
+  background-color: #1e293b !important;
+}
+
+html.dark .tankhor-driver-popover .driver-popover-next-btn {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html.dark .tankhor-driver-popover .driver-popover-next-btn:hover {
+  background-color: #e2e8f0 !important;
+}
+
+.tankhor-driver-popover .driver-popover-prev-btn {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border-radius: 0.5rem !important;
+  padding: 0.375rem 0.75rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  text-shadow: none !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+  font-family: 'Vazirmatn', sans-serif !important;
+}
+
+.tankhor-driver-popover .driver-popover-prev-btn:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html.dark .tankhor-driver-popover .driver-popover-prev-btn {
+  background-color: #1e293b !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+html.dark .tankhor-driver-popover .driver-popover-prev-btn:hover {
+  background-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.tankhor-driver-popover .driver-popover-arrow {
+  border-color: #ffffff !important;
+}
+
+html.dark .tankhor-driver-popover .driver-popover-arrow {
+  border-color: #13151b !important;
+}
+
+
