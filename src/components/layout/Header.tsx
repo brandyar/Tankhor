@@ -127,18 +127,18 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
 
   return (
     <>
-      <header className="h-16 min-h-[64px] shrink-0 w-full bg-white dark:bg-[#0f121a] border-b border-neutral-200/80 dark:border-neutral-800/80 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 transition-colors z-20">
+      <header className="relative z-30 h-14 sm:h-16 min-h-[56px] sm:min-h-[64px] shrink-0 w-full bg-white dark:bg-[#0f121a] border-b border-neutral-200/80 dark:border-neutral-800/80 px-2 sm:px-4 md:px-6 flex items-center justify-between gap-1.5 sm:gap-3 transition-colors">
         {/* Left / Start: Mobile Sidebar Toggle (Hidden on Desktop) & Organization Switcher Dropdown */}
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
           {/* Mobile Sidebar Toggle (Hidden on Desktop since sidebar has its own button) */}
           {onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
               title={t('common.toggleSidebar')}
               aria-label={t('common.toggleSidebar')}
-              className="lg:hidden min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors cursor-pointer"
+              className="lg:hidden w-8.5 h-8.5 sm:w-10 sm:h-10 min-w-[34px] min-h-[34px] flex items-center justify-center rounded-xl text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/80 transition-colors cursor-pointer shrink-0"
             >
-              <Menu className="w-5 h-5 shrink-0" />
+              <Menu className="w-4.5 h-4.5 sm:w-5 sm:h-5 shrink-0" />
             </button>
           )}
 
@@ -146,17 +146,17 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
           <div className="relative" id="tour-header-org" ref={orgMenuRef}>
             <button
               onClick={() => setIsOrgMenuOpen(!isOrgMenuOpen)}
-              className="flex items-center gap-2 bg-neutral-100/90 dark:bg-neutral-800/60 hover:bg-neutral-200/70 dark:hover:bg-neutral-800 rounded-xl px-3 py-2 border border-neutral-200/90 dark:border-neutral-700/60 transition-all cursor-pointer focus:outline-none shadow-2xs min-h-[40px]"
+              className="flex items-center gap-1.5 sm:gap-2 bg-neutral-100/90 dark:bg-neutral-800/60 hover:bg-neutral-200/70 dark:hover:bg-neutral-800 rounded-xl px-2 py-1.5 sm:px-3 sm:py-2 border border-neutral-200/90 dark:border-neutral-700/60 transition-all cursor-pointer focus:outline-none shadow-2xs h-8.5 sm:h-10"
             >
-              <div className="w-5 h-5 rounded-lg bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 flex items-center justify-center shrink-0">
-                <Building2 className="w-3.5 h-3.5" />
+              <div className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-lg bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 flex items-center justify-center shrink-0">
+                <Building2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </div>
-              <div className="text-start pe-0.5 sm:pe-1">
-                <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 block truncate max-w-[100px] xs:max-w-[140px] sm:max-w-[190px]">
+              <div className="text-start pe-0.5">
+                <span className="text-[11px] sm:text-xs font-bold text-neutral-900 dark:text-neutral-100 block truncate max-w-[65px] xs:max-w-[110px] sm:max-w-[180px]">
                   {activeOrganization?.name || t('common.selectOrg')}
                 </span>
               </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400 transition-transform shrink-0 ${isOrgMenuOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-neutral-500 dark:text-neutral-400 transition-transform shrink-0 ${isOrgMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {/* Organization Switcher Dropdown Menu */}
@@ -228,28 +228,28 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
         </div>
 
         {/* Center: Quick Search Shortcut Trigger (Ctrl + K) */}
-        <div className="flex-1 max-w-xs sm:max-w-sm md:max-w-md mx-1 sm:mx-4">
+        <div className="flex-1 min-w-0 max-w-xs sm:max-w-sm md:max-w-md mx-1 sm:mx-3">
           <button
             type="button"
             onClick={() => setIsQuickSearchOpen(true)}
-            className="w-full flex items-center justify-between gap-2 bg-neutral-100/90 dark:bg-neutral-800/60 hover:bg-neutral-200/80 dark:hover:bg-neutral-800 rounded-xl px-3 py-2 border border-neutral-200/90 dark:border-neutral-700/60 transition-all cursor-pointer text-start shadow-2xs group min-h-[40px]"
+            className="w-full flex items-center justify-between gap-1.5 sm:gap-2 bg-neutral-100/90 dark:bg-neutral-800/60 hover:bg-neutral-200/80 dark:hover:bg-neutral-800 rounded-xl px-2 py-1.5 sm:px-3 sm:py-2 border border-neutral-200/90 dark:border-neutral-700/60 transition-all cursor-pointer text-start shadow-2xs group h-8.5 sm:h-10 min-w-0"
             title={`${t('common.quickSearchTitle', 'جستجوی سریع صفحات')} (Ctrl+K)`}
           >
-            <div className="flex items-center gap-2 min-w-0">
-              <Search className="w-4 h-4 text-neutral-400 dark:text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-200 shrink-0" />
-              <span className="text-xs text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-800 dark:group-hover:text-neutral-200 truncate font-medium">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-400 dark:text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-200 shrink-0" />
+              <span className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-800 dark:group-hover:text-neutral-200 truncate font-medium">
                 <span className="hidden xs:inline">{t('common.quickSearch', 'جستجوی سریع صفحات...')}</span>
                 <span className="xs:hidden">{t('common.search', 'جستجو...')}</span>
               </span>
             </div>
-            <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-[10px] font-mono font-medium rounded-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 shadow-2xs shrink-0">
+            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 shadow-2xs shrink-0">
               Ctrl K
             </kbd>
           </button>
         </div>
 
         {/* Right / End: Cloud Sync Icon & Theme Switcher */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
           {/* Trial Pro Badge Indicator or Upgrade Button */}
           {isTrialActive ? (
             <button
@@ -302,7 +302,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                 ? t('common.cloudLoginRequired')
                 : `${t('common.localOffline')} - ${t('common.switchToCloud', 'اتصال به سرور ابری')}`
             }
-            className={`relative flex items-center justify-center w-10 h-10 rounded-xl border transition-all cursor-pointer shadow-2xs ${
+            className={`relative flex items-center justify-center w-8.5 h-8.5 sm:w-10 sm:h-10 rounded-xl border transition-all cursor-pointer shadow-2xs shrink-0 ${
               pendingCount > 0
                 ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/60'
                 : mode === 'cloud_synced' && isCloudAuthenticated
@@ -311,21 +311,21 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
             }`}
           >
             {syncing ? (
-              <RefreshCw className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
+              <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-blue-600 dark:text-blue-400" />
             ) : mode === 'cloud_synced' ? (
-              <Cloud className="w-4 h-4" />
+              <Cloud className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             ) : (
-              <Database className="w-4 h-4" />
+              <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             )}
 
             {/* Notification Dot or Pending Counter */}
             {pendingCount > 0 ? (
-              <span className="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[9px] font-bold font-mono flex items-center justify-center shadow-xs">
+              <span className="absolute -top-1 -end-1 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-1 rounded-full bg-amber-500 text-white text-[8px] sm:text-[9px] font-bold font-mono flex items-center justify-center shadow-xs">
                 {pendingCount > 99 ? '99+' : pendingCount}
               </span>
             ) : (
               <span
-                className={`absolute bottom-1 end-1 w-2 h-2 rounded-full ring-2 ring-white dark:ring-[#0f121a] ${
+                className={`absolute bottom-1 end-1 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ring-2 ring-white dark:ring-[#0f121a] ${
                   mode === 'cloud_synced' && isCloudAuthenticated
                     ? 'bg-blue-500'
                     : 'bg-emerald-500'
@@ -339,19 +339,19 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
             <button
               onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
               title={`${t('common.theme')}: ${theme === 'dark' ? t('common.themeDark') : theme === 'light' ? t('common.themeLight') : t('common.themeSystem')}`}
-              className="flex items-center justify-center w-10 h-10 rounded-xl border border-neutral-200/80 dark:border-neutral-700/60 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 text-neutral-700 dark:text-neutral-200 transition-colors cursor-pointer shadow-2xs"
+              className="flex items-center justify-center w-8.5 h-8.5 sm:w-10 sm:h-10 rounded-xl border border-neutral-200/80 dark:border-neutral-700/60 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 text-neutral-700 dark:text-neutral-200 transition-colors cursor-pointer shadow-2xs shrink-0"
             >
               {theme === 'dark' ? (
-                <Moon className="w-4 h-4 text-indigo-400" />
+                <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />
               ) : theme === 'light' ? (
-                <Sun className="w-4 h-4 text-amber-500" />
+                <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" />
               ) : (
-                <Monitor className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+                <Monitor className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 dark:text-neutral-400" />
               )}
             </button>
 
             {isThemeMenuOpen && (
-              <div className="absolute end-0 mt-2 w-40 bg-white dark:bg-[#14161c] rounded-2xl shadow-xl border border-neutral-200/90 dark:border-neutral-800 py-1.5 z-50 animate-fade-in text-neutral-800 dark:text-neutral-200">
+              <div className="absolute end-0 mt-1.5 sm:mt-2 w-36 sm:w-40 bg-white dark:bg-[#14161c] rounded-2xl shadow-xl border border-neutral-200/90 dark:border-neutral-800 py-1.5 z-50 animate-fade-in text-neutral-800 dark:text-neutral-200">
                 <button
                   onClick={() => {
                     setTheme('light');
@@ -361,7 +361,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                     theme === 'light' ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 font-bold' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
                   }`}
                 >
-                  <Sun className="w-4 h-4 text-amber-500 shrink-0" />
+                  <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
                   <span>{t('common.themeLight')}</span>
                 </button>
                 <button
@@ -373,7 +373,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                     theme === 'dark' ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-800 dark:text-indigo-300 font-bold' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
                   }`}
                 >
-                  <Moon className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 shrink-0" />
                   <span>{t('common.themeDark')}</span>
                 </button>
                 <button
@@ -385,7 +385,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
                     theme === 'system' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300 font-bold' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
                   }`}
                 >
-                  <Monitor className="w-4 h-4 text-neutral-500 shrink-0" />
+                  <Monitor className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 shrink-0" />
                   <span>{t('common.themeSystem')}</span>
                 </button>
               </div>

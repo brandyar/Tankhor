@@ -320,7 +320,8 @@ export const TaxReportsPage: React.FC = () => {
 
         {activeTableTab === 'sales' ? (
           <Card className="overflow-hidden border-neutral-200/80 dark:border-neutral-800">
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-xs text-start">
                 <thead className="bg-neutral-50 dark:bg-neutral-900/50 border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-500">
                   <tr>
@@ -372,10 +373,48 @@ export const TaxReportsPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Card List View */}
+            <div className="md:hidden divide-y divide-neutral-100 dark:divide-neutral-800/80 p-2 space-y-2">
+              {orders.length === 0 ? (
+                <p className="text-center py-8 text-xs text-neutral-400">فاکتور فروشی در این بازه زمانی یافت نشد.</p>
+              ) : (
+                orders.map((order) => {
+                  const cId = typeof order.customer_id === 'object' ? (order.customer_id as any)?.id : order.customer_id;
+                  const customer = customers.find((c) => c.id === Number(cId));
+                  const taxable = order.subtotal || Math.round((order.total || 0) / 1.1);
+                  const tax = order.tax || Math.round(taxable * 0.1);
+                  return (
+                    <div key={order.id} className="p-3 rounded-xl bg-neutral-50/50 dark:bg-neutral-800/40 border border-neutral-200/70 dark:border-neutral-700/60 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-bold text-xs text-neutral-900 dark:text-white">
+                            {customer ? (customer.name || `${(customer as any).first_name || ''} ${(customer as any).last_name || ''}`.trim() || 'مشتری') : 'مشتری عمومی'}
+                          </p>
+                          <p className="text-[11px] font-mono text-neutral-500 mt-0.5">{order.order_number || `ORD-${order.id}`}</p>
+                        </div>
+                        <span className="font-mono text-[11px] text-neutral-400">{formatPersianDate(order.date_created)}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-200/60 dark:border-neutral-700/60 text-xs">
+                        <div>
+                          <span className="text-[10px] text-neutral-400 block">مالیات ارزش افزوده:</span>
+                          <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{formatCurrency(tax)}</span>
+                        </div>
+                        <div className="text-end">
+                          <span className="text-[10px] text-neutral-400 block">جمع کل فاکتور:</span>
+                          <span className="font-mono font-bold text-neutral-900 dark:text-white">{formatCurrency(order.total)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </Card>
         ) : (
           <Card className="overflow-hidden border-neutral-200/80 dark:border-neutral-800">
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-xs text-start">
                 <thead className="bg-neutral-50 dark:bg-neutral-900/50 border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-500">
                   <tr>
@@ -426,6 +465,41 @@ export const TaxReportsPage: React.FC = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card List View */}
+            <div className="md:hidden divide-y divide-neutral-100 dark:divide-neutral-800/80 p-2 space-y-2">
+              {purchaseOrders.length === 0 ? (
+                <p className="text-center py-8 text-xs text-neutral-400">فاکتور خریدی در این بازه زمانی یافت نشد.</p>
+              ) : (
+                purchaseOrders.map((po) => {
+                  const sId = typeof po.supplier_id === 'object' ? (po.supplier_id as any)?.id : po.supplier_id;
+                  const sup = suppliers.find((s) => s.id === Number(sId));
+                  const taxable = po.subtotal || Math.round((po.total || 0) / 1.1);
+                  const tax = po.tax || Math.round(taxable * 0.1);
+                  return (
+                    <div key={po.id} className="p-3 rounded-xl bg-neutral-50/50 dark:bg-neutral-800/40 border border-neutral-200/70 dark:border-neutral-700/60 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-bold text-xs text-neutral-900 dark:text-white">{sup?.name || po.supplier_name || 'تامین‌کننده'}</p>
+                          <p className="text-[11px] font-mono text-neutral-500 mt-0.5">{po.purchase_number || `PO-${po.id}`}</p>
+                        </div>
+                        <span className="font-mono text-[11px] text-neutral-400">{formatPersianDate(po.date_created)}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-200/60 dark:border-neutral-700/60 text-xs">
+                        <div>
+                          <span className="text-[10px] text-neutral-400 block">اعتبار ارزش افزوده:</span>
+                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(tax)}</span>
+                        </div>
+                        <div className="text-end">
+                          <span className="text-[10px] text-neutral-400 block">جمع کل خرید:</span>
+                          <span className="font-mono font-bold text-neutral-900 dark:text-white">{formatCurrency(po.total)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </Card>
         )}

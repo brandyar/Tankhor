@@ -354,7 +354,7 @@ export const BarcodePrintView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 no-print">
         {/* Left Col (7 cols): Variant Selector */}
         <div className="lg:col-span-7 space-y-4">
-          <Card>
+          <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
             {/* Search & Filter Bar */}
             <div className="space-y-3 mb-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">

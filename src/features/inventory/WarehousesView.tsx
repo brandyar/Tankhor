@@ -141,14 +141,9 @@ export const WarehousesView: React.FC = () => {
       key: 'name',
       header: t('inventory.warehouseNameLabel').replace(' *', ''),
       render: (w) => (
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-neutral-800 flex items-center justify-center text-slate-700 dark:text-neutral-300 shrink-0">
-            {w.type === 'store' ? <Store className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <WarehouseIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
-          </div>
-          <div>
-            <p className="font-bold text-slate-900 dark:text-neutral-100 text-sm">{w.name}</p>
-            <p className="text-[11px] font-mono text-slate-400 dark:text-neutral-500 mt-0.5">{w.code || '-'}</p>
-          </div>
+        <div>
+          <p className="font-bold text-slate-900 dark:text-neutral-100 text-sm">{w.name}</p>
+          <p className="text-[11px] font-mono text-slate-400 dark:text-neutral-500 mt-0.5">{w.code || '-'}</p>
         </div>
       ),
     },
@@ -200,17 +195,19 @@ export const WarehousesView: React.FC = () => {
         }
       />
 
-      <Card>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
-          <div className="w-full sm:w-80">
-            <Input
-              placeholder={t('inventory.searchWarehousePlaceholder')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+      {/* Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="w-full sm:w-80">
+          <Input
+            placeholder={t('inventory.searchWarehousePlaceholder')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
+      </div>
 
+      {/* 1. Desktop Tabular View */}
+      <div className="hidden md:block bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl shadow-sm p-5 overflow-hidden">
         <DataTable
           columns={columns}
           data={warehouses}
@@ -227,14 +224,96 @@ export const WarehousesView: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
                 onClick={() => handleDeleteWarehouse(w.id)}
                 icon={<Trash2 className="w-3.5 h-3.5" />}
               />
             </div>
           )}
         />
-      </Card>
+      </div>
+
+      {/* 2. Mobile Clean Card View */}
+      <div className="block md:hidden">
+        {isLoading ? (
+          <div className="w-full py-12 flex flex-col items-center justify-center text-neutral-400">
+            <div className="w-7 h-7 border-2 border-neutral-900 dark:border-neutral-100 border-t-transparent rounded-full animate-spin mb-3" />
+            <span className="text-xs font-mono text-neutral-500">{t('common.loadingData')}</span>
+          </div>
+        ) : warehouses.length === 0 ? (
+          <div className="w-full py-12 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 bg-neutral-50/50 dark:bg-neutral-900/40 p-6 text-center">
+            <WarehouseIcon className="w-8 h-8 text-neutral-400 mb-2 stroke-1" />
+            <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">{t('common.noData')}</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {warehouses.map((w) => (
+              <div
+                key={`mob_wh_${w.id}`}
+                className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#13151a] p-4 shadow-sm space-y-3 transition-all"
+              >
+                {/* Top Row: Name & Code <---> Type & Status */}
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h4 className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
+                      {w.name}
+                    </h4>
+                    <span className="font-mono text-xs text-neutral-400 dark:text-neutral-500 mt-0.5 inline-block">
+                      {w.code || '-'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                    {getTypeBadge(w.type)}
+                    <Badge variant={w.status === 'active' ? 'success' : 'danger'}>
+                      {w.status === 'active' ? t('inventory.active') : t('inventory.inactive')}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Middle Row: Phone & Address */}
+                {(w.phone || w.address) && (
+                  <div className="space-y-1.5 text-xs text-neutral-600 dark:text-neutral-400 pt-1 border-t border-neutral-100 dark:border-neutral-800/80">
+                    {w.phone && (
+                      <div className="flex items-center gap-1.5 font-mono">
+                        <Phone className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                        <span>{toPersianDigits(w.phone)}</span>
+                      </div>
+                    )}
+                    {w.address && (
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                        <span className="leading-snug">{w.address}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Bottom Row: Actions */}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenModal(w)}
+                    icon={<Edit className="w-3.5 h-3.5" />}
+                  >
+                    {t('common.edit')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                    onClick={() => handleDeleteWarehouse(w.id)}
+                    icon={<Trash2 className="w-3.5 h-3.5" />}
+                  >
+                    {t('common.delete')}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Warehouse Create/Edit Modal */}
       <Modal

@@ -20,7 +20,9 @@ import { FinancialAccount } from '../../types/accounting';
 import { useModuleAccess } from '../../hooks/useModuleAccess';
 import { PosShiftModal } from '../../components/modals/PosShiftModal';
 import { confirmAction } from '../../utils/confirm';
-import { toPersianDigits, matchesSearchQuery } from '../../utils/formatters';
+import { toPersianDigits, matchesSearchQuery, formatCurrency } from '../../utils/formatters';
+import { Button } from '../../components/ui/Button';
+import { ShoppingCart, ChevronUp, X } from 'lucide-react';
 
 // Sub-components
 import { CreateOrderHeader } from './components/CreateOrderHeader';
@@ -41,6 +43,9 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
   // Fullscreen POS Mode State
   const [isFullscreenPos, setIsFullscreenPos] = useState(false);
+
+  // Mobile Bottom Cart & Checkout Drawer State
+  const [isMobileCartDrawerOpen, setIsMobileCartDrawerOpen] = useState(false);
 
   // User membership & branch lock resolution
   const currentUserMember = useMemo(() => {
@@ -405,17 +410,21 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
     }
   };
 
-  // Handle Barcode Scan / Quick SKU Enter
+  // Handle Unified Search / Barcode Scan Quick Add
   const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!barcodeQuery.trim()) return;
+    if (!productSearch.trim()) return;
 
-    const query = barcodeQuery.trim().toLowerCase();
-    const matched = variants.find((v) => {
+    const query = productSearch.trim().toLowerCase();
+    let matched = variants.find((v) => {
       const sku = (v.sku || '').toLowerCase();
       const barcode = (v.barcode || '').toLowerCase();
       return sku === query || barcode === query;
     });
+
+    if (!matched && filteredVariants.length === 1) {
+      matched = filteredVariants[0];
+    }
 
     if (matched) {
       const available = getVariantAvailableStock(matched.id, selectedWarehouseId);
@@ -427,9 +436,9 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
       const prod = products.find((p) => p.id === (matched.product_id && typeof matched.product_id === 'object' ? (matched.product_id as any).id : matched.product_id));
       const title = prod ? prod.title : t('orders.untitledProduct');
       showToast('success', t('orders.itemAddedToCart', { title }));
-      setBarcodeQuery('');
+      setProductSearch('');
     } else {
-      showToast('error', t('orders.itemNotFoundWithBarcode', { barcode: barcodeQuery }));
+      showToast('error', t('orders.itemNotFoundWithBarcode', { barcode: productSearch }));
     }
   };
 
@@ -745,6 +754,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
       }
 
       setIsReceiptModalOpen(true);
+      setIsMobileCartDrawerOpen(false);
       setCart([]);
       setOrderNotes('');
       setExtraDiscount(0);
@@ -877,14 +887,12 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
         {/* Main POS Interface Split (7 Columns Catalog | 5 Columns Invoice Terminal) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Left Side: Product Catalog & Barcode Scanner (7 cols) */}
+        {/* Left Side: Product Catalog & Smart Unified Search (7 cols) */}
         <OrderQuickProductGrid
           barcodeInputRef={barcodeInputRef}
-          barcodeQuery={barcodeQuery}
-          setBarcodeQuery={setBarcodeQuery}
-          onBarcodeSubmit={handleBarcodeSubmit}
           productSearch={productSearch}
           setProductSearch={setProductSearch}
+          onBarcodeSubmit={handleBarcodeSubmit}
           categories={categories}
           selectedCategoryId={selectedCategoryId}
           setSelectedCategoryId={setSelectedCategoryId}
@@ -897,8 +905,8 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
           isLoading={isLoading}
         />
 
-        {/* Right Side: Digital Receipt & POS Checkout Terminal (5 cols) */}
-        <div className="lg:col-span-5 space-y-4">
+        {/* Right Side: Digital Receipt & POS Checkout Terminal (5 cols) - Desktop View */}
+        <div className="hidden lg:block lg:col-span-5 space-y-4 sticky top-6">
           <form onSubmit={handleSubmitOrder} className="bg-white dark:bg-[#13151a] border border-[#ebebeb] dark:border-neutral-800 rounded-2xl p-4 shadow-sm space-y-4">
             <OrderCartTable
               cart={cart}
@@ -956,6 +964,161 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         </div>
       </div>
       </div>
+
+      {/* Mobile Sticky Bottom Floating Summary Bar */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-[#13151a]/95 backdrop-blur-md border-t border-neutral-200/90 dark:border-neutral-800 shadow-[0_-4px_25px_rgba(0,0,0,0.12)] px-3 py-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] transition-transform">
+        <div className="flex items-center justify-between gap-3 max-w-lg mx-auto">
+          <div
+            onClick={() => setIsMobileCartDrawerOpen(true)}
+            role="button"
+            tabIndex={0}
+            className="flex items-center gap-2.5 cursor-pointer select-none flex-1 min-w-0"
+          >
+            <div className="relative w-10 h-10 rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 flex items-center justify-center shrink-0 shadow-xs">
+              <ShoppingCart className="w-5 h-5" />
+              {cart.length > 0 && (
+                <span className="absolute -top-1.5 -end-1.5 bg-emerald-500 text-white text-[10px] font-bold font-mono w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-white dark:ring-neutral-900 animate-scale-in">
+                  {isPersian ? toPersianDigits(cart.length) : cart.length}
+                </span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">
+                {cart.length > 0 ? (
+                  <span>{t('orders.itemsCount', { count: isPersian ? toPersianDigits(cart.length) : cart.length })}</span>
+                ) : (
+                  <span>{t('orders.cart')} ({isPersian ? 'خالی' : 'Empty'})</span>
+                )}
+              </div>
+              <div className="text-sm font-bold text-neutral-900 dark:text-neutral-100 font-mono truncate">
+                {formatCurrency(grandTotal, 'TOMAN', isPersian)}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={() => setIsMobileCartDrawerOpen(true)}
+              className="px-3.5 py-2.5 font-bold shadow-xs flex items-center gap-1.5 text-xs rounded-xl"
+            >
+              <span>{cart.length > 0 ? t('orders.viewCartAndCheckout') : t('orders.viewCart')}</span>
+              <ChevronUp className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Slide-Up Order Finalization Drawer */}
+      {isMobileCartDrawerOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end animate-fade-in">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileCartDrawerOpen(false)}
+          />
+
+          {/* Drawer Sheet */}
+          <div className="relative w-full max-h-[92vh] bg-white dark:bg-[#181a20] rounded-t-3xl shadow-2xl flex flex-col z-10 animate-slide-up border-t border-neutral-200 dark:border-neutral-700">
+            {/* Drawer Drag Indicator & Header */}
+            <div className="pt-3 pb-2.5 px-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 flex items-center justify-center">
+                  <ShoppingCart className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                    {t('orders.invoiceItems')}
+                  </h3>
+                  <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    {t('orders.itemsCount', { count: isPersian ? toPersianDigits(cart.length) : cart.length })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {cart.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearCart}
+                    className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 font-medium px-2 py-1 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                  >
+                    {t('orders.clearInvoice')}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsMobileCartDrawerOpen(false)}
+                  className="p-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 transition-colors"
+                  aria-label="بستن"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Drawer Body (Scrollable POS form) */}
+            <div className="overflow-y-auto flex-1 p-4 space-y-4 custom-scrollbar pb-10">
+              <form onSubmit={handleSubmitOrder} className="space-y-4">
+                <OrderCartTable
+                  cart={cart}
+                  onUpdateQty={handleUpdateQty}
+                  onRemoveLine={handleRemoveLine}
+                  extraDiscount={extraDiscount}
+                  setExtraDiscount={setExtraDiscount}
+                  hasTax={hasTax}
+                  setHasTax={setHasTax}
+                  taxAmount={taxAmount}
+                />
+
+                <OrderPaymentSection
+                  customers={customers}
+                  selectedCustomerId={selectedCustomerId}
+                  setSelectedCustomerId={setSelectedCustomerId}
+                  warehouses={warehouses}
+                  selectedWarehouseId={selectedWarehouseId}
+                  onWarehouseChange={(newWhId) => {
+                    setSelectedWarehouseId(newWhId);
+                    if (cart.length > 0) {
+                      const exceeding = cart.filter((c) => c.quantity > getVariantAvailableStock(c.variant.id, newWhId));
+                      if (exceeding.length > 0) {
+                        showToast(
+                          'error',
+                          `توجه: موجودی ${exceeding.length} قلم از کالاهای سبد خرید در انبار انتخابی کافی نیست.`
+                        );
+                      }
+                    }
+                  }}
+                  isWarehouseLocked={isWarehouseLocked}
+                  paymentType={paymentType}
+                  onPaymentTypeChange={handlePaymentTypeChange}
+                  hasAccounting={hasAccounting}
+                  financialAccounts={financialAccounts}
+                  selectedAccountId={selectedAccountId}
+                  setSelectedAccountId={setSelectedAccountId}
+                  isAccountLocked={isAccountLocked}
+                  onRefreshAccounts={() => loadFinancialAccounts()}
+                  cashReceived={cashReceived}
+                  setCashReceived={setCashReceived}
+                  cashChange={cashChange}
+                  subtotal={subtotal}
+                  totalDiscount={totalDiscount}
+                  hasTax={hasTax}
+                  taxAmount={taxAmount}
+                  grandTotal={grandTotal}
+                  isSaving={isSaving}
+                  cartLength={cart.length}
+                  onPreviewPrint={handlePreviewPrint}
+                  activeOrgId={activeOrganization?.id}
+                  userId={user?.id}
+                />
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Customer Creation Modal */}
       <QuickCustomerModal

@@ -133,14 +133,9 @@ export const SizesView: React.FC = () => {
       key: 'name',
       header: t('products.sizeNameHeader'),
       render: (size) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-neutral-300 flex items-center justify-center font-bold text-xs">
-            <Tag className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-          </div>
-          <div>
-            <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{size.name}</p>
-            {size.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">{t('products.sizeCode')}: {size.code}</p>}
-          </div>
+        <div>
+          <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{size.name}</p>
+          {size.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono mt-0.5">{t('products.sizeCode')}: {size.code}</p>}
         </div>
       ),
     },
@@ -189,7 +184,7 @@ export const SizesView: React.FC = () => {
         }
       />
 
-      <Card>
+      <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-80">
             <Input
@@ -212,29 +207,96 @@ export const SizesView: React.FC = () => {
           </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          data={filtered}
-          keyExtractor={(size) => size.id}
-          isLoading={isLoading}
-          actions={(size) => (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleOpenModal(size)}
-                icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
-                onClick={() => handleDelete(size.id)}
-                icon={<Trash2 className="w-4 h-4" />}
-              />
+        {/* 1. Desktop Tabular View */}
+        <div className="hidden md:block">
+          <DataTable
+            columns={columns}
+            data={filtered}
+            keyExtractor={(size) => size.id}
+            isLoading={isLoading}
+            actions={(size) => (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleOpenModal(size)}
+                  icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                  onClick={() => handleDelete(size.id)}
+                  icon={<Trash2 className="w-4 h-4" />}
+                />
+              </div>
+            )}
+          />
+        </div>
+
+        {/* 2. Mobile Responsive Cards View */}
+        <div className="block md:hidden space-y-3">
+          {isLoading ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.loading')}
             </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.noData')}
+            </div>
+          ) : (
+            filtered.map((size) => {
+              const sgId = typeof size.size_group_id === 'number' ? size.size_group_id : size.size_group_id?.id;
+              const group = sizeGroups.find((g) => g.id === sgId);
+
+              return (
+                <div
+                  key={`mob_sz_${size.id}`}
+                  className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#13151a] p-4 shadow-sm space-y-3 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="font-bold text-slate-900 dark:text-neutral-100 text-sm">{size.name}</h3>
+                      {size.code && (
+                        <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono mt-0.5">
+                          {t('products.sizeCode')}: {size.code}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant={size.status === 'active' ? 'success' : 'neutral'} className="shrink-0 text-[10px]">
+                      {size.status === 'active' ? t('products.statusActive') : t('products.statusInactive')}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800 text-xs">
+                    <span className="font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 px-2.5 py-1 rounded-lg border border-indigo-100 dark:border-indigo-900/50">
+                      {group?.name || '-'}
+                    </span>
+
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2.5 text-neutral-700 dark:text-neutral-300"
+                        onClick={() => handleOpenModal(size)}
+                        icon={<Edit className="w-3.5 h-3.5" />}
+                      >
+                        {t('common.edit')}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                        onClick={() => handleDelete(size.id)}
+                        icon={<Trash2 className="w-3.5 h-3.5" />}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })
           )}
-        />
+        </div>
       </Card>
 
       <Modal

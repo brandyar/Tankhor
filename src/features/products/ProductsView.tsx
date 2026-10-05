@@ -474,7 +474,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
         }
       />
 
-      <Card>
+      <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
         {/* Search & Filters Bar */}
         <div className="space-y-3 mb-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5">
@@ -600,39 +600,168 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
           </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          data={filteredProducts}
-          keyExtractor={(p) => p.id}
-          isLoading={isLoading}
-          actions={(p) => (
-            <div className="flex items-center justify-end gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-indigo-600 hover:bg-indigo-50 font-bold"
-                onClick={() => handleOpenVariantsModal(p)}
-                title={t('products.showProductVariants')}
-                icon={<Layers className="w-3.5 h-3.5" />}
-              >
-                {t('products.variants')}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleEditProduct(p)}
-                icon={<Edit className="w-3.5 h-3.5" />}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={() => handleDeleteProduct(p.id)}
-                icon={<Trash2 className="w-3.5 h-3.5" />}
-              />
+        {/* 1. Desktop Tabular View */}
+        <div className="hidden md:block">
+          <DataTable
+            columns={columns}
+            data={filteredProducts}
+            keyExtractor={(p) => p.id}
+            isLoading={isLoading}
+            actions={(p) => (
+              <div className="flex items-center justify-end gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-indigo-600 hover:bg-indigo-50 font-bold"
+                  onClick={() => handleOpenVariantsModal(p)}
+                  title={t('products.showProductVariants')}
+                  icon={<Layers className="w-3.5 h-3.5" />}
+                >
+                  {t('products.variants')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleEditProduct(p)}
+                  icon={<Edit className="w-3.5 h-3.5" />}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => handleDeleteProduct(p.id)}
+                  icon={<Trash2 className="w-3.5 h-3.5" />}
+                />
+              </div>
+            )}
+          />
+        </div>
+
+        {/* 2. Mobile Responsive Cards View */}
+        <div className="block md:hidden space-y-3">
+          {isLoading ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.loading')}
             </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.noData')}
+            </div>
+          ) : (
+            filteredProducts.map((p) => {
+              const cat = categories.find((c) => c.id === p.category_id);
+              const col = collections.find((c) => c.id === p.collection_id);
+              const brandName =
+                typeof p.brand === 'object' ? (p.brand as any)?.name : p.brand || (typeof p.brand_id === 'number' ? brands.find((b) => b.id === p.brand_id)?.name : '') || t('products.defaultBrand');
+
+              return (
+                <div
+                  key={`mob_prod_${p.id}`}
+                  className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#13151a] p-4 shadow-sm space-y-3 transition-all"
+                >
+                  {/* Top Section: Thumbnail + Title + Brand/Category + Status */}
+                  <div className="flex items-start gap-3">
+                    <ProductImage
+                      src={p.main_image}
+                      alt={p.title}
+                      fallbackText={p.title}
+                      containerClassName="w-12 h-12 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shrink-0 border border-neutral-200 dark:border-neutral-700 shadow-2xs"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3
+                          className="font-bold text-neutral-900 dark:text-neutral-100 text-sm leading-snug hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
+                          onClick={() => handleEditProduct(p)}
+                        >
+                          {p.title}
+                        </h3>
+                        <Badge variant={p.status === 'published' ? 'success' : 'warning'} className="shrink-0 text-[10px]">
+                          {p.status === 'published' ? t('common.published') : t('common.draft')}
+                        </Badge>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+                        {brandName && (
+                          <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+                            {brandName}
+                          </span>
+                        )}
+                        {cat && (
+                          <>
+                            <span className="text-neutral-300 dark:text-neutral-600">•</span>
+                            <span>{cat.name}</span>
+                          </>
+                        )}
+                        {col && (
+                          <span className="text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.5 rounded">
+                            {col.name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Middle Meta Matrix: Stock + Variants Count + Date */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800/80 text-xs">
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800">
+                      <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{t('products.totalStock')}:</span>
+                      <span className="font-mono font-bold text-amber-900 dark:text-amber-300">
+                        {isPersian ? toPersianDigits(p.total_stock || 0) : (p.total_stock || 0)}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenVariantsModal(p)}
+                      className="flex items-center justify-between p-2 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-100/80 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/70 transition-colors"
+                    >
+                      <span className="flex items-center gap-1 text-[11px]">
+                        <Layers className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                        {t('products.variants')}:
+                      </span>
+                      <span className="font-mono font-bold">
+                        {isPersian ? toPersianDigits(p.variants_count || 0) : (p.variants_count || 0)}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Bottom Actions Row */}
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[11px] text-neutral-400 font-mono">
+                      {formatDate(p.date_created, isPersian)}
+                    </span>
+
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-xs font-semibold px-2 py-1 h-8"
+                        onClick={() => handleOpenVariantsModal(p)}
+                        icon={<Layers className="w-3.5 h-3.5" />}
+                      >
+                        {t('products.variants')}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 px-2 py-1 h-8"
+                        onClick={() => handleEditProduct(p)}
+                        icon={<Edit className="w-3.5 h-3.5" />}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 px-2 py-1 h-8"
+                        onClick={() => handleDeleteProduct(p.id)}
+                        icon={<Trash2 className="w-3.5 h-3.5" />}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })
           )}
-        />
+        </div>
       </Card>
 
       {/* Product Variants Modal */}

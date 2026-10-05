@@ -497,7 +497,8 @@ export const AccountingExportPage: React.FC = () => {
         </div>
 
         <div className="overflow-x-auto max-h-[500px] custom-scrollbar">
-          <table className="w-full text-xs text-start">
+          {/* Desktop Table View */}
+          <table className="hidden md:table w-full text-xs text-start">
             <thead className="bg-neutral-100/60 dark:bg-neutral-900/40 text-neutral-500 border-b border-neutral-200/80 dark:border-neutral-800 sticky top-0 z-10 backdrop-blur-sm">
               <tr>
                 <th className="px-4 py-3 font-semibold text-start">شماره سند / تاریخ</th>
@@ -546,6 +547,45 @@ export const AccountingExportPage: React.FC = () => {
               )}
             </tbody>
           </table>
+
+          {/* Mobile Card List View */}
+          <div className="md:hidden divide-y divide-neutral-100 dark:divide-neutral-800/80 p-2 space-y-2">
+            {journalEntries.length === 0 ? (
+              <p className="text-center py-8 text-xs text-neutral-400">هیچ تراکنشی در این بازه زمانی برای صدور سند حسابداری یافت نشد.</p>
+            ) : (
+              journalEntries.map((entry) => (
+                <div key={entry.id} className="p-3 rounded-xl bg-neutral-50/50 dark:bg-neutral-800/40 border border-neutral-200/70 dark:border-neutral-700/60 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-bold text-xs text-neutral-900 dark:text-white">{entry.account_name}</p>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">{entry.description}</p>
+                    </div>
+                    <span className="font-mono text-[10px] bg-neutral-200/60 dark:bg-neutral-700/60 px-1.5 py-0.5 rounded text-neutral-600 dark:text-neutral-300 shrink-0">
+                      {entry.account_code}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-200/60 dark:border-neutral-700/60 text-xs">
+                    <div>
+                      <span className="text-[10px] text-neutral-400 block font-mono">{entry.entry_number}</span>
+                      <span className="text-[10px] text-neutral-400 font-mono">{formatPersianDate(entry.entry_date)}</span>
+                    </div>
+                    <div className="text-end">
+                      {entry.debit > 0 ? (
+                        <span className="font-mono font-bold text-rose-600 dark:text-rose-400 block">
+                          بدهکار: {formatCurrency(entry.debit)}
+                        </span>
+                      ) : null}
+                      {entry.credit > 0 ? (
+                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 block">
+                          بستانکار: {formatCurrency(entry.credit)}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </Card>
     </div>

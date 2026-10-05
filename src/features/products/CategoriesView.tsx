@@ -175,19 +175,19 @@ export const CategoriesView: React.FC = () => {
     return (
       <div key={`cat_node_${node.id || 'idx'}_${depth}_${nodeIndex}`} className="space-y-1">
         <div
-          className={`group flex items-center justify-between p-3 rounded-2xl border transition-all duration-150 ${
+          className={`group flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-2xl border transition-all duration-150 gap-2.5 ${
             depth === 0
-              ? 'bg-slate-50/80 dark:bg-[#181a20] border-slate-200/80 dark:border-neutral-800 hover:border-slate-300 dark:hover:border-neutral-700'
-              : 'bg-white dark:bg-[#13151a] border-slate-100 dark:border-neutral-800 hover:border-slate-200 dark:hover:border-neutral-700 hover:shadow-2xs'
+              ? 'bg-white dark:bg-[#13151a] sm:bg-slate-50/80 sm:dark:bg-[#181a20] border-neutral-200/90 dark:border-neutral-800 hover:border-slate-300 dark:hover:border-neutral-700 shadow-sm sm:shadow-none'
+              : 'bg-white dark:bg-[#13151a] border-neutral-200/80 dark:border-neutral-800/80 hover:border-slate-200 dark:hover:border-neutral-700 shadow-2xs'
           }`}
-          style={{ marginInlineStart: `${depth * 1.75}rem` }}
+          style={{ marginInlineStart: `${depth * 1}rem` }}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
             {hasChildren ? (
               <button
                 type="button"
                 onClick={() => toggleExpand(node.id)}
-                className="p-1 hover:bg-slate-200/60 dark:hover:bg-neutral-800 rounded-lg text-slate-500 dark:text-neutral-400 cursor-pointer"
+                className="p-1 hover:bg-slate-200/60 dark:hover:bg-neutral-800 rounded-lg text-slate-500 dark:text-neutral-400 cursor-pointer shrink-0 mt-0.5 sm:mt-0"
               >
                 {isExpanded ? (
                   <ChevronDown className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -196,7 +196,7 @@ export const CategoriesView: React.FC = () => {
                 )}
               </button>
             ) : (
-              <span className="w-6" />
+              <span className="w-5 shrink-0" />
             )}
 
             {node.image ? (
@@ -208,7 +208,7 @@ export const CategoriesView: React.FC = () => {
               />
             ) : (
               <div
-                className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                   depth === 0
                     ? 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
                     : 'bg-slate-100 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400'
@@ -222,8 +222,8 @@ export const CategoriesView: React.FC = () => {
               </div>
             )}
 
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <span className="font-bold text-slate-900 dark:text-neutral-100 text-sm">{node.name}</span>
                 <span className="text-[11px] font-mono text-slate-400 dark:text-neutral-500">({node.slug})</span>
               </div>
@@ -233,22 +233,23 @@ export const CategoriesView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Badge variant={node.status === 'active' ? 'success' : 'neutral'}>
+          <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-neutral-100 dark:border-neutral-800">
+            <Badge variant={node.status === 'active' ? 'success' : 'neutral'} className="text-[10px]">
               {node.status === 'active' ? t('products.statusActive') : t('products.statusInactive')}
             </Badge>
 
-            <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100">
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="sm"
+                className="h-8 px-2"
                 onClick={() => handleOpenModal(node)}
                 icon={<Edit className="w-3.5 h-3.5 text-slate-600 dark:text-neutral-300" />}
               />
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
                 onClick={() => handleDelete(node.id)}
                 icon={<Trash2 className="w-3.5 h-3.5" />}
               />
@@ -257,7 +258,7 @@ export const CategoriesView: React.FC = () => {
         </div>
 
         {hasChildren && isExpanded && (
-          <div className="space-y-1 relative ps-3 border-s-2 border-indigo-100 dark:border-indigo-900/50 ms-4">
+          <div className="space-y-1 relative ps-2 sm:ps-3 border-s-2 border-indigo-100 dark:border-indigo-900/50 ms-3 sm:ms-4">
             {children.map((child, cIdx) => renderTreeNode(child, depth + 1, cIdx))}
           </div>
         )}
@@ -290,7 +291,7 @@ export const CategoriesView: React.FC = () => {
         }
       />
 
-      <Card>
+      <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-5">
           <div className="w-full sm:w-80">
             <Input

@@ -66,6 +66,7 @@ export const ordersEn = {
   barcodeScannerActivePlaceholder: 'Barcode scanner active... Scan barcode or enter SKU',
   quickAdd: 'Quick Add',
   searchPlaceholder: 'Search product, code, or specs...',
+  searchAndScanPlaceholder: 'Search product, scan barcode or SKU...',
   availableItemsCount: 'Catalog items: {count} items',
   allCategories: 'All Categories',
   loadingCatalog: 'Loading product catalog...',
@@ -179,4 +180,6 @@ export const ordersEn = {
   activeInvoice: 'Active Invoice',
   quickPresets: 'Quick Amounts',
   posModeNotice: 'Fullscreen POS mode is active. Press Esc to exit.',
+  viewCartAndCheckout: 'View Cart & Checkout',
+  viewCart: 'View Cart',
 };

@@ -2,17 +2,14 @@ import React, { RefObject } from 'react';
 import { useTranslation } from '../../../i18n';
 import { Product, ProductVariant, Category } from '../../../types';
 import { Button } from '../../../components/ui/Button';
-import { Input } from '../../../components/ui/Input';
 import { formatCurrency, toPersianDigits } from '../../../utils/formatters';
-import { Barcode, Search, Plus } from 'lucide-react';
+import { Barcode, Search, Plus, X } from 'lucide-react';
 
 interface OrderQuickProductGridProps {
   barcodeInputRef: RefObject<HTMLInputElement>;
-  barcodeQuery: string;
-  setBarcodeQuery: (query: string) => void;
-  onBarcodeSubmit: (e: React.FormEvent) => void;
   productSearch: string;
   setProductSearch: (query: string) => void;
+  onBarcodeSubmit: (e: React.FormEvent) => void;
   categories: Category[];
   selectedCategoryId: number | 'all';
   setSelectedCategoryId: (id: number | 'all') => void;
@@ -27,11 +24,9 @@ interface OrderQuickProductGridProps {
 
 export const OrderQuickProductGrid: React.FC<OrderQuickProductGridProps> = ({
   barcodeInputRef,
-  barcodeQuery,
-  setBarcodeQuery,
-  onBarcodeSubmit,
   productSearch,
   setProductSearch,
+  onBarcodeSubmit,
   categories,
   selectedCategoryId,
   setSelectedCategoryId,
@@ -47,86 +42,83 @@ export const OrderQuickProductGrid: React.FC<OrderQuickProductGridProps> = ({
   const isPersian = locale === 'fa';
 
   return (
-    <div className="lg:col-span-7 space-y-4">
-      {/* Quick Barcode Scanner Bar */}
-      <form onSubmit={onBarcodeSubmit} className="bg-white dark:bg-[#13151a] border border-[#ebebeb] dark:border-neutral-800 rounded-xl p-3 shadow-2xs space-y-2">
-        <div className="flex items-center justify-between text-xs font-bold text-[#171717] dark:text-neutral-100">
-          <span className="flex items-center gap-1.5">
-            <Barcode className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            {t('orders.scanBarcodeOrSku')}
-          </span>
-          <span className="text-[10px] text-[#888888] dark:text-neutral-400 font-mono">{t('orders.enterKeyHint')}</span>
-        </div>
-
-        <div className="relative">
+    <div className="w-full lg:col-span-7 space-y-3 sm:space-y-4 pb-24 lg:pb-0">
+      {/* Unified Search & Barcode Scanner Toolbar */}
+      <div className="bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-800 rounded-2xl p-3 sm:p-3.5 shadow-2xs space-y-2.5">
+        {/* Smart Single Search/Scan Input */}
+        <form onSubmit={onBarcodeSubmit} className="relative flex items-center">
           <input
             ref={barcodeInputRef}
             type="text"
-            value={barcodeQuery}
-            onChange={(e) => setBarcodeQuery(e.target.value)}
-            placeholder={t('orders.barcodeScannerActivePlaceholder')}
-            className="w-full ps-9 pe-24 py-2 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 focus:border-[#171717] dark:focus:border-neutral-400 focus:bg-white dark:focus:bg-[#13151a] rounded-lg text-xs font-mono text-[#171717] dark:text-neutral-100 placeholder:text-[#a1a1a1] dark:placeholder:text-neutral-500 focus:outline-none transition-all shadow-inner"
+            value={productSearch}
+            onChange={(e) => setProductSearch(e.target.value)}
+            placeholder={t('orders.searchAndScanPlaceholder') || 'جستجوی کالا، اسکن بارکد یا کد SKU...'}
+            className="w-full ps-9 pe-24 sm:pe-28 py-2.5 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 focus:border-[#171717] dark:focus:border-neutral-400 focus:bg-white dark:focus:bg-[#13151a] rounded-xl text-xs text-[#171717] dark:text-neutral-100 placeholder:text-[#a1a1a1] dark:placeholder:text-neutral-500 focus:outline-none transition-all shadow-inner"
           />
-          <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-[#888888] dark:text-neutral-400">
-            <Barcode className="w-4 h-4" />
+          <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-neutral-400">
+            <Search className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <div className="absolute inset-y-0 end-1.5 flex items-center">
-            <Button type="submit" variant="primary" size="sm" className="h-7 text-[11px] px-3 font-bold">
-              {t('orders.quickAdd')}
+
+          <div className="absolute inset-y-0 end-1.5 flex items-center gap-1">
+            {productSearch && (
+              <button
+                type="button"
+                onClick={() => setProductSearch('')}
+                className="p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
+                title="پاک کردن"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              className="h-7 text-[11px] px-2.5 sm:px-3 font-bold rounded-lg"
+            >
+              <span>{t('orders.quickAdd')}</span>
             </Button>
           </div>
-        </div>
-      </form>
+        </form>
 
-      {/* Catalog Filter Bar */}
-      <div className="bg-white dark:bg-[#13151a] border border-[#ebebeb] dark:border-neutral-800 rounded-xl p-3 shadow-2xs space-y-3">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="w-full sm:w-64">
-            <Input
-              placeholder={t('orders.searchPlaceholder')}
-              value={productSearch}
-              onChange={(e) => setProductSearch(e.target.value)}
-              icon={<Search className="w-3.5 h-3.5" />}
-            />
-          </div>
-
-          <div className="text-xs font-mono text-[#888888] dark:text-neutral-400">
-            {t('orders.availableItemsCount', { count: filteredVariants.length })}
-          </div>
-        </div>
-
-        {/* Category Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 pt-1">
-          <button
-            type="button"
-            onClick={() => setSelectedCategoryId('all')}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 ${
-              selectedCategoryId === 'all'
-                ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 shadow-xs'
-                : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
-            }`}
-          >
-            {t('orders.allCategories')}
-          </button>
-          {categories.map((cat, idx) => (
+        {/* Category Filter Pills & Items Count Row */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/80">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
             <button
-              key={`ord_cat_${cat.id}_${idx}`}
               type="button"
-              onClick={() => setSelectedCategoryId(cat.id)}
+              onClick={() => setSelectedCategoryId('all')}
               className={`px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 ${
-                selectedCategoryId === cat.id
+                selectedCategoryId === 'all'
                   ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 shadow-xs'
                   : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
               }`}
             >
-              {cat.name}
+              {t('orders.allCategories')}
             </button>
-          ))}
+            {categories.map((cat, idx) => (
+              <button
+                key={`ord_cat_${cat.id}_${idx}`}
+                type="button"
+                onClick={() => setSelectedCategoryId(cat.id)}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 ${
+                  selectedCategoryId === cat.id
+                    ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900 shadow-xs'
+                    : 'bg-[#fafafa] dark:bg-[#181a20] text-[#4d4d4d] dark:text-neutral-300 border border-[#ebebeb] dark:border-neutral-700 hover:border-[#a1a1a1]'
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 text-end sm:text-start shrink-0">
+            {t('orders.availableItemsCount', { count: isPersian ? toPersianDigits(filteredVariants.length) : filteredVariants.length })}
+          </div>
         </div>
       </div>
 
       {/* Catalog Items Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto custom-scrollbar p-1">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 max-h-[60vh] sm:max-h-[500px] lg:max-h-[620px] overflow-y-auto custom-scrollbar p-0.5">
         {isLoading ? (
           <div className="col-span-3 p-12 text-center text-[#888888] dark:text-neutral-400 text-xs">{t('orders.loadingCatalog')}</div>
         ) : filteredVariants.length === 0 ? (

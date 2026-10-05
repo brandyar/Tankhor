@@ -6,8 +6,10 @@ interface CardProps {
   subtitle?: React.ReactNode;
   action?: React.ReactNode;
   className?: string;
+  bodyClassName?: string;
   id?: string;
   onClick?: () => void;
+  noPadding?: boolean;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -16,9 +18,14 @@ export const Card: React.FC<CardProps> = ({
   subtitle,
   action,
   className = '',
+  bodyClassName,
   id,
   onClick,
+  noPadding = false,
 }) => {
+  const defaultBodyClass = noPadding ? '' : 'p-5';
+  const resolvedBodyClass = bodyClassName !== undefined ? bodyClassName : defaultBodyClass;
+
   return (
     <div
       id={id}
@@ -34,7 +41,7 @@ export const Card: React.FC<CardProps> = ({
           {action && <div className="shrink-0">{action}</div>}
         </div>
       )}
-      <div className="p-5">{children}</div>
+      <div className={resolvedBodyClass}>{children}</div>
     </div>
   );
 };

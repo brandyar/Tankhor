@@ -158,7 +158,7 @@ export const ColorsView: React.FC = () => {
         }
       />
 
-      <Card>
+      <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-80">
             <Input
@@ -170,29 +170,98 @@ export const ColorsView: React.FC = () => {
           </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          data={filtered}
-          keyExtractor={(color) => color.id}
-          isLoading={isLoading}
-          actions={(color) => (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleOpenModal(color)}
-                icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
-                onClick={() => handleDelete(color.id)}
-                icon={<Trash2 className="w-4 h-4" />}
-              />
+        {/* 1. Desktop Tabular View */}
+        <div className="hidden md:block">
+          <DataTable
+            columns={columns}
+            data={filtered}
+            keyExtractor={(color) => color.id}
+            isLoading={isLoading}
+            actions={(color) => (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleOpenModal(color)}
+                  icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                  onClick={() => handleDelete(color.id)}
+                  icon={<Trash2 className="w-4 h-4" />}
+                />
+              </div>
+            )}
+          />
+        </div>
+
+        {/* 2. Mobile Responsive Cards View */}
+        <div className="block md:hidden space-y-3">
+          {isLoading ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.loading')}
             </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.noData')}
+            </div>
+          ) : (
+            filtered.map((color) => (
+              <div
+                key={`mob_color_${color.id}`}
+                className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#13151a] p-4 shadow-sm space-y-3 transition-all"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span
+                      className="w-8 h-8 rounded-xl border-2 border-neutral-200 dark:border-neutral-700 shadow-2xs inline-block shrink-0"
+                      style={{ backgroundColor: color.hex || '#000000' }}
+                    />
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-slate-900 dark:text-neutral-100 text-sm">{color.name}</h3>
+                      {color.code && (
+                        <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono mt-0.5">
+                          {t('products.colorCode')}: {color.code}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <Badge variant={color.status === 'active' ? 'success' : 'neutral'} className="shrink-0 text-[10px]">
+                    {color.status === 'active' ? t('products.statusActive') : t('products.statusInactive')}
+                  </Badge>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                  <span className="font-mono text-xs font-bold text-slate-700 dark:text-neutral-300 bg-slate-100 dark:bg-neutral-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-neutral-700">
+                    {color.hex || '-'}
+                  </span>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 text-neutral-700 dark:text-neutral-300"
+                      onClick={() => handleOpenModal(color)}
+                      icon={<Edit className="w-3.5 h-3.5" />}
+                    >
+                      {t('common.edit')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                      onClick={() => handleDelete(color.id)}
+                      icon={<Trash2 className="w-3.5 h-3.5" />}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))
           )}
-        />
+        </div>
       </Card>
 
       <Modal

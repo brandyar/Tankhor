@@ -84,100 +84,100 @@ export const AccountingView: React.FC<AccountingViewProps> = ({
           subtitle={t('accounting.subtitle')}
         />
 
-        <div className="flex border-b border-neutral-200/80 dark:border-neutral-800 gap-2 overflow-x-auto custom-scrollbar">
+        <div className="flex border-b border-neutral-200/80 dark:border-neutral-800 gap-1.5 sm:gap-2 overflow-x-auto custom-scrollbar pb-px -mx-2 px-2 sm:mx-0 sm:px-0">
           <button
             onClick={() => handleTabChange('accounting/dashboard')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer shrink-0 ${
               activeTab === 'accounting/dashboard' || activeTab === 'accounting'
                 ? 'border-neutral-900 dark:border-white text-neutral-900 dark:text-white'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
             }`}
           >
-            <BarChart3 className="w-4 h-4" />
+            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span>{t('accounting.dashboard')}</span>
           </button>
 
           <button
             onClick={() => handleTabChange('accounting/expenses')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer shrink-0 ${
               activeTab === 'accounting/expenses'
                 ? 'border-neutral-900 dark:border-white text-neutral-900 dark:text-white'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
             }`}
           >
-            <Receipt className="w-4 h-4" />
+            <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span>{t('accounting.expensesTitle')}</span>
           </button>
 
           <button
             onClick={() => handleTabChange('accounting/persons')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer shrink-0 ${
               activeTab === 'accounting/persons'
                 ? 'border-neutral-900 dark:border-white text-neutral-900 dark:text-white'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
             }`}
           >
-            <Users className="w-4 h-4" />
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span>{t('accounting.personsTitle')}</span>
           </button>
 
           <button
             onClick={() => handleTabChange('accounting/accounts')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer shrink-0 ${
               activeTab === 'accounting/accounts'
                 ? 'border-neutral-900 dark:border-white text-neutral-900 dark:text-white'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
             }`}
           >
-            <Wallet className="w-4 h-4" />
+            <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span>{t('accounting.accountsTitle')}</span>
           </button>
 
           <button
             onClick={() => handleTabChange('accounting/cheques')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer shrink-0 ${
               activeTab === 'accounting/cheques'
                 ? 'border-neutral-900 dark:border-white text-neutral-900 dark:text-white'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
             }`}
           >
-            <CheckSquare className="w-4 h-4" />
+            <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span>{t('accounting.chequesTitle')}</span>
           </button>
 
           <button
             onClick={() => handleTabChange('accounting/landed-costs')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer shrink-0 ${
               activeTab === 'accounting/landed-costs'
                 ? 'border-neutral-900 dark:border-white text-neutral-900 dark:text-white'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
             }`}
           >
-            <Scale className="w-4 h-4" />
+            <Scale className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span>{t('navigation.landedCosts')}</span>
           </button>
 
           <button
             onClick={() => handleTabChange('accounting/tax')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer shrink-0 ${
               activeTab === 'accounting/tax'
                 ? 'border-neutral-900 dark:border-white text-neutral-900 dark:text-white'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
             }`}
           >
-            <FileText className="w-4 h-4" />
+            <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span>{t('navigation.taxReports')}</span>
           </button>
 
           <button
             onClick={() => handleTabChange('accounting/export')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer shrink-0 ${
               activeTab === 'accounting/export'
                 ? 'border-neutral-900 dark:border-white text-neutral-900 dark:text-white'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
             }`}
           >
-            <FileSpreadsheet className="w-4 h-4" />
+            <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span>{t('navigation.accountingExport')}</span>
           </button>
         </div>

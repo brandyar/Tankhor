@@ -277,7 +277,7 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
         })}
       </div>
 
-      <Card>
+      <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
         {/* Categories Tab with Hierarchical Tree Indentation */}
         {activeTab === 'categories' && (
           <div className="overflow-x-auto">

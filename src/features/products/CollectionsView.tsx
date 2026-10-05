@@ -175,7 +175,7 @@ export const CollectionsView: React.FC = () => {
         }
       />
 
-      <Card>
+      <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-80">
             <Input
@@ -187,29 +187,103 @@ export const CollectionsView: React.FC = () => {
           </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          data={filtered}
-          keyExtractor={(col) => col.id}
-          isLoading={isLoading}
-          actions={(col) => (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleOpenModal(col)}
-                icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
-                onClick={() => handleDelete(col.id)}
-                icon={<Trash2 className="w-4 h-4" />}
-              />
+        {/* 1. Desktop Tabular View */}
+        <div className="hidden md:block">
+          <DataTable
+            columns={columns}
+            data={filtered}
+            keyExtractor={(col) => col.id}
+            isLoading={isLoading}
+            actions={(col) => (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleOpenModal(col)}
+                  icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                  onClick={() => handleDelete(col.id)}
+                  icon={<Trash2 className="w-4 h-4" />}
+                />
+              </div>
+            )}
+          />
+        </div>
+
+        {/* 2. Mobile Responsive Cards View */}
+        <div className="block md:hidden space-y-3">
+          {isLoading ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.loading')}
             </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.noData')}
+            </div>
+          ) : (
+            filtered.map((col) => (
+              <div
+                key={`mob_col_${col.id}`}
+                className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#13151a] p-4 shadow-sm space-y-3 transition-all"
+              >
+                <div className="flex items-start gap-3">
+                  {col.image ? (
+                    <ProductImage
+                      src={col.image}
+                      alt={col.name}
+                      fallbackText={col.name}
+                      containerClassName="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 dark:border-neutral-700 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold shrink-0">
+                      <Layers className="w-6 h-6" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="font-bold text-slate-900 dark:text-neutral-100 text-sm">{col.name}</h3>
+                        <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono mt-0.5">{col.slug}</p>
+                      </div>
+                      <Badge variant={col.status === 'active' ? 'success' : 'neutral'} className="shrink-0 text-[10px]">
+                        {col.status === 'active' ? t('products.statusActive') : t('products.statusInactive')}
+                      </Badge>
+                    </div>
+
+                    {col.description && (
+                      <p className="text-xs text-slate-600 dark:text-neutral-300 mt-2 line-clamp-2">
+                        {col.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-1 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2.5 text-neutral-700 dark:text-neutral-300"
+                    onClick={() => handleOpenModal(col)}
+                    icon={<Edit className="w-3.5 h-3.5" />}
+                  >
+                    {t('common.edit')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                    onClick={() => handleDelete(col.id)}
+                    icon={<Trash2 className="w-3.5 h-3.5" />}
+                  />
+                </div>
+              </div>
+            ))
           )}
-        />
+        </div>
       </Card>
 
       <Modal

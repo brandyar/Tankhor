@@ -374,84 +374,84 @@ export const ReportsView: React.FC = () => {
           </div>
 
           {/* Overview Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-            <Card className="hover:border-neutral-300 dark:hover:border-neutral-700 transition-all shadow-xs group">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="caption-mono text-neutral-600 dark:text-neutral-300 font-bold">{t('reports.totalUnitsSold')}</p>
-                  <h3 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight mt-2 font-mono">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+            <Card className="p-3 sm:p-5 hover:border-neutral-300 dark:hover:border-neutral-700 transition-all shadow-xs group">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="caption-mono text-neutral-600 dark:text-neutral-300 font-bold truncate">{t('reports.totalUnitsSold')}</p>
+                  <h3 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight mt-1.5 sm:mt-2 font-mono">
                     {formatNumber(bestSellersData.totalSoldQty)}
-                    <span className="text-xs font-normal text-neutral-500 dark:text-neutral-400 font-sans ms-1.5">{t('reports.unitsUnit')}</span>
+                    <span className="text-[10px] sm:text-xs font-normal text-neutral-500 dark:text-neutral-400 font-sans ms-1">{t('reports.unitsUnit')}</span>
                   </h3>
-                  <div className="mt-2.5 flex items-center gap-1 text-xs text-neutral-600 dark:text-neutral-300">
-                    <PackageCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>{t('reports.totalGarmentsDispatched')}</span>
+                  <div className="mt-1.5 sm:mt-2.5 flex items-center gap-1 text-[11px] sm:text-xs text-neutral-600 dark:text-neutral-300">
+                    <PackageCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="truncate">{t('reports.totalGarmentsDispatched')}</span>
                   </div>
                 </div>
-                <div className="w-11 h-11 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-xl flex items-center justify-center border border-neutral-200/80 dark:border-neutral-700 group-hover:scale-105 transition-transform">
-                  <Shirt className="w-5 h-5" />
+                <div className="w-8.5 h-8.5 sm:w-11 sm:h-11 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-xl flex items-center justify-center border border-neutral-200/80 dark:border-neutral-700 shrink-0 group-hover:scale-105 transition-transform">
+                  <Shirt className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
             </Card>
 
-            <Card className="hover:border-neutral-300 dark:hover:border-neutral-700 transition-all shadow-xs group">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="caption-mono text-neutral-600 dark:text-neutral-300 font-bold">{t('reports.bestSellingSize')}</p>
-                  <h3 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight mt-2 font-mono">
+            <Card className="p-3 sm:p-5 hover:border-neutral-300 dark:hover:border-neutral-700 transition-all shadow-xs group">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="caption-mono text-neutral-600 dark:text-neutral-300 font-bold truncate">{t('reports.bestSellingSize')}</p>
+                  <h3 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight mt-1.5 sm:mt-2 font-mono truncate">
                     {bestSellersData.sortedSizes[0]?.name || '---'}
                   </h3>
-                  <div className="mt-2.5 flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300 font-mono font-medium">
-                    <Tag className="w-3.5 h-3.5" />
-                    <span>{bestSellersData.sortedSizes[0] ? `${formatNumber(bestSellersData.sortedSizes[0].qty)} ${t('reports.unitsSold')}` : t('reports.noSalesRecorded')}</span>
+                  <div className="mt-1.5 sm:mt-2.5 flex items-center gap-1 text-[11px] sm:text-xs text-amber-700 dark:text-amber-300 font-mono font-medium truncate">
+                    <Tag className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{bestSellersData.sortedSizes[0] ? `${formatNumber(bestSellersData.sortedSizes[0].qty)} ${t('reports.unitsSold')}` : t('reports.noSalesRecorded')}</span>
                   </div>
                 </div>
-                <div className="w-11 h-11 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 rounded-xl flex items-center justify-center border border-amber-200/80 dark:border-amber-800/60 group-hover:scale-105 transition-transform">
-                  <Tag className="w-5 h-5" />
+                <div className="w-8.5 h-8.5 sm:w-11 sm:h-11 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 rounded-xl flex items-center justify-center border border-amber-200/80 dark:border-amber-800/60 shrink-0 group-hover:scale-105 transition-transform">
+                  <Tag className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
             </Card>
 
-            <Card className="hover:border-neutral-300 dark:hover:border-neutral-700 transition-all shadow-xs group">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="caption-mono text-neutral-600 dark:text-neutral-300 font-bold">{t('reports.mostPopularColor')}</p>
-                  <div className="flex items-center gap-2 mt-2">
+            <Card className="p-3 sm:p-5 hover:border-neutral-300 dark:hover:border-neutral-700 transition-all shadow-xs group">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="caption-mono text-neutral-600 dark:text-neutral-300 font-bold truncate">{t('reports.mostPopularColor')}</p>
+                  <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2">
                     {bestSellersData.sortedColors[0]?.hex && (
                       <span
-                        className="w-4 h-4 rounded-full border border-black/20 shrink-0"
+                        className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-black/20 shrink-0"
                         style={{ backgroundColor: bestSellersData.sortedColors[0].hex }}
                       />
                     )}
-                    <h3 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight">
+                    <h3 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight truncate">
                       {bestSellersData.sortedColors[0]?.name || '---'}
                     </h3>
                   </div>
-                  <div className="mt-2.5 flex items-center gap-1 text-xs text-purple-700 dark:text-purple-300 font-mono font-medium">
-                    <Palette className="w-3.5 h-3.5" />
-                    <span>{bestSellersData.sortedColors[0] ? `${formatNumber(bestSellersData.sortedColors[0].qty)} ${t('reports.unitsSold')}` : t('reports.noSalesRecorded')}</span>
+                  <div className="mt-1.5 sm:mt-2.5 flex items-center gap-1 text-[11px] sm:text-xs text-purple-700 dark:text-purple-300 font-mono font-medium truncate">
+                    <Palette className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{bestSellersData.sortedColors[0] ? `${formatNumber(bestSellersData.sortedColors[0].qty)} ${t('reports.unitsSold')}` : t('reports.noSalesRecorded')}</span>
                   </div>
                 </div>
-                <div className="w-11 h-11 bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 rounded-xl flex items-center justify-center border border-purple-200/80 dark:border-purple-800/60 group-hover:scale-105 transition-transform">
-                  <Palette className="w-5 h-5" />
+                <div className="w-8.5 h-8.5 sm:w-11 sm:h-11 bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 rounded-xl flex items-center justify-center border border-purple-200/80 dark:border-purple-800/60 shrink-0 group-hover:scale-105 transition-transform">
+                  <Palette className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
             </Card>
 
-            <Card className="hover:border-neutral-300 dark:hover:border-neutral-700 transition-all shadow-xs group">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="caption-mono text-neutral-600 dark:text-neutral-300 font-bold">{t('reports.catalogRevenueTurnover')}</p>
-                  <h3 className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white tracking-tight mt-2 font-mono truncate max-w-[200px]" title={formatCurrency(bestSellersData.totalSalesRev, activeOrganization?.currency, isPersian)}>
+            <Card className="p-3 sm:p-5 hover:border-neutral-300 dark:hover:border-neutral-700 transition-all shadow-xs group">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="caption-mono text-neutral-600 dark:text-neutral-300 font-bold truncate">{t('reports.catalogRevenueTurnover')}</p>
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-extrabold text-neutral-900 dark:text-white tracking-tight mt-1.5 sm:mt-2 font-mono truncate" title={formatCurrency(bestSellersData.totalSalesRev, activeOrganization?.currency, isPersian)}>
                     {formatCurrency(bestSellersData.totalSalesRev, activeOrganization?.currency, isPersian)}
                   </h3>
-                  <div className="mt-2.5 flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    <span>{t('reports.basedOnOrders')}</span>
+                  <div className="mt-1.5 sm:mt-2.5 flex items-center gap-1 text-[11px] sm:text-xs text-emerald-700 dark:text-emerald-300 font-medium truncate">
+                    <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{t('reports.basedOnOrders')}</span>
                   </div>
                 </div>
-                <div className="w-11 h-11 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 rounded-xl flex items-center justify-center border border-emerald-200/80 dark:border-emerald-800/60 group-hover:scale-105 transition-transform">
-                  <TrendingUp className="w-5 h-5" />
+                <div className="w-8.5 h-8.5 sm:w-11 sm:h-11 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 rounded-xl flex items-center justify-center border border-emerald-200/80 dark:border-emerald-800/60 shrink-0 group-hover:scale-105 transition-transform">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
             </Card>
@@ -548,8 +548,8 @@ export const ReportsView: React.FC = () => {
             </Card>
           </div>
 
-          {/* Top Product Variants Ranking Table */}
-          <Card className="p-5 space-y-4">
+          {/* Top Product Variants Ranking Table / Responsive Cards */}
+          <Card className="p-4 sm:p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white">{t('reports.topSkusTitle')}</h3>
@@ -558,7 +558,8 @@ export const ReportsView: React.FC = () => {
               <Badge variant="neutral">{t('reports.top10Badge')}</Badge>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
               <table className={`w-full text-xs ${isPersian ? 'text-right' : 'text-left'}`}>
                 <thead className="bg-neutral-50 dark:bg-[#181a20] text-neutral-800 dark:text-neutral-100 font-bold border-b border-neutral-200 dark:border-neutral-700">
                   <tr>
@@ -591,6 +592,33 @@ export const ReportsView: React.FC = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Card List View */}
+            <div className="md:hidden space-y-2.5">
+              {bestSellersData.sortedVariants.slice(0, 10).map((varStat, idx) => (
+                <div key={idx} className="p-3 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/40 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-bold text-xs text-neutral-900 dark:text-white">{varStat.title}</p>
+                      <p className="text-[11px] font-mono text-neutral-500 mt-0.5">{varStat.sku}</p>
+                    </div>
+                    <Badge variant="neutral">{formatNumber(idx + 1)}#</Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-neutral-200/60 dark:border-neutral-700/60">
+                    <span className="text-neutral-600 dark:text-neutral-400">{varStat.color} / {varStat.size}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-neutral-700 dark:text-neutral-300 font-bold">{formatNumber(varStat.qty)} عدد</span>
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        {formatCurrency(varStat.revenue, activeOrganization?.currency, isPersian)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {bestSellersData.sortedVariants.length === 0 && (
+                <p className="text-center py-6 text-xs text-neutral-400 dark:text-neutral-500">{t('reports.noDataRecorded')}</p>
+              )}
+            </div>
           </Card>
         </section>
 
@@ -598,23 +626,23 @@ export const ReportsView: React.FC = () => {
         {/* SECTION 2: DEAD STOCK ANALYSIS */}
         {/* ========================================================================= */}
         <section className="space-y-6 pt-4 border-t border-neutral-200 dark:border-neutral-800">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 flex items-center justify-center border border-rose-200/70 dark:border-rose-900/50">
-                <PackageX className="w-5 h-5" />
+              <div className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 flex items-center justify-center border border-rose-200/70 dark:border-rose-900/50 shrink-0">
+                <PackageX className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-neutral-900 dark:text-white">{t('reports.deadStockSectionTitle')}</h2>
-                <p className="text-xs text-neutral-500 dark:text-neutral-300 mt-0.5">{t('reports.deadStockSectionSubtitle')}</p>
+                <h2 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white">{t('reports.deadStockSectionTitle')}</h2>
+                <p className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-300 mt-0.5">{t('reports.deadStockSectionSubtitle')}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 no-print">
+            <div className="flex items-center gap-2 no-print self-end sm:self-auto">
               <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300 shrink-0">{t('reports.inactiveThreshold')}</span>
               <select
                 value={deadStockDaysThreshold}
                 onChange={(e) => setDeadStockDaysThreshold(Number(e.target.value))}
-                className="px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-[#181a20] text-xs font-bold text-neutral-900 dark:text-white focus:ring-1 focus:ring-neutral-900 dark:focus:ring-neutral-400"
+                className="px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-[#181a20] text-xs font-bold text-neutral-900 dark:text-white focus:ring-1 focus:ring-neutral-900 dark:focus:ring-neutral-400"
               >
                 <option value={15} className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('reports.opt15Days')}</option>
                 <option value={30} className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('reports.opt30Days')}</option>
@@ -625,57 +653,57 @@ export const ReportsView: React.FC = () => {
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
-            <Card className="hover:border-rose-300 dark:hover:border-rose-700 transition-all shadow-xs bg-gradient-to-br from-white to-rose-50/20 dark:from-[#181a20] dark:to-rose-950/40 dark:border-neutral-800">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <Card className="p-3.5 sm:p-4 hover:border-rose-300 dark:hover:border-rose-700 transition-all shadow-xs bg-gradient-to-br from-white to-rose-50/20 dark:from-[#181a20] dark:to-rose-950/40 dark:border-neutral-800">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="caption-mono text-rose-900 dark:text-rose-300 font-bold">{t('reports.tiedCapitalTitle')}</p>
-                  <h3 className="text-xl sm:text-2xl font-extrabold text-rose-950 dark:text-rose-200 tracking-tight mt-2 font-mono">
+                  <h3 className="text-lg sm:text-xl font-extrabold text-rose-950 dark:text-rose-200 tracking-tight mt-1.5 font-mono">
                     {formatCurrency(deadStockData.totalTiedCapital, activeOrganization?.currency, isPersian)}
                   </h3>
                   <p className="text-[11px] text-rose-700/80 dark:text-rose-300/90 mt-1">{t('reports.tiedCapitalDesc')}</p>
                 </div>
-                <div className="w-11 h-11 bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 rounded-xl flex items-center justify-center border border-rose-200/80 dark:border-rose-900/50">
-                  <TrendingDown className="w-5 h-5" />
+                <div className="w-9 h-9 sm:w-11 sm:h-11 bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 rounded-xl flex items-center justify-center border border-rose-200/80 dark:border-rose-900/50 shrink-0">
+                  <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
             </Card>
 
-            <Card className="hover:border-amber-300 dark:hover:border-amber-700 transition-all shadow-xs bg-gradient-to-br from-white to-amber-50/20 dark:from-[#181a20] dark:to-amber-950/40 dark:border-neutral-800">
+            <Card className="p-3.5 sm:p-4 hover:border-amber-300 dark:hover:border-amber-700 transition-all shadow-xs bg-gradient-to-br from-white to-amber-50/20 dark:from-[#181a20] dark:to-amber-950/40 dark:border-neutral-800">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="caption-mono text-amber-900 dark:text-amber-300 font-bold">{t('reports.totalDeadUnitsTitle')}</p>
-                  <h3 className="text-2xl sm:text-3xl font-extrabold text-amber-950 dark:text-amber-200 tracking-tight mt-2 font-mono">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-amber-950 dark:text-amber-200 tracking-tight mt-1.5 font-mono">
                     {formatNumber(deadStockData.totalDeadUnits)}
                     <span className="text-xs font-normal text-amber-800/80 dark:text-amber-300/90 font-sans ms-1.5">{t('reports.unitsUnit')}</span>
                   </h3>
                   <p className="text-[11px] text-amber-700/80 dark:text-amber-300/90 mt-1">{t('reports.totalDeadUnitsDesc')}</p>
                 </div>
-                <div className="w-11 h-11 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 rounded-xl flex items-center justify-center border border-amber-200/80 dark:border-amber-900/50">
-                  <PackageX className="w-5 h-5" />
+                <div className="w-9 h-9 sm:w-11 sm:h-11 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 rounded-xl flex items-center justify-center border border-amber-200/80 dark:border-amber-900/50 shrink-0">
+                  <PackageX className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
             </Card>
 
-            <Card className="hover:border-neutral-300 dark:hover:border-neutral-700 transition-all shadow-xs">
+            <Card className="p-3.5 sm:p-4 hover:border-neutral-300 dark:hover:border-neutral-700 transition-all shadow-xs">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="caption-mono text-neutral-600 dark:text-neutral-300 font-bold">{t('reports.inactiveVariantsTitle')}</p>
-                  <h3 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight mt-2 font-mono">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white tracking-tight mt-1.5 font-mono">
                     {formatNumber(deadStockData.deadStockItems.length)}
                     <span className="text-xs font-normal text-neutral-500 dark:text-neutral-400 font-sans ms-1.5">{t('reports.variantsUnit')}</span>
                   </h3>
                   <p className="text-[11px] text-neutral-500 dark:text-neutral-300 mt-1">{t('reports.inactiveVariantsDesc')}</p>
                 </div>
-                <div className="w-11 h-11 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-xl flex items-center justify-center border border-neutral-200/80 dark:border-neutral-700">
-                  <Layers className="w-5 h-5" />
+                <div className="w-9 h-9 sm:w-11 sm:h-11 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-xl flex items-center justify-center border border-neutral-200/80 dark:border-neutral-700 shrink-0">
+                  <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
             </Card>
           </div>
 
-          {/* Dead Stock Table */}
-          <Card className="p-5 space-y-4">
+          {/* Dead Stock Table / Mobile Cards */}
+          <Card className="p-4 sm:p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white">{t('reports.deadStockTableTitle')}</h3>
@@ -684,7 +712,8 @@ export const ReportsView: React.FC = () => {
               <Badge variant="neutral">{formatNumber(deadStockData.deadStockItems.length)} {t('reports.itemsBadge')}</Badge>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
               <table className={`w-full text-xs ${isPersian ? 'text-right' : 'text-left'}`}>
                 <thead className="bg-neutral-50 dark:bg-[#181a20] text-neutral-800 dark:text-neutral-100 font-bold border-b border-neutral-200 dark:border-neutral-700">
                   <tr>
@@ -736,6 +765,45 @@ export const ReportsView: React.FC = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card List View */}
+            <div className="md:hidden space-y-2.5">
+              {deadStockData.deadStockItems.map((item, idx) => (
+                <div key={idx} className="p-3 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/40 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-bold text-xs text-neutral-900 dark:text-white">{item.productTitle}</p>
+                      <p className="text-[11px] font-mono text-neutral-500 mt-0.5">{item.variant.sku} · {item.colorName} / {item.sizeName}</p>
+                    </div>
+                    {item.daysInactive >= 90 ? (
+                      <Badge variant="error">{t('reports.statusCritical')}</Badge>
+                    ) : item.daysInactive >= 60 ? (
+                      <Badge variant="warning">{t('reports.statusWarning')}</Badge>
+                    ) : (
+                      <Badge variant="neutral">{t('reports.statusAttention')}</Badge>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-200/60 dark:border-neutral-700/60 text-xs">
+                    <div>
+                      <span className="text-[10px] text-neutral-500 block">موجودی راکد:</span>
+                      <span className="font-mono font-bold text-amber-700 dark:text-amber-300">
+                        {formatNumber(item.stockQty)} عدد ({formatNumber(item.daysInactive)} روز)
+                      </span>
+                    </div>
+                    <div className="text-end">
+                      <span className="text-[10px] text-neutral-500 block">سرمایه بلوکه:</span>
+                      <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
+                        {formatCurrency(item.totalTiedCapital, activeOrganization?.currency, isPersian)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {deadStockData.deadStockItems.length === 0 && (
+                <p className="text-center py-6 text-xs text-neutral-400 dark:text-neutral-500">{t('reports.noDeadStockFound')}</p>
+              )}
             </div>
           </Card>
         </section>

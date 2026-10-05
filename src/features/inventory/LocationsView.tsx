@@ -138,14 +138,9 @@ export const LocationsView: React.FC = () => {
       key: 'name',
       header: t('inventory.locationNameLabel').replace(' *', ''),
       render: (loc) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 font-bold text-xs">
-            <Layers className="w-4 h-4" />
-          </div>
-          <div>
-            <p className="font-bold text-slate-900 dark:text-neutral-100 text-sm">{loc.name}</p>
-            <p className="text-[11px] font-mono text-slate-400 dark:text-neutral-500 mt-0.5">{loc.code || '-'}</p>
-          </div>
+        <div>
+          <p className="font-bold text-slate-900 dark:text-neutral-100 text-sm">{loc.name}</p>
+          <p className="text-[11px] font-mono text-slate-400 dark:text-neutral-500 mt-0.5">{loc.code || '-'}</p>
         </div>
       ),
     },
@@ -196,24 +191,26 @@ export const LocationsView: React.FC = () => {
         }
       />
 
-      <Card>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
-          <div className="w-full sm:w-72">
-            <select
-              value={selectedWarehouseFilter}
-              onChange={(e) => setSelectedWarehouseFilter(e.target.value ? Number(e.target.value) : '')}
-              className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-200 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-            >
-              <option value="">{t('inventory.allWarehousesOption')}</option>
-              {warehouses.map((w, wIdx) => (
-                <option key={`loc_wh_${w.id}_${wIdx}`} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-            </select>
-          </div>
+      {/* Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="w-full sm:w-72">
+          <select
+            value={selectedWarehouseFilter}
+            onChange={(e) => setSelectedWarehouseFilter(e.target.value ? Number(e.target.value) : '')}
+            className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-xl text-slate-800 dark:text-neutral-200 text-xs px-3 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-2xs"
+          >
+            <option value="">{t('inventory.allWarehousesOption')}</option>
+            {warehouses.map((w, wIdx) => (
+              <option key={`loc_wh_${w.id}_${wIdx}`} value={w.id}>
+                {w.name}
+              </option>
+            ))}
+          </select>
         </div>
+      </div>
 
+      {/* 1. Desktop Tabular View */}
+      <div className="hidden md:block bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl shadow-sm p-5 overflow-hidden">
         <DataTable
           columns={columns}
           data={locations}
@@ -230,14 +227,95 @@ export const LocationsView: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
                 onClick={() => handleDeleteLocation(loc.id)}
                 icon={<Trash2 className="w-3.5 h-3.5" />}
               />
             </div>
           )}
         />
-      </Card>
+      </div>
+
+      {/* 2. Mobile Clean Card View */}
+      <div className="block md:hidden">
+        {isLoading ? (
+          <div className="w-full py-12 flex flex-col items-center justify-center text-neutral-400">
+            <div className="w-7 h-7 border-2 border-neutral-900 dark:border-neutral-100 border-t-transparent rounded-full animate-spin mb-3" />
+            <span className="text-xs font-mono text-neutral-500">{t('common.loadingData')}</span>
+          </div>
+        ) : locations.length === 0 ? (
+          <div className="w-full py-12 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 bg-neutral-50/50 dark:bg-neutral-900/40 p-6 text-center">
+            <Layers className="w-8 h-8 text-neutral-400 mb-2 stroke-1" />
+            <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">{t('common.noData')}</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {locations.map((loc) => {
+              const wId = typeof loc.warehouse_id === 'number' ? loc.warehouse_id : loc.warehouse_id?.id;
+              const wh = warehouses.find((w) => w.id === wId);
+              return (
+                <div
+                  key={`mob_loc_${loc.id}`}
+                  className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#13151a] p-4 shadow-sm space-y-3 transition-all"
+                >
+                  {/* Top Row: Location Name & Code <---> Type & Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
+                        {loc.name}
+                      </h4>
+                      <span className="font-mono text-xs text-neutral-400 dark:text-neutral-500 mt-0.5 inline-block">
+                        {loc.code || '-'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      {getLocationTypeBadge(loc.type)}
+                      <Badge variant={loc.status === 'active' ? 'success' : 'danger'}>
+                        {loc.status === 'active' ? t('inventory.active') : t('inventory.inactive')}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Middle Row: Warehouse & Barcode */}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/80 text-xs text-neutral-600 dark:text-neutral-400">
+                    <span className="font-medium text-neutral-800 dark:text-neutral-200">
+                      {wh?.name || '-'}
+                    </span>
+
+                    {loc.barcode && (
+                      <span className="font-mono text-[11px] text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-lg">
+                        {toPersianDigits(loc.barcode)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Bottom Row: Actions */}
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenModal(loc)}
+                      icon={<Edit className="w-3.5 h-3.5" />}
+                    >
+                      {t('common.edit')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                      onClick={() => handleDeleteLocation(loc.id)}
+                      icon={<Trash2 className="w-3.5 h-3.5" />}
+                    >
+                      {t('common.delete')}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Modal Form */}
       <Modal

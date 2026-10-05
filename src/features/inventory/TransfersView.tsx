@@ -382,7 +382,7 @@ export const TransfersView: React.FC = () => {
       />
 
       {/* Filter Toolbar */}
-      <Card className="p-4">
+      <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="w-full sm:w-72">
             <Input
@@ -409,105 +409,214 @@ export const TransfersView: React.FC = () => {
         </div>
       </Card>
 
-      {/* Data Table */}
-      <Card className="p-0 overflow-hidden">
-        <DataTable<StockTransfer>
-          data={filteredTransfers}
-          keyExtractor={(trf) => trf.id}
-          isLoading={isLoading}
-          emptyMessage={t('inventory.noTransfersFound')}
-          columns={[
-            {
-              key: 'transfer_number',
-              header: t('inventory.transferNumber'),
-              render: (trf) => (
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-800/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-mono font-bold text-xs shrink-0">
-                    <ArrowLeftRight className="w-4 h-4" />
-                  </div>
+      {/* Data Table & Mobile Cards */}
+      <div className="border-0 sm:border border-neutral-200 dark:border-neutral-800 rounded-2xl bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm overflow-hidden">
+        {/* 1. Desktop Tabular View */}
+        <div className="hidden md:block">
+          <DataTable<StockTransfer>
+            data={filteredTransfers}
+            keyExtractor={(trf) => trf.id}
+            isLoading={isLoading}
+            emptyMessage={t('inventory.noTransfersFound')}
+            columns={[
+              {
+                key: 'transfer_number',
+                header: t('inventory.transferNumber'),
+                render: (trf) => (
                   <div>
                     <span className="font-mono font-bold text-slate-900 dark:text-neutral-100 text-xs sm:text-sm">
                       {trf.transfer_number}
                     </span>
-                    <div className="text-[10px] text-slate-400 dark:text-neutral-400 font-mono">
+                    <div className="text-[10px] text-slate-400 dark:text-neutral-400 font-mono mt-0.5">
                       {formatDate(trf.date_created, isPersian)}
                     </div>
                   </div>
-                </div>
-              ),
-            },
-            {
-              key: 'from_warehouse_id',
-              header: t('inventory.sourceWarehouseSender'),
-              render: (trf) => (
-                <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-neutral-200 text-xs">
-                  <Building2 className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-400" />
-                  {trf.from_warehouse_name}
-                </div>
-              ),
-            },
-            {
-              key: 'to_warehouse_id',
-              header: t('inventory.destWarehouseReceiver'),
-              render: (trf) => (
-                <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-neutral-200 text-xs">
-                  <Building2 className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-400" />
-                  {trf.to_warehouse_name}
-                </div>
-              ),
-            },
-            {
-              key: 'status',
-              header: t('common.status'),
-              render: (trf) => getStatusBadge(trf.status),
-            },
-          ]}
-          actions={(trf) => (
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleOpenDetails(trf)}
-                icon={<Eye className="w-3.5 h-3.5" />}
-              >
-                {t('common.details')}
-              </Button>
-
-              {trf.status === 'draft' && (
+                ),
+              },
+              {
+                key: 'from_warehouse_id',
+                header: t('inventory.sourceWarehouseSender'),
+                render: (trf) => (
+                  <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-neutral-200 text-xs">
+                    <Building2 className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-400" />
+                    {trf.from_warehouse_name}
+                  </div>
+                ),
+              },
+              {
+                key: 'to_warehouse_id',
+                header: t('inventory.destWarehouseReceiver'),
+                render: (trf) => (
+                  <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-neutral-200 text-xs">
+                    <Building2 className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-400" />
+                    {trf.to_warehouse_name}
+                  </div>
+                ),
+              },
+              {
+                key: 'status',
+                header: t('common.status'),
+                render: (trf) => getStatusBadge(trf.status),
+              },
+            ]}
+            actions={(trf) => (
+              <div className="flex items-center justify-end gap-2">
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
-                  onClick={() => handleUpdateStatus(trf, 'in_transit')}
-                  icon={<Truck className="w-3.5 h-3.5 text-amber-600" />}
+                  onClick={() => handleOpenDetails(trf)}
+                  icon={<Eye className="w-3.5 h-3.5" />}
                 >
-                  {t('inventory.confirmAndSend')}
+                  {t('common.details')}
                 </Button>
-              )}
 
-              {trf.status === 'in_transit' && (
+                {trf.status === 'draft' && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleUpdateStatus(trf, 'in_transit')}
+                    icon={<Truck className="w-3.5 h-3.5 text-amber-600" />}
+                  >
+                    {t('inventory.confirmAndSend')}
+                  </Button>
+                )}
+
+                {trf.status === 'in_transit' && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleUpdateStatus(trf, 'completed')}
+                    icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+                  >
+                    {t('inventory.confirmDelivery')}
+                  </Button>
+                )}
+
                 <Button
-                  variant="primary"
+                  variant="ghost"
                   size="sm"
-                  onClick={() => handleUpdateStatus(trf, 'completed')}
-                  icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+                  className="text-rose-600 hover:bg-rose-50"
+                  onClick={() => handleDeleteTransfer(trf)}
+                  icon={<Trash2 className="w-3.5 h-3.5" />}
                 >
-                  {t('inventory.confirmDelivery')}
+                  {t('common.delete')}
                 </Button>
-              )}
+              </div>
+            )}
+          />
+        </div>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-rose-600 hover:bg-rose-50"
-                onClick={() => handleDeleteTransfer(trf)}
-                icon={<Trash2 className="w-3.5 h-3.5" />}
-              >
-                {t('common.delete')}
-              </Button>
+        {/* 2. Mobile Clean Card View */}
+        <div className="block md:hidden">
+          {isLoading ? (
+            <div className="w-full py-12 flex flex-col items-center justify-center text-neutral-400">
+              <div className="w-7 h-7 border-2 border-neutral-900 dark:border-neutral-100 border-t-transparent rounded-full animate-spin mb-3" />
+              <span className="text-xs font-mono text-neutral-500">{t('common.loadingData')}</span>
+            </div>
+          ) : filteredTransfers.length === 0 ? (
+            <div className="w-full py-12 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 bg-neutral-50/50 dark:bg-neutral-900/40 p-6 text-center">
+              <Package className="w-8 h-8 text-neutral-400 mb-2 stroke-1" />
+              <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">{t('inventory.noTransfersFound')}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredTransfers.map((trf) => (
+                <div
+                  key={`mob_trf_${trf.id}`}
+                  className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#13151a] p-4 shadow-sm space-y-3 transition-all"
+                >
+                  {/* Top Row: Transfer Number & Date <---> Status Badge */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <span className="font-mono text-xs sm:text-sm font-bold text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700">
+                        {trf.transfer_number}
+                      </span>
+                      <div className="text-[10px] text-neutral-400 dark:text-neutral-500 font-mono mt-1">
+                        {formatDate(trf.date_created, isPersian)}
+                      </div>
+                    </div>
+
+                    <div className="shrink-0">
+                      {getStatusBadge(trf.status)}
+                    </div>
+                  </div>
+
+                  {/* Middle Row: Route (Stacked 2-tier so long warehouse names never truncate) */}
+                  <div className="space-y-2 p-3 rounded-xl bg-neutral-50/70 dark:bg-neutral-850/60 border border-neutral-200/80 dark:border-neutral-700/80 text-xs">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400 whitespace-nowrap shrink-0 mt-0.5">
+                        مبدأ:
+                      </span>
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <Building2 className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                        <span className="font-semibold text-neutral-800 dark:text-neutral-200 leading-snug break-words">
+                          {trf.from_warehouse_name}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2 min-w-0 pt-1.5 border-t border-neutral-200/60 dark:border-neutral-700/60">
+                      <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap shrink-0 mt-0.5">
+                        مقصد:
+                      </span>
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <Building2 className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
+                        <span className="font-semibold text-neutral-800 dark:text-neutral-200 leading-snug break-words">
+                          {trf.to_warehouse_name}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Row: Actions */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenDetails(trf)}
+                      icon={<Eye className="w-3.5 h-3.5" />}
+                    >
+                      {t('common.details')}
+                    </Button>
+
+                    <div className="flex items-center gap-1.5">
+                      {trf.status === 'draft' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleUpdateStatus(trf, 'in_transit')}
+                          icon={<Truck className="w-3.5 h-3.5 text-amber-600" />}
+                        >
+                          {t('inventory.confirmAndSend')}
+                        </Button>
+                      )}
+
+                      {trf.status === 'in_transit' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleUpdateStatus(trf, 'completed')}
+                          icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+                        >
+                          {t('inventory.confirmDelivery')}
+                        </Button>
+                      )}
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 p-2"
+                        onClick={() => handleDeleteTransfer(trf)}
+                        icon={<Trash2 className="w-3.5 h-3.5" />}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-        />
-      </Card>
+        </div>
+      </div>
 
       {/* Modal: Create Stock Transfer */}
       <Modal

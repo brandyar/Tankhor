@@ -1,5 +1,5 @@
 export const customersFa = {
-  title: 'مدیریت مشتریان (Customers)',
+  title: 'مدیریت مشتریان',
   subtitle: 'بانک اطلاعات خریداران، سابقه سفارشات و پروفایل مشتریان تن‌خور',
   createCustomer: 'مشتری جدید',
   addNewCustomer: 'افزودن مشتری جدید',

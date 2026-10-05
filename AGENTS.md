@@ -123,7 +123,7 @@
     - Design system controls (such as `Select.tsx`) implement defensive fallback guards to handle both declarative `options` arrays and arbitrary `children` elements safely.
 
 14. **Automated Desktop Releases & Self-Updater**:
-    - Current App Version: `1.1.1`.
+    - Current App Version: `1.1.2`.
     - Automated multi-platform releases built via GitHub Actions (`/.github/workflows/release-tauri.yml`).
     - Windows desktop builds use NSIS target (`bundle.targets: ["nsis", "app", "dmg"]`) with `windows.installMode: "passive"` for seamless in-place updates.
     - Desktop auto-update system powered by Tauri Updater (`tauri-plugin-updater`) and GitHub Releases with dedicated `latest.json` manifest.
@@ -162,6 +162,19 @@
     - **RTL & Design System Alignment**:
       - Driver.js popovers styled to match Tankhor's minimalist aesthetic (Vazirmatn typography, zero pill slop, WCAG contrast, dark/light themes).
       - Step indicators and navigation formatted with localized Persian digits (`مرحله ۱ از ۷`) and standard action buttons («بعدی»، «قبلی»، «رد کردن»، «شروع کار»).
+
+20. **Mobile-First Responsive Architecture & Dual Table/Card View Pattern (MANDATORY)**:
+    - **Dual Table/Card View Pattern**:
+      - All complex data tables (Products, Orders, POS, Inventory, Reports, Person Ledgers, Expenses, Cheques, Taxes, Journal Exports) **MUST** implement dual rendering:
+        - **Desktop (`hidden md:table` / `hidden md:block`)**: Dense, high-information-density tabular data grids with sortable column headers.
+        - **Mobile (`md:hidden space-y-3`)**: Touch-friendly, high-contrast standalone cards summarizing crucial metrics, status badges, and quick action buttons without awkward horizontal table scrolling.
+    - **Adaptive Header & Navigation Constraints**:
+      - Top navigation headers adapt smoothly across viewports (`h-14 sm:h-16`, `px-2 sm:px-4 md:px-6`).
+      - Dropdown menus and popovers strictly reside within `relative z-30` header stacking without `overflow-hidden` container clipping.
+      - Action icons and search inputs use responsive widths (`flex-1 min-w-0 max-w-xs sm:max-w-sm`) and compact icon-only representations on mobile screens.
+    - **Touch Targets & Zero Horizontal Overflow**:
+      - Buttons, selects, and interactive elements ensure a minimum 40px touch target area on mobile viewports.
+      - Sub-navigation bars use smooth horizontal scrolling with `-mx-2 px-2 sm:mx-0 sm:px-0` edge bleed and hidden scrollbars.
 
 ---
 

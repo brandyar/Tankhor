@@ -128,17 +128,17 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
   return (
     <div id="tour-analytics-charts" className="space-y-6">
       {/* Time Range Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-[#13151a] p-3 sm:p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs transition-colors">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-[#181a20] p-3 sm:p-4 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs transition-colors">
         <div className="flex items-center gap-2 text-xs font-bold text-neutral-800 dark:text-neutral-200">
           <Calendar className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           <span>{t('dashboard.timeRangeLabel')}</span>
         </div>
-        <div className="flex items-center gap-1 bg-neutral-100 dark:bg-[#181a20] p-1 rounded-lg w-full sm:w-auto">
+        <div className="flex items-center gap-1 bg-neutral-100 dark:bg-[#13151a] p-1 rounded-xl w-full sm:w-auto">
           <button
             onClick={() => onTimeRangeChange('7d')}
-            className={`flex-1 sm:flex-initial px-3 py-1 text-xs font-medium rounded-md transition-all ${
+            className={`flex-1 sm:flex-initial px-3 py-1.5 text-xs font-medium rounded-lg transition-all text-center whitespace-nowrap ${
               timeRange === '7d'
-                ? 'bg-white dark:bg-[#13151a] text-neutral-900 dark:text-neutral-100 shadow-2xs font-bold'
+                ? 'bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100 shadow-2xs font-bold'
                 : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
             }`}
           >
@@ -146,9 +146,9 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
           </button>
           <button
             onClick={() => onTimeRangeChange('30d')}
-            className={`flex-1 sm:flex-initial px-3 py-1 text-xs font-medium rounded-md transition-all ${
+            className={`flex-1 sm:flex-initial px-3 py-1.5 text-xs font-medium rounded-lg transition-all text-center whitespace-nowrap ${
               timeRange === '30d'
-                ? 'bg-white dark:bg-[#13151a] text-neutral-900 dark:text-neutral-100 shadow-2xs font-bold'
+                ? 'bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100 shadow-2xs font-bold'
                 : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
             }`}
           >
@@ -156,9 +156,9 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
           </button>
           <button
             onClick={() => onTimeRangeChange('90d')}
-            className={`flex-1 sm:flex-initial px-3 py-1 text-xs font-medium rounded-md transition-all ${
+            className={`flex-1 sm:flex-initial px-3 py-1.5 text-xs font-medium rounded-lg transition-all text-center whitespace-nowrap ${
               timeRange === '90d'
-                ? 'bg-white dark:bg-[#13151a] text-neutral-900 dark:text-neutral-100 shadow-2xs font-bold'
+                ? 'bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100 shadow-2xs font-bold'
                 : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
             }`}
           >
@@ -166,9 +166,9 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
           </button>
           <button
             onClick={() => onTimeRangeChange('all')}
-            className={`flex-1 sm:flex-initial px-3 py-1 text-xs font-medium rounded-md transition-all ${
+            className={`flex-1 sm:flex-initial px-3 py-1.5 text-xs font-medium rounded-lg transition-all text-center whitespace-nowrap ${
               timeRange === 'all'
-                ? 'bg-white dark:bg-[#13151a] text-neutral-900 dark:text-neutral-100 shadow-2xs font-bold'
+                ? 'bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100 shadow-2xs font-bold'
                 : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
             }`}
           >
@@ -178,7 +178,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
       </div>
 
       {/* Row 1: Primary Trends (Sales Revenue / Orders & Inventory Flow) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Chart 1: Sales / Orders Performance */}
         <Card
           title={canViewFinancials ? t('dashboard.salesTrendTitle') : t('dashboard.ordersTrendTitle')}
@@ -218,7 +218,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                <AreaChart data={salesData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
@@ -237,6 +237,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                     tickLine={false}
                   />
                   <YAxis
+                    width={40}
                     tick={{ fontSize: 11, fill: '#94a3b8', fontFamily: 'inherit' }}
                     axisLine={false}
                     tickLine={false}
@@ -287,7 +288,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={inventoryFlowData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                <BarChart data={inventoryFlowData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#94a3b8" opacity={0.2} />
                   <XAxis
                     dataKey="displayDate"
@@ -296,6 +297,7 @@ export const DashboardAnalyticsCharts: React.FC<DashboardAnalyticsChartsProps> =
                     tickLine={false}
                   />
                   <YAxis
+                    width={35}
                     tick={{ fontSize: 11, fill: '#94a3b8', fontFamily: 'inherit' }}
                     axisLine={false}
                     tickLine={false}

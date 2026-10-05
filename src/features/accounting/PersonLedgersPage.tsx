@@ -502,70 +502,134 @@ export const PersonLedgersPage: React.FC = () => {
                     هنوز هیچ سند مالی یا تراکنشی برای این شخص ثبت نشده است.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-neutral-200/80 dark:border-neutral-800">
-                    <table className="w-full text-xs text-start">
-                      <thead className="bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-500">
-                        <tr>
-                          <th className="py-2.5 px-3 text-start font-semibold">تاریخ</th>
-                          <th className="py-2.5 px-3 text-start font-semibold">شرح سند</th>
-                          <th className="py-2.5 px-3 text-start font-semibold">شماره پیگیری / فاکتور</th>
-                          <th className="py-2.5 px-3 text-start font-semibold text-rose-600">بدهکار (+)</th>
-                          <th className="py-2.5 px-3 text-start font-semibold text-emerald-600">بستانکار (-)</th>
-                          <th className="py-2.5 px-3 text-start font-semibold">مانده</th>
-                          <th className="py-2.5 px-3 text-center font-semibold">عملیات</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
-                        {transactions.map((tx) => {
-                          const isManual = !tx.order_id && !tx.purchase_order_id;
-                          return (
-                            <tr key={tx.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
-                              <td className="py-2.5 px-3 font-mono text-neutral-600 dark:text-neutral-300">
-                                {formatPersianDate(tx.transaction_date)}
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <div className="font-semibold text-neutral-900 dark:text-neutral-100">
+                  <div className="rounded-xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden">
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-xs text-start">
+                        <thead className="bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-500">
+                          <tr>
+                            <th className="py-2.5 px-3 text-start font-semibold">تاریخ</th>
+                            <th className="py-2.5 px-3 text-start font-semibold">شرح سند</th>
+                            <th className="py-2.5 px-3 text-start font-semibold">شماره پیگیری / فاکتور</th>
+                            <th className="py-2.5 px-3 text-start font-semibold text-rose-600">بدهکار (+)</th>
+                            <th className="py-2.5 px-3 text-start font-semibold text-emerald-600">بستانکار (-)</th>
+                            <th className="py-2.5 px-3 text-start font-semibold">مانده</th>
+                            <th className="py-2.5 px-3 text-center font-semibold">عملیات</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
+                          {transactions.map((tx) => {
+                            const isManual = !tx.order_id && !tx.purchase_order_id;
+                            return (
+                              <tr key={tx.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
+                                <td className="py-2.5 px-3 font-mono text-neutral-600 dark:text-neutral-300">
+                                  {formatPersianDate(tx.transaction_date)}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <div className="font-semibold text-neutral-900 dark:text-neutral-100">
+                                    {tx.transaction_type === 'order_invoice' && 'فاکتور فروش کالا'}
+                                    {tx.transaction_type === 'purchase_invoice' && 'فاکتور خرید کالا'}
+                                    {tx.transaction_type === 'receive_money' && 'دریافت وجه'}
+                                    {tx.transaction_type === 'pay_money' && 'پرداخت وجه'}
+                                    {tx.transaction_type === 'adjustment' && 'اصلاحیه حساب'}
+                                  </div>
+                                  {tx.description && (
+                                    <div className="text-[10px] text-neutral-400 mt-0.5 line-clamp-1">
+                                      {tx.description}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="py-2.5 px-3 font-mono text-neutral-500">
+                                  {tx.order_number || tx.purchase_number || tx.reference_code || '-'}
+                                </td>
+                                <td className="py-2.5 px-3 font-mono font-bold text-rose-600 dark:text-rose-400">
+                                  {tx.debit_amount ? formatCurrency(tx.debit_amount) : '-'}
+                                </td>
+                                <td className="py-2.5 px-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                  {tx.credit_amount ? formatCurrency(tx.credit_amount) : '-'}
+                                </td>
+                                <td className="py-2.5 px-3 font-mono font-bold text-neutral-900 dark:text-white">
+                                  {tx.running_balance !== undefined ? formatCurrency(Math.abs(tx.running_balance)) : '-'}
+                                </td>
+                                <td className="py-2.5 px-3 text-center">
+                                  {isManual && tx.id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => tx.id && handleDeleteTransaction(tx.id)}
+                                      className="text-rose-500 hover:text-rose-700"
+                                      title="حذف سند"
+                                      icon={<Trash2 className="w-3 h-3" />}
+                                    />
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile Card List View */}
+                    <div className="md:hidden divide-y divide-neutral-100 dark:divide-neutral-800/80 p-2 space-y-2">
+                      {transactions.map((tx) => {
+                        const isManual = !tx.order_id && !tx.purchase_order_id;
+                        return (
+                          <div key={tx.id} className="p-3 rounded-xl bg-neutral-50/50 dark:bg-neutral-800/40 border border-neutral-200/70 dark:border-neutral-700/60 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <span className="font-bold text-xs text-neutral-900 dark:text-white">
                                   {tx.transaction_type === 'order_invoice' && 'فاکتور فروش کالا'}
                                   {tx.transaction_type === 'purchase_invoice' && 'فاکتور خرید کالا'}
                                   {tx.transaction_type === 'receive_money' && 'دریافت وجه'}
                                   {tx.transaction_type === 'pay_money' && 'پرداخت وجه'}
                                   {tx.transaction_type === 'adjustment' && 'اصلاحیه حساب'}
-                                </div>
+                                </span>
                                 {tx.description && (
-                                  <div className="text-[10px] text-neutral-400 mt-0.5 line-clamp-1">
-                                    {tx.description}
-                                  </div>
+                                  <p className="text-[11px] text-neutral-500 mt-0.5 line-clamp-1">{tx.description}</p>
                                 )}
-                              </td>
-                              <td className="py-2.5 px-3 font-mono text-neutral-500">
-                                {tx.order_number || tx.purchase_number || tx.reference_code || '-'}
-                              </td>
-                              <td className="py-2.5 px-3 font-mono font-bold text-rose-600 dark:text-rose-400">
-                                {tx.debit_amount ? formatCurrency(tx.debit_amount) : '-'}
-                              </td>
-                              <td className="py-2.5 px-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                                {tx.credit_amount ? formatCurrency(tx.credit_amount) : '-'}
-                              </td>
-                              <td className="py-2.5 px-3 font-mono font-bold text-neutral-900 dark:text-white">
-                                {tx.running_balance !== undefined ? formatCurrency(Math.abs(tx.running_balance)) : '-'}
-                              </td>
-                              <td className="py-2.5 px-3 text-center">
+                              </div>
+                              <span className="font-mono text-[11px] text-neutral-400">
+                                {formatPersianDate(tx.transaction_date)}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-200/60 dark:border-neutral-700/60 text-xs">
+                              <div>
+                                {tx.debit_amount ? (
+                                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400 block">
+                                    بدهکار: {formatCurrency(tx.debit_amount)}
+                                  </span>
+                                ) : null}
+                                {tx.credit_amount ? (
+                                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 block">
+                                    بستانکار: {formatCurrency(tx.credit_amount)}
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="text-end flex items-center justify-end gap-1.5">
+                                <div>
+                                  <span className="text-[10px] text-neutral-400 block">مانده:</span>
+                                  <span className="font-mono font-bold text-neutral-900 dark:text-white">
+                                    {tx.running_balance !== undefined ? formatCurrency(Math.abs(tx.running_balance)) : '-'}
+                                  </span>
+                                </div>
                                 {isManual && tx.id && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => tx.id && handleDeleteTransaction(tx.id)}
-                                    className="text-rose-500 hover:text-rose-700"
+                                    className="text-rose-500 hover:text-rose-700 p-1 h-auto"
                                     title="حذف سند"
                                     icon={<Trash2 className="w-3 h-3" />}
                                   />
                                 )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

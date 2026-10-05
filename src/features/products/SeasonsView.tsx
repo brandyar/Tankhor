@@ -148,14 +148,9 @@ export const SeasonsView: React.FC = () => {
       key: 'name',
       header: t('products.seasonNameHeader'),
       render: (season) => (
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
-            <Sun className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{season.name}</p>
-            {season.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono">{t('products.seasonCode')}: {season.code}</p>}
-          </div>
+        <div>
+          <p className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">{season.name}</p>
+          {season.code && <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono mt-0.5">{t('products.seasonCode')}: {season.code}</p>}
         </div>
       ),
     },
@@ -194,7 +189,7 @@ export const SeasonsView: React.FC = () => {
         }
       />
 
-      <Card>
+      <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-80">
             <Input
@@ -206,29 +201,92 @@ export const SeasonsView: React.FC = () => {
           </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          data={filtered}
-          keyExtractor={(season) => season.id}
-          isLoading={isLoading}
-          actions={(season) => (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleOpenModal(season)}
-                icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
-                onClick={() => handleDelete(season.id)}
-                icon={<Trash2 className="w-4 h-4" />}
-              />
+        {/* 1. Desktop Tabular View */}
+        <div className="hidden md:block">
+          <DataTable
+            columns={columns}
+            data={filtered}
+            keyExtractor={(season) => season.id}
+            isLoading={isLoading}
+            actions={(season) => (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleOpenModal(season)}
+                  icon={<Edit className="w-4 h-4 text-slate-600 dark:text-neutral-300" />}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                  onClick={() => handleDelete(season.id)}
+                  icon={<Trash2 className="w-4 h-4" />}
+                />
+              </div>
+            )}
+          />
+        </div>
+
+        {/* 2. Mobile Responsive Cards View */}
+        <div className="block md:hidden space-y-3">
+          {isLoading ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.loading')}
             </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.noData')}
+            </div>
+          ) : (
+            filtered.map((season) => (
+              <div
+                key={`mob_season_${season.id}`}
+                className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#13151a] p-4 shadow-sm space-y-3 transition-all"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-neutral-100 text-sm">{season.name}</h3>
+                    {season.code && (
+                      <p className="text-xs text-slate-400 dark:text-neutral-500 font-mono mt-0.5">
+                        {t('products.seasonCode')}: {season.code}
+                      </p>
+                    )}
+                  </div>
+                  <Badge variant={season.status === 'active' ? 'success' : 'neutral'} className="shrink-0 text-[10px]">
+                    {season.status === 'active' ? t('products.statusActive') : t('products.statusInactive')}
+                  </Badge>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-neutral-300 font-mono p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-500 shrink-0" />
+                  <span>{isPersian ? toPersianDigits(season.start_date || t('products.undefinedDate')) : season.start_date || t('products.undefinedDate')}</span>
+                  <span className="text-slate-300 dark:text-neutral-600">{t('products.dateTo')}</span>
+                  <span>{isPersian ? toPersianDigits(season.end_date || t('products.undefinedDate')) : season.end_date || t('products.undefinedDate')}</span>
+                </div>
+
+                <div className="flex items-center justify-end gap-1 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2.5 text-neutral-700 dark:text-neutral-300"
+                    onClick={() => handleOpenModal(season)}
+                    icon={<Edit className="w-3.5 h-3.5" />}
+                  >
+                    {t('common.edit')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                    onClick={() => handleDelete(season.id)}
+                    icon={<Trash2 className="w-3.5 h-3.5" />}
+                  />
+                </div>
+              </div>
+            ))
           )}
-        />
+        </div>
       </Card>
 
       <Modal

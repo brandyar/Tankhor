@@ -458,7 +458,7 @@ export const SizeGuidesView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Templates Sidebar / List */}
         <div className="lg:col-span-4 space-y-4">
-          <Card className="p-4 space-y-3">
+          <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-4 space-y-3">
             <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-neutral-800">
               <h3 className="font-bold text-slate-900 dark:text-neutral-100 text-sm flex items-center gap-2">
                 <Ruler className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />

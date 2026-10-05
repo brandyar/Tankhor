@@ -268,31 +268,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       </div>
 
       {/* 2. Four Operational Quick Access Blocks */}
-      <div id="tour-quick-actions" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      <div id="tour-quick-actions" className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-5">
         {/* Quick Action 1: Create Order (ثبت سفارش) */}
         <button
           type="button"
           onClick={() => onNavigate('orders/create')}
           disabled={!permissions.canCreateOrders}
-          className={`group relative overflow-hidden text-start p-4 sm:p-5 rounded-xl border bg-white dark:bg-[#13151a] transition-all shadow-xs ${
+          className={`group relative overflow-hidden text-start p-3.5 sm:p-5 rounded-xl border bg-white dark:bg-[#13151a] transition-all shadow-xs ${
             permissions.canCreateOrders
               ? 'hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md cursor-pointer border-neutral-200/80 dark:border-neutral-800'
               : 'opacity-60 cursor-not-allowed border-neutral-200/60 dark:border-neutral-800/60'
           }`}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/60 group-hover:scale-105 group-hover:bg-blue-600 group-hover:text-white dark:group-hover:bg-blue-600 dark:group-hover:text-white transition-all">
-              <ShoppingCart className="w-6 h-6 transition-colors" />
+          <div className="flex items-start justify-between gap-2">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/60 group-hover:scale-105 group-hover:bg-blue-600 group-hover:text-white dark:group-hover:bg-blue-600 dark:group-hover:text-white transition-all">
+              <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 transition-colors" />
             </div>
-            <span className="p-1.5 rounded-lg text-neutral-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/40 transition-colors">
-              {isPersian ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            <span className="p-1 sm:p-1.5 rounded-lg text-neutral-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/40 transition-colors">
+              {isPersian ? <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </span>
           </div>
-          <div className="mt-4">
-            <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+          <div className="mt-3 sm:mt-4">
+            <h3 className="text-xs sm:text-base font-bold text-neutral-900 dark:text-neutral-100 tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">
               {t('dashboard.actionCreateOrder')}
             </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-1 leading-relaxed">
+            <p className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-1 leading-relaxed">
               {t('dashboard.actionCreateOrderDesc')}
             </p>
           </div>
@@ -303,25 +303,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           type="button"
           onClick={() => onNavigate('products/create')}
           disabled={!permissions.canEditProducts}
-          className={`group relative overflow-hidden text-start p-4 sm:p-5 rounded-xl border bg-white dark:bg-[#13151a] transition-all shadow-xs ${
+          className={`group relative overflow-hidden text-start p-3.5 sm:p-5 rounded-xl border bg-white dark:bg-[#13151a] transition-all shadow-xs ${
             permissions.canEditProducts
               ? 'hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-md cursor-pointer border-neutral-200/80 dark:border-neutral-800'
               : 'opacity-60 cursor-not-allowed border-neutral-200/60 dark:border-neutral-800/60'
           }`}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/60 group-hover:scale-105 group-hover:bg-emerald-600 group-hover:text-white dark:group-hover:bg-emerald-600 dark:group-hover:text-white transition-all">
-              <PackagePlus className="w-6 h-6 transition-colors" />
+          <div className="flex items-start justify-between gap-2">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/60 group-hover:scale-105 group-hover:bg-emerald-600 group-hover:text-white dark:group-hover:bg-emerald-600 dark:group-hover:text-white transition-all">
+              <PackagePlus className="w-5 h-5 sm:w-6 sm:h-6 transition-colors" />
             </div>
-            <span className="p-1.5 rounded-lg text-neutral-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/40 transition-colors">
-              {isPersian ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            <span className="p-1 sm:p-1.5 rounded-lg text-neutral-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/40 transition-colors">
+              {isPersian ? <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </span>
           </div>
-          <div className="mt-4">
-            <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+          <div className="mt-3 sm:mt-4">
+            <h3 className="text-xs sm:text-base font-bold text-neutral-900 dark:text-neutral-100 tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-1">
               {t('dashboard.actionCreateProduct')}
             </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-1 leading-relaxed">
+            <p className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-1 leading-relaxed">
               {t('dashboard.actionCreateProductDesc')}
             </p>
           </div>
@@ -332,25 +332,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           type="button"
           onClick={() => onNavigate('orders/all')}
           disabled={!permissions.canViewOrders}
-          className={`group relative overflow-hidden text-start p-4 sm:p-5 rounded-xl border bg-white dark:bg-[#13151a] transition-all shadow-xs ${
+          className={`group relative overflow-hidden text-start p-3.5 sm:p-5 rounded-xl border bg-white dark:bg-[#13151a] transition-all shadow-xs ${
             permissions.canViewOrders
               ? 'hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-md cursor-pointer border-neutral-200/80 dark:border-neutral-800'
               : 'opacity-60 cursor-not-allowed border-neutral-200/60 dark:border-neutral-800/60'
           }`}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-900/60 group-hover:scale-105 group-hover:bg-purple-600 group-hover:text-white dark:group-hover:bg-purple-600 dark:group-hover:text-white transition-all">
-              <FileText className="w-6 h-6 transition-colors" />
+          <div className="flex items-start justify-between gap-2">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-900/60 group-hover:scale-105 group-hover:bg-purple-600 group-hover:text-white dark:group-hover:bg-purple-600 dark:group-hover:text-white transition-all">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 transition-colors" />
             </div>
-            <span className="p-1.5 rounded-lg text-neutral-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 group-hover:bg-purple-50 dark:group-hover:bg-purple-950/40 transition-colors">
-              {isPersian ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            <span className="p-1 sm:p-1.5 rounded-lg text-neutral-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 group-hover:bg-purple-50 dark:group-hover:bg-purple-950/40 transition-colors">
+              {isPersian ? <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </span>
           </div>
-          <div className="mt-4">
-            <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 tracking-tight group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+          <div className="mt-3 sm:mt-4">
+            <h3 className="text-xs sm:text-base font-bold text-neutral-900 dark:text-neutral-100 tracking-tight group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors line-clamp-1">
               {t('dashboard.actionOrdersList')}
             </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-1 leading-relaxed">
+            <p className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-1 leading-relaxed">
               {t('dashboard.actionOrdersListDesc')}
             </p>
           </div>
@@ -361,25 +361,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           type="button"
           onClick={() => onNavigate('purchasing/orders/create')}
           disabled={!permissions.canViewPurchasing}
-          className={`group relative overflow-hidden text-start p-4 sm:p-5 rounded-xl border bg-white dark:bg-[#13151a] transition-all shadow-xs ${
+          className={`group relative overflow-hidden text-start p-3.5 sm:p-5 rounded-xl border bg-white dark:bg-[#13151a] transition-all shadow-xs ${
             permissions.canViewPurchasing
               ? 'hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-md cursor-pointer border-neutral-200/80 dark:border-neutral-800'
               : 'opacity-60 cursor-not-allowed border-neutral-200/60 dark:border-neutral-800/60'
           }`}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/60 group-hover:scale-105 group-hover:bg-amber-600 group-hover:text-white dark:group-hover:bg-amber-600 dark:group-hover:text-white transition-all">
-              <Truck className="w-6 h-6 transition-colors" />
+          <div className="flex items-start justify-between gap-2">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/60 group-hover:scale-105 group-hover:bg-amber-600 group-hover:text-white dark:group-hover:bg-amber-600 dark:group-hover:text-white transition-all">
+              <Truck className="w-5 h-5 sm:w-6 sm:h-6 transition-colors" />
             </div>
-            <span className="p-1.5 rounded-lg text-neutral-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 group-hover:bg-amber-50 dark:group-hover:bg-amber-950/40 transition-colors">
-              {isPersian ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            <span className="p-1 sm:p-1.5 rounded-lg text-neutral-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 group-hover:bg-amber-50 dark:group-hover:bg-amber-950/40 transition-colors">
+              {isPersian ? <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </span>
           </div>
-          <div className="mt-4">
-            <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 tracking-tight group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+          <div className="mt-3 sm:mt-4">
+            <h3 className="text-xs sm:text-base font-bold text-neutral-900 dark:text-neutral-100 tracking-tight group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-1">
               {t('dashboard.actionCreatePurchaseOrder')}
             </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-1 leading-relaxed">
+            <p className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-1 leading-relaxed">
               {t('dashboard.actionCreatePurchaseOrderDesc')}
             </p>
           </div>
@@ -466,23 +466,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         isPersian={isPersian}
       />
 
-      {/* 5. Bottom Row: Recent Movements & System Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Movements Table */}
-        <div className="lg:col-span-2 space-y-4">
-          <Card
-            title={t('dashboard.recentMovements')}
-            subtitle={t('dashboard.recentMovementsSubtitle')}
-            action={
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onNavigate('inventory/movements')}
-              >
-                {t('dashboard.viewAll')}
-              </Button>
-            }
-          >
+      {/* 5. Bottom Row: Recent Movements */}
+      <div className="w-full space-y-4">
+        <Card
+          title={t('dashboard.recentMovements')}
+          subtitle={t('dashboard.recentMovementsSubtitle')}
+          action={
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onNavigate('inventory/movements')}
+            >
+              {t('dashboard.viewAll')}
+            </Button>
+          }
+        >
+          {/* Desktop Tabular View */}
+          <div className="hidden md:block">
             <DataTable
               columns={movementColumns}
               data={movements.slice(0, 6)}
@@ -490,25 +490,63 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               isLoading={isLoading}
               emptyMessage={t('dashboard.noMovementsLogged')}
             />
-          </Card>
-        </div>
+          </div>
 
-        {/* System Status Sidebar */}
-        <div className="space-y-6">
-          <Card title={t('dashboard.systemStatus')}>
-            <div className="space-y-3 text-xs">
-              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/50 text-emerald-900 dark:text-emerald-200">
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
-                <div>
-                  <p className="font-bold">{t('dashboard.offlineReady')}</p>
-                  <p className="text-[11px] text-emerald-800/90 dark:text-emerald-300/80 mt-0.5 leading-relaxed">
-                    {t('dashboard.realtimeEngineNote')}
-                  </p>
-                </div>
+          {/* Mobile Responsive Cards View */}
+          <div className="block md:hidden space-y-2.5">
+            {isLoading ? (
+              <div className="py-8 text-center text-xs text-neutral-400">
+                {t('common.loading')}
               </div>
-            </div>
-          </Card>
-        </div>
+            ) : movements.length === 0 ? (
+              <div className="py-8 text-center text-xs text-neutral-400">
+                {t('dashboard.noMovementsLogged')}
+              </div>
+            ) : (
+              movements.slice(0, 6).map((m) => {
+                const isIn = m.type === 'purchase' || m.type === 'transfer_in' || m.type === 'return';
+                let label: string = String(m.type);
+                if (m.type === 'purchase') label = t('dashboard.purchaseIn');
+                else if (m.type === 'sale') label = t('dashboard.saleOut');
+                else if (m.type === 'return') label = t('dashboard.returnIn');
+                else if (m.type === 'transfer_in') label = t('inventory.typeTransferIn');
+                else if (m.type === 'transfer_out') label = t('inventory.typeTransferOut');
+                else if (m.type === 'adjustment') label = t('inventory.stockAdjustment');
+
+                return (
+                  <div
+                    key={`mob_mov_${m.id}`}
+                    className="p-3 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/60 space-y-2 text-xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100 text-xs">
+                          {m.sku || 'TNK-SKU'}
+                        </span>
+                        <p className="text-[10px] text-neutral-400 font-mono mt-0.5">
+                          {formatDate(m.created_at, isPersian)}
+                        </p>
+                      </div>
+                      <Badge variant={isIn ? 'success' : 'danger'}>
+                        <span className="flex items-center gap-1 text-[11px]">
+                          {isIn ? <ArrowDownLeft className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
+                          {label}
+                        </span>
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                      <span className="text-[11px] text-neutral-500 font-mono">{m.reference_id ? `#${m.reference_id}` : '-'}</span>
+                      <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">
+                        {isPersian ? toPersianDigits(m.quantity) : m.quantity} {t('dashboard.unitsCount')}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </Card>
       </div>
     </div>
   );

@@ -536,10 +536,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
         }
       />
 
-      {/* Filter Toolbar */}
-      <Card className="p-3.5 sm:p-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="w-full sm:w-72">
+      {/* Unified Orders Container */}
+      <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
+        {/* Filter Toolbar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-5">
+          <div className="w-full sm:w-80">
             <Input
               placeholder={t('orders.searchProductVariant')}
               value={search}
@@ -562,24 +563,19 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
             />
           </div>
         </div>
-      </Card>
 
-      {/* Orders Data Table */}
-      <Card className="p-0 overflow-hidden">
-        <DataTable<Order>
-          data={filteredOrders}
-          keyExtractor={(ord) => ord.id}
-          isLoading={isLoading}
-          emptyMessage={t('common.noData')}
-          columns={[
-            {
-              key: 'order_number',
-              header: t('orders.orderNumber'),
-              render: (ord) => (
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-mono font-bold text-xs shrink-0">
-                    <ShoppingCart className="w-4 h-4" />
-                  </div>
+        {/* 1. Desktop Tabular View */}
+        <div className="hidden md:block">
+          <DataTable<Order>
+            data={filteredOrders}
+            keyExtractor={(ord) => ord.id}
+            isLoading={isLoading}
+            emptyMessage={t('common.noData')}
+            columns={[
+              {
+                key: 'order_number',
+                header: t('orders.orderNumber'),
+                render: (ord) => (
                   <div>
                     <span className="font-mono font-bold text-slate-900 dark:text-neutral-100 text-xs sm:text-sm">
                       {ord.order_number}
@@ -588,82 +584,188 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
                       {formatDate(ord.date_created, isPersian)}
                     </div>
                   </div>
-                </div>
-              ),
-            },
-            {
-              key: 'customer_name',
-              header: t('orders.customer'),
-              render: (ord) => (
-                <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-neutral-100 text-xs">
-                  <User className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-400" />
-                  {ord.customer_name}
-                </div>
-              ),
-            },
-            {
-              key: 'total',
-              header: t('orders.totalAmount'),
-              render: (ord) => (
-                <div className="font-bold font-mono text-slate-900 dark:text-neutral-100 text-xs">
-                  {formatCurrency(ord.total, 'TOMAN', isPersian)}
-                </div>
-              ),
-            },
-            {
-              key: 'payment_status',
-              header: t('orders.paymentStatus'),
-              render: (ord) => getPaymentStatusBadge(ord.payment_status),
-            },
-            {
-              key: 'status',
-              header: t('orders.orderStatus'),
-              render: (ord) => getOrderStatusBadge(ord.status),
-            },
-          ]}
-          actions={(ord) => (
-            <div className="flex items-center justify-end gap-2">
-              {ord.payment_status === 'pending' && (
+                ),
+              },
+              {
+                key: 'customer_name',
+                header: t('orders.customer'),
+                render: (ord) => (
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-neutral-100 text-xs">
+                    <User className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-400" />
+                    {ord.customer_name}
+                  </div>
+                ),
+              },
+              {
+                key: 'total',
+                header: t('orders.totalAmount'),
+                render: (ord) => (
+                  <div className="font-bold font-mono text-slate-900 dark:text-neutral-100 text-xs">
+                    {formatCurrency(ord.total, 'TOMAN', isPersian)}
+                  </div>
+                ),
+              },
+              {
+                key: 'payment_status',
+                header: t('orders.paymentStatus'),
+                render: (ord) => getPaymentStatusBadge(ord.payment_status),
+              },
+              {
+                key: 'status',
+                header: t('orders.orderStatus'),
+                render: (ord) => getOrderStatusBadge(ord.status),
+              },
+            ]}
+            actions={(ord) => (
+              <div className="flex items-center justify-end gap-2">
+                {ord.payment_status === 'pending' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenSettleModal(ord)}
+                    icon={<CreditCard className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                    className="border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                    title="تسویه حساب فاکتور نسیه"
+                  >
+                    تسویه
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleOpenSettleModal(ord)}
-                  icon={<CreditCard className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
-                  className="border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                  title="تسویه حساب فاکتور نسیه"
+                  onClick={() => handleDirectPrintOrder(ord)}
+                  icon={<Printer className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                  title={t('orders.printInvoice')}
                 >
-                  تسویه
+                  {t('orders.print')}
                 </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDirectPrintOrder(ord)}
-                icon={<Printer className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
-                title={t('orders.printInvoice')}
-              >
-                {t('orders.print')}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleOpenOrderDetails(ord)}
-                icon={<Eye className="w-3.5 h-3.5" />}
-              >
-                {t('common.details')}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-rose-600 hover:bg-rose-50"
-                onClick={() => handleDeleteOrder(ord)}
-                icon={<Trash2 className="w-3.5 h-3.5" />}
-              >
-                {t('common.delete')}
-              </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenOrderDetails(ord)}
+                  icon={<Eye className="w-3.5 h-3.5" />}
+                >
+                  {t('common.details')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-rose-600 hover:bg-rose-50"
+                  onClick={() => handleDeleteOrder(ord)}
+                  icon={<Trash2 className="w-3.5 h-3.5" />}
+                >
+                  {t('common.delete')}
+                </Button>
+              </div>
+            )}
+          />
+        </div>
+
+        {/* 2. Mobile Responsive Cards View */}
+        <div className="block md:hidden space-y-3">
+          {isLoading ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.loading')}
             </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.noData')}
+            </div>
+          ) : (
+            filteredOrders.map((ord) => (
+              <div
+                key={`mob_ord_${ord.id}`}
+                className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#181a20] p-4 shadow-sm space-y-3 transition-all"
+              >
+                {/* Top Row: Order Number + Order Status */}
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-neutral-100 text-sm font-mono tracking-wide">
+                      {ord.order_number}
+                    </h3>
+                    <p className="text-[11px] text-slate-400 dark:text-neutral-500 font-mono mt-0.5">
+                      {formatDate(ord.date_created, isPersian)}
+                    </p>
+                  </div>
+                  <div className="shrink-0">
+                    {getOrderStatusBadge(ord.status)}
+                  </div>
+                </div>
+
+                {/* Customer and Warehouse Meta */}
+                <div className="flex items-center justify-between text-xs pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-neutral-200 truncate">
+                    <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">{ord.customer_name}</span>
+                  </div>
+                  {ord.warehouse_name && (
+                    <span className="text-[11px] text-slate-500 dark:text-neutral-400 bg-slate-50 dark:bg-neutral-900 px-2 py-0.5 rounded border border-slate-100 dark:border-neutral-800 shrink-0">
+                      {ord.warehouse_name}
+                    </span>
+                  )}
+                </div>
+
+                {/* Total & Payment Status Row */}
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">{t('orders.totalAmount')}:</span>
+                    <span className="font-mono font-extrabold text-slate-900 dark:text-neutral-100 text-sm">
+                      {formatCurrency(ord.total, 'TOMAN', isPersian)}
+                    </span>
+                  </div>
+                  <div className="shrink-0">
+                    {getPaymentStatusBadge(ord.payment_status)}
+                  </div>
+                </div>
+
+                {/* Bottom Actions Row */}
+                <div className="flex items-center justify-between gap-1 pt-1 border-t border-neutral-100 dark:border-neutral-800/80">
+                  <div className="flex items-center gap-1">
+                    {ord.payment_status === 'pending' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenSettleModal(ord)}
+                        icon={<CreditCard className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                        className="h-8 px-2 text-xs border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                      >
+                        تسویه
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDirectPrintOrder(ord)}
+                      icon={<Printer className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                      className="h-8 px-2.5 text-xs"
+                    >
+                      {t('orders.print')}
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenOrderDetails(ord)}
+                      icon={<Eye className="w-3.5 h-3.5" />}
+                      className="h-8 px-2.5 text-xs"
+                    >
+                      {t('common.details')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                      onClick={() => handleDeleteOrder(ord)}
+                      icon={<Trash2 className="w-3.5 h-3.5" />}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))
           )}
-        />
+        </div>
       </Card>
 
       {/* Modal: Comprehensive Order Details & Product Items List & Printing */}

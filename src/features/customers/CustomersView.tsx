@@ -269,34 +269,32 @@ export const CustomersView: React.FC = () => {
         }
       />
 
-      {/* Search Toolbar */}
-      <Card className="p-4">
-        <div className="max-w-md">
-          <Input
-            placeholder={t('customers.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            icon={<Search className="w-4 h-4" />}
-          />
+      {/* Unified Customers Container */}
+      <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
+        {/* Search Toolbar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-5">
+          <div className="w-full sm:w-80">
+            <Input
+              placeholder={t('customers.searchPlaceholder')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              icon={<Search className="w-4 h-4" />}
+            />
+          </div>
         </div>
-      </Card>
 
-      {/* Customers Data Table */}
-      <Card className="p-0 overflow-hidden">
-        <DataTable<Customer>
-          data={filteredCustomers}
-          keyExtractor={(c) => c.id}
-          isLoading={isLoading}
-          emptyMessage={t('customers.emptyMessage')}
-          columns={[
-            {
-              key: 'name',
-              header: t('customers.customerName'),
-              render: (c) => (
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-center text-slate-700 dark:text-neutral-300 font-bold text-xs shrink-0">
-                    <User className="w-4 h-4" />
-                  </div>
+        {/* 1. Desktop Tabular View */}
+        <div className="hidden md:block">
+          <DataTable<Customer>
+            data={filteredCustomers}
+            keyExtractor={(c) => c.id}
+            isLoading={isLoading}
+            emptyMessage={t('customers.emptyMessage')}
+            columns={[
+              {
+                key: 'name',
+                header: t('customers.customerName'),
+                render: (c) => (
                   <div>
                     <span className="font-bold text-slate-900 dark:text-neutral-100 text-xs sm:text-sm">{c.name}</span>
                     {c.date_created && (
@@ -305,88 +303,195 @@ export const CustomersView: React.FC = () => {
                       </div>
                     )}
                   </div>
-                </div>
-              ),
-            },
-            {
-              key: 'phone',
-              header: t('customers.phone'),
-              render: (c) => (
-                <div className="flex items-center gap-1.5 font-mono text-xs text-slate-700 dark:text-neutral-300">
-                  <Phone className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-500" />
-                  {c.phone || '-'}
-                </div>
-              ),
-            },
-            {
-              key: 'email',
-              header: t('customers.emailOrAddress'),
-              render: (c) => (
-                <div className="text-xs text-slate-600 dark:text-neutral-400 truncate max-w-xs">
-                  {c.email && (
-                    <div className="flex items-center gap-1 font-mono text-[11px]">
-                      <Mail className="w-3 h-3 text-slate-400 dark:text-neutral-500" />
-                      {c.email}
+                ),
+              },
+              {
+                key: 'phone',
+                header: t('customers.phone'),
+                render: (c) => (
+                  <div className="flex items-center gap-1.5 font-mono text-xs text-slate-700 dark:text-neutral-300">
+                    <Phone className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-500" />
+                    {c.phone || '-'}
+                  </div>
+                ),
+              },
+              {
+                key: 'email',
+                header: t('customers.emailOrAddress'),
+                render: (c) => (
+                  <div className="text-xs text-slate-600 dark:text-neutral-400 truncate max-w-xs">
+                    {c.email && (
+                      <div className="flex items-center gap-1 font-mono text-[11px]">
+                        <Mail className="w-3 h-3 text-slate-400 dark:text-neutral-500" />
+                        {c.email}
+                      </div>
+                    )}
+                    {c.address && (
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-neutral-400 truncate">
+                        <MapPin className="w-3 h-3 text-slate-400 dark:text-neutral-500 shrink-0" />
+                        {c.address}
+                      </div>
+                    )}
+                    {!c.email && !c.address && '-'}
+                  </div>
+                ),
+              },
+              {
+                key: 'orders',
+                header: t('customers.ordersCountAndTotal'),
+                render: (c) => {
+                  const stats = getCustomerOrderStats(c.id);
+                  return (
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-neutral-100 text-xs font-mono">
+                        {formatCurrency(stats.totalSpent, activeOrganization?.currency, isPersian)}
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
+                        {stats.count} {t('customers.ordersCountLabel')}
+                      </div>
                     </div>
-                  )}
-                  {c.address && (
-                    <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-neutral-400 truncate">
-                      <MapPin className="w-3 h-3 text-slate-400 dark:text-neutral-500 shrink-0" />
-                      {c.address}
+                  );
+                },
+              },
+            ]}
+            actions={(c) => (
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenHistory(c)}
+                  icon={<History className="w-3.5 h-3.5" />}
+                >
+                  {t('customers.history')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenModal(c)}
+                  icon={<Edit className="w-3.5 h-3.5" />}
+                >
+                  {t('common.edit')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                  onClick={() => handleDeleteCustomer(c)}
+                  icon={<Trash2 className="w-3.5 h-3.5" />}
+                >
+                  {t('common.delete')}
+                </Button>
+              </div>
+            )}
+          />
+        </div>
+
+        {/* 2. Mobile Responsive Cards View */}
+        <div className="block md:hidden space-y-3">
+          {isLoading ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.loading')}
+            </div>
+          ) : filteredCustomers.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('customers.emptyMessage')}
+            </div>
+          ) : (
+            filteredCustomers.map((c) => {
+              const stats = getCustomerOrderStats(c.id);
+
+              return (
+                <div
+                  key={`mob_cust_${c.id}`}
+                  className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#181a20] p-4 shadow-sm space-y-3 transition-all"
+                >
+                  {/* Top: Customer Name + Membership Date */}
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-bold text-slate-900 dark:text-neutral-100 text-sm">
+                      {c.name}
+                    </h3>
+                    {c.date_created && (
+                      <span className="text-[10px] text-slate-400 dark:text-neutral-500 font-mono">
+                        {t('customers.membership')}: {formatDate(c.date_created, isPersian)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Contact Info (Phone, Email, Address) */}
+                  <div className="space-y-1.5 text-xs text-slate-600 dark:text-neutral-300">
+                    {c.phone && (
+                      <div className="flex items-center gap-1.5 font-mono">
+                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                        <a href={`tel:${c.phone}`} className="hover:underline text-indigo-600 dark:text-indigo-400 font-bold">
+                          {c.phone}
+                        </a>
+                      </div>
+                    )}
+                    {c.email && (
+                      <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-500 dark:text-neutral-400">
+                        <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{c.email}</span>
+                      </div>
+                    )}
+                    {c.address && (
+                      <div className="flex items-start gap-1.5 text-[11px] text-slate-500 dark:text-neutral-400">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                        <span className="line-clamp-2">{c.address}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Orders Summary Matrix */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">{t('customers.totalSpent')}:</span>
+                      <span className="font-mono font-extrabold text-slate-900 dark:text-neutral-100 text-sm">
+                        {formatCurrency(stats.totalSpent, activeOrganization?.currency, isPersian)}
+                      </span>
                     </div>
-                  )}
-                  {!c.email && !c.address && '-'}
-                </div>
-              ),
-            },
-            {
-              key: 'orders',
-              header: t('customers.ordersCountAndTotal'),
-              render: (c) => {
-                const stats = getCustomerOrderStats(c.id);
-                return (
-                  <div>
-                    <div className="font-bold text-slate-900 dark:text-neutral-100 text-xs font-mono">
-                      {formatCurrency(stats.totalSpent, activeOrganization?.currency, isPersian)}
-                    </div>
-                    <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
-                      {stats.count} {t('customers.ordersCountLabel')}
+
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-bold text-xs font-mono">
+                      <ShoppingBag className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                      <span>{isPersian ? toPersianDigits(stats.count) : stats.count} {t('customers.ordersCountLabel')}</span>
+                    </span>
+                  </div>
+
+                  {/* Actions Row */}
+                  <div className="flex items-center justify-between gap-1 pt-1 border-t border-neutral-100 dark:border-neutral-800/80">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenHistory(c)}
+                      icon={<History className="w-3.5 h-3.5" />}
+                      className="h-8 px-2.5 text-xs"
+                    >
+                      {t('customers.history')}
+                    </Button>
+
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenModal(c)}
+                        icon={<Edit className="w-3.5 h-3.5" />}
+                        className="h-8 px-2.5 text-xs"
+                      >
+                        {t('common.edit')}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                        onClick={() => handleDeleteCustomer(c)}
+                        icon={<Trash2 className="w-3.5 h-3.5" />}
+                      />
                     </div>
                   </div>
-                );
-              },
-            },
-          ]}
-          actions={(c) => (
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleOpenHistory(c)}
-                icon={<History className="w-3.5 h-3.5" />}
-              >
-                {t('customers.history')}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleOpenModal(c)}
-                icon={<Edit className="w-3.5 h-3.5" />}
-              >
-                {t('common.edit')}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                onClick={() => handleDeleteCustomer(c)}
-                icon={<Trash2 className="w-3.5 h-3.5" />}
-              >
-                {t('common.delete')}
-              </Button>
-            </div>
+                </div>
+              );
+            })
           )}
-        />
+        </div>
       </Card>
 
       {/* Modal: Create/Edit Customer */}

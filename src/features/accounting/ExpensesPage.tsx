@@ -350,7 +350,7 @@ export const ExpensesPage: React.FC = () => {
         </div>
       </Card>
 
-      {/* Expenses Table */}
+      {/* Expenses Table & Mobile Card View */}
       <Card className="border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
         {loading ? (
           <div className="py-12 flex justify-center items-center text-xs text-neutral-500">
@@ -368,83 +368,131 @@ export const ExpensesPage: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-start">
-              <thead className="bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-500">
-                <tr>
-                  <th className="py-3 px-4 text-start font-semibold">عنوان و شرح هزینه</th>
-                  <th className="py-3 px-4 text-start font-semibold">سرفصل</th>
-                  <th className="py-3 px-4 text-start font-semibold">تاریخ ثبت</th>
-                  <th className="py-3 px-4 text-start font-semibold">روش پرداخت</th>
-                  <th className="py-3 px-4 text-start font-semibold">طرف‌حساب / دریافت‌کننده</th>
-                  <th className="py-3 px-4 text-start font-semibold">مبلغ</th>
-                  <th className="py-3 px-4 text-center font-semibold">عملیات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
-                {filteredExpenses.map((exp) => (
-                  <tr key={exp.id} className="hover:bg-neutral-50/60 dark:hover:bg-neutral-800/40 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="font-bold text-neutral-900 dark:text-neutral-100">
-                        {exp.title}
-                      </div>
-                      {exp.description && (
-                        <div className="text-[11px] text-neutral-400 mt-0.5 line-clamp-1">
-                          {exp.description}
-                        </div>
-                      )}
-                      {exp.reference_code && (
-                        <div className="text-[10px] text-neutral-400 mt-0.5 font-mono">
-                          کد پیگیری: {exp.reference_code}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge variant="neutral">
-                        {exp.category_title || 'سایر هزینه‌ها'}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4 font-mono text-neutral-600 dark:text-neutral-300">
-                      {formatPersianDate(exp.expense_date)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-[11px] text-neutral-600 dark:text-neutral-400">
-                        {exp.payment_method === 'cash' && 'نقدی / تنخواه'}
-                        {exp.payment_method === 'card_transfer' && 'کارت به کارت / پایا'}
-                        {exp.payment_method === 'cheque' && 'چک'}
-                        {exp.payment_method === 'bank_account' && 'حساب بانکی'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-neutral-700 dark:text-neutral-300">
-                      {exp.paid_to || '-'}
-                    </td>
-                    <td className="py-3 px-4 font-bold text-rose-600 dark:text-rose-400 font-mono">
-                      {formatCurrency(exp.amount)}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenEditExpense(exp)}
-                          title="ویرایش"
-                          icon={<Edit2 className="w-3.5 h-3.5" />}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => exp.id && handleDeleteExpense(exp.id)}
-                          title="حذف"
-                          className="text-rose-500 hover:text-rose-700"
-                          icon={<Trash2 className="w-3.5 h-3.5" />}
-                        />
-                      </div>
-                    </td>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-xs text-start">
+                <thead className="bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-500">
+                  <tr>
+                    <th className="py-3 px-4 text-start font-semibold">عنوان و شرح هزینه</th>
+                    <th className="py-3 px-4 text-start font-semibold">سرفصل</th>
+                    <th className="py-3 px-4 text-start font-semibold">تاریخ ثبت</th>
+                    <th className="py-3 px-4 text-start font-semibold">روش پرداخت</th>
+                    <th className="py-3 px-4 text-start font-semibold">طرف‌حساب / دریافت‌کننده</th>
+                    <th className="py-3 px-4 text-start font-semibold">مبلغ</th>
+                    <th className="py-3 px-4 text-center font-semibold">عملیات</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
+                  {filteredExpenses.map((exp) => (
+                    <tr key={exp.id} className="hover:bg-neutral-50/60 dark:hover:bg-neutral-800/40 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-neutral-900 dark:text-neutral-100">
+                          {exp.title}
+                        </div>
+                        {exp.description && (
+                          <div className="text-[11px] text-neutral-400 mt-0.5 line-clamp-1">
+                            {exp.description}
+                          </div>
+                        )}
+                        {exp.reference_code && (
+                          <div className="text-[10px] text-neutral-400 mt-0.5 font-mono">
+                            کد پیگیری: {exp.reference_code}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge variant="neutral">
+                          {exp.category_title || 'سایر هزینه‌ها'}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4 font-mono text-neutral-600 dark:text-neutral-300">
+                        {formatPersianDate(exp.expense_date)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-[11px] text-neutral-600 dark:text-neutral-400">
+                          {exp.payment_method === 'cash' && 'نقدی / تنخواه'}
+                          {exp.payment_method === 'card_transfer' && 'کارت به کارت / پایا'}
+                          {exp.payment_method === 'cheque' && 'چک'}
+                          {exp.payment_method === 'bank_account' && 'حساب بانکی'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-neutral-700 dark:text-neutral-300">
+                        {exp.paid_to || '-'}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-rose-600 dark:text-rose-400 font-mono">
+                        {formatCurrency(exp.amount)}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEditExpense(exp)}
+                            title="ویرایش"
+                            icon={<Edit2 className="w-3.5 h-3.5" />}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => exp.id && handleDeleteExpense(exp.id)}
+                            title="حذف"
+                            className="text-rose-500 hover:text-rose-700"
+                            icon={<Trash2 className="w-3.5 h-3.5" />}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card List View */}
+            <div className="md:hidden divide-y divide-neutral-100 dark:divide-neutral-800/80 p-2 sm:p-3 space-y-2">
+              {filteredExpenses.map((exp) => (
+                <div key={exp.id} className="p-3 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/40 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="text-xs font-bold text-neutral-900 dark:text-white">{exp.title}</h4>
+                      {exp.description && (
+                        <p className="text-[11px] text-neutral-500 mt-0.5 line-clamp-1">{exp.description}</p>
+                      )}
+                    </div>
+                    <span className="font-mono font-bold text-rose-600 dark:text-rose-400 text-xs shrink-0">
+                      {formatCurrency(exp.amount)}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] pt-2 border-t border-neutral-200/60 dark:border-neutral-700/60">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge variant="neutral">{exp.category_title || 'سایر هزینه‌ها'}</Badge>
+                      <span className="text-neutral-400">·</span>
+                      <span className="font-mono text-neutral-500">{formatPersianDate(exp.expense_date)}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenEditExpense(exp)}
+                        title="ویرایش"
+                        icon={<Edit2 className="w-3.5 h-3.5" />}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => exp.id && handleDeleteExpense(exp.id)}
+                        title="حذف"
+                        className="text-rose-500 hover:text-rose-700"
+                        icon={<Trash2 className="w-3.5 h-3.5" />}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </Card>
 

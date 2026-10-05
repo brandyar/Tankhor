@@ -222,7 +222,7 @@ export const VariantsView: React.FC = () => {
         subtitle={t('products.variantsSubtitle')}
       />
 
-      <Card>
+      <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
           <div className="w-full sm:w-80">
             <Input
@@ -234,34 +234,144 @@ export const VariantsView: React.FC = () => {
           </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          data={variants}
-          keyExtractor={(v) => v.id}
-          isLoading={isLoading}
-          actions={(v) => (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
-                onClick={() => handleOpenEdit(v)}
-                title={t('products.editVariantTitle')}
-              >
-                <Edit className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={() => handleDeleteVariant(v.id)}
-                title={t('common.delete')}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
+        {/* 1. Desktop Tabular View */}
+        <div className="hidden md:block">
+          <DataTable
+            columns={columns}
+            data={variants}
+            keyExtractor={(v) => v.id}
+            isLoading={isLoading}
+            actions={(v) => (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                  onClick={() => handleOpenEdit(v)}
+                  title={t('products.editVariantTitle')}
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                  onClick={() => handleDeleteVariant(v.id)}
+                  title={t('common.delete')}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          />
+        </div>
+
+        {/* 2. Mobile Responsive Cards View */}
+        <div className="block md:hidden space-y-3">
+          {isLoading ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.loading')}
             </div>
+          ) : variants.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.noData')}
+            </div>
+          ) : (
+            variants.map((v) => {
+              const color = colors.find((c) => c.id === (typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id));
+              const size = sizes.find((s) => s.id === (typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id));
+
+              return (
+                <div
+                  key={`mob_var_${v.id}`}
+                  className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#13151a] p-4 shadow-sm space-y-3 transition-all"
+                >
+                  {/* Top: Image + Title + SKU + Stock Badge */}
+                  <div className="flex items-start gap-3">
+                    <ProductImage
+                      src={v.image}
+                      alt={v.sku}
+                      fallbackText={v.sku}
+                      containerClassName="w-12 h-12 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shrink-0 border border-neutral-200 dark:border-neutral-700 shadow-2xs"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-extrabold text-neutral-900 dark:text-neutral-100 font-mono text-xs tracking-wider">
+                            {v.sku}
+                          </p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-300 font-medium mt-0.5 line-clamp-1">
+                            {v.product_title || '-'}
+                          </p>
+                        </div>
+                        <Badge variant={(v.stock_quantity || 0) > 0 ? 'success' : 'danger'} className="shrink-0 text-[10px]">
+                          {isPersian ? toPersianDigits(v.stock_quantity || 0) : (v.stock_quantity || 0)} {t('products.unitItems')}
+                        </Badge>
+                      </div>
+
+                      {/* Color & Size Pills */}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        {(v.color_name || color) && (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                            {color && (
+                              <span
+                                className="w-2.5 h-2.5 rounded-full border border-neutral-300 dark:border-neutral-600 shrink-0"
+                                style={{ backgroundColor: color.hex || '#000000' }}
+                              />
+                            )}
+                            <span>{v.color_name || color?.name}</span>
+                          </span>
+                        )}
+
+                        {(v.size_name || size) && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/70 dark:border-indigo-800/60 text-xs font-bold text-indigo-700 dark:text-indigo-300 font-mono">
+                            {v.size_name || size?.name}
+                          </span>
+                        )}
+
+                        {v.barcode && (
+                          <span className="inline-flex items-center gap-1 font-mono text-[11px] text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-900 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-800">
+                            <BarcodeIcon className="w-2.5 h-2.5 text-neutral-400" />
+                            {isPersian ? toPersianDigits(v.barcode) : v.barcode}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Financial & Stock Details Row */}
+                  <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800 text-xs">
+                    <div>
+                      <span className="text-[11px] text-neutral-400 block">{t('products.sellingPrice')}:</span>
+                      <span className="font-extrabold text-slate-900 dark:text-neutral-100 text-sm">
+                        {formatCurrency(v.price, activeOrganization?.currency, isPersian)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 px-2.5 py-1 h-8"
+                        onClick={() => handleOpenEdit(v)}
+                        icon={<Edit className="w-3.5 h-3.5" />}
+                      >
+                        {t('common.edit')}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 px-2 py-1 h-8"
+                        onClick={() => handleDeleteVariant(v.id)}
+                        icon={<Trash2 className="w-3.5 h-3.5" />}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })
           )}
-        />
+        </div>
       </Card>
 
       {/* Edit Variant Modal */}

@@ -392,102 +392,202 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
         }
       />
 
-      <Card className="p-4">
-        <div className="max-w-md">
-          <Input
-            placeholder={t('purchasing.searchPOPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            icon={<Search className="w-4 h-4" />}
-          />
+      {/* Unified Purchase Orders Container */}
+      <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
+        {/* Search Toolbar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-5">
+          <div className="w-full sm:w-80">
+            <Input
+              placeholder={t('purchasing.searchPOPlaceholder')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              icon={<Search className="w-4 h-4" />}
+            />
+          </div>
         </div>
-      </Card>
 
-      <Card className="p-0 overflow-hidden">
-        <DataTable<PurchaseOrder>
-          data={filteredPOs}
-          keyExtractor={(po) => po.id}
-          isLoading={isLoading}
-          emptyMessage={t('purchasing.noPOsFound')}
-          columns={[
-            {
-              key: 'purchase_number',
-              header: t('purchasing.poNumber'),
-              render: (po) => (
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-mono font-bold text-xs shrink-0">
-                    <Truck className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <span className="font-mono font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
-                      {po.purchase_number}
-                    </span>
-                    <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
-                      {formatDate(po.date_created, isPersian)}
+        {/* 1. Desktop Tabular View */}
+        <div className="hidden md:block">
+          <DataTable<PurchaseOrder>
+            data={filteredPOs}
+            keyExtractor={(po) => po.id}
+            isLoading={isLoading}
+            emptyMessage={t('purchasing.noPOsFound')}
+            columns={[
+              {
+                key: 'purchase_number',
+                header: t('purchasing.poNumber'),
+                render: (po) => (
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-mono font-bold text-xs shrink-0">
+                      <Truck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-mono font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
+                        {po.purchase_number}
+                      </span>
+                      <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
+                        {formatDate(po.date_created, isPersian)}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ),
-            },
-            {
-              key: 'supplier_id',
-              header: t('purchasing.supplier'),
-              render: (po) => (
-                <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">{po.supplier_name}</span>
-              ),
-            },
-            {
-              key: 'total',
-              header: t('purchasing.poTotalInvoice'),
-              render: (po) => (
-                <span className="font-bold font-mono text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm">
-                  {formatCurrency(po.total, activeOrganization?.currency, isPersian)}
-                </span>
-              ),
-            },
-            {
-              key: 'status',
-              header: t('purchasing.poStatus'),
-              render: (po) => getPOStatusBadge(po.status),
-            },
-          ]}
-          actions={(po) => (
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedPO(po);
-                  setIsDetailModalOpen(true);
-                }}
-                icon={<Eye className="w-3.5 h-3.5" />}
-              >
-                {t('purchasing.poDetails')}
-              </Button>
-
-              {po.status === 'ordered' && (
+                ),
+              },
+              {
+                key: 'supplier_id',
+                header: t('purchasing.supplier'),
+                render: (po) => (
+                  <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">{po.supplier_name}</span>
+                ),
+              },
+              {
+                key: 'total',
+                header: t('purchasing.poTotalInvoice'),
+                render: (po) => (
+                  <span className="font-bold font-mono text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm">
+                    {formatCurrency(po.total, activeOrganization?.currency, isPersian)}
+                  </span>
+                ),
+              },
+              {
+                key: 'status',
+                header: t('purchasing.poStatus'),
+                render: (po) => getPOStatusBadge(po.status),
+              },
+            ]}
+            actions={(po) => (
+              <div className="flex items-center justify-end gap-2">
                 <Button
-                  variant="primary"
+                  variant="outline"
                   size="sm"
-                  onClick={() => handleUpdateStatus(po, 'received')}
-                  icon={<PackageCheck className="w-3.5 h-3.5" />}
+                  onClick={() => {
+                    setSelectedPO(po);
+                    setIsDetailModalOpen(true);
+                  }}
+                  icon={<Eye className="w-3.5 h-3.5" />}
                 >
-                  {t('purchasing.poReceiveStock')}
+                  {t('purchasing.poDetails')}
                 </Button>
-              )}
 
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                onClick={() => handleDeletePO(po)}
-                icon={<Trash2 className="w-3.5 h-3.5" />}
-              >
-                {t('common.delete')}
-              </Button>
+                {po.status === 'ordered' && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleUpdateStatus(po, 'received')}
+                    icon={<PackageCheck className="w-3.5 h-3.5" />}
+                  >
+                    {t('purchasing.poReceiveStock')}
+                  </Button>
+                )}
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                  onClick={() => handleDeletePO(po)}
+                  icon={<Trash2 className="w-3.5 h-3.5" />}
+                >
+                  {t('common.delete')}
+                </Button>
+              </div>
+            )}
+          />
+        </div>
+
+        {/* 2. Mobile Responsive Cards View */}
+        <div className="block md:hidden space-y-3">
+          {isLoading ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('common.loading')}
             </div>
+          ) : filteredPOs.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
+              {t('purchasing.noPOsFound')}
+            </div>
+          ) : (
+            filteredPOs.map((po) => (
+              <div
+                key={`mob_po_${po.id}`}
+                className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#181a20] p-4 shadow-sm space-y-3 transition-all"
+              >
+                {/* Header: PO Number + Date + Status */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                      <Truck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 dark:text-neutral-100 text-sm font-mono tracking-wide">
+                        {po.purchase_number}
+                      </h3>
+                      <p className="text-[11px] text-slate-400 dark:text-neutral-500 font-mono mt-0.5">
+                        {formatDate(po.date_created, isPersian)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    {getPOStatusBadge(po.status)}
+                  </div>
+                </div>
+
+                {/* Supplier info */}
+                <div className="flex items-center justify-between text-xs pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-neutral-200 truncate">
+                    <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">{po.supplier_name}</span>
+                  </div>
+                </div>
+
+                {/* Total Invoice Amount */}
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800">
+                  <span className="text-[11px] text-slate-500 dark:text-neutral-400">{t('purchasing.poTotalInvoice')}:</span>
+                  <span className="font-mono font-extrabold text-emerald-700 dark:text-emerald-400 text-sm">
+                    {formatCurrency(po.total, activeOrganization?.currency, isPersian)}
+                  </span>
+                </div>
+
+                {/* Bottom Actions Row */}
+                <div className="flex items-center justify-between gap-1 pt-1 border-t border-neutral-100 dark:border-neutral-800/80">
+                  <div className="flex items-center gap-1">
+                    {po.status === 'ordered' && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleUpdateStatus(po, 'received')}
+                        icon={<PackageCheck className="w-3.5 h-3.5" />}
+                        className="h-8 px-2.5 text-xs"
+                      >
+                        {t('purchasing.poReceiveStock')}
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedPO(po);
+                        setIsDetailModalOpen(true);
+                      }}
+                      icon={<Eye className="w-3.5 h-3.5" />}
+                      className="h-8 px-2.5 text-xs"
+                    >
+                      {t('purchasing.poDetails')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                      onClick={() => handleDeletePO(po)}
+                      icon={<Trash2 className="w-3.5 h-3.5" />}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))
           )}
-        />
+        </div>
       </Card>
 
       {/* Modal Create PO */}
