@@ -434,11 +434,11 @@ export const PurchaseModuleModal: React.FC<PurchaseModuleModalProps> = ({
                     <>
                       <div className="flex items-center gap-2">
                         <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                        <span>کارکرد مستقل و آفلاین بدون نیاز به اتصال دائم اینترنت</span>
+                        <span>کارکرد یکپارچه و همگام در نسخه تحت وب و نرم‌افزار دسکتاپ</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                        <span>لایسنس دائمی و امن متصل به شناسه سخت‌افزاری دستگاه</span>
+                        <span>لایسنس دائمی و مادام‌العمر برای سازمان بدون هزینه شارژ دوره‌ای</span>
                       </div>
                     </>
                   )}
@@ -451,7 +451,7 @@ export const PurchaseModuleModal: React.FC<PurchaseModuleModalProps> = ({
                   <Cpu className="w-4 h-4 text-sky-500 shrink-0" />
                   <div>
                     <span className="text-neutral-500 dark:text-neutral-400 block text-[11px]">
-                      شناسه سخت‌افزاری سیستم شما:
+                      شناسه دستگاه شما (جهت صدور لایسنس):
                     </span>
                     <span className="font-mono font-bold text-neutral-800 dark:text-neutral-200 dir-ltr inline-block">
                       {hardwareId}

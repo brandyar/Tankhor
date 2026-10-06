@@ -52,6 +52,8 @@ import {
   MessageSquare,
   Store,
   Sparkles,
+  PackageX,
+  TrendingUp,
 } from 'lucide-react';
 import { UserProfileModal } from '../modals/UserProfileModal';
 import { FeedbackModal } from '../modals/FeedbackModal';
@@ -121,6 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     products: false,
     purchasing: false,
     accounting: false,
+    reports: false,
     online_catalog: false,
     woocommerce: false,
     settings: false,
@@ -161,6 +164,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (route === 'sales/catalog' && (currentRoute === 'catalog' || currentRoute === 'online_catalog')) return true;
     if (route.startsWith('sales/catalog') && currentRoute === route) return true;
     if (route.startsWith('accounting') && currentRoute === route) return true;
+    if (route.startsWith('reports') && currentRoute === route) return true;
+    if (route === 'reports/sales' && (currentRoute === 'reports' || currentRoute === 'reports/sales-profit')) return true;
     return false;
   };
 
@@ -258,11 +263,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
       : []),
     {
       key: 'reports',
-      label: t('navigation.reportsGroup', 'گزارشات'),
+      label: t('navigation.reportsGroup', 'گزارش‌ها و تحلیل‌ها'),
       icon: BarChart3,
-      route: 'reports/apparel',
-      isSingle: true,
-      visible: permissions.canViewOrders || permissions.canViewFinancials,
+      visible: permissions.canViewOrders || permissions.canViewFinancials || permissions.canViewProducts || permissions.canViewInventory,
+      items: [
+        {
+          route: 'reports/sales',
+          label: t('navigation.salesProfitReport', 'فروش و سودآوری'),
+          icon: TrendingUp,
+          visible: permissions.canViewOrders || permissions.canViewFinancials,
+        },
+        {
+          route: 'reports/apparel',
+          label: t('navigation.apparelReport', 'تحلیل اقلام و مد'),
+          icon: Shirt,
+          visible: permissions.canViewOrders || permissions.canViewProducts,
+        },
+        {
+          route: 'reports/inventory',
+          label: t('navigation.inventoryPerformanceReport', 'عملکرد انبار و راکدی'),
+          icon: PackageX,
+          visible: permissions.canViewInventory,
+        },
+      ].filter((i) => i.visible !== false),
     },
     ...(hasOnlineCatalogAccess
       ? [
@@ -316,12 +339,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               },
             ]
           : []),
-        {
-          route: 'action:feedback',
-          label: t('common.feedback', 'ارسال بازخورد'),
-          icon: MessageSquare,
-          visible: true,
-        },
       ].filter((i) => i.visible !== false),
     },
   ];
@@ -839,6 +856,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 );
               })}
             </div>
+          )}
+
+          {/* Feedback Option (Inside main menu, at the bottom of the list) */}
+          {!isCollapsed ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsFeedbackModalOpen(true);
+                if (onMobileClose) onMobileClose();
+              }}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer text-neutral-400 hover:text-white hover:bg-white/5 font-medium group"
+              title={t('common.feedback', 'ارسال بازخورد')}
+            >
+              <MessageSquare className="w-4 h-4 shrink-0 text-neutral-400 group-hover:text-amber-400 transition-colors" />
+              <span className="truncate">{t('common.feedback', 'ارسال بازخورد')}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsFeedbackModalOpen(true)}
+              onMouseEnter={(e) => handleMouseEnter('feedback', t('common.feedback', 'ارسال بازخورد'), e, undefined, true)}
+              onMouseLeave={handleMouseLeave}
+              className="w-11 h-11 mx-auto rounded-xl flex items-center justify-center transition-all cursor-pointer text-neutral-400 hover:text-white hover:bg-white/5 group"
+              title={t('common.feedback', 'ارسال بازخورد')}
+            >
+              <MessageSquare className="w-5 h-5 text-neutral-400 group-hover:text-amber-400 transition-colors" />
+            </button>
           )}
         </nav>
 

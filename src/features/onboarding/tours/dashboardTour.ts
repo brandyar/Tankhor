@@ -4,7 +4,9 @@ import { TourDefinition } from '../types';
 export const dashboardTour: TourDefinition = {
   name: 'dashboard',
   getSteps: (t: (key: string, paramsOrFallback?: any, fallback?: string) => string, isRtl: boolean): DriveStep[] => {
-    return [
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+
+    const steps: DriveStep[] = [
       // Step 1: Welcome & Dashboard KPI Ribbon
       {
         element: '#tour-dashboard-ribbon',
@@ -31,46 +33,70 @@ export const dashboardTour: TourDefinition = {
           align: 'center',
         },
       },
-      // Step 3: Products & Catalog
-      {
-        element: '#tour-nav-products',
+    ];
+
+    if (isMobile) {
+      // Step 3 (Mobile): Mobile Navigation Hamburger Menu
+      steps.push({
+        element: '#tour-mobile-menu-btn',
         popover: {
-          title: t('onboarding.dashboard.products.title', 'محصولات و کاتالوگ تخصصی پوشاک'),
+          title: t('onboarding.dashboard.mobileNavigation.title', 'منوی ناوبری و دسترسی‌ها'),
           description: t(
-            'onboarding.dashboard.products.description',
-            'مدیریت ماتریس تنوع رنگ و سایز، راهنمای سایز تعاملی، ویژگی‌ها، دسته‌بندی‌ها، فصل‌ها و برندها با معماری مختص صنعت مد و لباس.'
+            'onboarding.dashboard.mobileNavigation.description',
+            'در نسخه موبایل، برای دسترسی به بخش‌های محصولات و کاتالوگ، انبارداری، سفارشات، حسابداری، گزارش‌ها و تنظیمات، این منو را لمس کنید.'
           ),
-          side: isRtl ? 'left' : 'right',
-          align: 'start',
+          side: 'bottom',
+          align: isRtl ? 'start' : 'end',
         },
-      },
-      // Step 4: Inventory & Multi-Warehouse
-      {
-        element: '#tour-nav-inventory',
-        popover: {
-          title: t('onboarding.dashboard.inventory.title', 'انبارداری، موجودی و چاپ بارکد'),
-          description: t(
-            'onboarding.dashboard.inventory.description',
-            'کنترل موجودی انبارها، انتقال بین انبارها، رهگیری اسناد ورود و خروج، هشدارهای کسری موجودی و طراحی و چاپ بارکد و لیبل استاندارد.'
-          ),
-          side: isRtl ? 'left' : 'right',
-          align: 'start',
+      });
+    } else {
+      // Step 3, 4, 5 (Desktop): Sidebar Menu Items
+      steps.push(
+        // Products & Catalog
+        {
+          element: '#tour-nav-products',
+          popover: {
+            title: t('onboarding.dashboard.products.title', 'محصولات و کاتالوگ تخصصی پوشاک'),
+            description: t(
+              'onboarding.dashboard.products.description',
+              'مدیریت ماتریس تنوع رنگ و سایز، راهنمای سایز تعاملی، ویژگی‌ها، دسته‌بندی‌ها، فصل‌ها و برندها با معماری مختص صنعت مد و لباس.'
+            ),
+            side: isRtl ? 'left' : 'right',
+            align: 'start',
+          },
         },
-      },
-      // Step 5: Orders & Sales
-      {
-        element: '#tour-nav-orders',
-        popover: {
-          title: t('onboarding.dashboard.orders.title', 'فروش، فاکتور و مشتریان'),
-          description: t(
-            'onboarding.dashboard.orders.description',
-            'ثبت و صدور فاکتور فروش، کسر آنی موجودی، تسویه حساب‌های نقدی/پوز، ثبت در دفتر معین مشتری و مدیریت ارتباط با خریداران.'
-          ),
-          side: isRtl ? 'left' : 'right',
-          align: 'start',
+        // Inventory & Multi-Warehouse
+        {
+          element: '#tour-nav-inventory',
+          popover: {
+            title: t('onboarding.dashboard.inventory.title', 'انبارداری، موجودی و چاپ بارکد'),
+            description: t(
+              'onboarding.dashboard.inventory.description',
+              'کنترل موجودی انبارها، انتقال بین انبارها، رهگیری اسناد ورود و خروج، هشدارهای کسری موجودی و طراحی و چاپ بارکد و لیبل استاندارد.'
+            ),
+            side: isRtl ? 'left' : 'right',
+            align: 'start',
+          },
         },
-      },
-      // Step 6: Analytics & Intelligence Charts
+        // Orders & Sales
+        {
+          element: '#tour-nav-orders',
+          popover: {
+            title: t('onboarding.dashboard.orders.title', 'فروش، فاکتور و مشتریان'),
+            description: t(
+              'onboarding.dashboard.orders.description',
+              'ثبت و صدور فاکتور فروش، کسر آنی موجودی، تسویه حساب‌های نقدی/پوز، ثبت در دفتر معین مشتری و مدیریت ارتباط با خریداران.'
+            ),
+            side: isRtl ? 'left' : 'right',
+            align: 'start',
+          },
+        }
+      );
+    }
+
+    // Common remaining steps: Analytics & Header Organization
+    steps.push(
+      // Analytics & Intelligence Charts
       {
         element: '#tour-analytics-charts',
         popover: {
@@ -83,7 +109,7 @@ export const dashboardTour: TourDefinition = {
           align: 'center',
         },
       },
-      // Step 7: Organization & Cloud Sync
+      // Organization & Cloud Sync
       {
         element: '#tour-header-org',
         popover: {
@@ -95,7 +121,9 @@ export const dashboardTour: TourDefinition = {
           side: 'bottom',
           align: isRtl ? 'start' : 'end',
         },
-      },
-    ];
+      }
+    );
+
+    return steps;
   },
 };

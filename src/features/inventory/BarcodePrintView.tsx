@@ -303,16 +303,11 @@ export const BarcodePrintView: React.FC = () => {
 
   if (!hasBarcodeAccess) {
     return (
-      <div className="space-y-6">
-        <PageHeader
-          title={t('inventory.barcodePrintTitle')}
-          subtitle={t('inventory.barcodePrintSubtitle')}
-        />
-        <ModuleLockedCard
-          moduleSlug="barcode"
-          moduleName={t('inventory.barcodePrintTitle')}
-        />
-      </div>
+      <ModuleLockedCard
+        moduleSlug="barcode"
+        moduleName={t('inventory.barcodePrintTitle')}
+        description={t('inventory.barcodePrintSubtitle')}
+      />
     );
   }
 

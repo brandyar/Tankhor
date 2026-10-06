@@ -1,7 +1,91 @@
 export const reportsFa = {
-  title: 'گزارش‌ها و تحلیل‌های تخصصی پوشاک',
-  subtitle: 'تحلیل جامع پرفروش‌ترین سایزها و رنگ‌ها و آنالیز تفکیکی سرمایه‌های راکد در انبار (Dead Stock)',
+  title: 'گزارش‌ها و تحلیل‌های مدیریتی',
+  subtitle: 'تحلیل جامع فروش و سودآوری، پرفروش‌ترین سایزها و رنگ‌ها و آنالیز سرمایه‌های راکد در انبار',
   printReportBtn: 'چاپ و خروجی گزارش',
+  
+  // Sub navigation tabs
+  tabSalesProfit: 'گزارش فروش و سودآوری',
+  tabApparel: 'تحلیل اقلام و کاتالوگ',
+  tabInventoryPerformance: 'عملکرد انبار و کالاهای راکد',
+
+  // Date ranges
+  rangePreset: 'بازه زمانی:',
+  rangeToday: 'امروز',
+  rangeYesterday: 'دیروز',
+  rangeLast7Days: '۷ روز اخیر',
+  rangeLast30Days: '۳۰ روز اخیر',
+  rangeThisMonth: 'این ماه',
+  rangeLastMonth: 'ماه گذشته',
+  rangeThisSeason: 'فصل جاری',
+  rangeThisYear: 'سال جاری',
+  rangeAllTime: 'کل دوره',
+  rangeCustom: 'بازه دلخواه',
+  fromDate: 'از تاریخ',
+  toDate: 'تا تاریخ',
+  applyFilter: 'اعمال فیلتر',
+
+  // Filters
+  filterStatus: 'وضعیت سفارش',
+  filterPayment: 'وضعیت پرداخت',
+  filterChannel: 'کانال فروش',
+  allStatuses: 'همه وضعیت‌ها',
+  allPayments: 'همه پرداخت‌ها',
+  allChannels: 'همه کانال‌ها',
+  channelOnline: 'آنلاین (کاتالوگ / وب)',
+  channelStore: 'حضوری / فروشگاه',
+
+  // Sales & Profit KPIs
+  grossSales: 'فروش ناخالص',
+  grossSalesDesc: 'مجموع مبالغ اقلام پیش از تخفیف',
+  discounts: 'تخفیف‌ها',
+  discountsDesc: 'مجموع تخفیف‌های اعطایی',
+  netSales: 'فروش خالص',
+  netSalesDesc: 'درآمد وصولی نهایی سفارشات',
+  cogs: 'بهای تمام‌شده (COGS)',
+  cogsDesc: 'ارزش خرید اقلام فروخته‌شده',
+  grossProfit: 'سود ناخالص',
+  grossProfitDesc: 'فروش خالص منهای بهای خرید',
+  profitMargin: 'حاشیه سود ناخالص',
+  profitMarginDesc: 'نسبت سود به فروش خالص',
+  totalOrdersCount: 'تعداد سفارشات',
+  averageOrderValue: 'میانگین هر سفارش (AOV)',
+  totalSoldUnits: 'تعداد اقلام فروخته‌شده',
+  
+  // Charts & Trends
+  salesTrendsTitle: 'روند زمانی فروش و سود ناخالص',
+  salesTrendsSubtitle: 'نمودار مقایسه‌ای درآمد فروش، بهای خرید کالا و سود ناخالص',
+  groupByDay: 'تفکیک روزانه',
+  groupByMonth: 'تفکیک ماهانه',
+  chartRevenue: 'درآمد فروش',
+  chartCost: 'بهای تمام‌شده',
+  chartProfit: 'سود ناخالص',
+  periodDate: 'تاریخ',
+
+  // Category & Product Breakdown
+  categoryProfitTitle: 'سهم سود به تفکیک دسته‌بندی‌ها',
+  categoryProfitSubtitle: 'میزان سودآوری و درآمد هر گروه کالایی',
+  topProfitableProductsTitle: 'سودآورترین کالاها و تنوع‌ها',
+  topProfitableSubtitle: 'رتبه‌بندی محصولات بر اساس بیشترین سود ناخالص ایجادی',
+  colGrossSales: 'فروش ناخالص',
+  colNetSales: 'فروش خالص',
+  colCogs: 'بهای خرید',
+  colProfit: 'سود ناخالص',
+  colMargin: 'حاشیه سود',
+
+  // Detailed Orders Ledger
+  detailedOrdersTitle: 'ریز سفارشات و سودآوری فاکتورها',
+  detailedOrdersSubtitle: 'مشاهده جزییات مالی و سود تفکیکی هر سفارش در بازه انتخابی',
+  searchOrdersPlaceholder: 'جستجوی شماره سفارش، نام مشتری...',
+  colOrderNumber: 'شماره سفارش',
+  colDate: 'تاریخ ثبت',
+  colCustomer: 'مشتری',
+  colItems: 'تعداد اقلام',
+  colPaymentStatus: 'وضعیت پرداخت',
+  exportCsv: 'خروجی اکسل (CSV)',
+  noOrdersInPeriod: 'در بازه زمانی انتخابی هیچ سفارشی یافت نشد.',
+  summaryTotal: 'جمع کل بازه',
+
+  // Apparel & Fashion section
   bestSellersTitle: 'پرفروش‌ترین سایزها و رنگ‌ها',
   bestSellersSubtitle: 'تحلیل تقاضای مشتریان و توزیع رنگ‌ها و سایزهای محبوب',
   totalUnitsSold: 'کل قطعات فروخته‌شده',
@@ -29,6 +113,8 @@ export const reportsFa = {
   colUnitsSold: 'تعداد فروخته‌شده',
   colTotalRevenue: 'مبلغ کل درآمد',
   noDataRecorded: 'سابقه‌ای ثبت نشده است.',
+
+  // Dead stock section
   deadStockSectionTitle: 'تحلیل مانده موجودی و سرمایه راکد (Dead Stock)',
   deadStockSectionSubtitle: 'شناسایی اقلام بدون گردش به تفکیک سایز، رنگ و ارزش سرمایه بلوکه‌شده',
   inactiveThreshold: 'آستانه عدم گردش:',

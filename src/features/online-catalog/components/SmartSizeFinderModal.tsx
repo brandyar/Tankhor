@@ -208,7 +208,7 @@ export const SmartSizeFinderModal: React.FC<SmartSizeFinderModalProps> = ({
                     return (
                       <div
                         key={`meas_in_${meas.id}`}
-                        className="p-3 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-850"
+                        className="p-3 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-800"
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <label className="font-semibold text-neutral-800 dark:text-neutral-200">
@@ -241,7 +241,7 @@ export const SmartSizeFinderModal: React.FC<SmartSizeFinderModalProps> = ({
             /* Mode 2: Height & Weight Estimation */
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-850">
+                <div className="p-3 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-800">
                   <div className="flex justify-between mb-1.5">
                     <label className="font-semibold">قد شما:</label>
                     <span className="font-mono font-bold">{toPersianDigits(heightCm)} سانتی‌متر</span>
@@ -256,7 +256,7 @@ export const SmartSizeFinderModal: React.FC<SmartSizeFinderModalProps> = ({
                   />
                 </div>
 
-                <div className="p-3 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-850">
+                <div className="p-3 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-800">
                   <div className="flex justify-between mb-1.5">
                     <label className="font-semibold">وزن شما:</label>
                     <span className="font-mono font-bold">{toPersianDigits(weightKg)} کیلوگرم</span>
@@ -322,7 +322,7 @@ export const SmartSizeFinderModal: React.FC<SmartSizeFinderModalProps> = ({
 
           {/* Engine Output Banner */}
           {result && result.recommendedSize && (
-            <div className="p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-850">
+            <div className="p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-[11px] text-neutral-500 block">سایز پیشنهادی موتور تن‌خور:</span>

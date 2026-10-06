@@ -57,9 +57,13 @@
      4. **Catalog & Products (محصولات و کاتالوگ)**: Products, Variants, Size Guides, Attributes/Categories/Brands/Collections (Submenu)
      5. **Purchasing & Procurement (تدارکات و خرید)**: Purchase Orders, Suppliers
      6. **Accounting & Treasury (حسابداری و مالی)**: Hierarchical main menu and submenus after activation (Dashboard, Expenses, Accounts & Cashboxes, Person Ledgers, Cheques, Landed Costs, Tax Reports, Accounting Software Export)
-     7. **Digital Catalog (کاتالوگ دیجیتال)**: Displayed under Sales & Orders when active (Catalog Settings [تنظیمات کاتالوگ], Showcase Products [کالاهای ویترین], Size Finder Simulator [شبیه‌ساز راهنمای سایز])
-     8. **WooCommerce Sync (فروشگاه آنلاین ووکامرس)**: Displayed right before Settings when activated, providing seamless store connection, inventory sync, and order import
-     9. **Settings (تنظیمات)**: Organization & User Management, Cloud Sync & Storage
+     7. **Reports & Analytics (گزارش‌ها و تحلیل‌ها)**: Modular expandable menu & responsive sub-views:
+        - `reports/sales`: Sales & Profitability analysis with preset/custom date ranges, COGS, gross profit, margin %, trends, category profit shares, and invoice ledger
+        - `reports/apparel`: Fashion & garment demand analytics (best-selling sizes, colors, SKU rankings)
+        - `reports/inventory`: Inventory turnover and dead stock capital analysis with inactivity thresholds (15, 30, 60, 90 days)
+     8. **Digital Catalog (کاتالوگ دیجیتال)**: Displayed under Sales & Orders when active (Catalog Settings [تنظیمات کاتالوگ], Showcase Products [کالاهای ویترین], Size Finder Simulator [شبیه‌ساز راهنمای سایز])
+     9. **WooCommerce Sync (فروشگاه آنلاین ووکامرس)**: Displayed right before Settings when activated, providing seamless store connection, inventory sync, and order import
+     10. **Settings (تنظیمات)**: Organization & User Management, Cloud Sync & Storage
    - Submenus support responsive collapsible states and auto-expansion based on the active route.
    - **Settings Sub-menu Structure**: Settings is organized into modular dedicated sub-menus:
      - `settings/org`: Organization profile, currency, and general information
@@ -123,7 +127,7 @@
     - Design system controls (such as `Select.tsx`) implement defensive fallback guards to handle both declarative `options` arrays and arbitrary `children` elements safely.
 
 14. **Automated Desktop Releases & Self-Updater**:
-    - Current App Version: `1.1.2`.
+    - Current App Version: `1.1.3`.
     - Automated multi-platform releases built via GitHub Actions (`/.github/workflows/release-tauri.yml`).
     - Windows desktop builds use NSIS target (`bundle.targets: ["nsis", "app", "dmg"]`) with `windows.installMode: "passive"` for seamless in-place updates.
     - Desktop auto-update system powered by Tauri Updater (`tauri-plugin-updater`) and GitHub Releases with dedicated `latest.json` manifest.
@@ -215,6 +219,7 @@
 - `/src/components/layout/`: Responsive App Shell (Sidebar, Top Header, Org Switcher)
 - `/src/features/`: Modular domain views (Dashboard, Products, Inventory, Orders, Purchasing, Size Guides, Settings, Organizations)
 - `/src/features/accounting/`: Complete accounting suite (Dashboard, Expenses, Person Ledgers, Financial Accounts, Cheques, Landed Costs, Tax Reports, Accounting Export)
+- `/src/features/reports/`: Executive analytics & reports suite (`ReportsView.tsx`, `SalesReportPage.tsx`, `ApparelReportPage.tsx`, `InventoryPerformancePage.tsx`)
 - `/src/features/woocommerce/`: WooCommerce integration module (store credentials, synchronization dashboard, logs, variant mapping)
 - `/src/utils/updater.ts`: Desktop update checker and installation helper using `@tauri-apps/plugin-updater` and `@tauri-apps/plugin-process`
 - `/.github/workflows/release-tauri.yml`: Multi-platform release pipeline for Tauri desktop (Windows, macOS) and Android APK

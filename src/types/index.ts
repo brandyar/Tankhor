@@ -309,6 +309,9 @@ export interface Order {
   date_created?: string;
   date_updated?: string;
   customer_name?: string;
+  warehouse_name?: string;
+  order_date?: string;
+  channel?: string;
   items_count?: number;
 }
 
@@ -319,6 +322,7 @@ export interface OrderItem {
   variant_id: number | ProductVariant;
   quantity: number;
   unit_price: number;
+  unit_cost?: number;
   discount: number;
   total: number;
   created_at?: string;

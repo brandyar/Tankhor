@@ -1,7 +1,91 @@
 export const reportsEn = {
-  title: 'Apparel Analytics & Sales Reports',
-  subtitle: 'Comprehensive analysis of best-selling sizes, colors, and inventory dead stock',
+  title: 'Executive Reports & Analytics',
+  subtitle: 'Comprehensive analysis of sales & profitability, best-selling sizes and colors, and inventory dead stock',
   printReportBtn: 'Print & Export Report',
+  
+  // Sub navigation tabs
+  tabSalesProfit: 'Sales & Profitability',
+  tabApparel: 'Fashion & Catalog Analytics',
+  tabInventoryPerformance: 'Inventory & Dead Stock',
+
+  // Date ranges
+  rangePreset: 'Time Range:',
+  rangeToday: 'Today',
+  rangeYesterday: 'Yesterday',
+  rangeLast7Days: 'Last 7 Days',
+  rangeLast30Days: 'Last 30 Days',
+  rangeThisMonth: 'This Month',
+  rangeLastMonth: 'Last Month',
+  rangeThisSeason: 'This Season',
+  rangeThisYear: 'This Year',
+  rangeAllTime: 'All Time',
+  rangeCustom: 'Custom Range',
+  fromDate: 'From Date',
+  toDate: 'To Date',
+  applyFilter: 'Apply Filter',
+
+  // Filters
+  filterStatus: 'Order Status',
+  filterPayment: 'Payment Status',
+  filterChannel: 'Sales Channel',
+  allStatuses: 'All Statuses',
+  allPayments: 'All Payments',
+  allChannels: 'All Channels',
+  channelOnline: 'Online (Catalog / Web)',
+  channelStore: 'In-Store / POS',
+
+  // Sales & Profit KPIs
+  grossSales: 'Gross Sales',
+  grossSalesDesc: 'Sum of item prices before discounts',
+  discounts: 'Discounts',
+  discountsDesc: 'Total order discounts given',
+  netSales: 'Net Sales',
+  netSalesDesc: 'Final payable order revenue',
+  cogs: 'Cost of Goods Sold (COGS)',
+  cogsDesc: 'Purchase cost of sold items',
+  grossProfit: 'Gross Profit',
+  grossProfitDesc: 'Net sales minus cost of goods',
+  profitMargin: 'Gross Profit Margin',
+  profitMarginDesc: 'Ratio of profit to net sales',
+  totalOrdersCount: 'Total Orders',
+  averageOrderValue: 'Average Order Value (AOV)',
+  totalSoldUnits: 'Total Units Sold',
+  
+  // Charts & Trends
+  salesTrendsTitle: 'Sales & Gross Profit Trends',
+  salesTrendsSubtitle: 'Comparative timeline of revenue, cost of goods, and gross profit',
+  groupByDay: 'Daily Breakdown',
+  groupByMonth: 'Monthly Breakdown',
+  chartRevenue: 'Sales Revenue',
+  chartCost: 'Cost of Goods',
+  chartProfit: 'Gross Profit',
+  periodDate: 'Date',
+
+  // Category & Product Breakdown
+  categoryProfitTitle: 'Profit Share by Category',
+  categoryProfitSubtitle: 'Profitability and revenue per product group',
+  topProfitableProductsTitle: 'Top Profitable Products & Variants',
+  topProfitableSubtitle: 'Ranking of items by gross profit contribution',
+  colGrossSales: 'Gross Sales',
+  colNetSales: 'Net Sales',
+  colCogs: 'Unit Cost',
+  colProfit: 'Gross Profit',
+  colMargin: 'Margin %',
+
+  // Detailed Orders Ledger
+  detailedOrdersTitle: 'Detailed Orders & Invoice Profitability',
+  detailedOrdersSubtitle: 'View individual financial and profit details of each order in the period',
+  searchOrdersPlaceholder: 'Search order #, customer name...',
+  colOrderNumber: 'Order #',
+  colDate: 'Order Date',
+  colCustomer: 'Customer',
+  colItems: 'Items',
+  colPaymentStatus: 'Payment Status',
+  exportCsv: 'Export Excel (CSV)',
+  noOrdersInPeriod: 'No orders found in the selected time range.',
+  summaryTotal: 'Period Total',
+
+  // Apparel & Fashion section
   bestSellersTitle: 'Top Selling Sizes & Colors',
   bestSellersSubtitle: 'Customer demand analysis and distribution of popular colors & sizes',
   totalUnitsSold: 'Total Units Sold',
@@ -29,6 +113,8 @@ export const reportsEn = {
   colUnitsSold: 'Units Sold',
   colTotalRevenue: 'Total Revenue',
   noDataRecorded: 'No sales records found.',
+
+  // Dead stock section
   deadStockSectionTitle: 'Dead Stock & Stagnant Capital Analysis',
   deadStockSectionSubtitle: 'Identify slow-moving inventory by size, color, and tied-up working capital',
   inactiveThreshold: 'Inactivity Threshold:',

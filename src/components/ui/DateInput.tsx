@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar, ChevronRight, ChevronLeft, Check, Clock } from 'lucide-react';
+import { Calendar, ChevronRight, ChevronLeft, Check, Clock, X } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { toPersianDigits } from '../../utils/formatters';
 import {
@@ -66,6 +66,17 @@ export const DateInput: React.FC<DateInputProps> = ({
     setViewMonth(j.jm);
     setManualText(formatJalaliDateString(j.jy, j.jm, j.jd));
   }, [currentIso]);
+
+  // Lock body scroll when date picker modal is open
+  useEffect(() => {
+    if (isOpen && typeof document !== 'undefined') {
+      const original = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = original;
+      };
+    }
+  }, [isOpen]);
 
   // Close popup on outside click
   useEffect(() => {
@@ -180,8 +191,170 @@ export const DateInput: React.FC<DateInputProps> = ({
 
   const formattedDisplay = `${toPersianDigits(currentJalali.jd, true)} ${PERSIAN_MONTH_NAMES[currentJalali.jm - 1]} ${toPersianDigits(currentJalali.jy, true)}`;
 
+  // Shared Calendar UI Content
+  const renderCalendarContent = (isMobileModal = false) => (
+    <div className="space-y-3">
+      {/* Mobile Modal Title & Close Bar */}
+      {isMobileModal && (
+        <div className="flex items-center justify-between pb-2.5 border-b border-neutral-100 dark:border-neutral-800">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-neutral-500" />
+            <span className="text-xs font-bold text-neutral-900 dark:text-white">
+              {label ? `انتخاب تاریخ ${label}` : 'انتخاب تاریخ شمسی'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="p-1 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Calendar Header with Selectors & Nav */}
+      <div className="flex items-center justify-between gap-1">
+        <button
+          type="button"
+          onClick={handlePrevMonth}
+          title="ماه قبل"
+          className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors cursor-pointer"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+
+        <div className="flex items-center gap-1.5">
+          {/* Month Dropdown */}
+          <select
+            value={viewMonth}
+            onChange={(e) => setViewMonth(Number(e.target.value))}
+            className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white text-xs font-bold rounded-lg px-2.5 py-1.5 border-0 cursor-pointer focus:ring-1 focus:ring-neutral-400 outline-hidden"
+          >
+            {PERSIAN_MONTH_NAMES.map((name, idx) => (
+              <option key={idx + 1} value={idx + 1}>
+                {name}
+              </option>
+            ))}
+          </select>
+
+          {/* Year Dropdown */}
+          <select
+            value={viewYear}
+            onChange={(e) => setViewYear(Number(e.target.value))}
+            className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white text-xs font-bold rounded-lg px-2.5 py-1.5 border-0 cursor-pointer focus:ring-1 focus:ring-neutral-400 outline-hidden"
+          >
+            {yearsList.map((y) => (
+              <option key={y} value={y}>
+                {toPersianDigits(y, true)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleNextMonth}
+          title="ماه بعد"
+          className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors cursor-pointer"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Weekday Names Header */}
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {PERSIAN_WEEKDAYS.map((wd) => (
+          <div
+            key={wd.key}
+            className={`text-[11px] font-medium py-1 ${
+              wd.key === 'fr' ? 'text-red-500 font-bold' : 'text-neutral-400 dark:text-neutral-500'
+            }`}
+          >
+            {wd.short}
+          </div>
+        ))}
+      </div>
+
+      {/* Days Grid */}
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {/* Empty slots before first day */}
+        {Array.from({ length: firstDayWeekday }).map((_, i) => (
+          <div key={`empty-${i}`} className="h-8 w-8" />
+        ))}
+
+        {/* Days of current month */}
+        {Array.from({ length: daysInMonth }).map((_, i) => {
+          const day = i + 1;
+          const isSelected =
+            currentJalali.jy === viewYear &&
+            currentJalali.jm === viewMonth &&
+            currentJalali.jd === day;
+          const isToday =
+            todayJalali.jy === viewYear &&
+            todayJalali.jm === viewMonth &&
+            todayJalali.jd === day;
+
+          // Check if Friday (weekend in Iran)
+          const weekdayIndex = (firstDayWeekday + i) % 7;
+          const isFriday = weekdayIndex === 6;
+
+          return (
+            <button
+              key={`day-${day}`}
+              type="button"
+              onClick={() => handleSelectDay(day)}
+              className={`h-8 w-8 rounded-lg text-xs font-medium flex items-center justify-center transition-all mx-auto cursor-pointer ${
+                isSelected
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-bold shadow-xs'
+                  : isToday
+                  ? 'border border-neutral-900/50 dark:border-white/50 text-neutral-900 dark:text-white font-bold'
+                  : isFriday
+                  ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30'
+                  : 'text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+              }`}
+            >
+              {toPersianDigits(day, true)}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Manual Input & Today Action Footer */}
+      <div className="pt-2.5 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-neutral-400">تایپ:</span>
+          <input
+            type="text"
+            value={manualText}
+            onChange={handleManualTextChange}
+            placeholder="1405/06/19"
+            className="w-24 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-1 text-center text-xs font-mono outline-hidden"
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleSetToday}
+            className="px-2.5 py-1 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg text-neutral-800 dark:text-neutral-200 text-xs font-medium transition-colors cursor-pointer"
+          >
+            امروز
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="px-2.5 py-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white text-xs transition-colors cursor-pointer"
+          >
+            بستن
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className={`w-full space-y-1 relative ${className}`} ref={containerRef}>
+    <div className={`w-full space-y-1 relative ${isOpen ? 'z-30' : 'z-10'} ${className}`} ref={containerRef}>
       {label && (
         <label htmlFor={inputId} className="block text-xs font-medium text-neutral-700 dark:text-neutral-300">
           {label} {required && <span className="text-red-500">*</span>}
@@ -204,152 +377,23 @@ export const DateInput: React.FC<DateInputProps> = ({
             ({toPersianDigits(manualText, true)})
           </span>
         </div>
-        <span className="text-[10px] text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">
-          شمسی
-        </span>
       </div>
 
       {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
 
-      {/* Jalali Floating Calendar Popover */}
+      {/* Jalali Calendar Modal Popup (Full screen on mobile, centered modal dialog on desktop) */}
       {isOpen && (
-        <div className="absolute z-50 mt-1 start-0 w-80 bg-white dark:bg-[#15171e] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl p-3.5 animate-in fade-in zoom-in-95 duration-150 select-none">
-          {/* Calendar Header with Selectors & Nav */}
-          <div className="flex items-center justify-between gap-1 mb-3">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              title="ماه قبل"
-              className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center gap-1.5">
-              {/* Month Dropdown */}
-              <select
-                value={viewMonth}
-                onChange={(e) => setViewMonth(Number(e.target.value))}
-                className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white text-xs font-semibold rounded-md px-2 py-1 border-0 cursor-pointer focus:ring-1 focus:ring-neutral-400"
-              >
-                {PERSIAN_MONTH_NAMES.map((name, idx) => (
-                  <option key={idx + 1} value={idx + 1}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-
-              {/* Year Dropdown */}
-              <select
-                value={viewYear}
-                onChange={(e) => setViewYear(Number(e.target.value))}
-                className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white text-xs font-semibold rounded-md px-2 py-1 border-0 cursor-pointer focus:ring-1 focus:ring-neutral-400"
-              >
-                {yearsList.map((y) => (
-                  <option key={y} value={y}>
-                    {toPersianDigits(y, true)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              title="ماه بعد"
-              className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Weekday Names Header */}
-          <div className="grid grid-cols-7 gap-1 text-center mb-1">
-            {PERSIAN_WEEKDAYS.map((wd) => (
-              <div
-                key={wd.key}
-                className={`text-[11px] font-medium py-1 ${
-                  wd.key === 'fr' ? 'text-red-500 font-bold' : 'text-neutral-400 dark:text-neutral-500'
-                }`}
-              >
-                {wd.short}
-              </div>
-            ))}
-          </div>
-
-          {/* Days Grid */}
-          <div className="grid grid-cols-7 gap-1 text-center">
-            {/* Empty slots before first day */}
-            {Array.from({ length: firstDayWeekday }).map((_, i) => (
-              <div key={`empty-${i}`} className="h-7 w-7" />
-            ))}
-
-            {/* Days of current month */}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1;
-              const isSelected =
-                currentJalali.jy === viewYear &&
-                currentJalali.jm === viewMonth &&
-                currentJalali.jd === day;
-              const isToday =
-                todayJalali.jy === viewYear &&
-                todayJalali.jm === viewMonth &&
-                todayJalali.jd === day;
-
-              // Check if Friday (weekend in Iran)
-              const weekdayIndex = (firstDayWeekday + i) % 7;
-              const isFriday = weekdayIndex === 6;
-
-              return (
-                <button
-                  key={`day-${day}`}
-                  type="button"
-                  onClick={() => handleSelectDay(day)}
-                  className={`h-7 w-7 rounded-lg text-xs font-medium flex items-center justify-center transition-all mx-auto ${
-                    isSelected
-                      ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-bold shadow-xs'
-                      : isToday
-                      ? 'border border-neutral-900/40 dark:border-white/40 text-neutral-900 dark:text-white font-bold'
-                      : isFriday
-                      ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30'
-                      : 'text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                  }`}
-                >
-                  {toPersianDigits(day, true)}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Manual Input & Today Action Footer */}
-          <div className="mt-3 pt-2.5 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-neutral-400">تایپ:</span>
-              <input
-                type="text"
-                value={manualText}
-                onChange={handleManualTextChange}
-                placeholder="1405/06/19"
-                className="w-24 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded px-1.5 py-0.5 text-center text-xs font-mono"
-              />
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={handleSetToday}
-                className="px-2 py-1 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded text-neutral-800 dark:text-neutral-200 text-xs font-medium transition-colors"
-              >
-                امروز
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="px-2 py-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white text-xs transition-colors"
-              >
-                بستن
-              </button>
-            </div>
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={() => setIsOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm bg-white dark:bg-[#15171e] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-4 sm:p-5 animate-in zoom-in-95 duration-150 select-none text-start"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {renderCalendarContent(true)}
           </div>
         </div>
       )}

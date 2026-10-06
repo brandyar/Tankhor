@@ -235,7 +235,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             {activeOrganization?.name ? `${activeOrganization.name} · ${t('common.appSubtitle')}` : t('common.appSubtitle')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-2">
           <button
             type="button"
             onClick={() => startTour('dashboard', { force: true })}

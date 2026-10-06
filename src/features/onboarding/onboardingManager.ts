@@ -9,6 +9,25 @@ const STORAGE_PREFIX = 'tankhor_tour_seen_';
 export class OnboardingManager {
   private static activeDriverInstance: Driver | null = null;
 
+  private static isElementVisible(el: Element | null): boolean {
+    if (!el || !(el instanceof HTMLElement)) return false;
+    // Check if element or any ancestor has display: none
+    if (el.offsetParent === null && window.getComputedStyle(el).position !== 'fixed') {
+      return false;
+    }
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    // Check if element is positioned completely off-screen (e.g. translated mobile drawer/sidebar)
+    if (rect.right <= 0 || rect.left >= window.innerWidth || rect.bottom <= 0 || rect.top >= window.innerHeight) {
+      return false;
+    }
+    const style = window.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+      return false;
+    }
+    return true;
+  }
+
   public static getStorageKey(tourName: TourName, orgId?: string | number): string {
     const orgSuffix = orgId ? `_${orgId}` : '_global';
     return `${STORAGE_PREFIX}${tourName}${orgSuffix}`;
@@ -75,12 +94,15 @@ export class OnboardingManager {
 
     const rawSteps = tourDef.getSteps(t, isRtl);
 
-    // Filter out steps whose element does not exist in the DOM
+    // Filter out steps whose element does not exist or is invisible/hidden in the DOM
     const validSteps = rawSteps.filter((step) => {
       if (!step.element) return true;
       if (typeof step.element === 'string') {
         const el = document.querySelector(step.element);
-        return Boolean(el);
+        return this.isElementVisible(el);
+      }
+      if (step.element instanceof Element) {
+        return this.isElementVisible(step.element);
       }
       return true;
     });

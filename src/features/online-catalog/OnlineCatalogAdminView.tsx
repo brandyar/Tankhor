@@ -362,14 +362,14 @@ export const OnlineCatalogAdminView: React.FC<OnlineCatalogAdminViewProps> = ({
               </div>
 
               {/* Link Box */}
-              <div className="p-3 bg-neutral-50 dark:bg-neutral-850 rounded-xl flex items-center justify-between gap-2 border border-neutral-200/80 dark:border-neutral-800">
+              <div className="p-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl flex items-center justify-between gap-2 border border-neutral-200/80 dark:border-neutral-700">
                 <span className="text-xs font-mono text-neutral-600 dark:text-neutral-300 truncate direction-ltr">
                   {publicUrl}
                 </span>
                 <button
                   type="button"
                   onClick={handleCopyLink}
-                  className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-750 shrink-0 border border-neutral-200 dark:border-neutral-700"
+                  className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 shrink-0 border border-neutral-200 dark:border-neutral-700"
                 >
                   {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
@@ -531,7 +531,7 @@ export const OnlineCatalogAdminView: React.FC<OnlineCatalogAdminViewProps> = ({
                     const prodVariant = variants.find((v) => Number(v.product_id) === Number(prod.id));
 
                     return (
-                      <tr key={`adm_prod_${prod.id}`} className="hover:bg-neutral-50 dark:hover:bg-neutral-850">
+                      <tr key={`adm_prod_${prod.id}`} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
                         <td className="py-2.5 px-3 flex items-center gap-3">
                           <div className="w-10 h-13 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 shrink-0 border border-neutral-200/80 dark:border-neutral-700/80">
                             <ProductImage
@@ -680,7 +680,7 @@ export const OnlineCatalogAdminView: React.FC<OnlineCatalogAdminViewProps> = ({
 
               {simResult && simResult.recommendedSize ? (
                 <div className="space-y-4 text-xs">
-                  <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-850 border border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between">
+                  <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 flex items-center justify-between">
                     <div>
                       <span className="text-[11px] text-neutral-500 font-medium">سایز پیشنهادی نهایی:</span>
                       <h4 className="text-lg font-bold text-neutral-900 dark:text-white mt-0.5">
@@ -707,7 +707,7 @@ export const OnlineCatalogAdminView: React.FC<OnlineCatalogAdminViewProps> = ({
                         {simResult.comparisons.map((c) => (
                           <div
                             key={`comp_${c.measurementId}`}
-                            className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-850 border border-neutral-200/80 dark:border-neutral-800 text-xs flex items-center justify-between"
+                            className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 text-xs flex items-center justify-between"
                           >
                             <span className="font-semibold text-neutral-800 dark:text-neutral-200">
                               {c.measurementName}

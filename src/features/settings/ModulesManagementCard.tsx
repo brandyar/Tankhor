@@ -141,10 +141,10 @@ export const ModulesManagementCard: React.FC = () => {
               <ShieldCheck className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <div>
                 <h4 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
-                  {t('modules.offlineModelTitle', 'مدل ماژولار و مالکیت دائمی آفلاین')}
+                  {t('modules.offlineModelTitle', 'مالکیت دائمی ماژول‌های تخصصی')}
                 </h4>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1 leading-relaxed">
-                  {t('modules.offlineModelDesc', 'شما می‌توانید هر ماژول را به صورت لایسنس دائمی آفلاین خریداری و با شناسه سخت‌افزاری فعال کنید، یا با تهیه اشتراک پرو به همه ماژول‌ها دسترسی یابید.')}
+                  {t('modules.offlineModelDesc', 'شما می‌توانید هر ماژول را به صورت لایسنس دائمی خریداری و فعال کنید، یا با تهیه اشتراک پرو به همه ماژول‌ها دسترسی یابید.')}
                 </p>
               </div>
             </div>

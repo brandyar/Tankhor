@@ -251,8 +251,13 @@ const AuthenticatedApp: React.FC = () => {
       case 'accounting/tax':
       case 'accounting/export':
         return <AccountingView activeSubRoute={currentRoute} onNavigate={setCurrentRoute} />;
+      case 'reports':
+      case 'reports/sales':
+      case 'reports/sales-profit':
       case 'reports/apparel':
-        return <ReportsView />;
+      case 'reports/inventory':
+      case 'reports/dead-stock':
+        return <ReportsView activeSubRoute={currentRoute} onNavigate={setCurrentRoute} />;
       case 'settings':
       case 'settings/org':
       case 'settings/general':

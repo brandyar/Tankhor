@@ -542,26 +542,26 @@ export const TransfersView: React.FC = () => {
                   </div>
 
                   {/* Middle Row: Route (Stacked 2-tier so long warehouse names never truncate) */}
-                  <div className="space-y-2 p-3 rounded-xl bg-neutral-50/70 dark:bg-neutral-850/60 border border-neutral-200/80 dark:border-neutral-700/80 text-xs">
+                  <div className="space-y-2 p-3 rounded-xl bg-neutral-100 dark:bg-neutral-800/90 border border-neutral-200 dark:border-neutral-700 text-xs">
                     <div className="flex items-start gap-2 min-w-0">
                       <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400 whitespace-nowrap shrink-0 mt-0.5">
                         مبدأ:
                       </span>
                       <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                        <Building2 className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                        <span className="font-semibold text-neutral-800 dark:text-neutral-200 leading-snug break-words">
+                        <Building2 className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400 shrink-0" />
+                        <span className="font-semibold text-neutral-900 dark:text-neutral-100 leading-snug break-words">
                           {trf.from_warehouse_name}
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2 min-w-0 pt-1.5 border-t border-neutral-200/60 dark:border-neutral-700/60">
+                    <div className="flex items-start gap-2 min-w-0 pt-1.5 border-t border-neutral-200 dark:border-neutral-700">
                       <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap shrink-0 mt-0.5">
                         مقصد:
                       </span>
                       <div className="flex items-center gap-1.5 min-w-0 flex-1">
                         <Building2 className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
-                        <span className="font-semibold text-neutral-800 dark:text-neutral-200 leading-snug break-words">
+                        <span className="font-semibold text-neutral-900 dark:text-neutral-100 leading-snug break-words">
                           {trf.to_warehouse_name}
                         </span>
                       </div>

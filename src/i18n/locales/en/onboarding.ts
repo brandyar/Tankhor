@@ -24,6 +24,10 @@ export const onboardingEn = {
       title: 'Operational Quick Actions',
       description: 'Quickly create sales orders, register new products, issue purchase orders, and inspect recent sales with one-click shortcuts.',
     },
+    mobileNavigation: {
+      title: 'Navigation Menu & Modules',
+      description: 'On mobile, tap this menu to open the drawer and access Products, Inventory, Orders, Accounting, Reports, and Settings.',
+    },
     products: {
       title: 'Apparel Catalog & Variants',
       description: 'Tailored for fashion retail: manage color and size combinations, dynamic size guides, attributes, categories, and seasonal collections.',

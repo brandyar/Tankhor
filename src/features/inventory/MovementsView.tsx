@@ -259,7 +259,7 @@ export const MovementsView: React.FC = () => {
                         {sku}
                       </span>
                       {m.reference_id && (
-                        <span className="font-mono text-[11px] text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-850 px-2 py-0.5 rounded-lg border border-neutral-200/80 dark:border-neutral-700/80">
+                        <span className="font-mono text-[11px] text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-lg border border-neutral-200/80 dark:border-neutral-700/80">
                           {m.reference_id}
                         </span>
                       )}
@@ -272,8 +272,8 @@ export const MovementsView: React.FC = () => {
 
                   {/* Middle Row: Warehouse Pill + Date */}
                   <div className="flex items-center justify-between gap-2 pt-0.5 text-xs text-neutral-600 dark:text-neutral-400">
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-50 dark:bg-neutral-850 border border-neutral-200/80 dark:border-neutral-700/80">
-                      <WarehouseIcon className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
+                      <WarehouseIcon className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400 shrink-0" />
                       <span className="font-medium text-neutral-800 dark:text-neutral-200">{whName}</span>
                     </div>
 

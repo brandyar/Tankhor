@@ -133,6 +133,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
           {/* Mobile Sidebar Toggle (Hidden on Desktop since sidebar has its own button) */}
           {onToggleSidebar && (
             <button
+              id="tour-mobile-menu-btn"
               onClick={onToggleSidebar}
               title={t('common.toggleSidebar')}
               aria-label={t('common.toggleSidebar')}

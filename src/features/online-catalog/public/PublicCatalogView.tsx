@@ -375,7 +375,7 @@ export const PublicCatalogView: React.FC<PublicCatalogViewProps> = ({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="جستجوی مدل، نام پوشاک یا کد کالا..."
-                className="w-full ps-10 pe-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-850 border border-neutral-200/80 dark:border-neutral-800 text-xs text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-600"
+                className="w-full ps-10 pe-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 text-xs text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-600"
               />
               {search && (
                 <button
@@ -396,7 +396,7 @@ export const PublicCatalogView: React.FC<PublicCatalogViewProps> = ({
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   selectedCategory === 'all'
                     ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900'
-                    : 'bg-white dark:bg-neutral-850 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                    : 'bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700'
                 }`}
               >
                 همه ({products.length})
@@ -409,7 +409,7 @@ export const PublicCatalogView: React.FC<PublicCatalogViewProps> = ({
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     selectedCategory === cat.id
                       ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900'
-                      : 'bg-white dark:bg-neutral-850 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                      : 'bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700'
                   }`}
                 >
                   {cat.name}
@@ -454,11 +454,11 @@ export const PublicCatalogView: React.FC<PublicCatalogViewProps> = ({
                   className="group bg-white dark:bg-[#12141a] rounded-2xl border border-neutral-200/80 dark:border-neutral-800 overflow-hidden shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
                 >
                   {/* Large Apparel Product Image */}
-                  <div className="relative aspect-[3/4] w-full bg-neutral-100 dark:bg-neutral-850 overflow-hidden">
+                  <div className="relative aspect-[3/4] w-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
                     <ProductImage
                       src={imgSrc}
                       alt={prod.title}
-                      containerClassName="w-full h-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-850 overflow-hidden"
+                      containerClassName="w-full h-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 overflow-hidden"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
 
@@ -531,11 +531,11 @@ export const PublicCatalogView: React.FC<PublicCatalogViewProps> = ({
           >
             <div className="grid grid-cols-1 sm:grid-cols-2">
               {/* Product Photo: High prominence */}
-              <div className="relative aspect-[3/4] sm:aspect-auto w-full min-h-[300px] sm:min-h-[420px] bg-neutral-100 dark:bg-neutral-850">
+              <div className="relative aspect-[3/4] sm:aspect-auto w-full min-h-[300px] sm:min-h-[420px] bg-neutral-100 dark:bg-neutral-800">
                 <ProductImage
                   src={selectedProduct.main_image || selectedVariant?.image}
                   alt={selectedProduct.title}
-                  containerClassName="w-full h-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-850 overflow-hidden"
+                  containerClassName="w-full h-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 overflow-hidden"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -577,7 +577,7 @@ export const PublicCatalogView: React.FC<PublicCatalogViewProps> = ({
 
                   {/* Smart Size Recommendation Trigger */}
                   {selectedProduct.size_guide_template_id && (
-                    <div className="mt-4 p-3 rounded-xl bg-neutral-50 dark:bg-neutral-850 border border-neutral-200/80 dark:border-neutral-800">
+                    <div className="mt-4 p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Ruler className="w-4 h-4 text-neutral-700 dark:text-neutral-300 shrink-0" />
@@ -626,7 +626,7 @@ export const PublicCatalogView: React.FC<PublicCatalogViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsInquiryModalOpen(true)}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 text-neutral-900 dark:text-neutral-100 font-bold text-xs transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-neutral-100 font-bold text-xs transition-colors cursor-pointer"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>ثبت درخواست خرید</span>
@@ -704,7 +704,7 @@ export const PublicCatalogView: React.FC<PublicCatalogViewProps> = ({
                 </div>
 
                 {selectedSize && (
-                  <div className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-850 text-xs flex justify-between border border-neutral-200/60 dark:border-neutral-800">
+                  <div className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800 text-xs flex justify-between border border-neutral-200/60 dark:border-neutral-700">
                     <span className="text-neutral-500">سایز انتخابی:</span>
                     <span className="font-bold font-mono">{selectedSize.name}</span>
                   </div>

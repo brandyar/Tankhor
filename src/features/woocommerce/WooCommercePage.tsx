@@ -315,14 +315,12 @@ export const WooCommercePage: React.FC<WooCommercePageProps> = ({
   // If module is locked for this organization
   if (!hasWcAccess) {
     return (
-      <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ModuleLockedCard
-          moduleSlug="woocommerce"
-          moduleName="همگام‌سازی با ووکامرس"
-          description="اتصال دوطرفه و خودکار انبار تن‌خور با وب‌سایت وردپرس ووکامرس: همگام‌سازی بلادرنگ موجودی، قیمت‌ها و دریافت خودکار سفارشات فروشگاه آنلاین."
-          onUnlocked={loadData}
-        />
-      </div>
+      <ModuleLockedCard
+        moduleSlug="woocommerce"
+        moduleName="همگام‌سازی با ووکامرس"
+        description="اتصال دوطرفه و خودکار انبار تن‌خور با وب‌سایت وردپرس ووکامرس: همگام‌سازی بلادرنگ موجودی، قیمت‌ها و دریافت خودکار سفارشات فروشگاه آنلاین."
+        onUnlocked={loadData}
+      />
     );
   }
 

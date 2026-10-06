@@ -31,6 +31,11 @@ export function useOnboardingTour(options: UseOnboardingTourOptions = {}) {
         onSkip?: () => void;
       } = {}
     ): boolean => {
+      // Do not run interactive tour on mobile/tablets (< 1024px) where sidebar is in a closed drawer
+      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+        return false;
+      }
+
       return OnboardingManager.startTour(tourName, t, {
         orgId,
         isRtl,
@@ -58,6 +63,12 @@ export function useOnboardingTour(options: UseOnboardingTourOptions = {}) {
     if (!options.autoStartTour) return;
     if (options.autoStartCondition === false) return;
     if (!orgId) return;
+
+    // Do NOT auto-start on mobile or tablet viewports (< 1024px).
+    // On mobile screens, automatically popping up guide tours targeting sidebars disrupts the experience.
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      return;
+    }
 
     if (!isTourCompleted(options.autoStartTour)) {
       const timer = setTimeout(() => {

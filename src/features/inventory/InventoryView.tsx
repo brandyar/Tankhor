@@ -460,7 +460,7 @@ export const InventoryView: React.FC = () => {
             className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border shadow-2xs ${
               lowStockOnly
                 ? 'bg-amber-100 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200'
-                : 'bg-white dark:bg-neutral-800 border-slate-300 dark:border-neutral-700 text-slate-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-neutral-750'
+                : 'bg-white dark:bg-neutral-800 border-slate-300 dark:border-neutral-700 text-slate-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-neutral-700'
             }`}
           >
             {t('inventory.statusLowStock')} ({isPersian ? toPersianDigits(lowStockCount) : lowStockCount})
@@ -541,13 +541,13 @@ export const InventoryView: React.FC = () => {
 
                       <div className="flex items-center gap-2 flex-wrap mt-2.5">
                         {/* SKU Pill */}
-                        <div className="px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50/70 dark:bg-neutral-850/60 font-mono text-xs font-bold text-neutral-800 dark:text-neutral-200 shadow-2xs shrink-0">
+                        <div className="px-2.5 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 font-mono text-xs font-bold text-neutral-800 dark:text-neutral-200 shadow-2xs shrink-0">
                           {sku}
                         </div>
 
                         {/* Variant Specs Pill (Size | Color) */}
                         {(sizeName !== '-' || colorName !== '-' || colorHex) && (
-                          <div className="flex items-center rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50/70 dark:bg-neutral-850/60 text-xs overflow-hidden shadow-2xs shrink-0">
+                          <div className="flex items-center rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 text-xs overflow-hidden shadow-2xs shrink-0">
                             {sizeName !== '-' && (
                               <span className="px-2.5 py-1 font-mono font-bold text-neutral-800 dark:text-neutral-200">
                                 {sizeName}
@@ -600,7 +600,7 @@ export const InventoryView: React.FC = () => {
                       )}
 
                       {/* Warehouse Pill */}
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-neutral-50 dark:bg-neutral-850 text-neutral-700 dark:text-neutral-300 border border-neutral-200/80 dark:border-neutral-700/80">
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200/80 dark:border-neutral-700/80">
                         <WarehouseIcon className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
                         <span className="font-medium">{whName}</span>
                         {locName && locName !== '-' && (
@@ -614,7 +614,7 @@ export const InventoryView: React.FC = () => {
                       type="button"
                       onClick={() => handleOpenThresholdModal(item)}
                       title={t('inventory.editThresholds', 'تنظیم حد سفارش')}
-                      className="w-9 h-9 rounded-xl border border-neutral-200/90 dark:border-neutral-700/90 bg-neutral-50/80 dark:bg-neutral-850 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100 flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
+                      className="w-9 h-9 rounded-xl border border-neutral-200/90 dark:border-neutral-700/90 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100 flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
                     >
                       <SlidersHorizontal className="w-4 h-4" />
                     </button>
@@ -678,7 +678,7 @@ export const InventoryView: React.FC = () => {
           title={t('inventory.editThresholds')}
         >
           <form onSubmit={handleSaveThresholds} className="space-y-4 text-xs">
-            <div className="p-3 bg-slate-50 dark:bg-neutral-850 rounded-xl border border-slate-200 dark:border-neutral-700">
+            <div className="p-3 bg-slate-50 dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700">
               <span className="text-slate-500 dark:text-neutral-400 block mb-1">{t('inventory.skuAndTitle')}:</span>
               <span className="font-bold text-slate-900 dark:text-neutral-100 font-mono">
                 {editingItem.sku || (typeof editingItem.variant_id === 'number' ? `VAR-#${editingItem.variant_id}` : '-')}
