@@ -407,7 +407,8 @@ export class BackupManager {
   public static async restoreBackup(
     backupData: Record<string, any[]>,
     mode: 'replace' | 'merge' = 'replace',
-    targetOrgId?: number
+    targetOrgId?: number,
+    skipCloudSync: boolean = false
   ): Promise<{ success: boolean; restoredCount: number; error?: string }> {
     try {
       let totalRestored = 0;
@@ -498,16 +499,18 @@ export class BackupManager {
         }
       }
 
-      // Sync with Cloud Directus if in Cloud Mode or Directus session is active
-      try {
-        const { storageManager } = await import('./index');
-        const { directusClient } = await import('../api/directus');
-        if (storageManager.getMode() === 'cloud_synced' || Boolean(directusClient.getToken())) {
-          const { CloudMigrationManager } = await import('./cloudMigrationManager');
-          await CloudMigrationManager.migrateLocalToCloud(activeOrgId);
+      // Sync with Cloud Directus if in Cloud Mode or Directus session is active (unless explicitly skipped)
+      if (!skipCloudSync) {
+        try {
+          const { storageManager } = await import('./index');
+          const { directusClient } = await import('../api/directus');
+          if (storageManager.getMode() === 'cloud_synced' || Boolean(directusClient.getToken())) {
+            const { CloudMigrationManager } = await import('./cloudMigrationManager');
+            await CloudMigrationManager.migrateLocalToCloud(activeOrgId);
+          }
+        } catch (cloudErr) {
+          console.warn('[BackupManager] Cloud sync warning during restore:', cloudErr);
         }
-      } catch (cloudErr) {
-        console.warn('[BackupManager] Cloud sync warning during restore:', cloudErr);
       }
 
       // Notify the application

@@ -210,14 +210,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       <form id="product-detail-form" onSubmit={handleSave} className="space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label={`${t('products.productName')} *`}
+            label={`${t('products.productTitle', 'عنوان محصول')} *`}
             placeholder={isPersian ? "مثال: کت چرم مردانه VIP" : "e.g. Men's Leather Jacket VIP"}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
           />
           <Input
-            label={t('products.categorySlug')}
+            label={t('products.slugHeader', 'شناسه یکتا (اسلاگ)')}
             placeholder="men-leather-jacket-vip"
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
@@ -290,8 +290,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label={isPersian ? "برچسب‌ها / تگ‌ها" : "Tags / Labels"}
-            placeholder={isPersian ? "مردانه, چرم, زمستانه, VIP" : "men, leather, winter, VIP"}
+            label={t('products.tags', 'برچسب‌ها (تگ‌ها)')}
+            placeholder={t('products.tagsPlaceholder', 'مثال: مردانه, چرم, زمستانه, VIP')}
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             icon={<Tag className="w-4 h-4" />}

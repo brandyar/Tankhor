@@ -344,7 +344,7 @@ export class SqliteSalesStorage {
 
         const txDate = ord.date_created || (ord as any).order_date || new Date().toISOString();
         const newTx: TreasuryTransaction = {
-          id: Date.now() + Math.floor(Math.random() * 10000),
+          id: this.base.generateUniqueId(treasuryTxList),
           organization_id: orgId,
           source_account_id: null,
           destination_account_id: destAcc.id,

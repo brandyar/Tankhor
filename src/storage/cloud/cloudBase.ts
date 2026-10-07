@@ -20,6 +20,20 @@ export function cleanInt(val: any): number | null {
   return Math.floor(num);
 }
 
+export function isValidDirectusId(val: any): boolean {
+  if (typeof val === 'number') {
+    return Number.isInteger(val) && val > 0 && val <= 2147483647;
+  }
+  if (typeof val === 'string') {
+    const num = Number(val);
+    if (!isNaN(num) && Number.isInteger(num)) {
+      return num > 0 && num <= 2147483647;
+    }
+    return cleanUuid(val) !== null;
+  }
+  return false;
+}
+
 export class CloudStorageBase {
   public localAdapter: LocalOfflineAdapter;
 

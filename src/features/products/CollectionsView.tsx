@@ -304,8 +304,8 @@ export const CollectionsView: React.FC = () => {
       >
         <form id="collection-form" onSubmit={handleSave} className="space-y-4">
           <Input
-            label={`${t('products.collectionName')} *`}
-            placeholder="Spring/Summer"
+            label={`${t('products.collectionName', 'عنوان مجموعه')} *`}
+            placeholder={isPersian ? "مثال: کالکشن بهاره ۱۴۰۴ یا عیدانه" : "Spring/Summer"}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required

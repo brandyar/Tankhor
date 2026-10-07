@@ -232,10 +232,13 @@ export class CloudAccountingStorage {
 
   async savePersonTransaction(tx: Partial<PersonTransaction>): Promise<PersonTransaction> {
     try {
-      if (tx.id) {
-        return await this.base.client.updateItem<PersonTransaction>('person_transactions', tx.id, tx);
+      const isRealId = tx.id && typeof tx.id === 'number' && tx.id > 0 && tx.id < 1000000000;
+      if (isRealId) {
+        return await this.base.client.updateItem<PersonTransaction>('person_transactions', tx.id!, tx);
       }
-      return await this.base.client.createItem<PersonTransaction>('person_transactions', tx);
+      const createPayload = { ...tx };
+      delete createPayload.id;
+      return await this.base.client.createItem<PersonTransaction>('person_transactions', createPayload);
     } catch {
       const saved = await this.base.localAdapter.savePersonTransaction(tx);
       this.base.syncManager.enqueue({ action: tx.id ? 'UPDATE' : 'CREATE', collection: 'person_transactions', payload: saved });
@@ -582,10 +585,13 @@ export class CloudAccountingStorage {
 
   async saveFinancialAccount(account: Partial<FinancialAccount>): Promise<FinancialAccount> {
     try {
-      if (account.id) {
-        return await this.base.client.updateItem<FinancialAccount>('financial_accounts', account.id, account);
+      const isRealId = account.id && typeof account.id === 'number' && account.id > 0 && account.id < 1000000000;
+      if (isRealId) {
+        return await this.base.client.updateItem<FinancialAccount>('financial_accounts', account.id!, account);
       }
-      return await this.base.client.createItem<FinancialAccount>('financial_accounts', account);
+      const createPayload = { ...account };
+      delete createPayload.id;
+      return await this.base.client.createItem<FinancialAccount>('financial_accounts', createPayload);
     } catch {
       const saved = await this.base.localAdapter.saveFinancialAccount(account);
       this.base.syncManager.enqueue({ action: account.id ? 'UPDATE' : 'CREATE', collection: 'financial_accounts', payload: saved });
@@ -632,10 +638,13 @@ export class CloudAccountingStorage {
   async saveTreasuryTransaction(tx: Partial<TreasuryTransaction>): Promise<TreasuryTransaction> {
     try {
       let saved: TreasuryTransaction;
-      if (tx.id) {
-        saved = await this.base.client.updateItem<TreasuryTransaction>('treasury_transactions', tx.id, tx);
+      const isRealId = tx.id && typeof tx.id === 'number' && tx.id > 0 && tx.id < 1000000000;
+      if (isRealId) {
+        saved = await this.base.client.updateItem<TreasuryTransaction>('treasury_transactions', tx.id!, tx);
       } else {
-        saved = await this.base.client.createItem<TreasuryTransaction>('treasury_transactions', tx);
+        const createPayload = { ...tx };
+        delete createPayload.id;
+        saved = await this.base.client.createItem<TreasuryTransaction>('treasury_transactions', createPayload);
       }
 
       await this.base.localAdapter.saveTreasuryTransaction(saved).catch(() => {});
@@ -712,10 +721,13 @@ export class CloudAccountingStorage {
 
   async saveCheque(cheque: Partial<Cheque>): Promise<Cheque> {
     try {
-      if (cheque.id) {
-        return await this.base.client.updateItem<Cheque>('cheques', cheque.id, cheque);
+      const isRealId = cheque.id && typeof cheque.id === 'number' && cheque.id > 0 && cheque.id < 1000000000;
+      if (isRealId) {
+        return await this.base.client.updateItem<Cheque>('cheques', cheque.id!, cheque);
       }
-      return await this.base.client.createItem<Cheque>('cheques', cheque);
+      const createPayload = { ...cheque };
+      delete createPayload.id;
+      return await this.base.client.createItem<Cheque>('cheques', createPayload);
     } catch {
       const saved = await this.base.localAdapter.saveCheque(cheque);
       this.base.syncManager.enqueue({ action: cheque.id ? 'UPDATE' : 'CREATE', collection: 'cheques', payload: saved });
@@ -800,10 +812,13 @@ export class CloudAccountingStorage {
   async saveLandedCost(cost: Partial<LandedCost>, allocations?: Partial<LandedCostAllocation>[]): Promise<LandedCost> {
     try {
       let saved: LandedCost;
-      if (cost.id) {
-        saved = await this.base.client.updateItem<LandedCost>('landed_costs', cost.id, cost);
+      const isRealId = cost.id && typeof cost.id === 'number' && cost.id > 0 && cost.id < 1000000000;
+      if (isRealId) {
+        saved = await this.base.client.updateItem<LandedCost>('landed_costs', cost.id!, cost);
       } else {
-        saved = await this.base.client.createItem<LandedCost>('landed_costs', cost);
+        const createPayload = { ...cost };
+        delete createPayload.id;
+        saved = await this.base.client.createItem<LandedCost>('landed_costs', createPayload);
       }
 
       if (allocations && allocations.length > 0) {
@@ -812,10 +827,13 @@ export class CloudAccountingStorage {
             ...alloc,
             landed_cost_id: saved.id,
           };
-          if (alloc.id) {
-            await this.base.client.updateItem<LandedCostAllocation>('landed_cost_allocations', alloc.id, payload);
+          const isAllocRealId = alloc.id && typeof alloc.id === 'number' && alloc.id > 0 && alloc.id < 1000000000;
+          if (isAllocRealId) {
+            await this.base.client.updateItem<LandedCostAllocation>('landed_cost_allocations', alloc.id!, payload);
           } else {
-            await this.base.client.createItem<LandedCostAllocation>('landed_cost_allocations', payload);
+            const allocPayload = { ...payload };
+            delete allocPayload.id;
+            await this.base.client.createItem<LandedCostAllocation>('landed_cost_allocations', allocPayload);
           }
         }
       }
@@ -880,10 +898,13 @@ export class CloudAccountingStorage {
 
   async saveLandedCostAllocation(allocation: Partial<LandedCostAllocation>): Promise<LandedCostAllocation> {
     try {
-      if (allocation.id) {
-        return await this.base.client.updateItem<LandedCostAllocation>('landed_cost_allocations', allocation.id, allocation);
+      const isRealId = allocation.id && typeof allocation.id === 'number' && allocation.id > 0 && allocation.id < 1000000000;
+      if (isRealId) {
+        return await this.base.client.updateItem<LandedCostAllocation>('landed_cost_allocations', allocation.id!, allocation);
       }
-      return await this.base.client.createItem<LandedCostAllocation>('landed_cost_allocations', allocation);
+      const createPayload = { ...allocation };
+      delete createPayload.id;
+      return await this.base.client.createItem<LandedCostAllocation>('landed_cost_allocations', createPayload);
     } catch {
       return await this.base.localAdapter.saveLandedCostAllocation(allocation);
     }

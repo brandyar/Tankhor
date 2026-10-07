@@ -6,6 +6,9 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { BackupManager, InspectionResult, BackupCollectionKey } from '../../storage/backupManager';
+import { isTauriEnvironment } from '../../storage';
+import { CloudMigrationManager } from '../../storage/cloudMigrationManager';
+import { useAuth } from '../../context/AuthContext';
 import { toPersianDigits, formatDate } from '../../utils/formatters';
 import {
   Download,
@@ -32,6 +35,8 @@ import {
 export const LocalBackupRestoreCard: React.FC = () => {
   const { t, locale } = useTranslation();
   const { activeOrganization, refreshOrganizations } = useOrganization();
+  const { isCloudAuthenticated } = useAuth();
+  const isDesktop = isTauriEnvironment();
   const isPersian = locale === 'fa';
   const formatNum = (val: number | string) => (isPersian ? toPersianDigits(val) : String(val));
 
@@ -46,6 +51,7 @@ export const LocalBackupRestoreCard: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [isSeedingDemo, setIsSeedingDemo] = useState(false);
+  const [isMigratingCloudToLocal, setIsMigratingCloudToLocal] = useState(false);
 
   // File Inspection & Restore Modal
   const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
@@ -164,6 +170,36 @@ export const LocalBackupRestoreCard: React.FC = () => {
       });
     } finally {
       setIsRestoring(false);
+    }
+  };
+
+  // Handle Cloud-to-Local Migration (Desktop Free SQLite)
+  const handleMigrateCloudToLocal = async () => {
+    if (!activeOrganization?.id) return;
+    setIsMigratingCloudToLocal(true);
+    setFeedback(null);
+    try {
+      const res = await CloudMigrationManager.migrateCloudToLocal(activeOrganization.id);
+      if (res.success) {
+        await refreshOrganizations();
+        loadStats();
+        setFeedback({
+          type: 'success',
+          message: `انتقال اطلاعات ابری به پایگاه‌داده محلی این سیستم با موفقیت انجام شد (${toPersianDigits(res.totalMigrated)} رکورد ذخیره گردید).`,
+        });
+      } else {
+        setFeedback({
+          type: 'error',
+          message: res.errors[0] || 'خطا در انتقال اطلاعات به پایگاه‌داده محلی',
+        });
+      }
+    } catch (err: any) {
+      setFeedback({
+        type: 'error',
+        message: `خطا در ارتباط با سرور ابری: ${err.message}`,
+      });
+    } finally {
+      setIsMigratingCloudToLocal(false);
     }
   };
 
@@ -443,6 +479,32 @@ export const LocalBackupRestoreCard: React.FC = () => {
                 </Button>
               </div>
             </div>
+
+            {/* Box 3: Cloud to Local Sync (Desktop Only) */}
+            {isDesktop && isCloudAuthenticated && (
+              <div className="p-5 rounded-2xl border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/40 dark:bg-emerald-950/20 sm:col-span-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <h4 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                      انتقال اطلاعات ابری به پایگاه‌داده محلی این سیستم (SQLite)
+                    </h4>
+                  </div>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                    اگر اشتراک ابری سازمان به پایان رسیده یا می‌خواهید یک نسخه کامل و آفلاین از تمامی داده‌های سازمان روی این سیستم داشته باشید، با ۱ کلیک اطلاعات را از سرور دریافت و در دیتابیس محلی ذخیره نمایید.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleMigrateCloudToLocal}
+                  isLoading={isMigratingCloudToLocal}
+                  icon={<Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+                  className="font-bold text-xs py-2.5 px-4 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/40 shrink-0 cursor-pointer shadow-2xs"
+                >
+                  دریافت و ذخیره داده‌های ابری
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Section 3: Demo Data & Initial Factory Reset */}

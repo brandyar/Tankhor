@@ -282,8 +282,8 @@ export const ColorsView: React.FC = () => {
       >
         <form id="color-form" onSubmit={handleSave} className="space-y-4">
           <Input
-            label={`${t('products.colorName')} *`}
-            placeholder="Black, Navy, White..."
+            label={`${t('products.colorName', 'نام رنگ')} *`}
+            placeholder={isPersian ? "مثال: مشکی ذغالی، سرمه‌ای یا سفید" : "Black, Navy, White..."}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required

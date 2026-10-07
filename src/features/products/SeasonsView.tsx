@@ -307,8 +307,8 @@ export const SeasonsView: React.FC = () => {
       >
         <form id="season-form" onSubmit={handleSave} className="space-y-4">
           <Input
-            label={`${t('products.seasonName')} *`}
-            placeholder="FW24, Spring 2025..."
+            label={`${t('products.seasonName', 'عنوان فصل')} *`}
+            placeholder={isPersian ? "مثال: بهاره ۱۴۰۴ یا تابستانه" : "e.g. Spring 2025, FW25..."}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -316,8 +316,8 @@ export const SeasonsView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label={t('products.seasonCode')}
-              placeholder="FW24"
+              label={t('products.seasonCode', 'کد اختصاری فصل')}
+              placeholder={isPersian ? "مثال: SS25 یا FW24" : "e.g. SS25 or FW24"}
               value={code}
               onChange={(e) => setCode(e.target.value)}
             />

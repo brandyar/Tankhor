@@ -91,15 +91,15 @@ export const ProductGeneralSpecsCard: React.FC<ProductGeneralSpecsCardProps> = (
         <div className="md:col-span-2 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label={`${t('products.name')} *`}
-              placeholder={t('products.productTitlePlaceholder')}
+              label={`${t('products.productTitle', 'عنوان محصول')} *`}
+              placeholder={t('products.productTitlePlaceholder', 'مثال: پیراهن مردانه آستین بلند')}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
             />
             <Input
-              label={`${t('products.slugHeader')} *`}
-              placeholder={t('products.slugPlaceholder')}
+              label={`${t('products.slugHeader', 'شناسه یکتا (اسلاگ)')} *`}
+              placeholder={t('products.slugPlaceholder', 'men-leather-jacket')}
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
             />
@@ -229,14 +229,14 @@ export const ProductGeneralSpecsCard: React.FC<ProductGeneralSpecsCardProps> = (
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label={t('products.tags')}
-              placeholder={t('products.tagsPlaceholder')}
+              label={t('products.tags', 'برچسب‌ها (تگ‌ها)')}
+              placeholder={t('products.tagsPlaceholder', 'مثال: مردانه, چرم, زمستانه, VIP')}
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               icon={<Tag className="w-4 h-4" />}
             />
             <Input
-              label={t('products.sortOrderLabel')}
+              label={t('products.sortOrderLabel', 'ترتیب نمایش')}
               type="number"
               value={sort}
               onChange={(e) => setSort(e.target.value ? Number(e.target.value) : '')}

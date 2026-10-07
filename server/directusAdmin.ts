@@ -194,10 +194,7 @@ export class DirectusAdminClient {
 
         if (!response.ok) {
           const errorMsg = data.errors?.[0]?.message || data.message || `Directus request failed with status ${response.status}`;
-          // Only log error if not retrying
-          if (attempt > maxRetries) {
-            console.error(`[DirectusAdminClient] Directus error on ${endpoint} (${response.status}):`, JSON.stringify(data));
-          }
+          console.error(`[DirectusAdminClient] Directus error on ${endpoint} (${response.status}):`, JSON.stringify(data));
           throw new Error(errorMsg);
         }
 
@@ -225,10 +222,8 @@ export class DirectusAdminClient {
           continue;
         }
 
-        if (attempt > maxRetries) {
-          console.error(`[DirectusAdminClient] Error on ${endpoint} after ${maxRetries} retries:`, error.message);
-          throw error;
-        }
+        // For non-network / non-pressure errors, do not retry uselessly
+        throw error;
       } finally {
         this.releaseSlot();
       }
@@ -278,6 +273,16 @@ export class DirectusAdminClient {
 
   public static async getItemById<T = any>(collection: string, id: string | number, fields?: string): Promise<T | null> {
     try {
+      if (id === undefined || id === null) return null;
+
+      // Safe check for 32-bit integer limits in PostgreSQL
+      if (typeof id === 'number' || /^-?\d+$/.test(String(id).trim())) {
+        const numId = Number(id);
+        if (numId > 2147483647 || numId < -2147483648) {
+          return null;
+        }
+      }
+
       // For items collections, using filter query avoids Directus 403/404 errors when ID doesn't exist
       if (!collection.startsWith('directus_') && collection !== 'users' && collection !== 'roles' && collection !== 'settings') {
         const items = await this.getItems<T>(collection, {
@@ -296,7 +301,8 @@ export class DirectusAdminClient {
         err.message?.includes('404') ||
         err.message?.includes('403') ||
         err.message?.toLowerCase().includes('not found') ||
-        err.message?.toLowerCase().includes("don't have permission")
+        err.message?.toLowerCase().includes("don't have permission") ||
+        err.message?.toLowerCase().includes('out of range for type integer')
       ) {
         return null;
       }
@@ -312,6 +318,12 @@ export class DirectusAdminClient {
   }
 
   public static async updateItem<T = any>(collection: string, id: string | number, item: any): Promise<T> {
+    if (typeof id === 'number' || /^-?\d+$/.test(String(id).trim())) {
+      const numId = Number(id);
+      if (numId > 2147483647 || numId < -2147483648) {
+        throw new Error(`Item ${id} not found in ${collection}`);
+      }
+    }
     return this.request<T>(this.getCollectionEndpoint(collection, String(id)), {
       method: 'PATCH',
       body: JSON.stringify(item),
@@ -319,6 +331,12 @@ export class DirectusAdminClient {
   }
 
   public static async deleteItem(collection: string, id: string | number): Promise<boolean> {
+    if (typeof id === 'number' || /^-?\d+$/.test(String(id).trim())) {
+      const numId = Number(id);
+      if (numId > 2147483647 || numId < -2147483648) {
+        return true;
+      }
+    }
     await this.request(this.getCollectionEndpoint(collection, String(id)), {
       method: 'DELETE',
     });

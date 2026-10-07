@@ -35,6 +35,7 @@ export interface SyncQueueItem {
   action: 'CREATE' | 'UPDATE' | 'DELETE';
   payload: any;
   timestamp: string;
+  retries?: number;
 }
 
 export interface IStorageProvider {

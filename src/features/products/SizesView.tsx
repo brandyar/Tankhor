@@ -318,8 +318,8 @@ export const SizesView: React.FC = () => {
         <form id="size-form" onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label={`${t('products.sizeName')} *`}
-              placeholder="Medium, 42, XL..."
+              label={`${t('products.sizeName', 'عنوان سایز')} *`}
+              placeholder={isPersian ? "مثال: مدیوم، XL یا ۴۲" : "Medium, 42, XL..."}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required

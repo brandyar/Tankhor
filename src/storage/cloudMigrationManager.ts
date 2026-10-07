@@ -769,4 +769,167 @@ export class CloudMigrationManager {
       };
     }
   }
+
+  /**
+   * Performs an automated data offboarding / migration
+   * from Cloud Directus to local offline storage (SQLite on Desktop or LocalStorage).
+   * 
+   * Fetches all tenant-scoped business entities belonging to orgId from Directus,
+   * normalizes relational identifiers, and restores them into the local database with tenant isolation.
+   */
+  public static async migrateCloudToLocal(
+    orgId: number,
+    onProgress?: (progress: MigrationStepProgress) => void
+  ): Promise<CloudMigrationResult> {
+    const errors: string[] = [];
+    let totalMigrated = 0;
+
+    const emitProgress = (
+      step: string,
+      current: number,
+      total: number,
+      status: 'pending' | 'in_progress' | 'completed' | 'failed',
+      error?: string
+    ) => {
+      if (onProgress) {
+        onProgress({ step, current, total, status, error });
+      }
+    };
+
+    try {
+      emitProgress('اتصال به سرور ابری و دریافت فهرست اطلاعات', 0, 1, 'in_progress');
+
+      // Collections to fetch from Cloud Directus
+      const cloudCollectionsToFetch: Array<{ key: string; label: string; isOrgCollection?: boolean }> = [
+        { key: 'organizations', label: 'اطلاعات سازمان', isOrgCollection: true },
+        { key: 'categories', label: 'دسته‌بندی‌ها' },
+        { key: 'brands', label: 'برندها' },
+        { key: 'seasons', label: 'فصل‌ها' },
+        { key: 'collections', label: 'کالکشن‌ها' },
+        { key: 'colors', label: 'رنگ‌ها' },
+        { key: 'size_groups', label: 'گروه‌های سایز' },
+        { key: 'sizes', label: 'سایزها' },
+        { key: 'size_guide_templates', label: 'الگوهای راهنمای سایز' },
+        { key: 'size_guide_measurements', label: 'مشخصات اندازه‌گیری' },
+        { key: 'size_guide_values', label: 'مقادیر راهنمای سایز' },
+        { key: 'products', label: 'محصولات' },
+        { key: 'product_variants', label: 'تنوع‌های کالا' },
+        { key: 'warehouses', label: 'انبارها و فروشگاه‌ها' },
+        { key: 'warehouse_locations', label: 'موقعیت‌های انبار' },
+        { key: 'inventory_items', label: 'موجودی انبارها' },
+        { key: 'inventory_movements', label: 'گردش انبار' },
+        { key: 'stock_transfers', label: 'انتقال بین انبارها' },
+        { key: 'stock_transfer_items', label: 'اقلام انتقال انبار' },
+        { key: 'customers', label: 'مشتریان' },
+        { key: 'orders', label: 'فاکتورها و سفارشات' },
+        { key: 'order_items', label: 'اقلام سفارشات' },
+        { key: 'suppliers', label: 'تامین‌کنندگان' },
+        { key: 'purchase_orders', label: 'سفارشات خرید' },
+        { key: 'purchase_order_items', label: 'اقلام خرید' },
+        { key: 'expense_categories', label: 'دسته‌بندی هزینه‌ها' },
+        { key: 'expenses', label: 'هزینه‌ها' },
+        { key: 'financial_accounts', label: 'حساب‌های مالی و صندوق‌ها' },
+        { key: 'treasury_transactions', label: 'تراکنش‌های خزانه' },
+        { key: 'person_transactions', label: 'معین اشخاص و حساب‌ها' },
+        { key: 'cheques', label: 'چک‌های صیادی' },
+        { key: 'landed_costs', label: 'بهای تمام‌شده خرید' },
+        { key: 'landed_cost_allocations', label: 'تسهیم هزینه‌های خرید' },
+        { key: 'organization_modules', label: 'ماژول‌های خریداری‌شده' },
+        { key: 'pos_shifts', label: 'شیفت‌های صندوق' },
+        { key: 'woocommerce_settings', label: 'تنظیمات اتصال ووکامرس' },
+        { key: 'woocommerce_mappings', label: 'تطبیق محصولات ووکامرس' },
+        { key: 'woocommerce_logs', label: 'لاگ‌های ووکامرس' },
+      ];
+
+      const backupData: Record<string, any[]> = {};
+      const totalSteps = cloudCollectionsToFetch.length;
+
+      for (let s = 0; s < totalSteps; s++) {
+        const itemConfig = cloudCollectionsToFetch[s];
+        emitProgress(`دریافت ${itemConfig.label}`, s + 1, totalSteps, 'in_progress');
+
+        try {
+          let items: any[] = [];
+          if (itemConfig.isOrgCollection) {
+            const orgRes = await directusClient.getItems<any>('organizations', {
+              filter: { id: { _eq: orgId } },
+              limit: 1,
+            });
+            items = Array.isArray(orgRes) ? orgRes : [];
+          } else {
+            const query: any = {
+              filter: { organization_id: { _eq: orgId } },
+              limit: 5000,
+            };
+            const result = await directusClient.getItems<any>(itemConfig.key, query);
+            items = Array.isArray(result) ? result : [];
+          }
+
+          // Normalize nested relational objects to numeric IDs for local adapters
+          const normalized = items.map((rec) => {
+            const copy = { ...rec };
+            for (const [k, v] of Object.entries(copy)) {
+              if (v && typeof v === 'object' && !Array.isArray(v) && 'id' in v) {
+                copy[k] = (v as any).id;
+              }
+            }
+            if (!itemConfig.isOrgCollection) {
+              copy.organization_id = orgId;
+            }
+            return copy;
+          });
+
+          backupData[itemConfig.key] = normalized;
+          totalMigrated += normalized.length;
+        } catch (fetchErr: any) {
+          console.warn(`[CloudMigrationManager] Warning fetching ${itemConfig.key} from Cloud:`, fetchErr);
+          backupData[itemConfig.key] = [];
+        }
+      }
+
+      emitProgress('ذخیره‌سازی اطلاعات در پایگاه‌داده محلی سیستم', totalSteps, totalSteps, 'in_progress');
+
+      // Call BackupManager.restoreBackup with skipCloudSync = true to prevent re-upload
+      const restoreRes = await BackupManager.restoreBackup(backupData, 'replace', orgId, true);
+      if (!restoreRes.success) {
+        errors.push(restoreRes.error || 'خطا در بازیابی اطلاعات در پایگاه‌داده محلی');
+      }
+
+      // Enforce local offline storage mode & update local cache
+      try {
+        localStorage.setItem('tankhor_storage_mode', 'local_offline');
+        localStorage.setItem('tankhor_active_org_id', String(orgId));
+
+        // Update cached user profile if exists so it reflects local offline mode
+        const cachedRaw = localStorage.getItem('tankhor_cached_user_profile');
+        if (cachedRaw) {
+          try {
+            const cached = JSON.parse(cachedRaw);
+            if (cached.activeOrganization) {
+              cached.activeOrganization.plan = 'free';
+            }
+            localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(cached));
+          } catch {}
+        }
+
+        storageManager.setMode('local_offline');
+      } catch (err) {
+        console.warn('[CloudMigrationManager] Mode switch warning:', err);
+      }
+
+      emitProgress('انتقال اطلاعات به پایگاه‌داده محلی با موفقیت پایان یافت', totalSteps, totalSteps, 'completed');
+
+      return {
+        success: errors.length === 0,
+        totalMigrated,
+        errors,
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        totalMigrated,
+        errors: [...errors, e?.message || 'خطا در فرآیند انتقال ابری به محلی'],
+      };
+    }
+  }
 }

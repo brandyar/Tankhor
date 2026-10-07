@@ -160,7 +160,7 @@ export const WebFreePlanGuardModal: React.FC = () => {
           </div>
 
           <p className="text-sm text-slate-600 dark:text-neutral-300 leading-relaxed max-w-3xl pt-1">
-            نرم‌افزار مدیریت فروش و انبار تن‌خور به صورت <strong className="text-emerald-600 dark:text-emerald-400 font-bold">کاملاً رایگان و نامحدود</strong> روی ویندوز، مک و اندروید قابل استفاده است. در صورت تمایل به استفاده از همین پنل تحت وب و اتصال ابری، می‌توانید سازمان خود را به پلن <strong className="text-indigo-600 dark:text-indigo-400 font-bold">Pro</strong> ارتقا دهید.
+            دسترسی به نسخه ابری و این پنل تحت وب مرورگر از طریق اشتراک <strong className="text-indigo-600 dark:text-indigo-400 font-bold">Pro</strong> امکان‌پذیر است. چنانچه تمایلی به خرید یا تمدید اشتراک ابری ندارید، تمامی اطلاعات شما در سرور محفوظ است؛ برای <strong className="text-emerald-600 dark:text-emerald-400 font-bold">استفاده ۱۰۰٪ رایگان و انتقال داده‌ها به دستگاه شخصی</strong>، کافی است نرم‌افزار دسکتاپ تن‌خور را دانلود و اجرا نمایید تا با یک کلیک تمامی اطلاعات به پایگاه‌داده محلی رایانه شما منتقل شود.
           </p>
         </div>
 
@@ -205,10 +205,10 @@ export const WebFreePlanGuardModal: React.FC = () => {
 
                 <div className="space-y-1.5">
                   <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                    دانلود رایگان نرم‌افزار
+                    دانلود رایگان نرم‌افزار و انتقال اطلاعات به سیستم شخصی
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-neutral-400 leading-relaxed">
-                    نسخه دسکتاپ و موبایل با پایگاه داده محلی روی سیستم شما به صورت کاملاً آفلاین، نامحدود و رایگان اجرا می‌شود.
+                    برای استفاده ۱۰۰٪ رایگان و انتقال تمامی اطلاعات ثبت‌شده به پایگاه‌داده محلی رایانه خود، نرم‌افزار دسکتاپ تن‌خور را دانلود و نصب نمایید. پس از ورود در نسخه دسکتاپ، دکمه دریافت و ذخیره مستقیم اطلاعات برای شما فعال است.
                   </p>
                 </div>
               </div>

@@ -618,7 +618,17 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
       >
         <form id="attribute-modal-form" onSubmit={handleSaveItem} className="space-y-4">
           <Input
-            label={t('products.titleOrName')}
+            label={
+              activeTab === 'categories'
+                ? `${t('products.categoryName', 'عنوان دسته‌بندی')} *`
+                : activeTab === 'seasons'
+                ? `${t('products.seasonName', 'عنوان فصل')} *`
+                : activeTab === 'collections'
+                ? `${t('products.collectionName', 'عنوان مجموعه')} *`
+                : activeTab === 'colors'
+                ? `${t('products.colorName', 'نام رنگ')} *`
+                : `${t('products.titleOrName', 'عنوان / نام')} *`
+            }
             value={name}
             onChange={(e) => setName(e.target.value)}
             required

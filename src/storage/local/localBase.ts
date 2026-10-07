@@ -23,12 +23,11 @@ export class LocalStorageBase {
   }
 
   generateUniqueId(items: { id: number | string }[]): number {
-    const maxExisting = items.reduce(
-      (max, item) => (typeof item.id === 'number' && Number.isFinite(item.id) && item.id > max ? item.id : max),
-      0
-    );
-    const now = Date.now();
-    const candidate = Math.max(maxExisting + 1, now, this.lastGeneratedId + 1);
+    const maxExisting = items.reduce((max, item) => {
+      const id = typeof item.id === 'number' ? item.id : Number(item.id);
+      return Number.isInteger(id) && id > 0 && id <= 2147483647 && id > max ? id : max;
+    }, 0);
+    const candidate = Math.max(maxExisting + 1, (this.lastGeneratedId % 2147483647) + 1);
     this.lastGeneratedId = candidate;
     return candidate;
   }

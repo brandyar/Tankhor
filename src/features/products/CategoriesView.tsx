@@ -343,8 +343,8 @@ export const CategoriesView: React.FC = () => {
       >
         <form id="category-form" onSubmit={handleSave} className="space-y-4">
           <Input
-            label={`${t('products.categoryName')} *`}
-            placeholder="مثال: کت و کاپشن مردانه"
+            label={`${t('products.categoryName', 'عنوان دسته‌بندی')} *`}
+            placeholder={isPersian ? "مثال: کت و کاپشن مردانه" : "e.g. Men's Jackets"}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -352,17 +352,17 @@ export const CategoriesView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label={t('products.categorySlug')}
+              label={t('products.slugHeader', 'شناسه یکتا (اسلاگ)')}
               placeholder="men-jackets"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
             />
             <Select
-              label={t('products.parentCategory')}
+              label={t('products.parentCategory', 'دسته‌بندی والد')}
               value={parentId}
               onChange={(e) => setParentId(e.target.value ? Number(e.target.value) : '')}
               options={[
-                { value: '', label: t('products.rootCategory') },
+                { value: '', label: t('products.rootCategory', 'دسته‌بندی اصلی (سطح اول)') },
                 ...getParentSelectOptions(),
               ]}
             />

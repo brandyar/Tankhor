@@ -28,6 +28,8 @@ import {
   ExternalLink,
   Laptop,
   Radio,
+  Download,
+  Database,
 } from 'lucide-react';
 
 interface UpgradeToProModalProps {
@@ -81,6 +83,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
   const { activeOrganization, refreshOrganizations } = useOrganization();
   const { isCloudAuthenticated, openLoginModal } = useAuth();
   const { settings } = useProjectSettings();
+  const isDesktop = isTauriEnvironment();
 
   const [selectedMonths, setSelectedMonths] = useState<number>(3);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -100,11 +103,17 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
   } | null>(null);
   const pollingTimerRef = useRef<any>(null);
 
-  // Cloud Data Migration State
+  // Cloud Data Migration State (Local to Cloud)
   const [isMigrating, setIsMigrating] = useState(false);
   const [migrationProgress, setMigrationProgress] = useState<MigrationStepProgress | null>(null);
   const [migrationDone, setMigrationDone] = useState(false);
   const [migrationStats, setMigrationStats] = useState<{ total: number; errors: string[] } | null>(null);
+
+  // Local Offline Migration State (Cloud to Local SQLite/Disk)
+  const [isMigratingToLocal, setIsMigratingToLocal] = useState(false);
+  const [localMigrationProgress, setLocalMigrationProgress] = useState<MigrationStepProgress | null>(null);
+  const [localMigrationDone, setLocalMigrationDone] = useState(false);
+  const [localMigrationStats, setLocalMigrationStats] = useState<{ total: number; errors: string[] } | null>(null);
 
   // Polling for Desktop/External payment confirmation
   useEffect(() => {
@@ -331,12 +340,50 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
     if (onSuccess) onSuccess();
   };
 
+  /**
+   * Start cloud-to-local data offboarding / migration (Desktop Free SQLite)
+   */
+  const handleMigrateCloudToLocal = async () => {
+    if (!activeOrganization?.id) return;
+    setIsMigratingToLocal(true);
+    setError(null);
+
+    try {
+      const res = await CloudMigrationManager.migrateCloudToLocal(
+        activeOrganization.id,
+        (progress) => {
+          setLocalMigrationProgress(progress);
+        }
+      );
+
+      if (res.success) {
+        setLocalMigrationDone(true);
+        setLocalMigrationStats({ total: res.totalMigrated, errors: res.errors });
+        await refreshOrganizations();
+      } else {
+        setError(res.errors[0] || 'خطا در فرآیند انتقال اطلاعات به دیتابیس محلی');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'خطا در برقراری ارتباط با سرور ابری');
+    } finally {
+      setIsMigratingToLocal(false);
+    }
+  };
+
+  const handleFinishOfflineSession = () => {
+    storageManager.setMode('local_offline');
+    onClose();
+    if (typeof window !== 'undefined') {
+      window.location.reload();
+    }
+  };
+
   return (
     <div
       id="upgrade-pro-modal-backdrop"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-fade-in"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !isChecking && !isMigrating && !isProcessingPayment) onClose();
+        if (e.target === e.currentTarget && !isChecking && !isMigrating && !isMigratingToLocal && !isProcessingPayment) onClose();
       }}
     >
       <div
@@ -473,7 +520,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
             </div>
           )}
 
-          {/* Migration Complete View */}
+          {/* Migration Complete View (Local to Cloud) */}
           {migrationDone && (
             <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 rounded-2xl space-y-3">
               <div className="flex items-center gap-2 font-bold text-xs text-blue-900 dark:text-blue-200">
@@ -489,8 +536,29 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
             </div>
           )}
 
+          {/* Local Offline Migration Complete View (Cloud to Local SQLite) */}
+          {localMigrationDone && (
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 rounded-2xl space-y-3 animate-scale-up">
+              <div className="flex items-center gap-2 font-bold text-xs text-emerald-900 dark:text-emerald-200">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>انتقال اطلاعات به پایگاه‌داده محلی با موفقیت انجام شد!</span>
+              </div>
+              <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                تعداد <strong>{toPersianDigits(localMigrationStats?.total || 0)} رکورد</strong> با موفقیت از سرور دریافت و در پایگاه‌داده محلی این سیستم (SQLite) ذخیره شدند. از این پس نرم‌افزار به صورت ۱۰۰٪ آفلاین، رایگان و بدون نیاز به اینترنت برای شما فعال است.
+              </p>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleFinishOfflineSession}
+                className="w-full text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 cursor-pointer shadow-xs"
+              >
+                شروع استفاده رایگان و آفلاین از نرم‌افزار
+              </Button>
+            </div>
+          )}
+
           {/* Waiting For External / Desktop Payment */}
-          {waitingPayment && !success && !migrationDone && (
+          {waitingPayment && !success && !migrationDone && !localMigrationDone && (
             <div className="p-4 sm:p-5 bg-gradient-to-b from-blue-50/80 to-indigo-50/50 dark:from-blue-950/40 dark:to-indigo-950/30 border-2 border-blue-200 dark:border-blue-800/80 rounded-2xl space-y-4 animate-scale-up">
               <div className="flex items-center gap-3">
                 <div className="relative flex items-center justify-center shrink-0">
@@ -578,7 +646,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
             </div>
           )}
 
-          {!success && !migrationDone && !waitingPayment && (
+          {!success && !migrationDone && !localMigrationDone && !waitingPayment && (
             <>
               {/* 14-Day Free Trial Promotion Banner */}
               {canStartTrial && (
@@ -692,6 +760,113 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Alternative: Free Local Offline Database / Data Transfer */}
+              {isDesktop ? (
+                /* Desktop Mode: 1-Click Cloud to Local SQLite Data Transfer */
+                <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/90 dark:border-emerald-800/60 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-600/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                        <Database className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                          <span>انتقال اطلاعات ابری به پایگاه‌داده محلی سیستم</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 font-bold">
+                            ۱۰۰٪ رایگان و آفلاین
+                          </span>
+                        </h4>
+                        <p className="text-[11px] text-neutral-600 dark:text-neutral-300 mt-1 leading-relaxed">
+                          اگر تمایلی به خرید یا تمدید اشتراک ابری ندارید، می‌توانید با ۱ کلیک تمام اطلاعات سازمان خود (کالاها، تنوع‌ها، فاکتورها، انبارها، مشتریان، هزینه‌ها و چک‌ها) را مستقیماً از سرور به پایگاه‌داده محلی این سیستم (SQLite) منتقل نمایید و به صورت دائمی، آفلاین و بدون نیاز به اینترنت استفاده کنید.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isMigratingToLocal && localMigrationProgress && (
+                    <div className="p-3 bg-white dark:bg-neutral-800 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                        <span className="flex items-center gap-1.5">
+                          <RefreshCw className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 animate-spin" />
+                          در حال دریافت و ذخیره: {localMigrationProgress.step}
+                        </span>
+                        <span className="font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
+                          {toPersianDigits(localMigrationProgress.current)} از {toPersianDigits(localMigrationProgress.total)}
+                        </span>
+                      </div>
+                      <div className="w-full bg-neutral-100 dark:bg-neutral-700 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-emerald-600 h-2 transition-all duration-300 rounded-full"
+                          style={{
+                            width: `${
+                              localMigrationProgress.total > 0
+                                ? Math.round((localMigrationProgress.current / localMigrationProgress.total) * 100)
+                                : 100
+                            }%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 border-t border-emerald-200/60 dark:border-emerald-800/40">
+                    <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
+                      اطلاعات مستقیماً روی حافظه این رایانه ذخیره خواهد شد.
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleMigrateCloudToLocal}
+                      isLoading={isMigratingToLocal}
+                      disabled={isProcessingPayment || isChecking}
+                      icon={<Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                      className="text-xs font-bold text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 cursor-pointer shadow-2xs shrink-0 justify-center"
+                    >
+                      دریافت و انتقال اطلاعات به دیتابیس محلی
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* Web Browser Mode: Explain requirement of Desktop app for offline transfer (No sync button here) */
+                <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-900/60 space-y-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <AlertCircle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-amber-950 dark:text-amber-200">
+                        استفاده رایگان و انتقال داده‌ها به رایانه شخصی:
+                      </h4>
+                      <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed mt-1">
+                        دسترسی به نسخه ابری و این پنل تحت وب مرورگر تنها با اشتراک فعال Pro امکان‌پذیر است. چنانچه تمایلی به تمدید ندارید و می‌خواهید داده‌های خود را به سیستم شخصی منتقل کنید، کافی است نرم‌افزار دسکتاپ تن‌خور را دانلود و نصب نمایید. با لاگین در نسخه دسکتاپ، دکمه دریافت و ذخیره مستقیم اطلاعات در پایگاه‌داده محلی رایانه فعال خواهد شد.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-200/50 dark:border-amber-900/40">
+                    <a
+                      href={settings.windows_setup || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 text-[11px] font-semibold hover:bg-neutral-50 dark:hover:bg-neutral-750 transition-colors shadow-2xs"
+                    >
+                      <Laptop className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      <span>دانلود نسخه ویندوز</span>
+                    </a>
+                    <a
+                      href={settings.macos_setup || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 text-[11px] font-semibold hover:bg-neutral-50 dark:hover:bg-neutral-750 transition-colors shadow-2xs"
+                    >
+                      <Download className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400" />
+                      <span>نسخه مک (macOS)</span>
+                    </a>
+                  </div>
+                </div>
+              )}
 
               {/* Payment Actions */}
               <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800 space-y-2">
