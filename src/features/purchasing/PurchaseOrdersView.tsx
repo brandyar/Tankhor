@@ -16,6 +16,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import { SearchableVariantSelect } from '../../components/ui/SearchableVariantSelect';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
@@ -637,66 +638,68 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
             />
           </div>
 
-          <div className="p-4 bg-slate-50 dark:bg-[#181a20] border border-slate-200/80 dark:border-neutral-800 rounded-xl space-y-3">
-            <h4 className="text-xs font-bold text-slate-900 dark:text-neutral-100">{t('purchasing.selectItemsBoxTitle')}</h4>
+          <div className="p-4 bg-slate-50 dark:bg-[#181a20] border border-slate-200/80 dark:border-neutral-800 rounded-xl space-y-3.5">
+            <h4 className="text-xs font-bold text-slate-900 dark:text-neutral-100 flex items-center gap-1.5">
+              <Package className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              {t('purchasing.selectItemsBoxTitle')}
+            </h4>
             
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2.5 sm:gap-2">
-              <div className="flex-1 w-full">
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-neutral-300 mb-1">{t('purchasing.selectVariantLabel')}</label>
-                <select
-                  value={selectedVariantId}
-                  onChange={(e) => {
-                    const id = Number(e.target.value);
-                    setSelectedVariantId(id);
-                    const v = variants.find((varObj) => varObj.id === id);
-                    if (v) {
-                      const costVal = v.cost !== undefined && v.cost !== null ? Number(v.cost) : ((v as any).cost_price !== undefined ? Number((v as any).cost_price) : 0);
-                      setItemCost(costVal);
-                    } else {
-                      setItemCost(0);
-                    }
-                  }}
-                  className="w-full p-2.5 text-xs border border-slate-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-[#13151a] text-slate-900 dark:text-neutral-100 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+            {/* 1. Full-Width Product Selection Field */}
+            <div className="w-full">
+              <SearchableVariantSelect
+                label={t('purchasing.selectVariantLabel')}
+                value={selectedVariantId || ''}
+                onChange={(id) => {
+                  setSelectedVariantId(id);
+                  const v = variants.find((varObj) => varObj.id === id);
+                  if (v) {
+                    const costVal = v.cost !== undefined && v.cost !== null
+                      ? Number(v.cost)
+                      : ((v as any).cost_price !== undefined ? Number((v as any).cost_price) : 0);
+                    setItemCost(costVal);
+                  } else {
+                    setItemCost(0);
+                  }
+                }}
+                variants={variants}
+                products={products}
+                placeholder={t('purchasing.selectVariantPlaceholder')}
+              />
+            </div>
+
+            {/* 2. Quantity, Unit Cost, and Add Button in next row */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 pt-1">
+              <div className="w-full sm:w-28 shrink-0">
+                <Input
+                  label={t('purchasing.quantityLabel')}
+                  type="number"
+                  min={1}
+                  value={itemQty}
+                  onChange={(e) => setItemQty(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="w-full sm:w-44 shrink-0">
+                <Input
+                  label={t('purchasing.unitCostLabel')}
+                  type="number"
+                  value={itemCost}
+                  onChange={(e) => setItemCost(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="flex-1 sm:flex-initial">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleAddItem}
+                  disabled={!selectedVariantId}
+                  icon={<Plus className="w-4 h-4" />}
+                  className="h-[42px] px-5 w-full sm:w-auto justify-center"
                 >
-                  <option value={0} className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">{t('purchasing.selectVariantPlaceholder')}</option>
-                  {variants.map((v, vIdx) => (
-                    <option key={`po_var_opt_${v.id}_${vIdx}`} value={v.id} className="bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100">
-                      {getVariantLabel(v)}
-                    </option>
-                  ))}
-                </select>
+                  {t('purchasing.addBtn')}
+                </Button>
               </div>
-
-              <div className="grid grid-cols-2 sm:flex sm:items-end gap-2 w-full sm:w-auto">
-                <div className="w-full sm:w-24">
-                  <Input
-                    label={t('purchasing.quantityLabel')}
-                    type="number"
-                    min={1}
-                    value={itemQty}
-                    onChange={(e) => setItemQty(Number(e.target.value))}
-                  />
-                </div>
-
-                <div className="w-full sm:w-32">
-                  <Input
-                    label={t('purchasing.unitCostLabel')}
-                    type="number"
-                    value={itemCost}
-                    onChange={(e) => setItemCost(Number(e.target.value))}
-                  />
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleAddItem}
-                icon={<Plus className="w-4 h-4" />}
-                className="w-full sm:w-auto whitespace-nowrap justify-center"
-              >
-                {t('purchasing.addBtn')}
-              </Button>
             </div>
 
             {/* List of Added Order Items */}

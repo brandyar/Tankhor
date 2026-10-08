@@ -391,7 +391,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
         className="w-full max-w-xl max-h-[92vh] bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden flex flex-col animate-scale-up"
       >
         {/* Header Ribbon */}
-        <div className="relative bg-gradient-to-r from-neutral-950 via-blue-950 to-indigo-950 text-white p-5 sm:p-6 pb-6">
+        <div className="relative bg-gradient-to-r from-neutral-950 via-slate-900 to-indigo-950 text-white p-5 sm:p-6 pb-5">
           <button
             onClick={onClose}
             disabled={isChecking || isMigrating || isProcessingPayment}
@@ -400,20 +400,17 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
             <X className="w-4 h-4" />
           </button>
 
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-7 h-7 rounded-xl bg-amber-400 text-neutral-950 flex items-center justify-center font-black shadow-md">
-              <Sparkles className="w-4 h-4 text-neutral-950" />
-            </div>
-            <span className="text-[11px] font-bold tracking-wide uppercase text-amber-300 bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-400/20">
-              ارتقا به نسخه حرفه‌ای (Pro)
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[11px] font-bold text-amber-300 bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-400/20">
+              نسخه حرفه‌ای (Pro)
             </span>
           </div>
 
-          <h2 className="text-base sm:text-lg font-black tracking-tight text-white mt-1">
-            فعال‌سازی اشتراک Pro و همگام‌سازی ابری
+          <h2 className="text-base sm:text-lg font-black tracking-tight text-white">
+            ارتقا به اشتراک Pro و همگام‌سازی ابری
           </h2>
           <p className="text-xs text-neutral-300 mt-1 leading-relaxed">
-            دسترسی نامحدود به پنل تحت وب، همگام‌سازی چندشعبه‌ای و اتصال تیم فروش و انبار
+            دسترسی به پنل ابری، همگام‌سازی بین سیستم‌ها و اتصال نامحدود اعضای تیم
           </p>
         </div>
 
@@ -650,22 +647,17 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
             <>
               {/* 14-Day Free Trial Promotion Banner */}
               {canStartTrial && (
-                <div className="relative overflow-hidden p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-blue-500/15 dark:from-emerald-950/50 dark:via-teal-950/40 dark:to-blue-950/50 border-2 border-emerald-500/40 dark:border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-                  <div className="flex items-start sm:items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
-                      <Sparkles className="w-5 h-5 text-white" />
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Sparkles className="w-4 h-4 text-white" />
                     </div>
                     <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="text-xs sm:text-sm font-black text-emerald-950 dark:text-emerald-100">
-                          هدیه ویژه تن‌خور: تست ۱۴ روزه رایگان اشتراک Pro
-                        </h4>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white">
-                          بدون نیاز به کارت بانکی
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-emerald-800/90 dark:text-emerald-300/80 mt-1 leading-relaxed">
-                        دسترسی فوری به پنل ابری تحت وب، همگام‌سازی نامحدود بین دستگاه‌ها و پرسنل نامحدود به مدت ۲ هفته کامل.
+                      <h4 className="text-xs sm:text-sm font-bold text-emerald-950 dark:text-emerald-100">
+                        تست رایگان ۱۴ روزه اشتراک Pro
+                      </h4>
+                      <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 mt-0.5">
+                        استفاده از تمام امکانات ابری به مدت ۲ هفته بدون نیاز به پرداخت
                       </p>
                     </div>
                   </div>
@@ -676,19 +668,19 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
                     onClick={handleStartTrial}
                     isLoading={isActivatingTrial}
                     icon={<Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />}
-                    className="w-full sm:w-auto text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 cursor-pointer shadow-sm py-2.5 px-4"
+                    className="w-full sm:w-auto text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 cursor-pointer shadow-xs py-2 px-3.5"
                   >
-                    شروع فوری تست ۱۴ روزه
+                    شروع تست ۱۴ روزه
                   </Button>
                 </div>
               )}
 
               {/* Plan Selection Cards */}
-              <div className="space-y-2.5">
-                <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center justify-between">
-                  <span>مدت زمان اشتراک را انتخاب کنید:</span>
-                  <span className="text-[11px] font-normal text-neutral-500 dark:text-neutral-400">پرداخت امن از طریق شبکه شاپرک</span>
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-neutral-800 dark:text-neutral-200">انتخاب دوره اشتراک:</span>
+                  <span className="text-[11px] text-neutral-500 dark:text-neutral-400">پرداخت امن شاپرک</span>
+                </div>
 
                 <div className="grid grid-cols-2 gap-2.5">
                   {PLAN_OPTIONS.map((plan) => {
@@ -697,14 +689,14 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
                       <div
                         key={plan.months}
                         onClick={() => setSelectedMonths(plan.months)}
-                        className={`relative p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                        className={`relative p-3 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                           isSelected
-                            ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-600 dark:border-blue-500 shadow-sm'
+                            ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-600 dark:border-blue-500 shadow-xs'
                             : 'bg-white dark:bg-neutral-800/50 border-neutral-200 dark:border-neutral-700/80 hover:border-neutral-300 dark:hover:border-neutral-600'
                         }`}
                       >
                         {plan.badge && (
-                          <span className="absolute -top-2.5 end-3 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white shadow-xs">
+                          <span className="absolute -top-2.5 end-3 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white shadow-2xs">
                             {plan.badge}
                           </span>
                         )}
@@ -718,13 +710,13 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
                           </div>
                         </div>
 
-                        <div className="mt-3">
+                        <div className="mt-2.5">
                           <p className="text-sm font-black text-neutral-900 dark:text-neutral-100">
-                            {toPersianDigits(plan.priceTomans.toLocaleString('fa-IR'))} <span className="text-[11px] font-normal text-neutral-500 dark:text-neutral-400">تومان</span>
+                            {toPersianDigits(plan.priceTomans.toLocaleString('fa-IR'))} <span className="text-[10px] font-normal text-neutral-500 dark:text-neutral-400">تومان</span>
                           </p>
                           {plan.discountPercent > 0 && (
                             <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">
-                              {toPersianDigits(plan.discountPercent)}٪ تخفیف اقتصادی
+                              {toPersianDigits(plan.discountPercent)}٪ تخفیف
                             </p>
                           )}
                         </div>
@@ -735,69 +727,59 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
               </div>
 
               {/* Pro Feature Highlights */}
-              <div className="space-y-2 pt-1">
-                <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>مزایای پلن حرفه‌ای Pro:</span>
-                </h3>
-
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/60 dark:border-neutral-700/60">
-                    <Cloud className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                    <span className="text-neutral-800 dark:text-neutral-200 font-medium">همگام‌سازی نامحدود ابری</span>
-                  </div>
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/60 dark:border-neutral-700/60">
-                    <Smartphone className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                    <span className="text-neutral-800 dark:text-neutral-200 font-medium">دسترسی تحت وب و موبایل</span>
-                  </div>
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/60 dark:border-neutral-700/60">
-                    <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                    <span className="text-neutral-800 dark:text-neutral-200 font-medium">کاربران و پرسنل نامحدود</span>
-                  </div>
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/60 dark:border-neutral-700/60">
-                    <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                    <span className="text-neutral-800 dark:text-neutral-200 font-medium">پشتیبان‌گیری ابری روزانه</span>
-                  </div>
+              <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/60 dark:border-neutral-700/60">
+                  <Cloud className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span className="text-neutral-800 dark:text-neutral-200 font-medium">همگام‌سازی ابری</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/60 dark:border-neutral-700/60">
+                  <Smartphone className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span className="text-neutral-800 dark:text-neutral-200 font-medium">پنل وب و موبایل</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/60 dark:border-neutral-700/60">
+                  <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span className="text-neutral-800 dark:text-neutral-200 font-medium">کاربران نامحدود</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/60 dark:border-neutral-700/60">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span className="text-neutral-800 dark:text-neutral-200 font-medium">پشتیبان‌گیری خودکار</span>
                 </div>
               </div>
 
               {/* Alternative: Free Local Offline Database / Data Transfer */}
               {isDesktop ? (
                 /* Desktop Mode: 1-Click Cloud to Local SQLite Data Transfer */
-                <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/90 dark:border-emerald-800/60 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-600/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                        <Database className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                          <span>انتقال اطلاعات ابری به پایگاه‌داده محلی سیستم</span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 font-bold">
-                            ۱۰۰٪ رایگان و آفلاین
-                          </span>
-                        </h4>
-                        <p className="text-[11px] text-neutral-600 dark:text-neutral-300 mt-1 leading-relaxed">
-                          اگر تمایلی به خرید یا تمدید اشتراک ابری ندارید، می‌توانید با ۱ کلیک تمام اطلاعات سازمان خود (کالاها، تنوع‌ها، فاکتورها، انبارها، مشتریان، هزینه‌ها و چک‌ها) را مستقیماً از سرور به پایگاه‌داده محلی این سیستم (SQLite) منتقل نمایید و به صورت دائمی، آفلاین و بدون نیاز به اینترنت استفاده کنید.
-                        </p>
-                      </div>
+                <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700/80 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Database className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <h4 className="text-xs font-bold text-neutral-900 dark:text-white">
+                        استفاده آفلاین و انتقال به پایگاه‌داده محلی
+                      </h4>
                     </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800/60">
+                      رایگان
+                    </span>
                   </div>
 
+                  <p className="text-[11px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                    در صورت عدم تمایل به تمدید ابری، می‌توانید با ۱ کلیک تمام اطلاعات را به دیتابیس محلی این سیستم (SQLite) منتقل و همیشه آفلاین استفاده کنید.
+                  </p>
+
                   {isMigratingToLocal && localMigrationProgress && (
-                    <div className="p-3 bg-white dark:bg-neutral-800 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-2">
+                    <div className="p-3 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 space-y-2">
                       <div className="flex items-center justify-between text-xs font-bold text-neutral-800 dark:text-neutral-200">
                         <span className="flex items-center gap-1.5">
                           <RefreshCw className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 animate-spin" />
-                          در حال دریافت و ذخیره: {localMigrationProgress.step}
+                          در حال انتقال: {localMigrationProgress.step}
                         </span>
                         <span className="font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
                           {toPersianDigits(localMigrationProgress.current)} از {toPersianDigits(localMigrationProgress.total)}
                         </span>
                       </div>
-                      <div className="w-full bg-neutral-100 dark:bg-neutral-700 rounded-full h-2 overflow-hidden">
+                      <div className="w-full bg-neutral-100 dark:bg-neutral-700 rounded-full h-1.5 overflow-hidden">
                         <div
-                          className="bg-emerald-600 h-2 transition-all duration-300 rounded-full"
+                          className="bg-emerald-600 h-1.5 transition-all duration-300 rounded-full"
                           style={{
                             width: `${
                               localMigrationProgress.total > 0
@@ -810,10 +792,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
                     </div>
                   )}
 
-                  <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 border-t border-emerald-200/60 dark:border-emerald-800/40">
-                    <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
-                      اطلاعات مستقیماً روی حافظه این رایانه ذخیره خواهد شد.
-                    </span>
+                  <div className="pt-1 flex items-center justify-end">
                     <Button
                       type="button"
                       variant="outline"
@@ -822,30 +801,26 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
                       isLoading={isMigratingToLocal}
                       disabled={isProcessingPayment || isChecking}
                       icon={<Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
-                      className="text-xs font-bold text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 cursor-pointer shadow-2xs shrink-0 justify-center"
+                      className="text-xs font-bold text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 cursor-pointer w-full sm:w-auto justify-center"
                     >
-                      دریافت و انتقال اطلاعات به دیتابیس محلی
+                      انتقال اطلاعات به پایگاه‌داده محلی
                     </Button>
                   </div>
                 </div>
               ) : (
-                /* Web Browser Mode: Explain requirement of Desktop app for offline transfer (No sync button here) */
-                <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-900/60 space-y-2.5">
-                  <div className="flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-                      <AlertCircle className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-amber-950 dark:text-amber-200">
-                        استفاده رایگان و انتقال داده‌ها به رایانه شخصی:
-                      </h4>
-                      <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed mt-1">
-                        دسترسی به نسخه ابری و این پنل تحت وب مرورگر تنها با اشتراک فعال Pro امکان‌پذیر است. چنانچه تمایلی به تمدید ندارید و می‌خواهید داده‌های خود را به سیستم شخصی منتقل کنید، کافی است نرم‌افزار دسکتاپ تن‌خور را دانلود و نصب نمایید. با لاگین در نسخه دسکتاپ، دکمه دریافت و ذخیره مستقیم اطلاعات در پایگاه‌داده محلی رایانه فعال خواهد شد.
-                      </p>
-                    </div>
+                /* Web Browser Mode: Concise Desktop app hint */
+                <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
+                      <Laptop className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      <span>استفاده رایگان در نرم‌افزار دسکتاپ تن‌خور</span>
+                    </h4>
                   </div>
+                  <p className="text-[11px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                    برای استفاده ۱۰۰٪ رایگان و آفلاین، نرم‌افزار دسکتاپ تن‌خور را دانلود و اجرا نمایید تا با یک کلیک اطلاعات به رایانه شما منتقل شود.
+                  </p>
 
-                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-200/50 dark:border-amber-900/40">
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
                     <a
                       href={settings.windows_setup || '#'}
                       target="_blank"
@@ -853,7 +828,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 text-[11px] font-semibold hover:bg-neutral-50 dark:hover:bg-neutral-750 transition-colors shadow-2xs"
                     >
                       <Laptop className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                      <span>دانلود نسخه ویندوز</span>
+                      <span>دانلود ویندوز</span>
                     </a>
                     <a
                       href={settings.macos_setup || '#'}
@@ -862,26 +837,26 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 text-[11px] font-semibold hover:bg-neutral-50 dark:hover:bg-neutral-750 transition-colors shadow-2xs"
                     >
                       <Download className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400" />
-                      <span>نسخه مک (macOS)</span>
+                      <span>دانلود مک</span>
                     </a>
                   </div>
                 </div>
               )}
 
               {/* Payment Actions */}
-              <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800 space-y-2">
+              <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800 space-y-2">
                 <Button
                   type="button"
                   variant="primary"
                   onClick={() => handleInitiatePayment()}
                   isLoading={isProcessingPayment}
                   icon={<CreditCard className="w-4 h-4" />}
-                  className="w-full justify-center text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md py-3 cursor-pointer"
+                  className="w-full justify-center text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs py-2.5 cursor-pointer"
                 >
-                  پرداخت آنلاین با درگاه زیبال (مبلغ: {toPersianDigits(currentPlan.priceTomans.toLocaleString('fa-IR'))} تومان)
+                  پرداخت آنلاین با زیبال ({toPersianDigits(currentPlan.priceTomans.toLocaleString('fa-IR'))} تومان)
                 </Button>
 
-                <div className="flex items-center justify-center pt-1">
+                <div className="flex items-center justify-center">
                   <Button
                     type="button"
                     variant="outline"
@@ -889,9 +864,9 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
                     onClick={handleCheckPlanOnline}
                     isLoading={isChecking}
                     icon={<RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin' : ''}`} />}
-                    className="text-[11px] w-full justify-center"
+                    className="text-[11px] w-full justify-center py-2"
                   >
-                    استعلام وضعیت اشتراک از سرور
+                    استعلام وضعیت اشتراک
                   </Button>
                 </div>
               </div>

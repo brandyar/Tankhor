@@ -7,6 +7,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import { SearchableVariantSelect } from '../../components/ui/SearchableVariantSelect';
 import { toPersianDigits } from '../../utils/formatters';
 import { RefreshCw, ArrowUpRight, ArrowDownLeft, AlertCircle, Package } from 'lucide-react';
 
@@ -142,14 +143,13 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Select
-          label={t('inventory.selectVariantSku') + ' *'}
+        <SearchableVariantSelect
+          label={t('inventory.selectVariantSku')}
+          required
           value={selectedVariantId}
-          onChange={(e) => setSelectedVariantId(Number(e.target.value))}
-          options={variants.map((v) => ({
-            value: v.id,
-            label: `${v.sku} - ${v.product_title || ''} (${v.color_name || ''} / ${v.size_name || ''})`,
-          }))}
+          onChange={(variantId) => setSelectedVariantId(variantId)}
+          variants={variants}
+          placeholder={t('inventory.selectOrSearchVariant')}
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -179,7 +179,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
-            label={t('inventory.movementType') + ' *'}
+            label={t('inventory.movementTypeRequired')}
             value={movementType}
             onChange={(e) => setMovementType(e.target.value as MovementType)}
             options={[
@@ -219,12 +219,12 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs font-semibold text-slate-700">{t('inventory.movementDescriptionLabel')}</label>
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t('inventory.movementDescriptionLabel')}</label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={2}
-            className="w-full bg-white border border-slate-300 rounded-xl text-slate-900 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full bg-white dark:bg-[#181a20] border border-neutral-300 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-100 text-xs p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder={t('inventory.movementDescriptionPlaceholder')}
           />
         </div>

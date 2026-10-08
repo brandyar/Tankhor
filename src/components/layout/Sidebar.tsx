@@ -149,10 +149,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [isMobileOpen]);
 
   const toggleSection = (key: string) => {
-    setOpenSections((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    setOpenSections((prev) => {
+      const isCurrentlyOpen = !!prev[key];
+      if (isCurrentlyOpen) {
+        return { [key]: false };
+      }
+      return { [key]: true };
+    });
   };
 
   const isRouteActive = (route: string) => {
@@ -394,13 +397,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     });
   }
 
-  // Auto-expand section containing currentRoute in expanded mode
+  // Auto-expand section containing currentRoute in expanded mode (closing other sections)
   useEffect(() => {
-    sections.forEach((sec) => {
-      if (sec.items && sec.items.some((item) => isRouteActive(item.route))) {
-        setOpenSections((prev) => ({ ...prev, [sec.key]: true }));
-      }
-    });
+    const activeSection = sections.find(
+      (sec) => sec.items && sec.items.some((item) => isRouteActive(item.route))
+    );
+    if (activeSection) {
+      setOpenSections({ [activeSection.key]: true });
+    }
   }, [currentRoute]);
 
   // Close flyout on scroll or window resize

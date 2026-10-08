@@ -86,24 +86,6 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
     };
   }, []);
 
-  // On Desktop, if user is logged into an organization with free/expired plan,
-  // prompt UpgradeToProModal once per session so they immediately see the 1-click cloud-to-local migration option
-  useEffect(() => {
-    if (
-      isTauriEnvironment() &&
-      isCloudAuthenticated &&
-      activeOrganization &&
-      activeOrganization.plan !== 'pro' &&
-      typeof window !== 'undefined'
-    ) {
-      const promptKey = `tankhor_seen_desktop_plan_prompt_${activeOrganization.id}`;
-      if (!sessionStorage.getItem(promptKey)) {
-        sessionStorage.setItem(promptKey, 'true');
-        setIsUpgradeModalOpen(true);
-      }
-    }
-  }, [isCloudAuthenticated, activeOrganization]);
-
   const toggleStorageMode = () => {
     if (mode === 'local_offline') {
       if (!isCloudAuthenticated) {

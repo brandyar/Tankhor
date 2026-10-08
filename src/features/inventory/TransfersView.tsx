@@ -15,6 +15,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import { SearchableVariantSelect } from '../../components/ui/SearchableVariantSelect';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
@@ -139,6 +140,7 @@ export const TransfersView: React.FC = () => {
       setSelectedItems([...selectedItems, { variant_id: itemVariantId, quantity: itemQty }]);
     }
     setItemQty(1);
+    setItemVariantId(0);
   };
 
   const handleRemoveItem = (variantId: number) => {
@@ -623,6 +625,7 @@ export const TransfersView: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         title={t('inventory.createTransferModalTitle')}
+        maxWidth="lg"
       >
         <div className="space-y-4">
           {formError && (
@@ -660,30 +663,27 @@ export const TransfersView: React.FC = () => {
           </div>
 
           {/* Add Item Section */}
-          <div className="p-3.5 bg-slate-50 dark:bg-neutral-800/60 border border-slate-200/80 dark:border-neutral-700 rounded-xl space-y-3">
+          <div className="p-3.5 sm:p-4 bg-slate-50 dark:bg-neutral-800/60 border border-slate-200/80 dark:border-neutral-700 rounded-xl space-y-3">
             <h4 className="text-xs font-bold text-slate-800 dark:text-neutral-200 flex items-center gap-1.5">
               <Package className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               {t('inventory.addItemsToTransfer')}
             </h4>
 
-            <div className="flex flex-col sm:flex-row items-end gap-2">
-              <div className="flex-1 w-full">
-                <label className="block text-[11px] text-slate-500 dark:text-neutral-400 mb-1">{t('inventory.selectItemVariantSku')}</label>
-                <select
-                  value={itemVariantId}
-                  onChange={(e) => setItemVariantId(Number(e.target.value))}
-                  className="w-full p-2 text-xs border border-slate-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-[#181a20] text-slate-900 dark:text-neutral-100 focus:ring-2 focus:ring-indigo-500 outline-none"
-                >
-                  <option value={0}>{t('inventory.selectVariantPlaceholder')}</option>
-                  {variants.map((v, vIdx) => (
-                    <option key={`trf_var_opt_${v.id}_${vIdx}`} value={v.id}>
-                      {getVariantLabel(v)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* 1. Full-Width Product Selection Field */}
+            <div className="w-full">
+              <SearchableVariantSelect
+                label={t('inventory.selectItemVariantSku')}
+                value={itemVariantId || ''}
+                onChange={(variantId) => setItemVariantId(variantId)}
+                variants={variants}
+                products={products}
+                placeholder={t('inventory.selectOrSearchVariant')}
+              />
+            </div>
 
-              <div className="w-full sm:w-28">
+            {/* 2. Compact Quantity Input & Add Button */}
+            <div className="flex items-end gap-3 pt-1">
+              <div className="w-24 sm:w-28 shrink-0">
                 <Input
                   label={t('inventory.quantity')}
                   type="number"
@@ -693,13 +693,17 @@ export const TransfersView: React.FC = () => {
                 />
               </div>
 
-              <Button
-                variant="secondary"
-                onClick={handleAddItem}
-                icon={<Plus className="w-4 h-4" />}
-              >
-                {t('inventory.addBtn')}
-              </Button>
+              <div className="flex-1 sm:flex-initial">
+                <Button
+                  variant="secondary"
+                  onClick={handleAddItem}
+                  disabled={!itemVariantId || itemQty <= 0}
+                  icon={<Plus className="w-4 h-4" />}
+                  className="h-[42px] px-4 w-full sm:w-auto"
+                >
+                  {t('inventory.addBtn')}
+                </Button>
+              </div>
             </div>
 
             {/* Selected Items List */}
