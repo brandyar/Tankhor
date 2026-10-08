@@ -71,6 +71,17 @@ const CACHED_USER_KEY = 'tankhor_cached_user_profile';
 const LAST_ACTIVITY_KEY = 'tankhor_last_activity_timestamp';
 const MAX_INACTIVITY_MS = 24 * 60 * 60 * 1000; // 24 hours of inactivity requires re-login
 
+function sanitizeOrgPlanClient(org: any): any {
+  if (!org) return org;
+  const now = Date.now();
+  if (org.plan === 'pro') {
+    if (org.trial_ends_at && new Date(org.trial_ends_at).getTime() <= now && !org.has_active_subscription) {
+      return { ...org, plan: 'free', is_trial: false, trial_expired: true };
+    }
+  }
+  return org;
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isCloudAuthenticated, setIsCloudAuthenticated] = useState<boolean>(false);
@@ -139,14 +150,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       directusClient.getMe()
         .then(async (meData) => {
           if (meData && (meData.id || meData.email)) {
-            let activeOrg = meData.active_organization || meData.activeOrganization;
-            let orgsList = Array.isArray(meData.organizations) ? meData.organizations : [];
+            let activeOrg = sanitizeOrgPlanClient(meData.active_organization || meData.activeOrganization);
+            let orgsList = Array.isArray(meData.organizations) ? meData.organizations.map(sanitizeOrgPlanClient) : [];
 
             if (orgsList.length === 0) {
               const verifiedOrgs = await directusClient.getOrganizations().catch(() => []);
               if (verifiedOrgs.length > 0) {
-                orgsList = verifiedOrgs;
-                if (!activeOrg) activeOrg = verifiedOrgs[0];
+                orgsList = verifiedOrgs.map(sanitizeOrgPlanClient);
+                if (!activeOrg) activeOrg = orgsList[0];
               }
             }
 
@@ -237,12 +248,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const loginRes = await directusClient.login(email, pass);
       let userData = await directusClient.getMe().catch(() => null);
 
-      const activeOrg = loginRes.activeOrganization || userData?.activeOrganization || userData?.active_organization;
-      const orgsList = (Array.isArray(loginRes.organizations) && loginRes.organizations.length > 0)
+      const activeOrg = sanitizeOrgPlanClient(loginRes.activeOrganization || userData?.activeOrganization || userData?.active_organization);
+      const rawOrgs = (Array.isArray(loginRes.organizations) && loginRes.organizations.length > 0)
         ? loginRes.organizations
         : (Array.isArray(userData?.organizations) && userData.organizations.length > 0)
         ? userData.organizations
         : (activeOrg ? [activeOrg] : []);
+      const orgsList = rawOrgs.map(sanitizeOrgPlanClient);
 
       const finalUser: User = {
         ...(loginRes.user || {}),
@@ -350,7 +362,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(userData);
         setIsCloudAuthenticated(true);
 
-        const activeOrg = userData.active_organization || userData.activeOrganization || regRes.organization || regRes.activeOrganization;
+        const activeOrg = sanitizeOrgPlanClient(userData.active_organization || userData.activeOrganization || regRes.organization || regRes.activeOrganization);
         if (activeOrg && activeOrg.plan === 'pro') {
           storageManager.setMode('cloud_synced');
         } else {

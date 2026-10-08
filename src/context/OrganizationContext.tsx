@@ -139,11 +139,21 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         list = await adapter.getOrganizations();
       }
 
-      // Ensure all organization objects strictly possess the plan field
-      list = list.map((o) => ({
-        ...o,
-        plan: o.plan || 'free',
-      }));
+      // Ensure all organization objects strictly possess the plan field and validate trial expiration
+      const now = Date.now();
+      list = list.map((o) => {
+        let plan = o.plan || 'free';
+        if (plan === 'pro') {
+          const isTrialExpired = o.trial_ends_at && new Date(o.trial_ends_at).getTime() <= now;
+          if (isTrialExpired && !(o as any).has_active_subscription) {
+            plan = 'free';
+          }
+        }
+        return {
+          ...o,
+          plan,
+        };
+      });
 
       // Filter out placeholder dummy "سازمان اصلی" if real organizations exist
       if (list.length > 1) {

@@ -50,6 +50,83 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
 // In-memory fallback cache for user organizations to survive transient Directus under-pressure spikes
 const userOrgsCache = new Map<string, { activeOrganization: any; organizations: any[]; timestamp: number }>();
 
+/**
+ * Validates and enforces trial and subscription status on an organization.
+ * If trial has expired and there is no active paid subscription, auto-downgrades plan to 'free'.
+ */
+export async function sanitizeAndEnforceOrgPlan(org: any): Promise<any> {
+  if (!org || !org.id) return org;
+  const now = new Date();
+  const currentPlan = org.plan || 'free';
+
+  if (currentPlan === 'pro') {
+    let isTrialActive = false;
+    let trialExpired = false;
+
+    if (org.trial_ends_at) {
+      const trialEnd = new Date(org.trial_ends_at);
+      if (!isNaN(trialEnd.getTime())) {
+        if (trialEnd > now) {
+          isTrialActive = true;
+        } else {
+          trialExpired = true;
+        }
+      }
+    } else if (org.has_used_trial) {
+      trialExpired = true;
+    }
+
+    if (isTrialActive) {
+      return {
+        ...org,
+        is_trial: true,
+        trial_days_remaining: Math.max(0, Math.ceil((new Date(org.trial_ends_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))),
+      };
+    }
+
+    // Check for active paid subscription
+    try {
+      const subs: any[] = await DirectusAdminClient.getItems('subscriptions', {
+        filter: { organization_id: { _eq: Number(org.id) } },
+        sort: '-end_date',
+        limit: 10,
+      }).catch(() => []);
+
+      const activePaidSub = subs.find((s: any) => {
+        if (!s.end_date) return false;
+        const notTrial = !String(s.transaction_id || s.Transaction_id || '').startsWith('TRIAL-');
+        const endDate = new Date(s.end_date);
+        return notTrial && !isNaN(endDate.getTime()) && endDate > now;
+      });
+
+      if (activePaidSub) {
+        return {
+          ...org,
+          plan: 'pro',
+          has_active_subscription: true,
+          subscription_end_date: activePaidSub.end_date,
+        };
+      }
+
+      // Neither active trial nor active paid sub -> Auto downgrade to free
+      console.log(`[enforceOrganizationPlan] Org #${org.id} (${org.name}) Pro trial/subscription expired. Downgrading to 'free'`);
+      org.plan = 'free';
+
+      DirectusAdminClient.updateItem('organizations', Number(org.id), {
+        plan: 'free',
+        date_updated: now.toISOString(),
+      }).catch((err: any) => console.error(`[enforceOrganizationPlan] Failed to update org #${org.id} to free:`, err.message));
+    } catch (err: any) {
+      console.warn(`[enforceOrganizationPlan] Error checking subscriptions for org #${org.id}:`, err.message);
+      if (trialExpired) {
+        org.plan = 'free';
+      }
+    }
+  }
+
+  return org;
+}
+
 export async function getUserOrganizations(userId: string, targetActiveOrgId?: number, userEmail?: string): Promise<{ activeOrganization: any; organizations: any[] }> {
   try {
     // 1. Fetch memberships from organization_users strictly for this userId / email
@@ -140,17 +217,24 @@ export async function getUserOrganizations(userId: string, targetActiveOrgId?: n
       }
     }
 
-    // 4. Return list of verified user organizations (no silent auto-provisioning on query)
-    let activeOrg: any = null;
-    if (targetActiveOrgId) {
-      activeOrg = uniqueOrgs.find((o) => Number(o.id) === Number(targetActiveOrgId)) || null;
-    }
-    if (!activeOrg && uniqueOrgs.length > 0) {
-      activeOrg = uniqueOrgs[0];
+    // 4. Sanitize and enforce plan status (revert expired trials/subs to free)
+    const sanitizedOrgs: any[] = [];
+    for (const org of uniqueOrgs) {
+      const sanitized = await sanitizeAndEnforceOrgPlan(org);
+      sanitizedOrgs.push(sanitized);
     }
 
-    if (uniqueOrgs.length > 0) {
-      const result = { activeOrganization: activeOrg, organizations: uniqueOrgs };
+    // 5. Return list of verified user organizations (no silent auto-provisioning on query)
+    let activeOrg: any = null;
+    if (targetActiveOrgId) {
+      activeOrg = sanitizedOrgs.find((o) => Number(o.id) === Number(targetActiveOrgId)) || null;
+    }
+    if (!activeOrg && sanitizedOrgs.length > 0) {
+      activeOrg = sanitizedOrgs[0];
+    }
+
+    if (sanitizedOrgs.length > 0) {
+      const result = { activeOrganization: activeOrg, organizations: sanitizedOrgs };
       userOrgsCache.set(userId, { ...result, timestamp: Date.now() });
       return result;
     }

@@ -18,7 +18,8 @@ import { confirmAction } from '../../utils/confirm';
 import { Layers, Plus, Search, Edit, Trash2 } from 'lucide-react';
 
 export const CollectionsView: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const isPersian = locale === 'fa';
   const { activeOrganization } = useOrganization();
 
   const [collections, setCollections] = useState<Collection[]>([]);

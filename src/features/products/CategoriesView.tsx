@@ -28,7 +28,8 @@ import {
 } from 'lucide-react';
 
 export const CategoriesView: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const isPersian = locale === 'fa';
   const { activeOrganization } = useOrganization();
 
   const [categories, setCategories] = useState<Category[]>([]);

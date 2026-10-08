@@ -772,16 +772,25 @@ paymentRouter.get('/subscriptions', requireAuth, async (req: AuthenticatedReques
       remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
     }
 
-    const isTrial = Boolean(
-      (activeSub && String(activeSub.Transaction_id || '').startsWith('TRIAL-')) ||
-      (org?.trial_ends_at && new Date(org.trial_ends_at) > now)
-    );
+    const isTrialActive = Boolean(org?.trial_ends_at && new Date(org.trial_ends_at) > now);
+    const hasPaidActiveSub = Boolean(activeSub && !String(activeSub.Transaction_id || activeSub.transaction_id || '').startsWith('TRIAL-'));
+    const isPro = hasPaidActiveSub || isTrialActive;
+
+    // If org has expired pro status, auto downgrade in DB
+    if (!isPro && org?.plan === 'pro') {
+      org.plan = 'free';
+      DirectusAdminClient.updateItem('organizations', orgIdNum, {
+        plan: 'free',
+        date_updated: now.toISOString(),
+      }).catch((err) => console.error('[payment/subscriptions] Failed to downgrade org to free:', err));
+    }
 
     return res.json({
       subscriptions,
       activeSubscription: activeSub,
-      isPro: org?.plan === 'pro' || !!activeSub,
-      isTrial,
+      plan: isPro ? 'pro' : 'free',
+      isPro,
+      isTrial: isTrialActive,
       hasUsedTrial: Boolean(org?.has_used_trial),
       trialEndsAt: org?.trial_ends_at || null,
       remainingDays,

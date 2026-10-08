@@ -15,7 +15,8 @@ import { Palette, Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { confirmAction } from '../../utils/confirm';
 
 export const ColorsView: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const isPersian = locale === 'fa';
   const { activeOrganization } = useOrganization();
 
   const [colors, setColors] = useState<Color[]>([]);
