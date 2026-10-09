@@ -81,7 +81,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
   onSuccess,
 }) => {
   const { activeOrganization, refreshOrganizations } = useOrganization();
-  const { isCloudAuthenticated, openLoginModal } = useAuth();
+  const { isCloudAuthenticated, openLoginModal, updateUserOrganization } = useAuth();
   const { settings } = useProjectSettings();
   const isDesktop = isTauriEnvironment();
 
@@ -279,13 +279,24 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
     try {
       const res = await directusClient.startFreeTrial(activeOrganization.id);
       if (res && (res.isPro || res.plan === 'pro')) {
-        await refreshOrganizations();
+        const updatedOrg = {
+          ...activeOrganization,
+          ...(res.organization || {}),
+          plan: 'pro' as const,
+          has_used_trial: true,
+          trial_ends_at: res.trialEndsAt || res.organization?.trial_ends_at,
+        };
+        updateUserOrganization(updatedOrg);
+        await refreshOrganizations(updatedOrg);
         storageManager.setMode('cloud_synced');
         setSuccess(true);
         setSubscriptionDetails({
           Transaction_id: 'هدیه ویژه تن‌خور (تست ۱۴ روزه)',
           transaction_amount: '۰ تومان (رایگان)',
         });
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
         setError('خطا در فعال‌سازی تست رایگان.');
       }

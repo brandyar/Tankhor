@@ -20,6 +20,9 @@ export interface User {
   description?: string;
   role?: string | UserRole;
   status?: string;
+  activeOrganization?: any;
+  active_organization?: any;
+  organizations?: any[];
 }
 
 export interface RegisterParams {
@@ -55,6 +58,8 @@ interface AuthContextType {
   register: RegisterFunction;
   loginOfflineGuest: () => void;
   logout: () => Promise<void>;
+  updateUserOrganization: (org: any) => void;
+  refreshUser: () => Promise<User | null>;
   updateUserProfile: (data: {
     first_name?: string;
     last_name?: string;
@@ -420,6 +425,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserOrganization = useCallback((updatedOrg: any) => {
+    if (!updatedOrg) return;
+    const sanitized = sanitizeOrgPlanClient(updatedOrg);
+    setUser((prevUser) => {
+      if (!prevUser) return prevUser;
+      const prevOrgs = Array.isArray(prevUser.organizations) ? [...prevUser.organizations] : [];
+      const idx = prevOrgs.findIndex((o) => o && o.id === sanitized.id);
+      let newOrgs = prevOrgs;
+      if (idx !== -1) {
+        newOrgs[idx] = { ...newOrgs[idx], ...sanitized };
+      } else {
+        newOrgs.push(sanitized);
+      }
+      const updatedUser: User = {
+        ...prevUser,
+        activeOrganization: sanitized,
+        active_organization: sanitized,
+        organizations: newOrgs,
+      };
+      try {
+        localStorage.setItem(CACHED_USER_KEY, JSON.stringify(updatedUser));
+      } catch {}
+      return updatedUser;
+    });
+
+    if (sanitized.plan === 'pro') {
+      storageManager.setMode('cloud_synced');
+    }
+    if (sanitized.id) {
+      localStorage.setItem('tankhor_active_org_id', String(sanitized.id));
+      storageManager.getLocalAdapter().saveOrganization(sanitized).catch(() => {});
+    }
+  }, []);
+
+  const refreshUser = useCallback(async (): Promise<User | null> => {
+    try {
+      const meData = await directusClient.getMe();
+      if (meData && (meData.id || meData.email)) {
+        let activeOrg = sanitizeOrgPlanClient(meData.active_organization || meData.activeOrganization);
+        let orgsList = Array.isArray(meData.organizations) ? meData.organizations.map(sanitizeOrgPlanClient) : [];
+
+        if (orgsList.length === 0) {
+          const verifiedOrgs = await directusClient.getOrganizations().catch(() => []);
+          if (verifiedOrgs.length > 0) {
+            orgsList = verifiedOrgs.map(sanitizeOrgPlanClient);
+            if (!activeOrg) activeOrg = orgsList[0];
+          }
+        }
+
+        const finalUser: User = {
+          ...meData,
+          activeOrganization: activeOrg,
+          active_organization: activeOrg,
+          organizations: orgsList,
+        };
+
+        setUser(finalUser);
+        try {
+          localStorage.setItem(CACHED_USER_KEY, JSON.stringify(finalUser));
+        } catch {}
+
+        if (activeOrg && activeOrg.plan === 'pro') {
+          storageManager.setMode('cloud_synced');
+        }
+
+        return finalUser;
+      }
+    } catch (err) {
+      console.warn('[AuthContext] refreshUser error:', err);
+    }
+    return null;
+  }, []);
+
   const updateUserProfile = async (data: {
     first_name?: string;
     last_name?: string;
@@ -483,6 +561,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         loginOfflineGuest,
         logout,
+        updateUserOrganization,
+        refreshUser,
         updateUserProfile,
       }}
     >

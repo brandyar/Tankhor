@@ -19,7 +19,7 @@ interface OrganizationContextType {
   deleteOrganizationUser: (id: number) => Promise<boolean>;
   refreshMembers: () => Promise<void>;
   isLoading: boolean;
-  refreshOrganizations: () => Promise<void>;
+  refreshOrganizations: (overrideOrg?: Organization) => Promise<void>;
 }
 
 const OrganizationContext = createContext<OrganizationContextType | undefined>(undefined);
@@ -117,26 +117,68 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const permissions: RolePermissions = getRolePermissions(userRole);
   const isOwner = userRole === 'owner' || permissions.canManageOrgSettings;
 
-  const refreshOrganizations = useCallback(async () => {
+  const refreshOrganizations = useCallback(async (forcedOrg?: Organization) => {
     try {
       let list: Organization[] = [];
 
-      // 1. If user has verified organizations in profile, prioritize them exclusively
-      if (user && (user as any).organizations && Array.isArray((user as any).organizations) && (user as any).organizations.length > 0) {
-        list = (user as any).organizations;
-      } else if (user && ((user as any).activeOrganization || (user as any).active_organization)) {
-        list = [(user as any).activeOrganization || (user as any).active_organization];
-      } else if (isCloudAuthenticated || user?.id) {
-        // Query directusClient strictly for the current authenticated user's organization memberships
-        const userOrgs = await directusClient.getOrganizations().catch(() => []);
-        if (userOrgs.length > 0) {
-          list = userOrgs;
-        } else {
-          list = [];
+      if (forcedOrg) {
+        list = [forcedOrg];
+      }
+
+      // 1. In cloud mode or if token is present, query backend to ensure live plan status
+      if (list.length === 0 && (isCloudAuthenticated || directusClient.getToken())) {
+        try {
+          const planCheck = await directusClient.checkOrganizationPlan();
+          if (planCheck?.organizations && planCheck.organizations.length > 0) {
+            list = planCheck.organizations;
+          } else if (planCheck?.activeOrganization) {
+            list = [planCheck.activeOrganization];
+          }
+        } catch {
+          const userOrgs = await directusClient.getOrganizations().catch(() => []);
+          if (userOrgs.length > 0) {
+            list = userOrgs;
+          }
         }
-      } else {
+      }
+
+      // 2. Check cached profile in localStorage if list is still empty
+      if (list.length === 0 && typeof window !== 'undefined') {
+        const cachedUserRaw = localStorage.getItem('tankhor_cached_user_profile');
+        if (cachedUserRaw) {
+          try {
+            const cached = JSON.parse(cachedUserRaw);
+            if (Array.isArray(cached.organizations) && cached.organizations.length > 0) {
+              list = cached.organizations;
+            } else if (cached.activeOrganization || cached.active_organization) {
+              list = [cached.activeOrganization || cached.active_organization];
+            }
+          } catch {}
+        }
+      }
+
+      // 3. Fallback to user object in state
+      if (list.length === 0) {
+        if (user && (user as any).organizations && Array.isArray((user as any).organizations) && (user as any).organizations.length > 0) {
+          list = (user as any).organizations;
+        } else if (user && ((user as any).activeOrganization || (user as any).active_organization)) {
+          list = [(user as any).activeOrganization || (user as any).active_organization];
+        }
+      }
+
+      // 4. Fallback to storage adapter
+      if (list.length === 0) {
         const adapter = storageManager.getAdapter();
         list = await adapter.getOrganizations();
+      }
+
+      if (forcedOrg) {
+        const fIdx = list.findIndex((o) => o && o.id === forcedOrg.id);
+        if (fIdx !== -1) {
+          list[fIdx] = { ...list[fIdx], ...forcedOrg };
+        } else {
+          list.push(forcedOrg);
+        }
       }
 
       // Ensure all organization objects strictly possess the plan field and validate trial expiration
@@ -165,13 +207,17 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       setOrganizations(list);
 
-      const savedOrgId = localStorage.getItem('tankhor_active_org_id');
+      const savedOrgId = typeof window !== 'undefined' ? localStorage.getItem('tankhor_active_org_id') : null;
       let found: Organization | null = null;
-      if (savedOrgId) {
-        found = list.find((o) => String(o.id) === String(savedOrgId)) || null;
-      }
-      if (!found && list.length > 0) {
-        found = list[0];
+      if (forcedOrg) {
+        found = list.find((o) => o && o.id === forcedOrg.id) || forcedOrg;
+      } else {
+        if (savedOrgId) {
+          found = list.find((o) => o && String(o.id) === String(savedOrgId)) || null;
+        }
+        if (!found && list.length > 0) {
+          found = list[0];
+        }
       }
 
       setActiveOrganization(found);
@@ -181,7 +227,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (err) {
       console.error('[OrganizationContext] Failed to load organizations:', err);
     }
-  }, [user]);
+  }, [user, isCloudAuthenticated]);
 
   useEffect(() => {
     refreshOrganizations();

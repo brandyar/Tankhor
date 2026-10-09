@@ -28,7 +28,7 @@ import {
 
 export const WebFreePlanGuardModal: React.FC = () => {
   const { organizations, activeOrganization, selectOrganization, refreshOrganizations } = useOrganization();
-  const { logout } = useAuth();
+  const { logout, updateUserOrganization } = useAuth();
   const { settings } = useProjectSettings();
 
   const [isChecking, setIsChecking] = useState(false);
@@ -46,9 +46,21 @@ export const WebFreePlanGuardModal: React.FC = () => {
     try {
       const res = await directusClient.startFreeTrial(activeOrganization.id);
       if (res && (res.isPro || res.plan === 'pro')) {
-        await refreshOrganizations();
+        const updatedOrg = {
+          ...activeOrganization,
+          ...(res.organization || {}),
+          plan: 'pro' as const,
+          has_used_trial: true,
+          trial_ends_at: res.trialEndsAt || res.organization?.trial_ends_at,
+        };
+        updateUserOrganization(updatedOrg);
         storageManager.setMode('cloud_synced');
+        await refreshOrganizations(updatedOrg);
         setSuccess(true);
+        setIsActivatingTrial(false);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       } else {
         setError('خطا در فعال‌سازی تست رایگان.');
         setIsActivatingTrial(false);
@@ -67,9 +79,19 @@ export const WebFreePlanGuardModal: React.FC = () => {
     try {
       const res = await directusClient.checkOrganizationPlan();
       if (res && (res.isPro || res.plan === 'pro')) {
-        await refreshOrganizations();
+        const updatedOrg = {
+          ...activeOrganization,
+          ...(res.activeOrganization || res.organization || {}),
+          plan: 'pro' as const,
+        };
+        updateUserOrganization(updatedOrg);
         storageManager.setMode('cloud_synced');
+        await refreshOrganizations(updatedOrg);
         setSuccess(true);
+        setIsChecking(false);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       } else {
         setError('اشتراک سازمان همچنان در وضعیت «رایگان» است. در صورت پرداخت، لطفاً چند لحظه بعد مجدداً بررسی را بزنید.');
         setIsChecking(false);
