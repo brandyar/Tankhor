@@ -129,11 +129,16 @@ export class SqliteSalesStorage {
 
       for (const itm of savedItems) {
         const vId = typeof itm.variant_id === 'object' ? (itm.variant_id as any)?.id : itm.variant_id;
+        const normVId = normalizeId(vId);
+        if (!normVId) continue;
+        const targetWhNorm = normalizeId(targetWarehouseId);
         const qty = Number(itm.quantity) || 1;
 
-        const inv = inventoryList.find((i) => normalizeId(i.variant_id) === normalizeId(vId) && Number(i.warehouse_id) === Number(targetWarehouseId));
+        const inv = inventoryList.find((i) => normalizeId(i.variant_id) === normVId && (targetWhNorm ? normalizeId(i.warehouse_id) === targetWhNorm : true));
         if (inv) {
           inv.quantity = Math.max(0, (Number(inv.quantity) || 0) - qty);
+          inv.available_quantity = Math.max(0, inv.quantity - (Number(inv.reserved_quantity) || 0) - (Number(inv.damaged_quantity) || 0));
+          inv.updated_at = new Date().toISOString();
           await this.base.saveItem('inventory_items', inv);
         }
 
@@ -141,7 +146,7 @@ export class SqliteSalesStorage {
         await this.base.saveItem('inventory_movements', {
           id: movId,
           organization_id: orgId,
-          variant_id: vId,
+          variant_id: normVId,
           warehouse_id: targetWarehouseId,
           type: 'sale',
           quantity: qty,
@@ -157,11 +162,16 @@ export class SqliteSalesStorage {
 
       for (const itm of savedItems) {
         const vId = typeof itm.variant_id === 'object' ? (itm.variant_id as any)?.id : itm.variant_id;
+        const normVId = normalizeId(vId);
+        if (!normVId) continue;
+        const targetWhNorm = normalizeId(targetWarehouseId);
         const qty = Number(itm.quantity) || 1;
 
-        const inv = inventoryList.find((i) => normalizeId(i.variant_id) === normalizeId(vId) && Number(i.warehouse_id) === Number(targetWarehouseId));
+        const inv = inventoryList.find((i) => normalizeId(i.variant_id) === normVId && (targetWhNorm ? normalizeId(i.warehouse_id) === targetWhNorm : true));
         if (inv) {
           inv.quantity = (Number(inv.quantity) || 0) + qty;
+          inv.available_quantity = Math.max(0, inv.quantity - (Number(inv.reserved_quantity) || 0) - (Number(inv.damaged_quantity) || 0));
+          inv.updated_at = new Date().toISOString();
           await this.base.saveItem('inventory_items', inv);
         }
 
@@ -169,7 +179,7 @@ export class SqliteSalesStorage {
         await this.base.saveItem('inventory_movements', {
           id: movId,
           organization_id: orgId,
-          variant_id: vId,
+          variant_id: normVId,
           warehouse_id: targetWarehouseId,
           type: 'return',
           quantity: qty,
@@ -204,11 +214,16 @@ export class SqliteSalesStorage {
 
       for (const itm of orderItems) {
         const vId = typeof itm.variant_id === 'object' ? (itm.variant_id as any)?.id : itm.variant_id;
+        const normVId = normalizeId(vId);
+        if (!normVId) continue;
+        const targetWhNorm = normalizeId(targetWarehouseId);
         const qty = Number(itm.quantity) || 1;
 
-        const inv = inventoryList.find((i) => normalizeId(i.variant_id) === normalizeId(vId) && Number(i.warehouse_id) === Number(targetWarehouseId));
+        const inv = inventoryList.find((i) => normalizeId(i.variant_id) === normVId && (targetWhNorm ? normalizeId(i.warehouse_id) === targetWhNorm : true));
         if (inv) {
           inv.quantity = (Number(inv.quantity) || 0) + qty;
+          inv.available_quantity = Math.max(0, inv.quantity - (Number(inv.reserved_quantity) || 0) - (Number(inv.damaged_quantity) || 0));
+          inv.updated_at = new Date().toISOString();
           await this.base.saveItem('inventory_items', inv);
         }
 
@@ -216,7 +231,7 @@ export class SqliteSalesStorage {
         await this.base.saveItem('inventory_movements', {
           id: movId,
           organization_id: order.organization_id || 1,
-          variant_id: vId,
+          variant_id: normVId,
           warehouse_id: targetWarehouseId,
           type: 'return',
           quantity: qty,

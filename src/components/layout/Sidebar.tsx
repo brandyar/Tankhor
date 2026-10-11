@@ -54,6 +54,7 @@ import {
   Sparkles,
   PackageX,
   TrendingUp,
+  Scissors,
 } from 'lucide-react';
 import { UserProfileModal } from '../modals/UserProfileModal';
 import { FeedbackModal } from '../modals/FeedbackModal';
@@ -114,6 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const hasAccountingAccess = hasAccess('accounting');
   const hasWooCommerceAccess = hasAccess('woocommerce');
   const hasOnlineCatalogAccess = hasAccess('online_catalog');
+  const hasProductionAccess = hasAccess('production') || hasAccess('produce');
   const isDesktop = isTauriEnvironment();
 
   // State to track open expandable sections in expanded mode
@@ -121,6 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     orders: false,
     inventory: false,
     products: false,
+    production: false,
     purchasing: false,
     accounting: false,
     reports: false,
@@ -234,6 +237,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { route: 'products/sizes', label: t('navigation.sizes', 'سایزها'), icon: Tag, visible: permissions.canViewProducts },
       ].filter((i) => i.visible !== false),
     },
+    ...(hasProductionAccess
+      ? [
+          {
+            key: 'production',
+            label: t('navigation.productionGroup', 'مدیریت تولید'),
+            icon: Scissors,
+            visible: true,
+            items: [
+              { route: 'production/overview', label: t('navigation.productionOverview', 'پیشخوان و آمار تولید'), icon: BarChart3, visible: true },
+              { route: 'production/materials', label: t('navigation.rawMaterials', 'انبار متریال و مواد اولیه'), icon: Boxes, visible: true },
+              { route: 'production/boms', label: t('navigation.boms', 'فرمول ساخت (BOM)'), icon: FileText, visible: true },
+              { route: 'production/orders', label: t('navigation.productionOrders', 'دستور کار و حواله برش'), icon: Shirt, visible: true },
+              { route: 'production/contractors', label: t('navigation.contractors', 'معین و حساب پیمانکاران'), icon: Users, visible: true },
+            ].filter((i) => i.visible !== false),
+          },
+        ]
+      : []),
     {
       key: 'purchasing',
       label: t('navigation.purchasingGroup', 'تدارکات و خرید'),
@@ -390,6 +410,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: t('navigation.onlineCatalog', 'کاتالوگ دیجیتال'),
       icon: Store,
       route: 'sales/catalog',
+      badge: t('navigation.moduleBadge', 'ماژول'),
+      isLocked: true,
+      isSingle: true,
+      visible: true,
+    });
+  }
+  if (!hasProductionAccess) {
+    lockedSections.push({
+      key: 'locked-production',
+      label: t('navigation.productionGroup', 'مدیریت تولید'),
+      icon: Scissors,
+      route: 'production/overview',
       badge: t('navigation.moduleBadge', 'ماژول'),
       isLocked: true,
       isSingle: true,

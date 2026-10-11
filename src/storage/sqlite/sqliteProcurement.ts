@@ -74,7 +74,8 @@ export class SqliteProcurementStorage {
     const savedItem: PurchaseOrderItem = {
       organization_id: item.organization_id || this.base.getActiveOrgId() || 1,
       purchase_order_id: item.purchase_order_id || 1,
-      variant_id: item.variant_id || 1,
+      variant_id: item.variant_id ?? null,
+      raw_material_id: (item as any).raw_material_id ?? null,
       quantity_ordered: qty,
       quantity_received: item.quantity_received || 0,
       unit_cost: unitCost,
@@ -123,7 +124,8 @@ export class SqliteProcurementStorage {
         const unitCost = itm.unit_cost || 0;
         const savedItem: PurchaseOrderItem = {
           organization_id: itm.organization_id || orgId || 1,
-          variant_id: itm.variant_id || 1,
+          variant_id: itm.variant_id ?? null,
+          raw_material_id: (itm as any).raw_material_id ?? null,
           quantity_ordered: qty,
           quantity_received: itm.quantity_received || 0,
           unit_cost: unitCost,
@@ -151,21 +153,29 @@ export class SqliteProcurementStorage {
 
       for (const itm of savedItems) {
         const vId = typeof itm.variant_id === 'object' ? (itm.variant_id as any)?.id : itm.variant_id;
+        const normVId = normalizeId(vId);
+        if (!normVId) continue;
         const qty = Number(itm.quantity_received) || Number(itm.quantity_ordered) || 1;
+        const targetWhNorm = normalizeId(targetWarehouseId);
 
-        const inv = inventoryList.find((i) => normalizeId(i.variant_id) === normalizeId(vId) && Number(i.warehouse_id) === Number(targetWarehouseId));
+        const inv = inventoryList.find((i) => normalizeId(i.variant_id) === normVId && (targetWhNorm ? normalizeId(i.warehouse_id) === targetWhNorm : true));
         if (inv) {
           inv.quantity = (Number(inv.quantity) || 0) + qty;
+          inv.available_quantity = Math.max(0, inv.quantity - (Number(inv.reserved_quantity) || 0) - (Number(inv.damaged_quantity) || 0));
+          inv.updated_at = new Date().toISOString();
           await this.base.saveItem('inventory_items', inv);
         } else {
           const newInvId = this.base.generateUniqueId(inventoryList);
           await this.base.saveItem('inventory_items', {
             id: newInvId,
             organization_id: orgId,
-            variant_id: vId,
+            variant_id: normVId,
             warehouse_id: targetWarehouseId,
             quantity: qty,
+            available_quantity: qty,
             reserved_quantity: 0,
+            damaged_quantity: 0,
+            updated_at: new Date().toISOString(),
           });
         }
 
@@ -173,7 +183,7 @@ export class SqliteProcurementStorage {
         await this.base.saveItem('inventory_movements', {
           id: movId,
           organization_id: orgId,
-          variant_id: vId,
+          variant_id: normVId,
           warehouse_id: targetWarehouseId,
           type: 'purchase',
           quantity: qty,
@@ -189,11 +199,16 @@ export class SqliteProcurementStorage {
 
       for (const itm of savedItems) {
         const vId = typeof itm.variant_id === 'object' ? (itm.variant_id as any)?.id : itm.variant_id;
+        const normVId = normalizeId(vId);
+        if (!normVId) continue;
         const qty = Number(itm.quantity_received) || Number(itm.quantity_ordered) || 1;
+        const targetWhNorm = normalizeId(targetWarehouseId);
 
-        const inv = inventoryList.find((i) => normalizeId(i.variant_id) === normalizeId(vId) && Number(i.warehouse_id) === Number(targetWarehouseId));
+        const inv = inventoryList.find((i) => normalizeId(i.variant_id) === normVId && (targetWhNorm ? normalizeId(i.warehouse_id) === targetWhNorm : true));
         if (inv) {
           inv.quantity = Math.max(0, (Number(inv.quantity) || 0) - qty);
+          inv.available_quantity = Math.max(0, inv.quantity - (Number(inv.reserved_quantity) || 0) - (Number(inv.damaged_quantity) || 0));
+          inv.updated_at = new Date().toISOString();
           await this.base.saveItem('inventory_items', inv);
         }
 
@@ -201,7 +216,7 @@ export class SqliteProcurementStorage {
         await this.base.saveItem('inventory_movements', {
           id: movId,
           organization_id: orgId,
-          variant_id: vId,
+          variant_id: normVId,
           warehouse_id: targetWarehouseId,
           type: 'return',
           quantity: qty,

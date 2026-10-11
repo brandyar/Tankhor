@@ -16,6 +16,8 @@ import {
   Users,
   FileSpreadsheet,
   Zap,
+  Scissors,
+  Boxes,
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -192,6 +194,31 @@ export const ModuleLockedCard: React.FC<ModuleLockedCardProps> = ({
             description: isRtl
               ? 'اتصال امن و دوطرفه وب‌سرویس سازگار با وب و دسکتاپ بدون افزونه واسط.'
               : 'Secure two-way integration supporting both web and desktop.',
+          },
+        ];
+      case 'production':
+      case 'produce':
+        return [
+          {
+            icon: Boxes,
+            title: isRtl ? 'انبار متریال و فرمول ساخت (BOM)' : 'Raw Materials & BOM Catalog',
+            description: isRtl
+              ? 'تعریف انبار مواد اولیه و خرج‌کار (پارچه، زیپ، نخ) و فرمول ساخت با محاسبه ضایعات.'
+              : 'Raw materials inventory management and Bill of Materials with waste factors.',
+          },
+          {
+            icon: Scissors,
+            title: isRtl ? 'دستور کار و حواله برش' : 'Production & Cut Work Orders',
+            description: isRtl
+              ? 'صدور دستور تولید، حواله برش، سنجش کسری متریال و ردیابی وضعیت در خط تولید.'
+              : 'Work order generation, cut slips, shortage detection, and routing.',
+          },
+          {
+            icon: Users,
+            title: isRtl ? 'حساب پیمانکاران و بهای تمام‌شده' : 'Contractor Ledgers & COGS',
+            description: isRtl
+              ? 'ثبت خودکار کارمزد برون‌سپاری در معین اشخاص، ورود کالا به انبار و محاسبه دقیق قیمت تمام‌شده.'
+              : 'Automated contractor fees logging, inventory receipts, and true unit costing.',
           },
         ];
       default:

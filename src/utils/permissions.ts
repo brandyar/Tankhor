@@ -16,6 +16,8 @@ export interface RolePermissions {
   canViewCustomers: boolean;
   canManageCustomers: boolean;
   canViewFinancials: boolean;
+  canViewProduction: boolean;
+  canManageProduction: boolean;
 }
 
 export interface RoleDefinition {
@@ -52,6 +54,8 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
       canViewCustomers: true,
       canManageCustomers: true,
       canViewFinancials: true,
+      canViewProduction: true,
+      canManageProduction: true,
     },
   },
   manager: {
@@ -77,6 +81,8 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
       canViewCustomers: true,
       canManageCustomers: true,
       canViewFinancials: true,
+      canViewProduction: true,
+      canManageProduction: true,
     },
   },
   warehouse: {
@@ -102,6 +108,8 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
       canViewCustomers: false,
       canManageCustomers: false,
       canViewFinancials: false,
+      canViewProduction: true,
+      canManageProduction: false,
     },
   },
   sales: {
@@ -127,6 +135,8 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
       canViewCustomers: true,
       canManageCustomers: true,
       canViewFinancials: false,
+      canViewProduction: false,
+      canManageProduction: false,
     },
   },
   viewer: {
@@ -152,9 +162,12 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
       canViewCustomers: true,
       canManageCustomers: false,
       canViewFinancials: false,
+      canViewProduction: false,
+      canManageProduction: false,
     },
   },
 };
+
 
 export function getRolePermissions(role?: string | null): RolePermissions {
   if (!role) return ROLE_DEFINITIONS.owner.permissions;

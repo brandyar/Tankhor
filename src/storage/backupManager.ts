@@ -49,6 +49,13 @@ export const BACKUP_COLLECTIONS = [
   'woocommerce_settings',
   'woocommerce_logs',
   'woocommerce_mappings',
+  'raw_materials',
+  'bill_of_materials',
+  'bom_items',
+  'contractors',
+  'production_orders',
+  'production_order_items',
+  'production_stages',
   'feedbacks',
 ] as const;
 

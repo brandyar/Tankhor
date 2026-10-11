@@ -32,13 +32,36 @@ itemsRouter.get(
       }
 
       if (collection === 'system_modules') {
-        let items = await DirectusAdminClient.getItems('system_modules', req.query).catch(
+        const rawItems = await DirectusAdminClient.getItems('system_modules', req.query).catch(
           () => []
         );
-        if (!items || items.length === 0) {
-          items = DEFAULT_SYSTEM_MODULES;
+        const mergedMap = new Map<string, any>();
+
+        for (const def of DEFAULT_SYSTEM_MODULES) {
+          mergedMap.set(def.slug, { ...def });
         }
-        return res.json({ data: items });
+
+        if (Array.isArray(rawItems)) {
+          for (const item of rawItems) {
+            if (item && item.slug) {
+              const existing = mergedMap.get(item.slug) || {};
+              mergedMap.set(item.slug, {
+                ...existing,
+                ...item,
+                name: item.name || existing.name,
+                description: item.description || existing.description,
+                icon: item.icon || existing.icon,
+                price_ir: item.price_ir !== undefined && item.price_ir !== null && String(item.price_ir).trim() !== '' ? String(item.price_ir) : existing.price_ir,
+                price_usd: item.price_usd !== undefined && item.price_usd !== null && String(item.price_usd).trim() !== '' ? String(item.price_usd) : existing.price_usd,
+                is_standalone_purchasable: item.is_standalone_purchasable !== undefined && item.is_standalone_purchasable !== null ? Boolean(item.is_standalone_purchasable) : existing.is_standalone_purchasable,
+                included_in_pro: item.included_in_pro !== undefined && item.included_in_pro !== null ? Boolean(item.included_in_pro) : existing.included_in_pro,
+                status: item.status || existing.status || 'published',
+              });
+            }
+          }
+        }
+
+        return res.json({ data: Array.from(mergedMap.values()) });
       }
 
       if (collection === 'organizations') {

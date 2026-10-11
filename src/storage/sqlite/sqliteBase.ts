@@ -55,6 +55,13 @@ export const SQLITE_COLLECTIONS = [
   'woocommerce_logs',
   'woocommerce_mappings',
   'feedbacks',
+  'raw_materials',
+  'bill_of_materials',
+  'bom_items',
+  'contractors',
+  'production_orders',
+  'production_order_items',
+  'production_stages',
 ] as const;
 
 export class SqliteStorageBase {

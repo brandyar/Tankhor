@@ -15,6 +15,7 @@ import { modulesFa } from './locales/fa/modules';
 import { accountingFa } from './locales/fa/accounting';
 import { woocommerceFa } from './locales/fa/woocommerce';
 import { onboardingFa } from './locales/fa/onboarding';
+import { productionFa } from './locales/fa/production';
 
 import { commonEn } from './locales/en/common';
 import { navigationEn } from './locales/en/navigation';
@@ -32,6 +33,7 @@ import { modulesEn } from './locales/en/modules';
 import { accountingEn } from './locales/en/accounting';
 import { woocommerceEn } from './locales/en/woocommerce';
 import { onboardingEn } from './locales/en/onboarding';
+import { productionEn } from './locales/en/production';
 
 export type Locale = 'fa' | 'en';
 export type Direction = 'rtl' | 'ltr';
@@ -57,6 +59,7 @@ const translations = {
     accounting: accountingFa,
     woocommerce: woocommerceFa,
     onboarding: onboardingFa,
+    production: productionFa,
   },
   en: {
     common: commonEn,
@@ -78,6 +81,7 @@ const translations = {
     accounting: accountingEn,
     woocommerce: woocommerceEn,
     onboarding: onboardingEn,
+    production: productionEn,
   },
 };
 

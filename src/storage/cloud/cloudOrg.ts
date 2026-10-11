@@ -1,5 +1,6 @@
 import { CloudStorageBase } from './cloudBase';
 import { QueryParams } from '../types';
+import { DEFAULT_SYSTEM_MODULES } from '../../utils/license';
 import {
   Organization,
   OrganizationUser,
@@ -199,12 +200,29 @@ export class CloudOrgStorage {
     try {
       const items = await this.base.client.getSystemModules(params);
       if (items && items.length > 0) {
-        this.base.localAdapter.setItem('system_modules', items);
-        let filtered = items;
-        if (params?.status) {
-          filtered = filtered.filter((m) => m.status === params.status);
+        const mergedMap = new Map<string, SystemModule>();
+        for (const def of DEFAULT_SYSTEM_MODULES) {
+          mergedMap.set(def.slug, { ...def });
         }
-        return filtered;
+          for (const item of items) {
+            if (item && item.slug) {
+              const existing: Partial<SystemModule> = mergedMap.get(item.slug) || {};
+              mergedMap.set(item.slug, {
+                ...existing,
+                ...item,
+                name: item.name || existing.name || '',
+                description: item.description || existing.description || null,
+                icon: item.icon || existing.icon || null,
+                price_ir: item.price_ir !== undefined && item.price_ir !== null && String(item.price_ir).trim() !== '' ? String(item.price_ir) : existing.price_ir || null,
+                price_usd: item.price_usd !== undefined && item.price_usd !== null && String(item.price_usd).trim() !== '' ? String(item.price_usd) : existing.price_usd || null,
+                is_standalone_purchasable: item.is_standalone_purchasable !== undefined ? Boolean(item.is_standalone_purchasable) : existing.is_standalone_purchasable,
+                included_in_pro: item.included_in_pro !== undefined ? Boolean(item.included_in_pro) : existing.included_in_pro,
+              } as SystemModule);
+            }
+          }
+        const mergedList = Array.from(mergedMap.values());
+        this.base.localAdapter.setItem('system_modules', mergedList);
+        return mergedList;
       }
       return await this.base.localAdapter.getSystemModules(params);
     } catch {

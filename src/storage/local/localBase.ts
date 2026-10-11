@@ -60,6 +60,9 @@ export class LocalStorageBase {
         const itemOrgId = typeof item.organization_id === 'number'
           ? item.organization_id
           : Number((item.organization_id as any)?.id || item.organization_id);
+        if (!itemOrgId || isNaN(itemOrgId) || itemOrgId === 0) {
+          return orgId === 1;
+        }
         return itemOrgId === orgId;
       });
     }

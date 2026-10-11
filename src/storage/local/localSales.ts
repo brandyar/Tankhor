@@ -279,6 +279,9 @@ export class LocalSalesStorage {
 
       for (const item of savedOrderItems) {
         const vId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
+        const normVId = normalizeId(vId);
+        if (!normVId) continue;
+        const normWId = normalizeId(wId);
         const qty = item.quantity || 1;
 
         // Record stock movement
@@ -286,8 +289,8 @@ export class LocalSalesStorage {
         movements.push({
           id: movId,
           organization_id: this.base.getActiveOrgId() || 1,
-          variant_id: vId,
-          warehouse_id: wId,
+          variant_id: normVId,
+          warehouse_id: normWId || 1,
           type: 'sale',
           quantity: qty,
           reference_type: 'order',
@@ -298,9 +301,9 @@ export class LocalSalesStorage {
 
         // Update inventory item
         const invIdx = invItems.findIndex((ii) => {
-          const ivId = typeof ii.variant_id === 'object' ? (ii.variant_id as any)?.id : ii.variant_id;
-          const iwId = typeof ii.warehouse_id === 'object' ? (ii.warehouse_id as any)?.id : ii.warehouse_id;
-          return ivId === vId && iwId === wId;
+          const ivId = normalizeId(ii.variant_id);
+          const iwId = normalizeId(ii.warehouse_id);
+          return ivId === normVId && (normWId ? iwId === normWId : true);
         });
 
         if (invIdx !== -1) {
@@ -322,14 +325,17 @@ export class LocalSalesStorage {
 
       for (const item of savedOrderItems) {
         const vId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
+        const normVId = normalizeId(vId);
+        if (!normVId) continue;
+        const normWId = normalizeId(wId);
         const qty = item.quantity || 1;
 
         const movId = this.base.generateUniqueId(movements);
         movements.push({
           id: movId,
           organization_id: this.base.getActiveOrgId() || 1,
-          variant_id: vId,
-          warehouse_id: wId,
+          variant_id: normVId,
+          warehouse_id: normWId || 1,
           type: 'return',
           quantity: qty,
           reference_type: 'order',
@@ -339,9 +345,9 @@ export class LocalSalesStorage {
         });
 
         const invIdx = invItems.findIndex((ii) => {
-          const ivId = typeof ii.variant_id === 'object' ? (ii.variant_id as any)?.id : ii.variant_id;
-          const iwId = typeof ii.warehouse_id === 'object' ? (ii.warehouse_id as any)?.id : ii.warehouse_id;
-          return ivId === vId && iwId === wId;
+          const ivId = normalizeId(ii.variant_id);
+          const iwId = normalizeId(ii.warehouse_id);
+          return ivId === normVId && (normWId ? iwId === normWId : true);
         });
 
         if (invIdx !== -1) {
@@ -353,8 +359,8 @@ export class LocalSalesStorage {
           invItems.push({
             id: newItemId,
             organization_id: this.base.getActiveOrgId() || 1,
-            variant_id: vId,
-            warehouse_id: wId,
+            variant_id: normVId,
+            warehouse_id: normWId || 1,
             quantity: qty,
             reserved_quantity: 0,
             available_quantity: qty,

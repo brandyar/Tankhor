@@ -28,6 +28,7 @@ import { CustomersView } from './features/customers/CustomersView';
 import { SuppliersView } from './features/purchasing/SuppliersView';
 import { PurchaseOrdersView } from './features/purchasing/PurchaseOrdersView';
 import { AccountingView } from './features/accounting/AccountingView';
+import { ProductionView } from './features/production/ProductionView';
 import { WooCommercePage } from './features/woocommerce/WooCommercePage';
 import { OnlineCatalogAdminView } from './features/online-catalog/OnlineCatalogAdminView';
 import { PublicCatalogView } from './features/online-catalog/public/PublicCatalogView';
@@ -118,6 +119,13 @@ const AuthenticatedApp: React.FC = () => {
       case 'purchasing/orders':
       case 'purchasing/orders/create':
         return permissions.canViewPurchasing;
+      case 'production':
+      case 'production/overview':
+      case 'production/materials':
+      case 'production/boms':
+      case 'production/orders':
+      case 'production/contractors':
+        return permissions.canViewInventory || permissions.canViewProducts || permissions.canViewPurchasing;
       case 'accounting':
       case 'accounting/dashboard':
       case 'accounting/expenses':
@@ -241,6 +249,13 @@ const AuthenticatedApp: React.FC = () => {
         return <PurchaseOrdersView />;
       case 'purchasing/orders/create':
         return <PurchaseOrdersView initialCreateMode={true} />;
+      case 'production':
+      case 'production/overview':
+      case 'production/materials':
+      case 'production/boms':
+      case 'production/orders':
+      case 'production/contractors':
+        return <ProductionView activeSubRoute={currentRoute} onNavigate={setCurrentRoute} />;
       case 'accounting':
       case 'accounting/dashboard':
       case 'accounting/expenses':

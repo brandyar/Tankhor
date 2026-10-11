@@ -40,14 +40,15 @@ export class CloudCatalogStorage {
       ]);
 
       let mappedProducts = products.map((p) => {
+        const normPId = this.base.normalizeId(p.id) || Number(p.id);
         const pVariants = variants.filter((v) => {
-          const pId = typeof v.product_id === 'number' ? v.product_id : (v.product_id as any)?.id;
-          return pId === p.id;
+          const pId = this.base.normalizeId(v.product_id) || Number(v.product_id);
+          return pId === normPId;
         });
-        const pVariantIds = new Set(pVariants.map((v) => v.id));
+        const pVariantIds = new Set(pVariants.map((v) => this.base.normalizeId(v.id) || v.id));
         const pInventory = inventoryItems.filter((i) => {
-          const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-          return pVariantIds.has(vId);
+          const vId = this.base.normalizeId(i.variant_id) || i.variant_id;
+          return pVariantIds.has(vId as any);
         });
         const totalStock = pInventory.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
 
@@ -180,9 +181,10 @@ export class CloudCatalogStorage {
         const color = colors.find((c) => c.id === colorId);
         const size = sizes.find((s) => s.id === sizeId);
 
+        const vNormId = this.base.normalizeId(v.id) || v.id;
         const vInv = inventoryItems.filter((i) => {
-          const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-          return vId === v.id;
+          const vId = this.base.normalizeId(i.variant_id) || i.variant_id;
+          return vId === vNormId;
         });
         const totalStock = vInv.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
 
@@ -226,8 +228,11 @@ export class CloudCatalogStorage {
       const productTitle = products[0]?.title || 'محصول';
 
       return variants.map((v) => {
-        const vNormId = this.base.normalizeId(v.id) || v.id;
-        const vInv = inventoryItems.filter((i) => this.base.normalizeId(i.variant_id) === vNormId);
+        const vNormId = this.base.normalizeId(v.id) || Number(v.id);
+        const vInv = inventoryItems.filter((i) => {
+          const invVId = this.base.normalizeId(i.variant_id) || Number(i.variant_id);
+          return invVId === vNormId;
+        });
         const totalStock = vInv.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
 
         const cId = this.base.normalizeId(v.color_id);
@@ -309,9 +314,10 @@ export class CloudCatalogStorage {
         }).catch(() => []);
 
         if (existingInventory.length > 0) {
-          const itemToUpdate = (warehouseId && existingInventory.find((i) => {
-            const whId = typeof i.warehouse_id === 'number' ? i.warehouse_id : (i.warehouse_id as any)?.id;
-            return whId === warehouseId;
+          const targetWhNorm = this.base.normalizeId(warehouseId) || (warehouseId ? Number(warehouseId) : undefined);
+          const itemToUpdate = (targetWhNorm && existingInventory.find((i) => {
+            const whId = this.base.normalizeId(i.warehouse_id) || Number(i.warehouse_id);
+            return whId === targetWhNorm;
           })) || existingInventory[0];
 
           const reserved = Number(itemToUpdate.reserved_quantity) || 0;

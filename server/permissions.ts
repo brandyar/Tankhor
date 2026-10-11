@@ -39,6 +39,13 @@ export const TENANT_SCOPED_COLLECTIONS = new Set([
   'woocommerce_settings',
   'woocommerce_logs',
   'woocommerce_mappings',
+  'raw_materials',
+  'bill_of_materials',
+  'bom_items',
+  'contractors',
+  'production_orders',
+  'production_order_items',
+  'production_stages',
 ]);
 
 export function checkRolePermission(
@@ -142,6 +149,10 @@ export function sanitizePayloadForDirectus(
     'size_id',
     'size_group_id',
     'template_id',
+    'bom_id',
+    'raw_material_id',
+    'contractor_id',
+    'production_order_id',
   ];
 
   for (const f of relationalFields) {

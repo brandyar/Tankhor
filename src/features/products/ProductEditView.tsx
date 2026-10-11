@@ -312,7 +312,9 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
     const activeKeys = new Set<string>();
 
     targetPairs.forEach(({ colorId, sizeId }) => {
-      const key = `${colorId || 'none'}_${sizeId || 'none'}`;
+      const normC = normalizeId(colorId) ?? 'none';
+      const normS = normalizeId(sizeId) ?? 'none';
+      const key = `${normC}_${normS}`;
       activeKeys.add(key);
 
       if (existingMap.has(key)) {
@@ -627,6 +629,10 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
       }
 
       // 3. Save / Update all variant rows in table
+      const targetWarehouseId = selectedWarehouseId && Number(selectedWarehouseId) > 0
+        ? Number(selectedWarehouseId)
+        : (warehouses.length > 0 ? warehouses[0].id : 1);
+
       for (const v of variants) {
         const vId = normalizeId(v.id);
         const colorId = normalizeId(v.color_id);
@@ -648,7 +654,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
             status: v.status || 'published',
             sort: v.sort !== undefined ? Number(v.sort) : 0,
           },
-          selectedWarehouseId,
+          targetWarehouseId,
           selectedLocationId ? Number(selectedLocationId) : undefined
         );
       }

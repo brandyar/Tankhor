@@ -11,7 +11,8 @@ import {
   LandedCost, LandedCostAllocation, VatReportSummary,
   PosShift, PosShiftStatus,
   WooCommerceSettings, WooCommerceLog, IntegrationMapping,
-  Feedback
+  Feedback,
+  RawMaterial, BillOfMaterials, BomItem, Contractor, ProductionOrder, ProductionOrderItem, ProductionStage
 } from '../types';
 import { LocalOfflineAdapter } from './localAdapter';
 import {
@@ -23,6 +24,7 @@ import {
   CloudProcurementStorage,
   CloudAccountingStorage,
   CloudWooCommerceStorage,
+  CloudProductionStorage,
 } from './cloud';
 
 export class CloudDirectusAdapter implements IStorageProvider {
@@ -38,6 +40,7 @@ export class CloudDirectusAdapter implements IStorageProvider {
   public procurement: CloudProcurementStorage;
   public accounting: CloudAccountingStorage;
   public woocommerce: CloudWooCommerceStorage;
+  public production: CloudProductionStorage;
 
   constructor(localAdapter?: LocalOfflineAdapter) {
     this.localAdapter = localAdapter || new LocalOfflineAdapter();
@@ -50,6 +53,7 @@ export class CloudDirectusAdapter implements IStorageProvider {
     this.procurement = new CloudProcurementStorage(this.base);
     this.accounting = new CloudAccountingStorage(this.base);
     this.woocommerce = new CloudWooCommerceStorage(this.base);
+    this.production = new CloudProductionStorage(this.base);
   }
 
   // ==========================================
@@ -647,4 +651,76 @@ export class CloudDirectusAdapter implements IStorageProvider {
   async submitFeedback(feedback: Partial<Feedback>): Promise<Feedback> {
     return this.org.submitFeedback(feedback);
   }
+
+  // ==========================================
+  // Production Module
+  // ==========================================
+  async getRawMaterials(params?: QueryParams): Promise<RawMaterial[]> {
+    return this.production.getRawMaterials(params);
+  }
+
+  async getRawMaterialById(id: number): Promise<RawMaterial | null> {
+    return this.production.getRawMaterialById(id);
+  }
+
+  async saveRawMaterial(material: Partial<RawMaterial>): Promise<RawMaterial> {
+    return this.production.saveRawMaterial(material);
+  }
+
+  async deleteRawMaterial(id: number): Promise<boolean> {
+    return this.production.deleteRawMaterial(id);
+  }
+
+  async getBillOfMaterials(params?: QueryParams): Promise<BillOfMaterials[]> {
+    return this.production.getBillOfMaterials(params);
+  }
+
+  async getBomByProductId(productId: number): Promise<BillOfMaterials | null> {
+    return this.production.getBomByProductId(productId);
+  }
+
+  async saveBillOfMaterials(bom: Partial<BillOfMaterials>, items?: Partial<BomItem>[]): Promise<BillOfMaterials> {
+    return this.production.saveBillOfMaterials(bom, items);
+  }
+
+  async deleteBillOfMaterials(id: number): Promise<boolean> {
+    return this.production.deleteBillOfMaterials(id);
+  }
+
+  async getContractors(params?: QueryParams): Promise<Contractor[]> {
+    return this.production.getContractors(params);
+  }
+
+  async getContractorById(id: number): Promise<Contractor | null> {
+    return this.production.getContractorById(id);
+  }
+
+  async saveContractor(contractor: Partial<Contractor>): Promise<Contractor> {
+    return this.production.saveContractor(contractor);
+  }
+
+  async deleteContractor(id: number): Promise<boolean> {
+    return this.production.deleteContractor(id);
+  }
+
+  async getProductionOrders(params?: QueryParams): Promise<ProductionOrder[]> {
+    return this.production.getProductionOrders(params);
+  }
+
+  async getProductionOrderById(id: number): Promise<ProductionOrder | null> {
+    return this.production.getProductionOrderById(id);
+  }
+
+  async saveProductionOrder(
+    order: Partial<ProductionOrder>,
+    items?: Partial<ProductionOrderItem>[],
+    stages?: Partial<ProductionStage>[]
+  ): Promise<ProductionOrder> {
+    return this.production.saveProductionOrder(order, items, stages);
+  }
+
+  async deleteProductionOrder(id: number): Promise<boolean> {
+    return this.production.deleteProductionOrder(id);
+  }
 }
+

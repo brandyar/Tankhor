@@ -345,4 +345,17 @@ export const DEFAULT_SYSTEM_MODULES: SystemModule[] = [
     included_in_pro: false,
     status: 'published',
   },
+  {
+    id: 5,
+    name: 'تولید و کارگاه پوشاک',
+    slug: 'production',
+    description: 'مدیریت مواد اولیه و خرج‌کار، فرمول ساخت (BOM)، دستور تولید و حواله برش، برون‌سپاری کارمزدی‌ها و محاسبه بهای تمام‌شده',
+    icon: 'scissors',
+    price_ir: '1280000',
+    price_usd: '39',
+    is_standalone_purchasable: true,
+    included_in_pro: false,
+    status: 'published',
+  },
 ];
+

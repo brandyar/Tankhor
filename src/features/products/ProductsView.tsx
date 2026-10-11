@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { DataTable, Column } from '../../components/ui/DataTable';
+import { Pagination } from '../../components/ui/Pagination';
 import { Product, Category, Collection, Season, SizeGuideTemplate, Color, Size, Brand, ProductVariant } from '../../types';
 import { toPersianDigits, formatDate, normalizeId, matchesSearchQuery } from '../../utils/formatters';
 import { ProductEditView } from './ProductEditView';
@@ -48,6 +49,10 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
   // View mode: 'list' | 'edit'
   const [viewMode, setViewMode] = useState<'list' | 'edit'>(initialCreateMode ? 'edit' : 'list');
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   // Product Variants Modal
   const [activeProductForVariants, setActiveProductForVariants] = useState<Product | null>(null);
@@ -230,6 +235,13 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
     colors,
     sizes,
   ]);
+
+  const totalProductsCount = filteredProducts.length;
+  const totalPages = Math.ceil(totalProductsCount / pageSize) || 1;
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredProducts.slice(start, start + pageSize);
+  }, [filteredProducts, currentPage, pageSize]);
 
   const handleOpenNewProduct = () => {
     setEditingProductId(null);
@@ -604,7 +616,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
         <div className="hidden md:block">
           <DataTable
             columns={columns}
-            data={filteredProducts}
+            data={paginatedProducts}
             keyExtractor={(p) => p.id}
             isLoading={isLoading}
             actions={(p) => (
@@ -643,12 +655,12 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
             <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
               {t('common.loading')}
             </div>
-          ) : filteredProducts.length === 0 ? (
+          ) : paginatedProducts.length === 0 ? (
             <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
               {t('common.noData')}
             </div>
           ) : (
-            filteredProducts.map((p) => {
+            paginatedProducts.map((p) => {
               const cat = categories.find((c) => c.id === p.category_id);
               const col = collections.find((c) => c.id === p.collection_id);
               const brandName =
@@ -762,6 +774,17 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
             })
           )}
         </div>
+
+        {/* Universal Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalProductsCount}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          className="mt-4"
+        />
       </Card>
 
       {/* Product Variants Modal */}

@@ -10,7 +10,8 @@ import {
   LandedCost, LandedCostAllocation, VatReportSummary,
   PosShift, PosShiftStatus,
   WooCommerceSettings, WooCommerceLog, IntegrationMapping,
-  Feedback
+  Feedback,
+  RawMaterial, BillOfMaterials, BomItem, Contractor, ProductionOrder, ProductionOrderItem, ProductionStage
 } from '../types';
 
 export type StorageMode = 'local_offline' | 'cloud_synced';
@@ -220,4 +221,30 @@ export interface IStorageProvider {
   // Feedback & Feature Suggestions (ثبت و ارسال بازخورد)
   submitFeedback?(feedback: Partial<Feedback>): Promise<Feedback>;
   getFeedbacks?(params?: QueryParams): Promise<Feedback[]>;
+
+  // Production Module (ماژول تولید و پوشاک)
+  getRawMaterials?(params?: QueryParams): Promise<RawMaterial[]>;
+  getRawMaterialById?(id: number): Promise<RawMaterial | null>;
+  saveRawMaterial?(material: Partial<RawMaterial>): Promise<RawMaterial>;
+  deleteRawMaterial?(id: number): Promise<boolean>;
+
+  getBillOfMaterials?(params?: QueryParams): Promise<BillOfMaterials[]>;
+  getBomByProductId?(productId: number): Promise<BillOfMaterials | null>;
+  saveBillOfMaterials?(bom: Partial<BillOfMaterials>, items?: Partial<BomItem>[]): Promise<BillOfMaterials>;
+  deleteBillOfMaterials?(id: number): Promise<boolean>;
+
+  getContractors?(params?: QueryParams): Promise<Contractor[]>;
+  getContractorById?(id: number): Promise<Contractor | null>;
+  saveContractor?(contractor: Partial<Contractor>): Promise<Contractor>;
+  deleteContractor?(id: number): Promise<boolean>;
+
+  getProductionOrders?(params?: QueryParams): Promise<ProductionOrder[]>;
+  getProductionOrderById?(id: number): Promise<ProductionOrder | null>;
+  saveProductionOrder?(
+    order: Partial<ProductionOrder>,
+    items?: Partial<ProductionOrderItem>[],
+    stages?: Partial<ProductionStage>[]
+  ): Promise<ProductionOrder>;
+  deleteProductionOrder?(id: number): Promise<boolean>;
 }
+

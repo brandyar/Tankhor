@@ -21,6 +21,7 @@ export const navigationFa = {
   movements: 'سوابق گردش کالا',
   stockTransfers: 'انتقال بین انبارها',
   ordersGroup: 'فروش و سفارشات',
+  productionGroup: 'مدیریت تولید',
   allOrders: 'لیست سفارشات',
   createOrder: 'ثبت سفارش جدید',
   purchasingGroup: 'خرید و تامین‌کنندگان',

@@ -20,6 +20,7 @@ import {
   XCircle,
   Globe,
   Store,
+  Scissors,
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -64,6 +65,9 @@ export const ModulesManagementCard: React.FC = () => {
         return <Globe className="w-5 h-5 text-violet-600" />;
       case 'online_catalog':
         return <Store className="w-5 h-5 text-indigo-600" />;
+      case 'production':
+      case 'produce':
+        return <Scissors className="w-5 h-5 text-rose-600" />;
       default:
         return <Boxes className="w-5 h-5 text-neutral-600" />;
     }

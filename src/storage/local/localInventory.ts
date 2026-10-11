@@ -154,40 +154,42 @@ export class LocalInventoryStorage {
     const locations = this.base.getItem<WarehouseLocation>('warehouse_locations', []);
 
     if (params?.warehouse_id) {
+      const targetWhId = normalizeId(params.warehouse_id);
       items = items.filter((item) => {
-        const whId = typeof item.warehouse_id === 'number' ? item.warehouse_id : Number((item.warehouse_id as any)?.id || (item as any).warehouse_id);
-        return whId === params.warehouse_id;
+        const whId = normalizeId(item.warehouse_id);
+        return targetWhId !== undefined && whId === targetWhId;
       });
     }
 
     if (params?.variant_id) {
+      const targetVId = normalizeId(params.variant_id);
       items = items.filter((item) => {
-        const vId = typeof item.variant_id === 'number' ? item.variant_id : Number((item.variant_id as any)?.id || (item as any).variant_id);
-        return vId === params.variant_id;
+        const vId = normalizeId(item.variant_id);
+        return targetVId !== undefined && vId === targetVId;
       });
     }
 
     // Join related data
     return items.map((item) => {
-      const vId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
-      const wId = typeof item.warehouse_id === 'object' ? (item.warehouse_id as any)?.id : item.warehouse_id;
-      const lId = typeof item.location_id === 'object' ? (item.location_id as any)?.id : item.location_id;
+      const vId = normalizeId(item.variant_id);
+      const wId = normalizeId(item.warehouse_id);
+      const lId = normalizeId(item.location_id);
 
-      const variant = variants.find((v) => v.id === vId);
+      const variant = variants.find((v) => normalizeId(v.id) === vId);
       let prodTitle: string | undefined;
       let colName: string | undefined;
       let szName: string | undefined;
 
       if (variant) {
-        const pId = typeof variant.product_id === 'object' ? (variant.product_id as any)?.id : variant.product_id;
-        const prod = products.find((p) => p.id === pId);
+        const pId = normalizeId(variant.product_id);
+        const prod = products.find((p) => normalizeId(p.id) === pId);
         prodTitle = prod?.title;
         colName = variant.color_name;
         szName = variant.size_name;
       }
 
-      const wh = warehouses.find((w) => w.id === wId);
-      const loc = locations.find((l) => l.id === lId);
+      const wh = warehouses.find((w) => normalizeId(w.id) === wId);
+      const loc = locations.find((l) => normalizeId(l.id) === lId);
 
       return {
         ...item,

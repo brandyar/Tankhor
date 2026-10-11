@@ -44,8 +44,9 @@ export class SqliteCatalogStorage {
     }
 
     return items.map((p) => {
-      const pVariants = variants.filter((v) => normalizeId(v.product_id) === p.id);
-      const pVariantIds = new Set(pVariants.map((v) => normalizeId(v.id)).filter(Boolean));
+      const normPId = normalizeId(p.id);
+      const pVariants = variants.filter((v) => normalizeId(v.product_id) === normPId);
+      const pVariantIds = new Set(pVariants.map((v) => normalizeId(v.id)).filter((id): id is number => id !== undefined));
       const pInventory = inventoryItems.filter((i) => {
         const vId = normalizeId(i.variant_id);
         return vId !== undefined && pVariantIds.has(vId);
@@ -62,7 +63,8 @@ export class SqliteCatalogStorage {
 
   async getProductById(id: number): Promise<Product | null> {
     const products = await this.getProducts();
-    return products.find((p) => p.id === id) || null;
+    const normId = normalizeId(id) || Number(id);
+    return products.find((p) => (normalizeId(p.id) || Number(p.id)) === normId) || null;
   }
 
   async saveProduct(product: Partial<Product>): Promise<Product> {
@@ -173,7 +175,8 @@ export class SqliteCatalogStorage {
 
   async getVariantsByProductId(productId: number): Promise<ProductVariant[]> {
     const all = await this.getVariants();
-    return all.filter((v) => normalizeId(v.product_id) === productId);
+    const normPId = normalizeId(productId) || Number(productId);
+    return all.filter((v) => (normalizeId(v.product_id) || Number(v.product_id)) === normPId);
   }
 
   async saveVariant(variant: Partial<ProductVariant>, warehouseId?: number, locationId?: number): Promise<ProductVariant> {
@@ -250,17 +253,27 @@ export class SqliteCatalogStorage {
         }
       }
 
-      const invItem = inventoryList.find((i) => normalizeId(i.variant_id) === saved.id && i.warehouse_id === targetWarehouseId);
+      const targetWhNormId = normalizeId(targetWarehouseId);
+      const savedNormId = normalizeId(saved.id) || Number(saved.id);
+      const invItem = inventoryList.find((i) => normalizeId(i.variant_id) === savedNormId && (targetWhNormId ? normalizeId(i.warehouse_id) === targetWhNormId : true));
       const movList = await this.base.getItems<InventoryMovement>('inventory_movements');
 
       if (invItem) {
-        const oldQty = invItem.quantity || 0;
-        await this.base.saveItem('inventory_items', { ...invItem, quantity: qtyNum });
+        const oldQty = Number(invItem.quantity) || 0;
+        const reserved = Number(invItem.reserved_quantity) || 0;
+        const damaged = Number(invItem.damaged_quantity) || 0;
+        const available = Math.max(0, qtyNum - reserved - damaged);
+        await this.base.saveItem('inventory_items', {
+          ...invItem,
+          quantity: qtyNum,
+          available_quantity: available,
+          updated_at: new Date().toISOString(),
+        });
         if (qtyNum !== oldQty) {
           const movId = this.base.generateUniqueId(movList);
           await this.base.saveItem('inventory_movements', {
             id: movId,
-            organization_id: variant.organization_id || 1,
+            organization_id: saved.organization_id || variant.organization_id || 1,
             variant_id: saved.id,
             warehouse_id: targetWarehouseId,
             type: 'adjustment',
@@ -273,18 +286,23 @@ export class SqliteCatalogStorage {
         const newInvId = this.base.generateUniqueId(inventoryList);
         await this.base.saveItem('inventory_items', {
           id: newInvId,
-          organization_id: variant.organization_id || 1,
+          organization_id: saved.organization_id || variant.organization_id || 1,
           variant_id: saved.id,
           warehouse_id: targetWarehouseId,
           location_id: locationId || undefined,
           quantity: qtyNum,
           reserved_quantity: 0,
+          damaged_quantity: 0,
+          available_quantity: qtyNum,
+          reorder_point: 5,
+          safety_stock: 2,
+          updated_at: new Date().toISOString(),
         });
         if (qtyNum > 0) {
           const movId = this.base.generateUniqueId(movList);
           await this.base.saveItem('inventory_movements', {
             id: movId,
-            organization_id: variant.organization_id || 1,
+            organization_id: saved.organization_id || variant.organization_id || 1,
             variant_id: saved.id,
             warehouse_id: targetWarehouseId,
             type: 'purchase',
@@ -294,6 +312,7 @@ export class SqliteCatalogStorage {
           });
         }
       }
+      return { ...saved, stock_quantity: qtyNum };
     }
 
     return saved;

@@ -6,3 +6,5 @@ export * from './cloudSales';
 export * from './cloudProcurement';
 export * from './cloudAccounting';
 export * from './cloudWooCommerce';
+export * from './cloudProduction';
+

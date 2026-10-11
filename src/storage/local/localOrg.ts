@@ -208,12 +208,29 @@ export class LocalOrgStorage {
       if (typeof window !== 'undefined' && window.navigator?.onLine !== false) {
         const liveItems = await directusClient.getSystemModules(params).catch(() => []);
         if (liveItems && liveItems.length > 0) {
-          this.base.setItem('system_modules', liveItems);
-          let filtered = liveItems;
-          if (params?.status) {
-            filtered = filtered.filter((m) => m.status === params.status);
+          const mergedMap = new Map<string, SystemModule>();
+          for (const def of DEFAULT_SYSTEM_MODULES) {
+            mergedMap.set(def.slug, { ...def });
           }
-          return filtered;
+          for (const item of liveItems) {
+            if (item && item.slug) {
+              const existing: Partial<SystemModule> = mergedMap.get(item.slug) || {};
+              mergedMap.set(item.slug, {
+                ...existing,
+                ...item,
+                name: item.name || existing.name || '',
+                description: item.description || existing.description || null,
+                icon: item.icon || existing.icon || null,
+                price_ir: item.price_ir !== undefined && item.price_ir !== null && String(item.price_ir).trim() !== '' ? String(item.price_ir) : existing.price_ir || null,
+                price_usd: item.price_usd !== undefined && item.price_usd !== null && String(item.price_usd).trim() !== '' ? String(item.price_usd) : existing.price_usd || null,
+                is_standalone_purchasable: item.is_standalone_purchasable !== undefined ? Boolean(item.is_standalone_purchasable) : existing.is_standalone_purchasable,
+                included_in_pro: item.included_in_pro !== undefined ? Boolean(item.included_in_pro) : existing.included_in_pro,
+              } as SystemModule);
+            }
+          }
+          const mergedList = Array.from(mergedMap.values());
+          this.base.setItem('system_modules', mergedList);
+          return mergedList;
         }
       }
     } catch {
@@ -224,9 +241,18 @@ export class LocalOrgStorage {
     if (!list || list.length === 0) {
       list = [...DEFAULT_SYSTEM_MODULES];
       this.base.setItem('system_modules', list);
-    }
-    if (params?.status) {
-      list = list.filter((m) => m.status === params.status);
+    } else {
+      const mergedMap = new Map<string, SystemModule>();
+      for (const def of DEFAULT_SYSTEM_MODULES) {
+        mergedMap.set(def.slug, { ...def });
+      }
+      for (const item of list) {
+        if (item && item.slug) {
+          const existing = mergedMap.get(item.slug) || {};
+          mergedMap.set(item.slug, { ...existing, ...item });
+        }
+      }
+      list = Array.from(mergedMap.values());
     }
     return list;
   }

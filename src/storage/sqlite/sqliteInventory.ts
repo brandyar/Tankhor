@@ -1,5 +1,6 @@
 import { QueryParams } from '../types';
 import { SqliteStorageBase } from './sqliteBase';
+import { normalizeId } from '../../utils/formatters';
 import {
   Warehouse,
   WarehouseLocation,
@@ -103,15 +104,17 @@ export class SqliteInventoryStorage {
     const orgId = this.base.getActiveOrgId(params);
     let items = await this.base.getItems<InventoryItem>('inventory_items', orgId);
     if (params?.warehouse_id) {
+      const targetWhId = normalizeId(params.warehouse_id);
       items = items.filter((i) => {
-        const wId = typeof i.warehouse_id === 'number' ? i.warehouse_id : (i.warehouse_id as any)?.id;
-        return wId === params.warehouse_id;
+        const wId = normalizeId(i.warehouse_id);
+        return targetWhId !== undefined && wId === targetWhId;
       });
     }
     if (params?.variant_id) {
+      const targetVId = normalizeId(params.variant_id);
       items = items.filter((i) => {
-        const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-        return vId === params.variant_id;
+        const vId = normalizeId(i.variant_id);
+        return targetVId !== undefined && vId === targetVId;
       });
     }
 
@@ -123,20 +126,20 @@ export class SqliteInventoryStorage {
     const locations = await this.base.getItems<WarehouseLocation>('warehouse_locations');
 
     return items.map((item) => {
-      const vId = typeof item.variant_id === 'number' ? item.variant_id : (item.variant_id as any)?.id;
-      const wId = typeof item.warehouse_id === 'number' ? item.warehouse_id : (item.warehouse_id as any)?.id;
-      const locId = typeof item.location_id === 'number' ? item.location_id : (item.location_id as any)?.id;
+      const vId = normalizeId(item.variant_id);
+      const wId = normalizeId(item.warehouse_id);
+      const locId = normalizeId(item.location_id);
 
-      const variant = variants.find((v) => v.id === vId);
-      const prodId = variant ? (typeof variant.product_id === 'number' ? variant.product_id : (variant.product_id as any)?.id) : null;
-      const product = prodId ? products.find((p) => p.id === prodId) : null;
-      const colorId = variant ? (typeof variant.color_id === 'number' ? variant.color_id : (variant.color_id as any)?.id) : null;
-      const sizeId = variant ? (typeof variant.size_id === 'number' ? variant.size_id : (variant.size_id as any)?.id) : null;
+      const variant = variants.find((v) => normalizeId(v.id) === vId);
+      const prodId = variant ? normalizeId(variant.product_id) : null;
+      const product = prodId ? products.find((p) => normalizeId(p.id) === prodId) : null;
+      const colorId = variant ? normalizeId(variant.color_id) : null;
+      const sizeId = variant ? normalizeId(variant.size_id) : null;
 
-      const color = colorId ? colors.find((c) => c.id === colorId) : null;
-      const size = sizeId ? sizes.find((s) => s.id === sizeId) : null;
-      const warehouse = warehouses.find((w) => w.id === wId);
-      const location = locations.find((l) => l.id === locId);
+      const color = colorId ? colors.find((c) => normalizeId(c.id) === colorId) : null;
+      const size = sizeId ? sizes.find((s) => normalizeId(s.id) === sizeId) : null;
+      const warehouse = warehouses.find((w) => normalizeId(w.id) === wId);
+      const location = locations.find((l) => normalizeId(l.id) === locId);
 
       return {
         ...item,

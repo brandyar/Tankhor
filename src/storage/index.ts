@@ -137,6 +137,17 @@ class StorageManagerSingleton {
     return this.activeAdapter.getFinancialAccounts(params);
   }
 
+  public async getProducts(params?: any) {
+    return this.activeAdapter.getProducts(params);
+  }
+
+  public async saveTreasuryTransaction(transaction: any) {
+    if (this.activeAdapter.saveTreasuryTransaction) {
+      return this.activeAdapter.saveTreasuryTransaction(transaction);
+    }
+    throw new Error('saveTreasuryTransaction not supported by active adapter');
+  }
+
   public async getProductVariants(params?: any) {
     return this.activeAdapter.getVariants(params);
   }
@@ -239,6 +250,119 @@ class StorageManagerSingleton {
       return this.activeAdapter.getFeedbacks(params);
     }
     return [];
+  }
+
+  // Production Module Delegation
+  public async getRawMaterials(params?: any) {
+    if (this.activeAdapter.getRawMaterials) {
+      return this.activeAdapter.getRawMaterials(params);
+    }
+    return [];
+  }
+
+  public async getRawMaterialById(id: number) {
+    if (this.activeAdapter.getRawMaterialById) {
+      return this.activeAdapter.getRawMaterialById(id);
+    }
+    return null;
+  }
+
+  public async saveRawMaterial(material: any) {
+    if (this.activeAdapter.saveRawMaterial) {
+      return this.activeAdapter.saveRawMaterial(material);
+    }
+    throw new Error('saveRawMaterial not supported by active adapter');
+  }
+
+  public async deleteRawMaterial(id: number) {
+    if (this.activeAdapter.deleteRawMaterial) {
+      return this.activeAdapter.deleteRawMaterial(id);
+    }
+    return false;
+  }
+
+  public async getBillOfMaterials(params?: any) {
+    if (this.activeAdapter.getBillOfMaterials) {
+      return this.activeAdapter.getBillOfMaterials(params);
+    }
+    return [];
+  }
+
+  public async getBomByProductId(productId: number) {
+    if (this.activeAdapter.getBomByProductId) {
+      return this.activeAdapter.getBomByProductId(productId);
+    }
+    return null;
+  }
+
+  public async saveBillOfMaterials(bom: any, items?: any[]) {
+    if (this.activeAdapter.saveBillOfMaterials) {
+      return this.activeAdapter.saveBillOfMaterials(bom, items);
+    }
+    throw new Error('saveBillOfMaterials not supported by active adapter');
+  }
+
+  public async deleteBillOfMaterials(id: number) {
+    if (this.activeAdapter.deleteBillOfMaterials) {
+      return this.activeAdapter.deleteBillOfMaterials(id);
+    }
+    return false;
+  }
+
+  public async getContractors(params?: any) {
+    if (this.activeAdapter.getContractors) {
+      return this.activeAdapter.getContractors(params);
+    }
+    return [];
+  }
+
+  public async getContractorById(id: number) {
+    if (this.activeAdapter.getContractorById) {
+      return this.activeAdapter.getContractorById(id);
+    }
+    return null;
+  }
+
+  public async saveContractor(contractor: any) {
+    if (this.activeAdapter.saveContractor) {
+      return this.activeAdapter.saveContractor(contractor);
+    }
+    throw new Error('saveContractor not supported by active adapter');
+  }
+
+  public async deleteContractor(id: number) {
+    if (this.activeAdapter.deleteContractor) {
+      return this.activeAdapter.deleteContractor(id);
+    }
+    return false;
+  }
+
+  public async getProductionOrders(params?: any) {
+    if (this.activeAdapter.getProductionOrders) {
+      return this.activeAdapter.getProductionOrders(params);
+    }
+    return [];
+  }
+
+  public async getProductionOrderById(id: number) {
+    if (this.activeAdapter.getProductionOrderById) {
+      return this.activeAdapter.getProductionOrderById(id);
+    }
+    return null;
+  }
+
+  public async saveProductionOrder(order: any, items?: any[], stages?: any[]) {
+    if (this.activeAdapter.saveProductionOrder) {
+      return this.activeAdapter.saveProductionOrder(order, items, stages);
+    }
+    throw new Error('saveProductionOrder not supported by active adapter');
+  }
+
+  public async deleteProductionOrder(id: number) {
+    if (this.activeAdapter.deleteProductionOrder) {
+      return this.activeAdapter.deleteProductionOrder(id);
+    }
+    return false;
   }
 }
 

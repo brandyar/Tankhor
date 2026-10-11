@@ -47,11 +47,12 @@ export class LocalCatalogStorage {
     }
 
     return items.map((p) => {
+      const normPId = normalizeId(p.id);
       const pVariants = variants.filter((v) => {
         const pId = normalizeId(v.product_id);
-        return pId === p.id;
+        return pId === normPId;
       });
-      const pVariantIds = new Set(pVariants.map((v) => normalizeId(v.id)).filter(Boolean));
+      const pVariantIds = new Set(pVariants.map((v) => normalizeId(v.id)).filter((id): id is number => id !== undefined));
       const pInventory = inventoryItems.filter((i) => {
         const vId = normalizeId(i.variant_id);
         return vId !== undefined && pVariantIds.has(vId);
@@ -68,17 +69,20 @@ export class LocalCatalogStorage {
 
   async getProductById(id: number): Promise<Product | null> {
     const list = await this.getProducts();
-    return list.find((p) => p.id === id) || null;
+    const normId = normalizeId(id) || Number(id);
+    return list.find((p) => (normalizeId(p.id) || Number(p.id)) === normId) || null;
   }
 
   async saveProduct(product: Partial<Product>): Promise<Product> {
     const list = this.base.getItem<Product>('products', []);
-    if (product.id) {
-      const idx = list.findIndex((p) => p.id === product.id);
+    const pId = normalizeId(product.id);
+    if (pId) {
+      const idx = list.findIndex((p) => (normalizeId(p.id) || Number(p.id)) === pId);
       if (idx !== -1) {
         list[idx] = {
           ...list[idx],
           ...product,
+          id: pId,
           main_image: product.main_image !== undefined ? (product.main_image || null as any) : list[idx].main_image,
           date_updated: new Date().toISOString()
         };
@@ -296,9 +300,12 @@ export class LocalCatalogStorage {
         }
       }
 
+      const savedNormId = normalizeId(saved.id) || Number(saved.id);
+      const targetWhNormId = normalizeId(targetWarehouseId);
       const invIdx = inventoryList.findIndex((i) => {
         const itemVId = normalizeId(i.variant_id);
-        return itemVId === saved.id;
+        const itemWId = normalizeId(i.warehouse_id);
+        return itemVId === savedNormId && (targetWhNormId ? itemWId === targetWhNormId : true);
       });
 
       if (invIdx !== -1) {
@@ -345,6 +352,7 @@ export class LocalCatalogStorage {
         this.base.setItem('inventory_movements', movementsList);
       }
       this.base.setItem('inventory_items', inventoryList);
+      return { ...saved, stock_quantity: qtyNum };
     }
 
     return saved;

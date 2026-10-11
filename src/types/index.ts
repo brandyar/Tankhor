@@ -363,13 +363,15 @@ export interface PurchaseOrder {
   date_created?: string;
   date_updated?: string;
   supplier_name?: string;
+  purchase_type?: 'product' | 'raw_material';
 }
 
 export interface PurchaseOrderItem {
   id: number;
   organization_id: number;
   purchase_order_id: number | PurchaseOrder;
-  variant_id: number | ProductVariant;
+  variant_id?: number | ProductVariant;
+  raw_material_id?: number;
   quantity_ordered: number;
   quantity_received: number;
   unit_cost: number;
@@ -521,3 +523,5 @@ export interface Feedback {
 
 export * from './accounting';
 export * from './woocommerce';
+export * from './production';
+

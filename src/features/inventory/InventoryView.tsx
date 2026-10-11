@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { DataTable, Column } from '../../components/ui/DataTable';
+import { Pagination } from '../../components/ui/Pagination';
 import { toPersianDigits, formatCurrency } from '../../utils/formatters';
 import { StockAdjustmentModal } from './StockAdjustmentModal';
 import { Modal } from '../../components/ui/Modal';
@@ -30,6 +31,10 @@ export const InventoryView: React.FC = () => {
   const [selectedWarehouseFilter, setSelectedWarehouseFilter] = useState<number | ''>('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   // Adjustment Modal
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
@@ -157,6 +162,13 @@ export const InventoryView: React.FC = () => {
   const lowStockCount = inventoryItems.filter(
     (i) => (Number(i.quantity) || 0) <= (i.reorder_point || 5) || (Number(i.quantity) || 0) <= (i.safety_stock || 2)
   ).length;
+
+  const totalInventoryCount = inventoryItems.length;
+  const totalPages = Math.ceil(totalInventoryCount / pageSize) || 1;
+  const paginatedItems = React.useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return inventoryItems.slice(start, start + pageSize);
+  }, [inventoryItems, currentPage, pageSize]);
 
   const columns: Column<InventoryItem>[] = [
     {
@@ -472,7 +484,7 @@ export const InventoryView: React.FC = () => {
       <div className="hidden md:block bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl shadow-sm p-5 overflow-hidden">
         <DataTable
           columns={columns}
-          data={inventoryItems}
+          data={paginatedItems}
           keyExtractor={(item) => item.id}
           isLoading={isLoading}
           actions={(item) => (
@@ -497,14 +509,14 @@ export const InventoryView: React.FC = () => {
             <div className="w-7 h-7 border-2 border-neutral-900 dark:border-neutral-100 border-t-transparent rounded-full animate-spin mb-3" />
             <span className="text-xs font-mono text-neutral-500">{t('common.loadingData')}</span>
           </div>
-        ) : inventoryItems.length === 0 ? (
+        ) : paginatedItems.length === 0 ? (
           <div className="w-full py-12 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 bg-neutral-50/50 dark:bg-neutral-900/40 p-6 text-center">
             <Package className="w-8 h-8 text-neutral-400 mb-2 stroke-1" />
             <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">{t('common.noData')}</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {inventoryItems.map((item) => {
+            {paginatedItems.map((item) => {
               const vId = typeof item.variant_id === 'number' ? item.variant_id : (item.variant_id as any)?.id;
               const v = variants.find((varObj) => varObj.id === vId);
               const sku = item.sku || v?.sku || (vId ? `VAR-#${vId}` : '-');
@@ -665,6 +677,17 @@ export const InventoryView: React.FC = () => {
             })}
           </div>
         )}
+
+        {/* Universal Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalInventoryCount}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          className="mt-4"
+        />
       </div>
 
       {/* Modal: Edit Reorder Point and Safety Stock */}

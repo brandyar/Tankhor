@@ -7,6 +7,7 @@ import { SqliteSalesStorage } from './sqlite/sqliteSales';
 import { SqliteProcurementStorage } from './sqlite/sqliteProcurement';
 import { SqliteAccountingStorage } from './sqlite/sqliteAccounting';
 import { SqliteWooCommerceStorage } from './sqlite/sqliteWooCommerce';
+import { SqliteProductionStorage } from './sqlite/sqliteProduction';
 
 export { isTauriEnvironment };
 
@@ -57,6 +58,13 @@ import {
   WooCommerceLog,
   IntegrationMapping,
   Feedback,
+  RawMaterial,
+  BillOfMaterials,
+  BomItem,
+  Contractor,
+  ProductionOrder,
+  ProductionOrderItem,
+  ProductionStage,
 } from '../types';
 
 export class SqliteStorageAdapter implements IStorageProvider {
@@ -70,6 +78,7 @@ export class SqliteStorageAdapter implements IStorageProvider {
   private procurementStorage: SqliteProcurementStorage;
   private accountingStorage: SqliteAccountingStorage;
   private wooCommerceStorage: SqliteWooCommerceStorage;
+  private productionStorage: SqliteProductionStorage;
 
   constructor() {
     this.base = new SqliteStorageBase();
@@ -80,6 +89,7 @@ export class SqliteStorageAdapter implements IStorageProvider {
     this.procurementStorage = new SqliteProcurementStorage(this.base);
     this.accountingStorage = new SqliteAccountingStorage(this.base);
     this.wooCommerceStorage = new SqliteWooCommerceStorage(this.base);
+    this.productionStorage = new SqliteProductionStorage(this.base);
   }
 
   // ==========================================
@@ -722,4 +732,76 @@ export class SqliteStorageAdapter implements IStorageProvider {
   submitFeedback(feedback: Partial<Feedback>): Promise<Feedback> {
     return this.orgStorage.submitFeedback(feedback);
   }
+
+  // ==========================================
+  // Production Module
+  // ==========================================
+  getRawMaterials(params?: QueryParams): Promise<RawMaterial[]> {
+    return this.productionStorage.getRawMaterials(params);
+  }
+
+  getRawMaterialById(id: number): Promise<RawMaterial | null> {
+    return this.productionStorage.getRawMaterialById(id);
+  }
+
+  saveRawMaterial(material: Partial<RawMaterial>): Promise<RawMaterial> {
+    return this.productionStorage.saveRawMaterial(material);
+  }
+
+  deleteRawMaterial(id: number): Promise<boolean> {
+    return this.productionStorage.deleteRawMaterial(id);
+  }
+
+  getBillOfMaterials(params?: QueryParams): Promise<BillOfMaterials[]> {
+    return this.productionStorage.getBillOfMaterials(params);
+  }
+
+  getBomByProductId(productId: number): Promise<BillOfMaterials | null> {
+    return this.productionStorage.getBomByProductId(productId);
+  }
+
+  saveBillOfMaterials(bom: Partial<BillOfMaterials>, items?: Partial<BomItem>[]): Promise<BillOfMaterials> {
+    return this.productionStorage.saveBillOfMaterials(bom, items);
+  }
+
+  deleteBillOfMaterials(id: number): Promise<boolean> {
+    return this.productionStorage.deleteBillOfMaterials(id);
+  }
+
+  getContractors(params?: QueryParams): Promise<Contractor[]> {
+    return this.productionStorage.getContractors(params);
+  }
+
+  getContractorById(id: number): Promise<Contractor | null> {
+    return this.productionStorage.getContractorById(id);
+  }
+
+  saveContractor(contractor: Partial<Contractor>): Promise<Contractor> {
+    return this.productionStorage.saveContractor(contractor);
+  }
+
+  deleteContractor(id: number): Promise<boolean> {
+    return this.productionStorage.deleteContractor(id);
+  }
+
+  getProductionOrders(params?: QueryParams): Promise<ProductionOrder[]> {
+    return this.productionStorage.getProductionOrders(params);
+  }
+
+  getProductionOrderById(id: number): Promise<ProductionOrder | null> {
+    return this.productionStorage.getProductionOrderById(id);
+  }
+
+  saveProductionOrder(
+    order: Partial<ProductionOrder>,
+    items?: Partial<ProductionOrderItem>[],
+    stages?: Partial<ProductionStage>[]
+  ): Promise<ProductionOrder> {
+    return this.productionStorage.saveProductionOrder(order, items, stages);
+  }
+
+  deleteProductionOrder(id: number): Promise<boolean> {
+    return this.productionStorage.deleteProductionOrder(id);
+  }
 }
+
