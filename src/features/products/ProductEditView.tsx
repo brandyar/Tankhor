@@ -26,10 +26,10 @@ import { ProductAttributeModals } from './components/ProductAttributeModals';
 
 const normalizeId = (id: any): number | undefined => {
   if (id === undefined || id === null || id === '') return undefined;
-  if (typeof id === 'number') return id;
+  if (typeof id === 'number') return id > 0 ? id : undefined;
   if (typeof id === 'object' && id !== null && 'id' in id) return normalizeId((id as any).id);
   const parsed = Number(id);
-  return isNaN(parsed) ? undefined : parsed;
+  return isNaN(parsed) || parsed <= 0 ? undefined : parsed;
 };
 
 interface ProductEditViewProps {
@@ -355,16 +355,18 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
       }
     });
 
-    // Track unselected variant IDs for deletion
+    // Track unselected variant IDs for deletion and restore re-selected ones
     currentVariants.forEach((v) => {
       const cVal = normalizeId(v.color_id) ?? 'none';
       const sVal = normalizeId(v.size_id) ?? 'none';
       const key = `${cVal}_${sVal}`;
+      const vId = normalizeId(v.id);
       if (!activeKeys.has(key) && (v.color_id || v.size_id)) {
-        const vId = normalizeId(v.id);
         if (vId) {
-          setDeletedVariantIds((prev) => [...prev, vId]);
+          setDeletedVariantIds((prev) => Array.from(new Set([...prev, vId])));
         }
+      } else if (activeKeys.has(key) && vId) {
+        setDeletedVariantIds((prev) => prev.filter((id) => id !== vId));
       }
     });
 
@@ -618,20 +620,29 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
         status,
       });
 
-      // 2. Process deletions first
-      for (const dId of deletedVariantIds) {
-        const normDId = normalizeId(dId);
-        if (normDId) {
-          await adapter.deleteVariant(normDId).catch((delErr) => {
-            console.warn('[ProductEditView] Delete variant warning:', delErr);
-          });
-        }
+      // 2. Process deletions first (only delete variants that are not present in current variants list)
+      const currentVariantIds = new Set(
+        variants
+          .map((v) => normalizeId(v.id))
+          .filter((id): id is number => id !== undefined && id > 0)
+      );
+
+      const uniqueDeletedIds = Array.from(new Set(deletedVariantIds))
+        .map((id) => normalizeId(id))
+        .filter((id): id is number => id !== undefined && id > 0 && !currentVariantIds.has(id));
+
+      for (const normDId of uniqueDeletedIds) {
+        await adapter.deleteVariant(normDId).catch((delErr) => {
+          console.warn('[ProductEditView] Delete variant warning:', delErr);
+        });
       }
 
       // 3. Save / Update all variant rows in table
       const targetWarehouseId = selectedWarehouseId && Number(selectedWarehouseId) > 0
         ? Number(selectedWarehouseId)
         : (warehouses.length > 0 ? warehouses[0].id : 1);
+
+      const finalProductId = normalizeId(savedProduct?.id) || (productId ? Number(productId) : undefined);
 
       for (const v of variants) {
         const vId = normalizeId(v.id);
@@ -642,7 +653,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
           {
             id: vId,
             organization_id: orgId,
-            product_id: savedProduct.id,
+            product_id: finalProductId,
             color_id: colorId,
             size_id: sizeId,
             sku: v.sku ? v.sku.trim() : `SKU-${Date.now().toString().slice(-6)}`,
@@ -659,6 +670,7 @@ export const ProductEditView: React.FC<ProductEditViewProps> = ({
         );
       }
 
+      window.dispatchEvent(new CustomEvent('tankhor_products_changed', { detail: { updatedId: finalProductId } }));
       onSaved();
       onBack();
     } catch (err: any) {

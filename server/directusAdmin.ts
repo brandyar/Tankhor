@@ -262,7 +262,7 @@ export class DirectusAdminClient {
       const params = new URLSearchParams();
       if (query.filter) params.append('filter', typeof query.filter === 'string' ? query.filter : JSON.stringify(query.filter));
       if (query.sort) params.append('sort', query.sort);
-      if (query.limit) params.append('limit', String(query.limit));
+      params.append('limit', query.limit !== undefined ? String(query.limit) : '-1');
       if (query.page) params.append('page', String(query.page));
       if (query.fields) params.append('fields', Array.isArray(query.fields) ? query.fields.join(',') : query.fields);
       queryString = `?${params.toString()}`;

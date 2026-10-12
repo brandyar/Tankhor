@@ -19,6 +19,7 @@ import { SearchableVariantSelect } from '../../components/ui/SearchableVariantSe
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
+import { Pagination } from '../../components/ui/Pagination';
 import { formatDate } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
 import {
@@ -50,6 +51,10 @@ export const TransfersView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   // Create Transfer Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -368,6 +373,17 @@ export const TransfersView: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
+
+  const totalTransfersCount = filteredTransfers.length;
+  const totalPages = Math.ceil(totalTransfersCount / pageSize) || 1;
+  const paginatedTransfers = React.useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTransfers.slice(start, start + pageSize);
+  }, [filteredTransfers, currentPage, pageSize]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -416,7 +432,7 @@ export const TransfersView: React.FC = () => {
         {/* 1. Desktop Tabular View */}
         <div className="hidden md:block">
           <DataTable<StockTransfer>
-            data={filteredTransfers}
+            data={paginatedTransfers}
             keyExtractor={(trf) => trf.id}
             isLoading={isLoading}
             emptyMessage={t('inventory.noTransfersFound')}
@@ -515,14 +531,14 @@ export const TransfersView: React.FC = () => {
               <div className="w-7 h-7 border-2 border-neutral-900 dark:border-neutral-100 border-t-transparent rounded-full animate-spin mb-3" />
               <span className="text-xs font-mono text-neutral-500">{t('common.loadingData')}</span>
             </div>
-          ) : filteredTransfers.length === 0 ? (
+          ) : paginatedTransfers.length === 0 ? (
             <div className="w-full py-12 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 bg-neutral-50/50 dark:bg-neutral-900/40 p-6 text-center">
               <Package className="w-8 h-8 text-neutral-400 mb-2 stroke-1" />
               <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">{t('inventory.noTransfersFound')}</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredTransfers.map((trf) => (
+              {paginatedTransfers.map((trf) => (
                 <div
                   key={`mob_trf_${trf.id}`}
                   className="rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#13151a] p-4 shadow-sm space-y-3 transition-all"
@@ -619,6 +635,17 @@ export const TransfersView: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Universal Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalTransfersCount}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+        className="mt-4"
+      />
 
       {/* Modal: Create Stock Transfer */}
       <Modal

@@ -11,6 +11,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
+import { Pagination } from '../../components/ui/Pagination';
 import { ProductImage } from '../../components/ui/ProductImage';
 import { ImageUpload } from '../../components/ui/ImageUpload';
 import { formatCurrency, toPersianDigits } from '../../utils/formatters';
@@ -26,6 +27,10 @@ export const VariantsView: React.FC = () => {
   const [sizes, setSizes] = useState<Size[]>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   // Edit Variant Modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -77,6 +82,17 @@ export const VariantsView: React.FC = () => {
   useEffect(() => {
     loadVariants();
   }, [activeOrganization, search]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const totalVariantsCount = variants.length;
+  const totalPages = Math.ceil(totalVariantsCount / pageSize) || 1;
+  const paginatedVariants = React.useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return variants.slice(start, start + pageSize);
+  }, [variants, currentPage, pageSize]);
 
   const handleOpenEdit = (v: ProductVariant) => {
     setEditingVariant(v);
@@ -238,7 +254,7 @@ export const VariantsView: React.FC = () => {
         <div className="hidden md:block">
           <DataTable
             columns={columns}
-            data={variants}
+            data={paginatedVariants}
             keyExtractor={(v) => v.id}
             isLoading={isLoading}
             actions={(v) => (
@@ -272,12 +288,12 @@ export const VariantsView: React.FC = () => {
             <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
               {t('common.loading')}
             </div>
-          ) : variants.length === 0 ? (
+          ) : paginatedVariants.length === 0 ? (
             <div className="py-12 text-center text-slate-400 dark:text-neutral-500 text-sm">
               {t('common.noData')}
             </div>
           ) : (
-            variants.map((v) => {
+            paginatedVariants.map((v) => {
               const color = colors.find((c) => c.id === (typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id));
               const size = sizes.find((s) => s.id === (typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id));
 
@@ -372,6 +388,17 @@ export const VariantsView: React.FC = () => {
             })
           )}
         </div>
+
+        {/* Universal Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalVariantsCount}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          className="mt-4"
+        />
       </Card>
 
       {/* Edit Variant Modal */}

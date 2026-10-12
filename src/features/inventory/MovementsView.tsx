@@ -8,6 +8,7 @@ import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { DataTable, Column } from '../../components/ui/DataTable';
+import { Pagination } from '../../components/ui/Pagination';
 import { toPersianDigits, formatDate } from '../../utils/formatters';
 import { History, Search, ArrowUpRight, ArrowDownLeft, AlertCircle, RefreshCw, FileText, Warehouse as WarehouseIcon, Package } from 'lucide-react';
 
@@ -21,6 +22,10 @@ export const MovementsView: React.FC = () => {
   const [selectedWarehouseFilter, setSelectedWarehouseFilter] = useState<number | ''>('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<MovementType | ''>('');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const isPersian = locale === 'fa';
 
@@ -62,6 +67,17 @@ export const MovementsView: React.FC = () => {
   useEffect(() => {
     loadMovements();
   }, [activeOrganization, selectedWarehouseFilter, selectedTypeFilter, search]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedWarehouseFilter, selectedTypeFilter, search]);
+
+  const totalMovementsCount = movements.length;
+  const totalPages = Math.ceil(totalMovementsCount / pageSize) || 1;
+  const paginatedMovements = React.useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return movements.slice(start, start + pageSize);
+  }, [movements, currentPage, pageSize]);
 
   const getMovementTypeBadge = (type: MovementType, qty: number) => {
     const formattedQty = isPersian ? toPersianDigits(qty) : qty;
@@ -224,7 +240,7 @@ export const MovementsView: React.FC = () => {
       <div className="hidden md:block bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl shadow-sm p-5 overflow-hidden">
         <DataTable
           columns={columns}
-          data={movements}
+          data={paginatedMovements}
           keyExtractor={(m) => m.id}
           isLoading={isLoading}
         />
@@ -237,14 +253,14 @@ export const MovementsView: React.FC = () => {
             <div className="w-7 h-7 border-2 border-neutral-900 dark:border-neutral-100 border-t-transparent rounded-full animate-spin mb-3" />
             <span className="text-xs font-mono text-neutral-500">{t('common.loadingData')}</span>
           </div>
-        ) : movements.length === 0 ? (
+        ) : paginatedMovements.length === 0 ? (
           <div className="w-full py-12 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 bg-neutral-50/50 dark:bg-neutral-900/40 p-6 text-center">
             <Package className="w-8 h-8 text-neutral-400 mb-2 stroke-1" />
             <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300">{t('common.noData')}</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {movements.map((m) => {
+            {paginatedMovements.map((m) => {
               const sku = m.sku || `VAR-#${m.variant_id}`;
               const whName = m.warehouse_name || t('inventory.mainWarehouseDefault');
               return (
@@ -294,6 +310,17 @@ export const MovementsView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Universal Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalMovementsCount}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+        className="mt-4"
+      />
     </div>
   );
 };

@@ -7,12 +7,13 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { DateInput } from '../../components/ui/DateInput';
 import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Sun, Plus, Search, Edit, Trash2, Calendar } from 'lucide-react';
-import { toPersianDigits } from '../../utils/formatters';
+import { toPersianDigits, formatDate } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
 
 export const SeasonsView: React.FC = () => {
@@ -160,9 +161,9 @@ export const SeasonsView: React.FC = () => {
       render: (season) => (
         <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-neutral-300 font-mono">
           <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-500" />
-          <span>{isPersian ? toPersianDigits(season.start_date || t('products.undefinedDate')) : season.start_date || t('products.undefinedDate')}</span>
+          <span>{season.start_date ? formatDate(season.start_date, isPersian) : t('products.undefinedDate')}</span>
           <span className="text-slate-300 dark:text-neutral-600">{t('products.dateTo')}</span>
-          <span>{isPersian ? toPersianDigits(season.end_date || t('products.undefinedDate')) : season.end_date || t('products.undefinedDate')}</span>
+          <span>{season.end_date ? formatDate(season.end_date, isPersian) : t('products.undefinedDate')}</span>
         </div>
       ),
     },
@@ -260,9 +261,9 @@ export const SeasonsView: React.FC = () => {
 
                 <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-neutral-300 font-mono p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800">
                   <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-500 shrink-0" />
-                  <span>{isPersian ? toPersianDigits(season.start_date || t('products.undefinedDate')) : season.start_date || t('products.undefinedDate')}</span>
+                  <span>{season.start_date ? formatDate(season.start_date, isPersian) : t('products.undefinedDate')}</span>
                   <span className="text-slate-300 dark:text-neutral-600">{t('products.dateTo')}</span>
-                  <span>{isPersian ? toPersianDigits(season.end_date || t('products.undefinedDate')) : season.end_date || t('products.undefinedDate')}</span>
+                  <span>{season.end_date ? formatDate(season.end_date, isPersian) : t('products.undefinedDate')}</span>
                 </div>
 
                 <div className="flex items-center justify-end gap-1 pt-2 border-t border-neutral-100 dark:border-neutral-800">
@@ -333,17 +334,17 @@ export const SeasonsView: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
+            <DateInput
               label={t('products.startDate')}
-              type="date"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(val) => setStartDate(val)}
+              placeholder={isPersian ? 'انتخاب تاریخ شروع...' : 'Select start date...'}
             />
-            <Input
+            <DateInput
               label={t('products.endDate')}
-              type="date"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(val) => setEndDate(val)}
+              placeholder={isPersian ? 'انتخاب تاریخ پایان...' : 'Select end date...'}
             />
           </div>
         </form>

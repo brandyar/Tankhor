@@ -843,15 +843,17 @@ class DirectusClient {
   // Generic collection helpers
   public async getItems<T>(collection: string, query?: Record<string, any>): Promise<T[]> {
     let queryString = '';
-    if (query) {
-      const params = new URLSearchParams();
-      if (query.filter) params.append('filter', typeof query.filter === 'string' ? query.filter : JSON.stringify(query.filter));
-      if (query.sort) params.append('sort', query.sort);
-      if (query.limit) params.append('limit', String(query.limit));
-      if (query.page) params.append('page', String(query.page));
-      if (query.fields) params.append('fields', Array.isArray(query.fields) ? query.fields.join(',') : query.fields);
-      queryString = `?${params.toString()}`;
+    const params = new URLSearchParams();
+    if (query?.filter) params.append('filter', typeof query.filter === 'string' ? query.filter : JSON.stringify(query.filter));
+    if (query?.sort) params.append('sort', query.sort);
+    if (query?.limit !== undefined) {
+      params.append('limit', String(query.limit));
+    } else {
+      params.append('limit', '-1');
     }
+    if (query?.page) params.append('page', String(query.page));
+    if (query?.fields) params.append('fields', Array.isArray(query.fields) ? query.fields.join(',') : query.fields);
+    queryString = `?${params.toString()}`;
     const result = await this.request<any>(`/items/${collection}${queryString}`);
     if (Array.isArray(result)) return result;
     if (Array.isArray(result?.data)) return result.data;

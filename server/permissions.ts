@@ -279,5 +279,47 @@ export function sanitizePayloadForDirectus(
     }
   }
 
+  if (collection === 'product_variants') {
+    if (payload.cost_price !== undefined && payload.cost === undefined) {
+      payload.cost = payload.cost_price;
+    }
+    if (payload.price !== undefined) payload.price = Number(payload.price) || 0;
+    if (payload.cost !== undefined) payload.cost = Number(payload.cost) || 0;
+    if (payload.sort !== undefined) payload.sort = Number(payload.sort) || 0;
+    if (payload.color_id === undefined || payload.color_id === 0 || payload.color_id === '') {
+      payload.color_id = null;
+    }
+    if (payload.size_id === undefined || payload.size_id === 0 || payload.size_id === '') {
+      payload.size_id = null;
+    }
+    delete payload.cost_price;
+    delete payload.stock_quantity;
+    delete payload.color_name;
+    delete payload.size_name;
+    delete payload.product_title;
+    delete payload.color;
+    delete payload.size;
+    delete payload.product;
+    delete payload._tempId;
+  }
+
+  if (collection === 'inventory_items') {
+    if (payload.quantity !== undefined) payload.quantity = Math.max(0, Number(payload.quantity) || 0);
+    if (payload.reserved_quantity !== undefined) payload.reserved_quantity = Math.max(0, Number(payload.reserved_quantity) || 0);
+    if (payload.available_quantity !== undefined) payload.available_quantity = Math.max(0, Number(payload.available_quantity) || 0);
+    if (payload.damaged_quantity !== undefined) payload.damaged_quantity = Math.max(0, Number(payload.damaged_quantity) || 0);
+    if (payload.reorder_point !== undefined) payload.reorder_point = Math.max(0, Number(payload.reorder_point) || 0);
+    if (payload.safety_stock !== undefined) payload.safety_stock = Math.max(0, Number(payload.safety_stock) || 0);
+    if (!payload.location_id) payload.location_id = null;
+    delete payload.variant;
+    delete payload.warehouse;
+    delete payload.location;
+    delete payload.product_title;
+    delete payload.sku;
+    delete payload.barcode;
+    delete payload.color_name;
+    delete payload.size_name;
+  }
+
   return payload;
 }

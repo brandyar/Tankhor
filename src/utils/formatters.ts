@@ -130,14 +130,19 @@ export function formatDateNumeric(isoString?: string | null, isPersian?: boolean
  * Safely extracts numeric ID from number, string, or object like { id: number }
  */
 export function normalizeId(val: any): number | undefined {
-  if (typeof val === 'number' && !isNaN(val)) return val;
-  if (val && typeof val === 'object' && val !== null && 'id' in val) {
-    const parsed = Number(val.id);
-    return !isNaN(parsed) ? parsed : undefined;
+  if (val === undefined || val === null || val === '') return undefined;
+  if (typeof val === 'number') {
+    return !isNaN(val) && val > 0 ? val : undefined;
   }
-  if (typeof val === 'string' && val.trim() !== '') {
-    const parsed = Number(val);
-    return !isNaN(parsed) ? parsed : undefined;
+  if (typeof val === 'object' && val !== null && 'id' in val) {
+    const parsed = Number(val.id);
+    return !isNaN(parsed) && parsed > 0 ? parsed : undefined;
+  }
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (!trimmed || isNaN(Number(trimmed))) return undefined;
+    const parsed = Number(trimmed);
+    return parsed > 0 ? parsed : undefined;
   }
   return undefined;
 }

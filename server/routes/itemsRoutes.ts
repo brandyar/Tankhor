@@ -223,7 +223,7 @@ itemsRouter.get(
         filter: effectiveFilter,
       };
       if (req.query.sort) query.sort = req.query.sort;
-      if (req.query.limit) query.limit = req.query.limit;
+      query.limit = req.query.limit !== undefined ? req.query.limit : -1;
       if (req.query.page) query.page = req.query.page;
       if (req.query.fields) query.fields = req.query.fields;
 

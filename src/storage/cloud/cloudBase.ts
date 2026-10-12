@@ -61,7 +61,7 @@ export class CloudStorageBase {
     return cleanInt(val);
   }
 
-  normalizeId(val: any): number {
-    return normalizeId(val) || Number(val);
+  normalizeId(val: any): number | undefined {
+    return normalizeId(val);
   }
 }

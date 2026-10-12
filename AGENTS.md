@@ -1,7 +1,7 @@
 # AGENTS.md - TANKHOR (تن‌خور) Project Guidelines & Instructions
 
 ## 📌 Project Identity
-**TANKHOR (تن‌خور)** is a modern, high-performance product and inventory management platform tailored for apparel, fashion, footwear, bags, and accessories businesses.
+**TANKHOR (تن‌خور)** is a modern, high-performance product and inventory management platform tailored for apparel, fashion, footwear, bags, accessories, and garment manufacturing businesses.
 
 ---
 
@@ -19,6 +19,7 @@
        - `*Sales`: Orders, order items, customers, customer ledger synchronization
        - `*Procurement`: Purchase orders, purchase order items, suppliers, supplier ledger synchronization
        - `*Accounting`: Expenses, expense categories, financial accounts, treasury transactions, cheques, landed costs
+       - `*Production`: Production orders, BOMs, raw materials, contractors
        - `*WooCommerce`: WooCommerce credentials, variant mappings, synchronization logs
        - `*System`: Modules, settings, sync logs, media cache
      - Main adapter classes (`LocalOfflineAdapter`, `SqliteStorageAdapter`, `CloudDirectusAdapter`) serve as clean Facades assembling domain sub-modules without duplicate code or circular dependencies.
@@ -27,158 +28,131 @@
      - Web Browser: `LocalOfflineAdapter` uses scoped local storage with memory cache.
      - Cloud Mode: `CloudDirectusAdapter` communicates with Directus REST API with automated sync queues.
 
-2. **Schema Fidelity**:
-   - The canonical database schema is stored in `/directus-schema.json` (25 collections).
+2. **Schema Fidelity & Variant-Level Stock**:
+   - The canonical database schema is stored in `/directus-schema.json`.
    - Do **NOT** invent duplicate collections, change field names, or alter primary key conventions.
-   - Variant-level stock rule: Products represent concepts (`products`). Stock balances live strictly on sellable variants (`product_variants` -> `inventory_items`).
+   - Products represent conceptual models (`products`). Stock balances live strictly on sellable variants (`product_variants` -> `inventory_items`).
+   - `normalizeId()` strictly enforces positive numeric IDs (`number | undefined`) to prevent invalid queries or NaN keys in Directus and SQLite.
+   - Server-side permissions (`/server/permissions.ts`) strictly sanitize `product_variants` and `inventory_items` payloads against unexpected fields.
 
 3. **Multi-Tenancy & Tenant Boundary Enforcement**:
-   - `organizations` is the tenant boundary.
-   - All query, create, update, and delete operations **MUST** scope data by the active `organization_id`.
-   - Backend API Proxy (`/server/proxy.ts`) strictly validates and enforces tenant ownership (`TENANT_SCOPED_COLLECTIONS`), preventing data leakage across organizations.
-   - Directus handles user authentication (`directus_users`). Membership and access permissions are managed via `organization_users` with defined roles (`owner`, `manager`, `warehouse`, `sales`, `viewer`).
+   - `organizations` is the tenant boundary. All operations **MUST** scope data by the active `organization_id`.
+   - Backend API Proxy (`/server/proxy.ts`, `/server/routes/itemsRoutes.ts`) strictly enforces tenant isolation (`TENANT_SCOPED_COLLECTIONS`).
+   - Directus handles authentication (`directus_users`). Membership and roles are managed via `organization_users` (`owner`, `manager`, `warehouse`, `sales`, `viewer`).
 
 4. **Desktop (Tauri) & Web Hybrid Support (BFF Pattern)**:
-   - The frontend remains platform-agnostic and runs seamlessly in both browser and native desktop (Tauri/Electron) environments.
-   - All authentication, registration, user management, and tenant scoping requests from both Web and Desktop clients pass through the secure Backend-For-Frontend (BFF) API Gateway (`/server/auth.ts`, `/server/proxy.ts`), keeping Admin tokens secure and enforcing tenant isolation.
-   - Directus API URL resolution (`/src/api/directus.ts`) detects Tauri vs browser environments dynamically, routing requests to the BFF Gateway (`https://my.tankhor.com/api` or `/api`) without exposing admin credentials.
+   - Platform-agnostic frontend runs seamlessly in both browser and native desktop (Tauri) environments.
+   - Authentication, tenant scoping, and third-party APIs pass through the secure BFF Gateway (`/server/auth.ts`, `/server/proxy.ts`), keeping admin credentials secure.
+   - Directus API URL resolution (`/src/api/directus.ts`) detects Tauri vs browser dynamically, routing to `/api` or `https://my.tankhor.com/api`.
 
 5. **Internationalization & Localization (i18n)**:
-   - First production UI language is **Persian (`fa`)** with **RTL** orientation and `Vazirmatn` font.
-   - **NO HARDCODED UI STRINGS**: All labels, buttons, form placeholders, table headers, error messages, and dialog titles must use translation keys `t("namespace.key")`.
-   - Translation keys are organized in `/src/i18n/locales/fa/` and `/src/i18n/locales/en/`.
-   - Use CSS Logical Properties (`margin-inline-start`, `padding-inline-end`, `border-s-`, etc.) to guarantee seamless LTR/RTL switching.
+   - Primary UI language is **Persian (`fa`)** with **RTL** orientation and `Vazirmatn` font. English (`en`) is supported.
+   - **NO HARDCODED UI STRINGS**: All labels, buttons, placeholders, table headers, error messages, and dialogs must use `t("namespace.key")`.
+   - Translation keys are structured in `/src/i18n/locales/fa/` and `/src/i18n/locales/en/`.
+   - Use CSS Logical Properties (`margin-inline-start`, `padding-inline-end`, `border-s-`, etc.) for seamless LTR/RTL switching.
 
 6. **Navigation & Information Architecture**:
    - Sidebar menus follow a logical business workflow:
      1. **Dashboard (پیشخوان)**
      2. **Orders & Sales (فروش و سفارشات)**: Create Order, All Orders, Customers
-     3. **Inventory & Warehouses (انبار و موجودی)**: Overview, Barcode Print, Stock Movements/Transfers (Submenu), Warehouses & Locations (Submenu)
-     4. **Catalog & Products (محصولات و کاتالوگ)**: Products, Variants, Size Guides, Attributes/Categories/Brands/Collections (Submenu)
-     5. **Purchasing & Procurement (تدارکات و خرید)**: Purchase Orders, Suppliers
-     6. **Accounting & Treasury (حسابداری و مالی)**: Hierarchical main menu and submenus after activation (Dashboard, Expenses, Accounts & Cashboxes, Person Ledgers, Cheques, Landed Costs, Tax Reports, Accounting Software Export)
-     7. **Reports & Analytics (گزارش‌ها و تحلیل‌ها)**: Modular expandable menu & responsive sub-views:
-        - `reports/sales`: Sales & Profitability analysis with preset/custom date ranges, COGS, gross profit, margin %, trends, category profit shares, and invoice ledger
-        - `reports/apparel`: Fashion & garment demand analytics (best-selling sizes, colors, SKU rankings)
-        - `reports/inventory`: Inventory turnover and dead stock capital analysis with inactivity thresholds (15, 30, 60, 90 days)
-     8. **Digital Catalog (کاتالوگ دیجیتال)**: Displayed under Sales & Orders when active (Catalog Settings [تنظیمات کاتالوگ], Showcase Products [کالاهای ویترین], Size Finder Simulator [شبیه‌ساز راهنمای سایز])
-     9. **WooCommerce Sync (فروشگاه آنلاین ووکامرس)**: Displayed right before Settings when activated, providing seamless store connection, inventory sync, and order import
-     10. **Settings (تنظیمات)**: Organization & User Management, Cloud Sync & Storage
-   - Submenus support responsive collapsible states and auto-expansion based on the active route.
-   - **Settings Sub-menu Structure**: Settings is organized into modular dedicated sub-menus:
-     - `settings/org`: Organization profile, currency, and general information
-     - `settings/members`: Team members and role-based access control (RBAC)
-     - `settings/modules`: Add-on module licensing, purchases, and hardware IDs
-     - `settings/sync`: Database backup/restore, cloud sync, and JSON snapshots
-     - `settings/appearance`: Visual theme, language, and display preferences
-     - `settings/updater`: Desktop version checks and one-click auto-updater (Desktop only)
-   - **Dynamic Module Placement in Sidebar**:
-     - Modules not yet purchased/activated automatically move to the bottom group (*ماژول‌ها و افزونه‌ها*) with subtle inactive styling and a clean *ماژول* badge.
-     - Once purchased or unlocked via Pro, modules immediately return to their native workflow section (e.g. *تولید و چاپ بارکد* under *انبار و موجودی*، *کاتالوگ دیجیتال* under *فروش و سفارشات*، *حسابداری و مالی* به عنوان منوی جامع، و *فروشگاه آنلاین ووکامرس* قبل از تنظیمات).
-     - **Offline/Free Store Synchronization**: The WooCommerce integration module is fully functional in offline/local desktop storage (SQLite) as well as Cloud mode, allowing both free tier and Pro users to purchase and activate it standalone without requiring an active cloud subscription.
+     3. **Inventory & Warehouses (انبار و موجودی)**: Overview (موجودی انبارها), Barcode Print, Stock Movements, Stock Transfers, Warehouses & Locations
+     4. **Catalog & Products (محصولات و کاتالوگ)**: Products, Variants (تنخور و تنوع‌ها), Size Guides, Attributes/Categories/Brands/Collections
+     5. **Production & Manufacturing (تولید و کارگاه)**: Production Orders (دستورهای تولید), BOM (فرمول ساخت), Raw Materials (مواد اولیه), Contractors (کارگاه‌های همکار)
+     6. **Purchasing & Procurement (تدارکات و خرید)**: Purchase Orders, Suppliers
+     7. **Accounting & Treasury (حسابداری و مالی)**: Dashboard, Expenses, Accounts & Cashboxes, Person Ledgers, Cheques, Landed Costs, Tax Reports, Accounting Software Export
+     8. **Reports & Analytics (گزارش‌ها و تحلیل‌ها)**: Sales & Profitability (`reports/sales`), Apparel & Demand (`reports/apparel`), Inventory Turnover & Dead Stock (`reports/inventory`)
+     9. **Digital Catalog (کاتالوگ دیجیتال)**: Catalog Settings, Showcase Products, Size Finder Simulator
+     10. **WooCommerce Sync (فروشگاه آنلاین ووکامرس)**: Store Connection, Inventory Sync, Order Import
+     11. **Settings (تنظیمات)**: Organization Profile, Members & RBAC, Modules & Licensing, Backup & Restore, Appearance, Auto-Updater (Desktop)
+   - Inactive modules automatically display in the bottom add-on section (*ماژول‌ها و افزونه‌ها*) and return to their primary workflow section upon activation or Pro plan.
 
 7. **Modular Add-ons & Cryptographic Licensing (`useModuleAccess`)**:
-   - Modules are defined in `system_modules` (slug, name, descriptions, `price_ir`, `price_usd`, `included_in_pro`).
-   - Tenant entitlements are stored in `organization_modules` (organization ID, slug, license key, hardware fingerprint, purchase date, lifetime status).
-   - `useModuleAccess()` hook coordinates real-time entitlement checks (`hasAccess(slug)`), Pro plan auto-unlocking, and dynamic module loading.
-   - Hardware ID fingerprinting binds standalone offline desktop licenses to the physical machine (`getMachineFingerprint()`).
+   - Modules are registered in `system_modules` and entitlements stored in `organization_modules`.
+   - `useModuleAccess()` coordinates entitlement checks (`hasAccess(slug)`), Pro auto-unlocking, and dynamic module loading.
+   - Standalone offline licenses are bound to the hardware fingerprint via `getMachineFingerprint()`. Dynamic prices are retrieved from `system_modules` (never hardcoded).
 
 8. **Payment Gateway Integration (Zibal & Zarinpal BFF Gateway)**:
-   - Server-side payment processing (`/server/payment.ts`) proxies Zibal & Zarinpal securely:
-     - **Subscription Upgrades**: `/api/payment/request` & `/api/payment/verify` for Organization Pro plans.
-     - **Module Purchases**: `/api/payment/request-module` & `/api/payment/verify-module` for individual lifetime module licenses with automated cryptographic key generation.
-   - Merchant IDs are dynamically resolved from Directus `project_settings` or secure server environment variables.
-   - **Dynamic Pricing Rule**: Prices are NEVER hardcoded in client components. Prices (`price_ir`, `price_usd`) are dynamically queried from Directus `system_modules` and formatted via `formatModulePrice()`.
-   - **Desktop Payment Workflow**: Opens system default browser via Tauri shell/external URL, with real-time polling in `PurchaseModuleModal.tsx` for zero-friction desktop activation upon gateway callback.
+   - Server-side payment processing (`/server/payment.ts`) proxies Zibal and Zarinpal for Pro subscriptions and lifetime module purchases.
+   - Desktop client triggers system default browser via Tauri shell with real-time polling in `PurchaseModuleModal.tsx` for zero-friction activation.
 
 9. **Dynamic Size Guide Architecture**:
    - Size Guides are generic (`size_guide_templates` -> `size_guide_measurements` -> `size_guide_values`).
-   - Do **NOT** hardcode apparel-specific dimensions (like chest/waist). Render measurement definitions dynamically based on the active template type (apparel, shoes, bags, accessories, custom).
+   - Do NOT hardcode apparel dimensions. Render measurements dynamically based on the active template type (apparel, shoes, bags, accessories, custom).
 
-10. **Accounting & Financial Module Architecture (Complete 3-Phase Implementation)**:
-    - The Financial & Accounting module is fully implemented across all 3 phases according to `/accounting-roadmap.md`:
-      - **Phase 1 (Core MVP)**: Operational expenses (`expenses`, `expense_categories`), Customer/Supplier Party Ledgers (`person_transactions`), and real-time Profit & Loss summary.
-      - **Phase 2 (Treasury & Cheques)**: Bank accounts and cashboxes (`financial_accounts`), Treasury balance transfers (`treasury_transactions`), and Sayad Cheques management (`cheques`) with complete status lifecycles (pending, cleared, bounced, refunded).
-      - **Phase 3 (Landed Cost & Compliance)**:
-        - Landed Cost Allocation (`landed_costs`, `landed_cost_allocations`) with automated weighted distribution by variant value or quantity to determine true unit cost.
-        - Tax Reports (`TaxReportsPage`): Output VAT, Input VAT credits, and Seasonal Purchase/Sale reporting (Art. 169 & Moadian system).
-        - Accounting Software Exports (`AccountingExportPage`): Double-entry balanced journal generators with 1-click UTF-8 BOM CSV exports for Sepidar (سپیدار), Holoo (هلو), and Samaneh Moadian (سامانه مؤدیان).
+10. **Accounting & Financial Module Architecture**:
+    - **Phase 1 (Core MVP)**: Operational expenses (`expenses`, `expense_categories`), Customer/Supplier Party Ledgers (`person_transactions`), and Profit & Loss summary.
+    - **Phase 2 (Treasury & Cheques)**: Bank accounts and cashboxes (`financial_accounts`), Treasury balance transfers (`treasury_transactions`), and Sayad Cheques management (`cheques`).
+    - **Phase 3 (Landed Cost & Compliance)**: Landed Cost Allocation (`landed_costs`, `landed_cost_allocations`), Tax Reports (VAT & Art. 169 seasonal), and 1-click UTF-8 BOM CSV exports for Sepidar (سپیدار), Holoo (هلو), and Samaneh Moadian (سامانه مؤدیان).
 
-11. **Comprehensive "Orders - Inventory - Accounting" Triangle Synchronization (MANDATORY)**:
+11. **Comprehensive "Orders - Inventory - Accounting" Triangle Synchronization**:
     - **Sales Orders Flow (`CreateOrderView`, `OrdersView`)**:
-      - **Inventory Side-Effects**: Confirming or completing an order automatically decrements sellable stock via `inventory_movements` (`type: 'sale'`, `reference_type: 'order'`) and updates `inventory_items`. Cancelling or deleting an order immediately triggers stock rollback (`type: 'return'`), restoring inventory balances.
-      - **Treasury Side-Effects**: Cash/POS payments create an immediate deposit transaction in `treasury_transactions` for the selected bank account/cashbox, incrementing its `current_balance`.
-      - **Person Ledger Side-Effects**: Every sale logs a sales invoice entry (`sale_invoice`, `debtor`) in `person_transactions` under the customer's account. Immediate payments concurrently register a receipt entry (`receipt`, `creditor`), keeping customer account statements fully audited.
-      - **Quick Invoice Settlement**: Unpaid/credit orders support 1-click settlement (`Settle Payment` modal), allowing cashiers to record receipt to a financial account and update the order to `paid` status seamlessly.
+      - Deducts sellable stock via `inventory_movements` (`type: 'sale'`, `reference_type: 'order'`) and updates `inventory_items`. Cancelling or deleting rolls back stock (`type: 'return'`).
+      - Payments record deposits in `treasury_transactions` and update `current_balance` of the account.
+      - Automatically logs sales invoice entries (`sale_invoice`, `debtor`) and receipt entries (`receipt`, `creditor`) in `person_transactions`.
     - **Purchasing Orders Flow (`PurchaseOrdersView`)**:
-      - Receiving goods (`status: 'received'`) creates inventory increments (`type: 'purchase'`) for all actual items and quantities in the purchase order, while simultaneously logging a payable entry (`purchase_invoice`, `creditor`) in the supplier's ledger.
-      - Cancelling or deleting a purchase order triggers reverse stock adjustments, preventing artificial stock inflation.
-    - **WooCommerce Online Store Flow (`server/woocommerce.ts`)**:
-      - Imported WooCommerce orders create native Tankhor orders, link or provision customers, deduct variant stocks from the designated warehouse, and for paid orders, automatically register Treasury deposits and dual ledger entries (`sale_invoice` + `receipt`).
+      - Receiving goods (`status: 'received'`) increments inventory (`type: 'purchase'`) and logs payable entries (`purchase_invoice`, `creditor`) in supplier ledgers.
+      - Cancellation/deletion triggers reverse stock adjustments.
+    - **WooCommerce Flow (`server/woocommerce.ts`)**:
+      - Imports orders, deducts variant stocks, registers Treasury deposits, and posts dual ledger entries for paid orders.
 
-12. **Locale-Aware Dual Calendar & Date Architecture (`DateInput` & `dateUtils`)**:
-    - **Persian (`fa`)**: Automatically displays an interactive, accessible Jalali (Shamsi) calendar popover powered by high-precision astronomical algorithms (`/src/utils/dateUtils.ts`), with Persian month names (فروردین تا اسفند), Persian numerals, and quick "امروز" selection.
-    - **English (`en`)**: Seamlessly falls back to standard Gregorian system picker (`type="date"`).
-    - **Data Integrity**: Storage format is strictly ISO-8601 date strings (`YYYY-MM-DD` or ISO timestamp) across SQLite, LocalStorage, and Directus collections.
-    - **Formatters**: Date helpers in `/src/utils/formatters.ts` (`formatDate`, `formatDateNumeric`, `formatPersianDate`) dynamically respect the active locale.
+12. **Production & Garment Manufacturing Flow (`production`)**:
+    - **Production Orders (`production_orders`)**: Tracks batch status (`draft`, `in_progress`, `completed`, `cancelled`), target variant, planned/completed quantities, and target warehouse.
+    - **Bill of Materials (`boms`, `bom_items`)**: Defines required fabrics, buttons, zippers, thread, and packaging per garment variant.
+    - **Raw Materials (`raw_materials`)**: Manages fabric roll lengths, trims, and unit purchase costs.
+    - **Contractors (`contractors`)**: Manages external pattern makers, cutters, sewing workshops, embroidery, and finishing partners with transaction ledgers.
+    - Completing a production order deducts raw materials and increments finished garment variant stock.
 
-13. **Defensive UI & Runtime Error Boundaries**:
-    - All complex views and accounting dashboards are wrapped with `ErrorBoundary` (`/src/components/ui/ErrorBoundary.tsx`) to prevent fatal application crashes or blank screens.
-    - Design system controls (such as `Select.tsx`) implement defensive fallback guards to handle both declarative `options` arrays and arbitrary `children` elements safely.
+13. **Locale-Aware Dual Calendar & Date Architecture (`DateInput` & `dateUtils`)**:
+    - Persian (`fa`): Accessible Jalali (Shamsi) calendar popover powered by astronomical algorithms (`/src/utils/dateUtils.ts`) with Persian month names and numerals.
+    - English (`en`): System Gregorian picker (`type="date"`).
+    - Database storage format is strictly ISO-8601 (`YYYY-MM-DD` or ISO timestamp).
 
 14. **Automated Desktop Releases & Self-Updater**:
-    - Current App Version: `1.1.7`.
+    - Current App Version: `1.1.8`.
     - Automated multi-platform releases built via GitHub Actions (`/.github/workflows/release-tauri.yml`).
-    - Windows desktop builds use NSIS target (`bundle.targets: ["nsis", "app", "dmg"]`) with `windows.installMode: "passive"` for seamless in-place updates.
-    - Desktop auto-update system powered by Tauri Updater (`tauri-plugin-updater`) and GitHub Releases with dedicated `latest.json` manifest.
-    - Version synchronization across: `/package.json`, `/src-tauri/tauri.conf.json`, `/src-tauri/Cargo.toml`, `/src/utils/version.ts`, `/latest.json`, and `/assets/latest.json`.
-    - Background check via `checkDesktopUpdate()` (`/src/utils/updater.ts`) on startup or manual trigger in Settings.
-    - Universal RTL update notification modal (`UpdateNotificationModal.tsx`) showing release notes, real-time download progress, and zero-downtime relaunch via `@tauri-apps/plugin-process`.
-    - Preservation of local SQLite database (`tankhor.db`) across desktop application updates.
+    - Windows desktop builds use NSIS target with `windows.installMode: "passive"` for seamless in-place updates.
+    - Auto-updater powered by Tauri Updater (`tauri-plugin-updater`) and GitHub Releases manifest (`latest.json`).
+    - **Version Synchronization**: Always synchronize version string simultaneously across:
+      - `/package.json`
+      - `/src-tauri/tauri.conf.json`
+      - `/src-tauri/Cargo.toml`
+      - `/src/utils/version.ts`
+      - `/latest.json`
+      - `/assets/latest.json`
+      - `/AGENTS.md`
+    - Preservation of local SQLite database (`tankhor.db`) across desktop updates.
 
-15. **Universal Iframe Printing Architecture (`printHtml`)**:
-    - Printing barcodes, orders, and receipts relies on an isolated, dynamic iframe in `/src/utils/print.ts` with explicit RTL, custom style inheritance, and font loading.
-    - Guarantees seamless print dialog triggering across macOS Tauri (WKWebView), Windows Tauri (WebView2), and Web Browsers.
+15. **Universal Pagination Pattern (`Pagination.tsx`)**:
+    - All high-volume listings (Products, Variants, Warehouse Inventory, Movements, Transfers, Production Orders, Raw Materials, Contractors, BOMs) **MUST** implement the universal `<Pagination />` component.
+    - Supports smart ellipsis, localized Persian numerals (`toPersianDigits`), configurable page size options (`10, 25, 50, 100`), and previous/next navigation.
+    - Filter Reset: Always reset `currentPage` to `1` via `useEffect` whenever search keywords, warehouse filters, or category filters change.
+    - Dual View Integration: Both desktop tabular grids (`DataTable`) and mobile cards consume the memoized `paginated*` slice (`.slice(start, start + pageSize)`).
 
-16. **Strict Directus Cloud Schema Sanitization (`sanitizeForDirectus`)**:
-    - All automated data migrations and demo data seeding (`CloudMigrationManager.migrateLocalToCloud`) strictly filter payload keys using `sanitizeForDirectus()` against canonical schema definitions.
-    - Prevents Directus 400 validation errors (such as unmapped `status` or `type` fields), ensuring onboarding demo data works smoothly in Cloud Mode.
+16. **Universal Iframe Printing Architecture (`printHtml`)**:
+    - Printing barcodes, orders, and receipts relies on an isolated dynamic iframe in `/src/utils/print.ts` with explicit RTL, custom CSS, and font loading.
+    - Works identically across macOS Tauri (WKWebView), Windows Tauri (WebView2), and Web Browsers.
 
-17. **Universal Image Resolution & Media Management (`ProductImage` & `mediaManager`)**:
-    - All product, variant, category, brand, collection, and dashboard metric images **MUST** be rendered using the `<ProductImage />` component (`/src/components/ui/ProductImage.tsx`) or resolved via `mediaManager.getDisplayUrl()`.
-    - Prevents broken image links when referencing raw Directus File UUIDs, Base64 strings, or local IndexedDB/blob URLs.
-    - Automatically provides elegant placeholder iconography, fallback text initials, and loading states across both offline/desktop and cloud setups.
+17. **Strict Directus Cloud Schema Sanitization (`sanitizeForDirectus`)**:
+    - Data migrations and demo seeding (`CloudMigrationManager.migrateLocalToCloud`) filter payload keys against canonical schema definitions using `sanitizeForDirectus()`, preventing 400 validation errors.
 
-18. **Digital Catalog & Dynamic Size Recommendation Engine (`online_catalog`)**:
-    - **Digital Showcase**: Responsive public catalog (`/c/:slug`), dynamic QR code generator, WhatsApp order dispatch, and direct purchase inquiry flow.
-    - **Garment-to-Body Dynamic Sizing**:
-      - Calculates size recommendations strictly using the active product's assigned Size Guide Template measurements (`size_guide_templates` -> `size_guide_measurements`).
-      - Supports dual input: Direct tailor tape measurements (cm) or anthropometric height/weight estimation.
-      - Incorporates user fit preferences (`snug`, `regular`, `relaxed`) with custom ease tolerances across dimensions (chest, waist, hips, inseam, etc.).
-    - **Apparel Showcase Presentation**: High-contrast imagery (`aspect-[3/4]`), zero emojis, and minimalist design complying with `DESIGN.md`.
+18. **Universal Image Resolution & Media Management (`ProductImage` & `mediaManager`)**:
+    - All product, variant, category, brand, and material images **MUST** use `<ProductImage />` (`/src/components/ui/ProductImage.tsx`) or `mediaManager.getDisplayUrl()`.
+    - Handles Directus UUIDs, Base64 strings, and local blob URLs with fallbacks and loading states.
 
-19. **Interactive Onboarding Tour Architecture (`onboardingManager` & `Driver.js`)**:
-    - **First-Time Guided Onboarding**: Automatic, non-intrusive guided tour on the user's initial visit to introduce core system capabilities (Dashboard KPIs, Quick Actions, Products & Variants, Multi-Warehouse Inventory, Orders & Customers, Analytics, and Organization/Cloud Sync).
-    - **Modular & Extensible Registry (`tourRegistry`)**:
-      - Domain tours are defined modularly (`TourDefinition`) in `/src/features/onboarding/tours/` allowing future domain-specific tours (e.g. Products, Inventory, Accounting).
-      - Controlled via `useOnboardingTour` hook with auto-start delays, DOM element fallback guards, and manual restart actions.
-    - **Persistence & Scoping**: Completion state is strictly persisted per organization in LocalStorage (`tankhor_tour_seen_${tourName}_${orgId}`) preventing unwanted recurring popups.
-    - **RTL & Design System Alignment**:
-      - Driver.js popovers styled to match Tankhor's minimalist aesthetic (Vazirmatn typography, zero pill slop, WCAG contrast, dark/light themes).
-      - Step indicators and navigation formatted with localized Persian digits (`مرحله ۱ از ۷`) and standard action buttons («بعدی»، «قبلی»، «رد کردن»، «شروع کار»).
+19. **Digital Catalog & Dynamic Size Recommendation Engine (`online_catalog`)**:
+    - Public catalog (`/c/:slug`), dynamic QR code generator, and WhatsApp order dispatch.
+    - Garment-to-body size matching using size guide template measurements, tailor tape inputs or height/weight estimation, and fit preferences (`snug`, `regular`, `relaxed`).
 
-20. **Mobile-First Responsive Architecture & Dual Table/Card View Pattern (MANDATORY)**:
-    - **Dual Table/Card View Pattern**:
-      - All complex data tables (Products, Orders, POS, Inventory, Reports, Person Ledgers, Expenses, Cheques, Taxes, Journal Exports) **MUST** implement dual rendering:
-        - **Desktop (`hidden md:table` / `hidden md:block`)**: Dense, high-information-density tabular data grids with sortable column headers.
-        - **Mobile (`md:hidden space-y-3`)**: Touch-friendly, high-contrast standalone cards summarizing crucial metrics, status badges, and quick action buttons without awkward horizontal table scrolling.
-    - **Adaptive Header & Navigation Constraints**:
-      - Top navigation headers adapt smoothly across viewports (`h-14 sm:h-16`, `px-2 sm:px-4 md:px-6`).
-      - Dropdown menus and popovers strictly reside within `relative z-30` header stacking without `overflow-hidden` container clipping.
-      - Action icons and search inputs use responsive widths (`flex-1 min-w-0 max-w-xs sm:max-w-sm`) and compact icon-only representations on mobile screens.
-    - **Touch Targets & Zero Horizontal Overflow**:
-      - Buttons, selects, and interactive elements ensure a minimum 40px touch target area on mobile viewports.
-      - Sub-navigation bars use smooth horizontal scrolling with `-mx-2 px-2 sm:mx-0 sm:px-0` edge bleed and hidden scrollbars.
+20. **Interactive Onboarding Tour Architecture (`onboardingManager` & `Driver.js`)**:
+    - Automatic guided tour introducing Dashboard KPIs, Quick Actions, Products, Multi-Warehouse Inventory, Orders, and Cloud Sync.
+    - Registry in `/src/features/onboarding/tours/` with per-organization LocalStorage completion persistence (`tankhor_tour_seen_${tourName}_${orgId}`).
+
+21. **Mobile-First Responsive Architecture & Dual Table/Card View Pattern (MANDATORY)**:
+    - Dual rendering across all data tables:
+      - **Desktop (`hidden md:block`)**: High-density tabular data grids with sortable columns.
+      - **Mobile (`block md:hidden space-y-3`)**: Touch-friendly standalone cards with status badges and quick action buttons.
+    - Touch Targets: Interactive controls maintain a minimum 40px touch target on mobile viewports.
+    - Zero horizontal viewport overflow.
 
 ---
 
@@ -186,49 +160,39 @@
 
 - `/src/types/index.ts`: Strongly typed domain definitions for all Directus collections
 - `/src/storage/types.ts`: Storage provider interface & sync queue definitions
-- `/src/storage/localAdapter.ts`: Local persistence provider facade (Browser)
-- `/src/storage/local/`: Modular LocalStorage domain providers (`localOrg.ts`, `localCatalog.ts`, `localInventory.ts`, `localSales.ts`, `localProcurement.ts`, `localAccounting.ts`, `localWooCommerce.ts`, `localSystem.ts`)
-- `/src/storage/sqliteAdapter.ts`: Native SQLite persistence provider facade (Desktop Tauri)
-- `/src/storage/sqlite/`: Modular SQLite domain providers (`sqliteOrg.ts`, `sqliteCatalog.ts`, `sqliteInventory.ts`, `sqliteSales.ts`, `sqliteProcurement.ts`, `sqliteAccounting.ts`, `sqliteWooCommerce.ts`, `sqliteSystem.ts`)
-- `/src/storage/cloudAdapter.ts`: Directus Cloud REST API persistence provider facade
-- `/src/storage/cloud/`: Modular Directus Cloud domain providers (`cloudOrg.ts`, `cloudCatalog.ts`, `cloudInventory.ts`, `cloudSales.ts`, `cloudProcurement.ts`, `cloudAccounting.ts`, `cloudWooCommerce.ts`, `cloudSystem.ts`)
+- `/src/storage/index.ts`: Storage manager instance and adapter factory
+- `/src/storage/localAdapter.ts`: Local persistence facade (Browser LocalStorage)
+- `/src/storage/local/`: Modular LocalStorage domain providers (`localOrg.ts`, `localCatalog.ts`, `localInventory.ts`, `localSales.ts`, `localProcurement.ts`, `localAccounting.ts`, `localProduction.ts`, `localWooCommerce.ts`, `localSystem.ts`)
+- `/src/storage/sqliteAdapter.ts`: Native SQLite persistence facade (Desktop Tauri)
+- `/src/storage/sqlite/`: Modular SQLite domain providers (`sqliteOrg.ts`, `sqliteCatalog.ts`, `sqliteInventory.ts`, `sqliteSales.ts`, `sqliteProcurement.ts`, `sqliteAccounting.ts`, `sqliteProduction.ts`, `sqliteWooCommerce.ts`, `sqliteSystem.ts`)
+- `/src/storage/cloudAdapter.ts`: Directus Cloud REST API persistence facade
+- `/src/storage/cloud/`: Modular Directus Cloud domain providers (`cloudOrg.ts`, `cloudCatalog.ts`, `cloudInventory.ts`, `cloudSales.ts`, `cloudProcurement.ts`, `cloudAccounting.ts`, `cloudProduction.ts`, `cloudWooCommerce.ts`, `cloudSystem.ts`)
 - `/src/storage/mediaManager.ts`: Offline media caching, blob storage, and image URL resolution
-- `/src/components/ui/ProductImage.tsx`: Unified image rendering component with Directus asset resolution and fallback
-- `/src/features/onboarding/`: Interactive guided tour suite (`onboardingManager.ts`, `useOnboardingTour.ts`, `tours/dashboardTour.ts`, `tours/index.ts`, `types.ts`)
-- `/src/features/online-catalog/`: Digital Catalog suite (Admin management, live preview, dynamic size engine simulator, and public customer-facing catalog)
-- `/src/features/online-catalog/engine/sizeRecommendationEngine.ts`: Garment-to-body size matching & anthropometric tolerance calculation engine
-- `/src/features/online-catalog/components/SmartSizeFinderModal.tsx`: Customer-facing smart size finder modal with dynamic template-driven inputs
-- `/src/features/online-catalog/public/PublicCatalogView.tsx`: Responsive public catalog showcase with high-res imagery, quick search, and WhatsApp order generator
-- `/src/storage/syncManager.ts`: Sync manager for offline changes
-- `/src/storage/backupManager.ts`: Automated 1-click JSON backup, restore & demo data seeding engine
-- `/src/api/directus.ts`: Directus API client with desktop/web support
-- `/server/proxy.ts`: Multi-tenant API proxy and tenant isolation enforcement
+- `/src/components/ui/ProductImage.tsx`: Unified image rendering component with asset resolution
+- `/src/components/ui/Pagination.tsx`: Universal RTL/LTR responsive pagination component
+- `/src/features/products/`: Catalog & products management (`ProductsView.tsx`, `VariantsView.tsx`, `ProductEditView.tsx`, `ProductVariantsModal.tsx`)
+- `/src/features/inventory/`: Inventory suite (`InventoryView.tsx`, `MovementsView.tsx`, `TransfersView.tsx`, `WarehousesView.tsx`, `LocationsView.tsx`, `BarcodePrintView.tsx`)
+- `/src/features/production/`: Garment manufacturing suite (`ProductionOrdersView.tsx`, `BomsView.tsx`, `RawMaterialsView.tsx`, `ContractorsView.tsx`)
+- `/src/features/orders/`: Sales & POS suite (`OrdersView.tsx`, `CreateOrderView.tsx`)
+- `/src/features/purchasing/`: Procurement suite (`PurchaseOrdersView.tsx`, `SuppliersView.tsx`)
+- `/src/features/accounting/`: Accounting suite (Dashboard, Expenses, Person Ledgers, Financial Accounts, Cheques, Landed Costs, Tax Reports, Accounting Export)
+- `/src/features/reports/`: Executive analytics (`SalesReportPage.tsx`, `ApparelReportPage.tsx`, `InventoryPerformancePage.tsx`)
+- `/src/features/online-catalog/`: Digital catalog & smart size finder (`PublicCatalogView.tsx`, `sizeRecommendationEngine.ts`)
+- `/src/features/woocommerce/`: WooCommerce store integration (`WooCommercePage.tsx`)
+- `/src/features/onboarding/`: Guided interactive tour suite (`onboardingManager.ts`, `dashboardTour.ts`)
+- `/server/proxy.ts`: Multi-tenant API gateway and tenant isolation enforcement
 - `/server/auth.ts`: Authentication, registration, and organization provisioning
-- `/server/payment.ts`: Zibal & Zarinpal payment gateway proxy, subscription & standalone module purchasing
-- `/server/woocommerce.ts`: WooCommerce REST synchronization proxy (product & variant sync, order import, warehouse deductions, customer matching)
+- `/server/payment.ts`: Zibal & Zarinpal payment gateway proxy
+- `/server/woocommerce.ts`: WooCommerce REST synchronization proxy
 - `/src/hooks/useModuleAccess.ts`: Dynamic entitlement and module access checking hook
-- `/src/utils/license.ts`: Cryptographic offline license verification, hardware fingerprinting & price formatters
-- `/src/utils/dateUtils.ts`: High-precision Jalali-Gregorian conversion algorithms & constants
-- `/src/utils/formatters.ts`: Locale-aware currency, number, and Jalali/Gregorian date formatting
-- `/src/components/modals/PurchaseModuleModal.tsx`: Dynamic module purchase modal with real-time gateway polling for desktop
-- `/accounting-roadmap.md`: Architectural specification and schema design for Financial & Accounting module
-- `/src/i18n/`: Translation keys (`fa`, `en`) and i18n helper hooks
-- `/src/context/`: AuthContext, OrganizationContext, and I18nProvider
-- `/src/components/ui/`: Reusable, locale-agnostic design system controls (`DateInput`, `ErrorBoundary`, `Button`, `Input`, `Select`, `Card`)
-- `/src/components/modals/UpdateNotificationModal.tsx`: Interactive modal for desktop app updates with progress bar and release notes
-- `/src/components/layout/`: Responsive App Shell (Sidebar, Top Header, Org Switcher)
-- `/src/features/`: Modular domain views (Dashboard, Products, Inventory, Orders, Purchasing, Size Guides, Settings, Organizations)
-- `/src/features/accounting/`: Complete accounting suite (Dashboard, Expenses, Person Ledgers, Financial Accounts, Cheques, Landed Costs, Tax Reports, Accounting Export)
-- `/src/features/reports/`: Executive analytics & reports suite (`ReportsView.tsx`, `SalesReportPage.tsx`, `ApparelReportPage.tsx`, `InventoryPerformancePage.tsx`)
-- `/src/features/woocommerce/`: WooCommerce integration module (store credentials, synchronization dashboard, logs, variant mapping)
-- `/src/utils/updater.ts`: Desktop update checker and installation helper using `@tauri-apps/plugin-updater` and `@tauri-apps/plugin-process`
-- `/.github/workflows/release-tauri.yml`: Multi-platform release pipeline for Tauri desktop (Windows, macOS) and Android APK
+- `/src/utils/updater.ts`: Desktop update checker and installation helper
+- `/src/utils/version.ts`: Canonical app version helper
+- `/.github/workflows/release-tauri.yml`: Multi-platform release pipeline for Tauri desktop and Android
 
 ---
 
 ## 📌 UI & Design Rules
 - The project design standards are documented in `DESIGN.md`.
-- Use all possible fields from `directus-schema.json` where applicable across modules.
 - Live Directus API Endpoint: `https://api.tankhor.com`.
 - **UI Naming Directive**: Do NOT display the word "Directus" in user-facing UI labels, badges, or dialogs. Refer to cloud features as "سرور ابری" / "همگام‌سازی ابری" / "Cloud Sync".
 - Authentication is strictly account-based; guest/offline bypass buttons are removed from login interfaces.

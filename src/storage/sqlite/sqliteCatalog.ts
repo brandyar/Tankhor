@@ -235,7 +235,8 @@ export class SqliteCatalogStorage {
 
       const warehouses = await this.base.getItems<Warehouse>('warehouses');
       let targetWarehouseId = warehouseId;
-      if (!targetWarehouseId || !warehouses.some((w) => w.id === targetWarehouseId)) {
+      const targetWhCheckId = normalizeId(targetWarehouseId) || (targetWarehouseId ? Number(targetWarehouseId) : undefined);
+      if (!targetWhCheckId || !warehouses.some((w) => (normalizeId(w.id) || Number(w.id)) === targetWhCheckId)) {
         if (warehouses.length > 0) {
           targetWarehouseId = warehouses[0].id;
         } else {

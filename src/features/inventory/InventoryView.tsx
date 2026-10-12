@@ -154,6 +154,10 @@ export const InventoryView: React.FC = () => {
     loadData();
   }, [activeOrganization, selectedWarehouseFilter, lowStockOnly, search]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedWarehouseFilter, lowStockOnly, search]);
+
   // Calculations for KPI Cards
   const totalQuantity = inventoryItems.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
   const totalAvailable = inventoryItems.reduce((acc, curr) => acc + (Number(curr.available_quantity) || Number(curr.quantity) || 0), 0);

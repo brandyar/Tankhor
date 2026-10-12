@@ -43,7 +43,8 @@ export const DateInput: React.FC<DateInputProps> = ({
   const isPersian = explicitIsPersian !== undefined ? explicitIsPersian : locale === 'fa';
 
   // Ensure standard date string or today
-  const currentIso = value ? value.slice(0, 10) : getTodayIso();
+  const hasValue = Boolean(value && value.trim() !== '');
+  const currentIso = hasValue ? value!.slice(0, 10) : getTodayIso();
   const currentJalali = isoToJalali(currentIso);
 
   // Popover state
@@ -56,7 +57,7 @@ export const DateInput: React.FC<DateInputProps> = ({
 
   // Direct manual input state for Persian mode
   const [manualText, setManualText] = useState<string>(() => {
-    return formatJalaliDateString(currentJalali.jy, currentJalali.jm, currentJalali.jd);
+    return hasValue ? formatJalaliDateString(currentJalali.jy, currentJalali.jm, currentJalali.jd) : '';
   });
 
   // Sync internal view when value changes externally
@@ -64,8 +65,8 @@ export const DateInput: React.FC<DateInputProps> = ({
     const j = isoToJalali(currentIso);
     setViewYear(j.jy);
     setViewMonth(j.jm);
-    setManualText(formatJalaliDateString(j.jy, j.jm, j.jd));
-  }, [currentIso]);
+    setManualText(hasValue ? formatJalaliDateString(j.jy, j.jm, j.jd) : '');
+  }, [currentIso, hasValue]);
 
   // Lock body scroll when date picker modal is open
   useEffect(() => {
@@ -108,7 +109,7 @@ export const DateInput: React.FC<DateInputProps> = ({
           <input
             type="date"
             id={inputId}
-            value={currentIso}
+            value={value || ''}
             onChange={(e) => onChange(e.target.value)}
             disabled={disabled}
             required={required}
@@ -368,15 +369,37 @@ export const DateInput: React.FC<DateInputProps> = ({
           disabled ? 'opacity-50 cursor-not-allowed bg-neutral-100 dark:bg-neutral-900' : ''
         } ${error ? 'border-[#ee0000]' : ''}`}
       >
-        <div className="flex items-center gap-2 truncate">
+        <div className="flex items-center gap-2 truncate flex-1 min-w-0">
           <Calendar className="w-4 h-4 text-neutral-400 shrink-0" />
-          <span className="font-medium text-neutral-900 dark:text-white">
-            {formattedDisplay}
-          </span>
-          <span className="text-xs text-neutral-400 font-mono hidden sm:inline">
-            ({toPersianDigits(manualText, true)})
-          </span>
+          {hasValue ? (
+            <>
+              <span className="font-medium text-neutral-900 dark:text-white truncate">
+                {formattedDisplay}
+              </span>
+              <span className="text-xs text-neutral-400 font-mono hidden sm:inline shrink-0">
+                ({toPersianDigits(manualText, true)})
+              </span>
+            </>
+          ) : (
+            <span className="text-neutral-400 dark:text-neutral-500 font-normal truncate">
+              {placeholder || (isPersian ? 'انتخاب تاریخ...' : 'Select date...')}
+            </span>
+          )}
         </div>
+
+        {hasValue && !disabled && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange('');
+            }}
+            className="p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors shrink-0 ms-1"
+            title={isPersian ? 'پاک کردن تاریخ' : 'Clear date'}
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
