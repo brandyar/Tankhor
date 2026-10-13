@@ -313,8 +313,8 @@ export class CloudInventoryStorage {
           location_id: payload.location_id || item.location_id,
           updated_at: new Date().toISOString(),
         });
-      } else {
-        let initialQty = moveQty;
+      } else if (vId && wId) {
+        let initialQty = moveType === 'adjustment' ? Math.max(0, moveQty) : moveQty;
         let initialDamaged = 0;
         if (moveType === 'damage') {
           initialDamaged = moveQty;

@@ -182,4 +182,8 @@ export const ordersEn = {
   posModeNotice: 'Fullscreen POS mode is active. Press Esc to exit.',
   viewCartAndCheckout: 'View Cart & Checkout',
   viewCart: 'View Cart',
+  resetPrice: 'Reset Price',
+  defaultPrice: 'Default Catalog Price',
+  customPriceNotice: 'Custom Price',
+  editUnitPrice: 'Edit Unit Price',
 };

@@ -11,6 +11,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable, Column } from '../../components/ui/DataTable';
+import { DateInput } from '../../components/ui/DateInput';
 import { toPersianDigits, formatDate } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
 import { Layers, Bookmark, Sun, Palette, Tag, Plus, Trash2, Edit, Folder, CornerDownLeft, Calendar, Hash } from 'lucide-react';
@@ -688,18 +689,18 @@ export const AttributesView: React.FC<AttributesViewProps> = ({ initialTab = 'ca
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
               />
-              <div className="grid grid-cols-2 gap-4">
-                <Input
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <DateInput
                   label={t('common.startDate')}
-                  type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(val) => setStartDate(val)}
+                  placeholder={locale === 'fa' ? 'انتخاب تاریخ شروع...' : 'Select start date...'}
                 />
-                <Input
+                <DateInput
                   label={t('common.endDate')}
-                  type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(val) => setEndDate(val)}
+                  placeholder={locale === 'fa' ? 'انتخاب تاریخ پایان...' : 'Select end date...'}
                 />
               </div>
             </>

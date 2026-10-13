@@ -108,7 +108,7 @@
     - Database storage format is strictly ISO-8601 (`YYYY-MM-DD` or ISO timestamp).
 
 14. **Automated Desktop Releases & Self-Updater**:
-    - Current App Version: `1.1.8`.
+    - Current App Version: `1.1.9`.
     - Automated multi-platform releases built via GitHub Actions (`/.github/workflows/release-tauri.yml`).
     - Windows desktop builds use NSIS target with `windows.installMode: "passive"` for seamless in-place updates.
     - Auto-updater powered by Tauri Updater (`tauri-plugin-updater`) and GitHub Releases manifest (`latest.json`).

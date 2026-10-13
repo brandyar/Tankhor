@@ -52,6 +52,7 @@ interface FullscreenPosTerminalProps {
   cart: CartLine[];
   onAddToCart: (variant: ProductVariant) => void;
   onUpdateQty: (variantId: number, qty: number) => void;
+  onUpdatePrice: (variantId: number, newPrice: number) => void;
   onRemoveLine: (variantId: number) => void;
   onClearCart: () => void;
   barcodeQuery: string;
@@ -107,6 +108,7 @@ export const FullscreenPosTerminal: React.FC<FullscreenPosTerminalProps> = ({
   cart,
   onAddToCart,
   onUpdateQty,
+  onUpdatePrice,
   onRemoveLine,
   onClearCart,
   barcodeQuery,
@@ -696,8 +698,28 @@ export const FullscreenPosTerminal: React.FC<FullscreenPosTerminalProps> = ({
                       {line.variant.size_name ? `${t('orders.size')}: ${line.variant.size_name}` : ''}
                       {line.variant.color_name ? ` · ${line.variant.color_name}` : ''}
                     </div>
-                    <div className="font-bold font-mono text-neutral-800 dark:text-neutral-200 mt-1">
-                      {formatCurrency(line.unitPrice, 'TOMAN', isPersian)}
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <span className="text-[10px] text-neutral-400 shrink-0">{t('orders.unitPrice')}:</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={line.unitPrice}
+                        onChange={(e) => onUpdatePrice(line.variant.id, Math.max(0, parseFloat(e.target.value) || 0))}
+                        className="w-24 px-1.5 py-0.5 text-xs font-mono font-bold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-[#121418] border border-neutral-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-2xs"
+                        title={t('orders.editUnitPrice')}
+                      />
+                      <span className="text-[10px] text-neutral-400">{t('common.currency')}</span>
+                      {line.unitPrice !== (line.variant.price || 0) && (
+                        <button
+                          type="button"
+                          onClick={() => onUpdatePrice(line.variant.id, line.variant.price || 0)}
+                          title={`${t('orders.resetPrice')} (${formatCurrency(line.variant.price || 0, 'TOMAN', isPersian)})`}
+                          className="text-[10px] text-amber-600 dark:text-amber-400 hover:underline font-bold px-1"
+                        >
+                          {t('orders.resetPrice')}
+                        </button>
+                      )}
                     </div>
                   </div>
 

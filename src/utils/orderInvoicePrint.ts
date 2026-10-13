@@ -21,13 +21,15 @@ export function generateOrderInvoiceHtml(
   organization?: Organization | null,
   isPersian: boolean = true,
   format: 'standard' | 'thermal' = 'standard',
-  resolvedLogoUrl?: string
+  resolvedLogoUrl?: string,
+  resolvedSignatureUrl?: string
 ): string {
   const orgName = organization?.name || 'تن‌خور (TANKHOR)';
   const orgPhone = organization?.phone || '';
   const orgMobile = organization?.mobile || '';
   const orgAddress = organization?.address || '';
   const logoSrc = resolvedLogoUrl || (organization?.logo ? mediaManager.getDisplayUrlSync(organization.logo) : '');
+  const signatureSrc = resolvedSignatureUrl || (organization?.signature ? mediaManager.getDisplayUrlSync(organization.signature) : '');
   const orderNumber = order.order_number || `ORD-${order.id}`;
   const orderDate = formatDate(order.date_created, isPersian);
   const customerName = order.customer_name || (isPersian ? 'مشتری حضوری (عمومی)' : 'Walk-in Customer');
@@ -115,6 +117,13 @@ export function generateOrderInvoiceHtml(
             <span>${formatCurrency(total, 'TOMAN', isPersian)}</span>
           </div>
         </div>
+
+        ${signatureSrc ? `
+          <div style="text-align: center; margin-top: 8px; margin-bottom: 4px; border-top: 1px dashed #bbb; padding-top: 6px;">
+            <div style="font-size: 8.5px; color: #555; margin-bottom: 3px; font-weight: bold;">مهر و امضای فروشگاه</div>
+            <img src="${signatureSrc}" alt="مهر و امضا" style="max-height: 48px; max-width: 120px; object-fit: contain; margin: 0 auto; filter: grayscale(100%) contrast(150%);" />
+          </div>
+        ` : ''}
 
         <div style="text-align: center; margin-top: 10px; padding-top: 6px; border-top: 1px dashed #999; font-size: 9.5px; color: #444;">
           ${notes}
@@ -243,12 +252,27 @@ export function generateOrderInvoiceHtml(
       </div>
 
       <!-- Signatures -->
-      <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 16px; border-top: 1px dashed #cbd5e1; font-size: 11px; color: #64748b;">
-        <div style="text-align: center; width: 140px; border-top: 1px solid #94a3b8; padding-top: 4px;">
-          مهر و امضای فروشنده
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 20px; border-top: 1px dashed #cbd5e1; font-size: 11px; color: #475569;">
+        <!-- Seller Stamp & Signature Box -->
+        <div style="text-align: center; width: 180px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative;">
+          ${signatureSrc ? `
+            <div style="min-height: 65px; max-height: 85px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+              <img src="${signatureSrc}" alt="مهر و امضای فروشنده" style="max-height: 75px; max-width: 170px; object-fit: contain;" />
+            </div>
+          ` : `
+            <div style="height: 55px;"></div>
+          `}
+          <div style="width: 100%; border-top: 1.5px solid #94a3b8; padding-top: 5px; font-weight: bold; color: #1e293b;">
+            مهر و امضای فروشنده
+          </div>
         </div>
-        <div style="text-align: center; width: 140px; border-top: 1px solid #94a3b8; padding-top: 4px;">
-          امضای خریدار / تحویل‌گیرنده
+
+        <!-- Buyer Signature Box -->
+        <div style="text-align: center; width: 180px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
+          <div style="height: 55px;"></div>
+          <div style="width: 100%; border-top: 1.5px solid #94a3b8; padding-top: 5px; font-weight: bold; color: #1e293b;">
+            امضای خریدار / تحویل‌گیرنده
+          </div>
         </div>
       </div>
     </div>
@@ -270,7 +294,23 @@ export async function printOrderInvoice(
       resolvedLogoUrl = mediaManager.getDisplayUrlSync(organization.logo);
     }
   }
-  const html = generateOrderInvoiceHtml(order, items, organization, isPersian, format, resolvedLogoUrl);
+  let resolvedSignatureUrl = '';
+  if (organization?.signature) {
+    try {
+      resolvedSignatureUrl = await mediaManager.getDisplayUrl(organization.signature);
+    } catch {
+      resolvedSignatureUrl = mediaManager.getDisplayUrlSync(organization.signature);
+    }
+  }
+  const html = generateOrderInvoiceHtml(
+    order,
+    items,
+    organization,
+    isPersian,
+    format,
+    resolvedLogoUrl,
+    resolvedSignatureUrl
+  );
   printHtml(html, {
     title: `فاکتور_${order.order_number || order.id}`,
     extraStyles: `

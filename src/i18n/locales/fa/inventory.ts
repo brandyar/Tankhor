@@ -269,4 +269,9 @@ export const inventoryFa = {
   editThresholdsDesc: 'تعیین حداقل موجودی و نقطه هشدار سفارش مجدد برای این تنوع در انبار',
   reorderPointNotice: 'هنگام رسیدن به این تعداد، کالا در وضعیت هشدار قرار می‌گیرد.',
   safetyStockNotice: 'حداقل موجودی مجاز در انبار.',
+  adjustDirectionIncrease: 'افزایش موجودی (+)',
+  adjustDirectionDecrease: 'کاهش موجودی (-)',
+  adjustModeExactBalance: 'تنظیم موجودی دقیق نهایی',
+  currentStockInWarehouse: 'موجودی فعلی در این انبار',
+  adjustItemIndividual: 'اصلاح و تعدیل این کالا',
 };

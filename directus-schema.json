@@ -1508,6 +1508,54 @@
         },
         {
             "collection": "organizations",
+            "field": "signature",
+            "type": "uuid",
+            "schema": {
+                "name": "signature",
+                "table": "organizations",
+                "data_type": "uuid",
+                "default_value": null,
+                "generation_expression": null,
+                "max_length": null,
+                "numeric_precision": null,
+                "numeric_scale": null,
+                "is_generated": false,
+                "is_nullable": true,
+                "is_unique": false,
+                "is_indexed": false,
+                "is_primary_key": false,
+                "has_auto_increment": false,
+                "foreign_key_schema": "public",
+                "foreign_key_table": "directus_files",
+                "foreign_key_column": "id",
+                "comment": null
+            },
+            "meta": {
+                "collection": "organizations",
+                "field": "signature",
+                "special": [
+                    "file"
+                ],
+                "interface": "file-image",
+                "options": null,
+                "display": null,
+                "display_options": null,
+                "readonly": false,
+                "hidden": false,
+                "sort": 5,
+                "width": "full",
+                "translations": null,
+                "note": null,
+                "conditions": null,
+                "required": false,
+                "group": null,
+                "validation": null,
+                "validation_message": null,
+                "searchable": true
+            }
+        },
+        {
+            "collection": "organizations",
             "field": "currency",
             "type": "string",
             "schema": {
@@ -27001,6 +27049,32 @@
             "meta": {
                 "many_collection": "organizations",
                 "many_field": "logo",
+                "one_collection": "directus_files",
+                "one_field": null,
+                "one_collection_field": null,
+                "one_allowed_collections": null,
+                "junction_field": null,
+                "sort_field": null,
+                "one_deselect_action": "nullify"
+            }
+        },
+        {
+            "collection": "organizations",
+            "field": "signature",
+            "related_collection": "directus_files",
+            "schema": {
+                "constraint_name": "organizations_signature_foreign",
+                "table": "organizations",
+                "column": "signature",
+                "foreign_key_schema": "public",
+                "foreign_key_table": "directus_files",
+                "foreign_key_column": "id",
+                "on_update": "NO ACTION",
+                "on_delete": "SET NULL"
+            },
+            "meta": {
+                "many_collection": "organizations",
+                "many_field": "signature",
                 "one_collection": "directus_files",
                 "one_field": null,
                 "one_collection_field": null,

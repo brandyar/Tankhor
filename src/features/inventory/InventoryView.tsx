@@ -38,6 +38,12 @@ export const InventoryView: React.FC = () => {
 
   // Adjustment Modal
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+  const [adjustingItem, setAdjustingItem] = useState<InventoryItem | null>(null);
+
+  const handleOpenAdjustment = (item?: InventoryItem) => {
+    setAdjustingItem(item || null);
+    setIsAdjustmentModalOpen(true);
+  };
 
   // Edit Thresholds Modal
   const [isThresholdModalOpen, setIsThresholdModalOpen] = useState(false);
@@ -383,7 +389,7 @@ export const InventoryView: React.FC = () => {
             </Button>
             <Button
               size="sm"
-              onClick={() => setIsAdjustmentModalOpen(true)}
+              onClick={() => handleOpenAdjustment()}
               icon={<RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             >
               <span className="hidden sm:inline">{t('inventory.stockAdjustment')}</span>
@@ -492,7 +498,15 @@ export const InventoryView: React.FC = () => {
           keyExtractor={(item) => item.id}
           isLoading={isLoading}
           actions={(item) => (
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-end gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 transition-colors"
+                onClick={() => handleOpenAdjustment(item)}
+                title={t('inventory.stockAdjustment')}
+                icon={<RefreshCw className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
+              />
               <Button
                 variant="ghost"
                 size="sm"
@@ -625,15 +639,26 @@ export const InventoryView: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Sliders Action Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleOpenThresholdModal(item)}
-                      title={t('inventory.editThresholds', 'تنظیم حد سفارش')}
-                      className="w-9 h-9 rounded-xl border border-neutral-200/90 dark:border-neutral-700/90 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100 flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
-                    >
-                      <SlidersHorizontal className="w-4 h-4" />
-                    </button>
+                    {/* Quick Action Buttons */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenAdjustment(item)}
+                        title={t('inventory.stockAdjustment', 'اصلاح و تعدیل موجودی')}
+                        className="w-9 h-9 rounded-xl border border-indigo-200/90 dark:border-indigo-800/90 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenThresholdModal(item)}
+                        title={t('inventory.editThresholds', 'تنظیم حد سفارش')}
+                        className="w-9 h-9 rounded-xl border border-neutral-200/90 dark:border-neutral-700/90 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100 flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
+                      >
+                        <SlidersHorizontal className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* 3. Bottom Quantity Bar with Vertical Dividing Lines */}
@@ -681,18 +706,18 @@ export const InventoryView: React.FC = () => {
             })}
           </div>
         )}
-
-        {/* Universal Pagination */}
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalInventoryCount}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
-          className="mt-4"
-        />
       </div>
+
+      {/* Universal Pagination for both Desktop and Mobile */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalInventoryCount}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+        className="mt-4"
+      />
 
       {/* Modal: Edit Reorder Point and Safety Stock */}
       {editingItem && (
@@ -775,10 +800,14 @@ export const InventoryView: React.FC = () => {
       {/* Stock Adjustment Modal */}
       <StockAdjustmentModal
         isOpen={isAdjustmentModalOpen}
-        onClose={() => setIsAdjustmentModalOpen(false)}
+        onClose={() => {
+          setIsAdjustmentModalOpen(false);
+          setAdjustingItem(null);
+        }}
         variants={variants}
         warehouses={warehouses}
         locations={locations}
+        initialItem={adjustingItem}
         onAdjustmentComplete={loadData}
       />
     </div>

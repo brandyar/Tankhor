@@ -229,9 +229,14 @@ export function sanitizePayloadForDirectus(
   }
 
   if (collection === 'treasury_transactions') {
-    if (payload.amount !== undefined) payload.amount = Number(payload.amount) || 0;
+    if (payload.amount !== undefined) {
+      payload.amount = Math.max(0, Math.round(Number(payload.amount) || 0));
+    }
     delete payload.source_account_name;
     delete payload.destination_account_name;
+    delete payload.description;
+    delete payload.person_transaction_id;
+    delete payload.expense_id;
   }
 
   if (collection === 'cheques') {

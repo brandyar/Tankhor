@@ -16,6 +16,7 @@ export interface CartLine {
 interface OrderCartTableProps {
   cart: CartLine[];
   onUpdateQty: (variantId: number, qty: number) => void;
+  onUpdatePrice: (variantId: number, newPrice: number) => void;
   onRemoveLine: (variantId: number) => void;
   extraDiscount: number;
   setExtraDiscount: (val: number) => void;
@@ -27,6 +28,7 @@ interface OrderCartTableProps {
 export const OrderCartTable: React.FC<OrderCartTableProps> = ({
   cart,
   onUpdateQty,
+  onUpdatePrice,
   onRemoveLine,
   extraDiscount,
   setExtraDiscount,
@@ -112,10 +114,54 @@ export const OrderCartTable: React.FC<OrderCartTableProps> = ({
                   <div className="font-bold font-mono text-[#171717] dark:text-neutral-100">
                     {formatCurrency(line.quantity * line.unitPrice - line.discount * line.quantity, 'TOMAN', isPersian)}
                   </div>
-                  <div className="text-[10px] text-[#888888] dark:text-neutral-400 font-mono">
-                    {formatCurrency(line.unitPrice, 'TOMAN', isPersian)} × {line.quantity}
-                  </div>
+                  {line.discount > 0 && (
+                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
+                      -{formatCurrency(line.discount * line.quantity, 'TOMAN', isPersian)}
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              {/* Editable Unit Price Row */}
+              <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-dashed border-[#ebebeb] dark:border-neutral-800 text-xs">
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                  <span className="text-[10px] text-[#737373] dark:text-neutral-400 whitespace-nowrap">
+                    {t('orders.unitPrice')}:
+                  </span>
+                  <div className="flex items-center gap-1 flex-1 max-w-[130px]">
+                    <input
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={line.unitPrice}
+                      onChange={(e) => onUpdatePrice(line.variant.id, Math.max(0, parseFloat(e.target.value) || 0))}
+                      className="w-full px-2 py-0.5 text-xs font-mono font-bold text-[#171717] dark:text-neutral-100 bg-white dark:bg-[#13151a] border border-[#ebebeb] dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-2xs"
+                      title={t('orders.editUnitPrice')}
+                    />
+                  </div>
+                  <span className="text-[10px] text-[#888888] dark:text-neutral-400">
+                    {t('common.currency')}
+                  </span>
+                </div>
+
+                {line.unitPrice !== (line.variant.price || 0) && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span
+                      title={`${t('orders.defaultPrice')}: ${formatCurrency(line.variant.price || 0, 'TOMAN', isPersian)}`}
+                      className="text-[9px] px-1 py-0.5 bg-amber-100/80 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 rounded font-bold border border-amber-300 dark:border-amber-800"
+                    >
+                      {t('orders.customPriceNotice')}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onUpdatePrice(line.variant.id, line.variant.price || 0)}
+                      title={`${t('orders.resetPrice')} (${formatCurrency(line.variant.price || 0, 'TOMAN', isPersian)})`}
+                      className="text-[10px] text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline p-0.5 font-bold"
+                    >
+                      {t('orders.resetPrice')}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))

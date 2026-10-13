@@ -56,6 +56,7 @@ const DIRECTUS_ALLOWED_FIELDS: Record<string, Set<string>> = {
   production_orders: new Set(['organization_id', 'order_number', 'product_id', 'bom_id', 'target_warehouse_id', 'total_quantity', 'status', 'start_date', 'due_date', 'completed_date', 'estimated_unit_cost', 'actual_unit_cost', 'notes']),
   production_order_items: new Set(['production_order_id', 'variant_id', 'quantity_planned', 'quantity_completed', 'quantity_rejected']),
   production_stages: new Set(['production_order_id', 'contractor_id', 'stage_type', 'status', 'unit_fee', 'total_fee', 'quantity_sent', 'quantity_received', 'quantity_damaged', 'sent_date', 'received_date', 'notes']),
+  organizations: new Set(['name', 'slug', 'currency', 'timezone', 'logo', 'signature', 'phone', 'mobile', 'address', 'status']),
 };
 
 export function sanitizeForDirectus(collection: string, rawItem: Record<string, any>): Record<string, any> {

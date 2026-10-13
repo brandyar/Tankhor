@@ -212,18 +212,84 @@ export class SqliteInventoryStorage {
   async saveInventoryMovement(movement: Partial<InventoryMovement>): Promise<InventoryMovement> {
     const list = await this.base.getItems<InventoryMovement>('inventory_movements');
     const validId = typeof movement.id === 'number' && movement.id > 0 ? movement.id : this.base.generateUniqueId(list);
+    const moveQty = Number(movement.quantity) || 0;
+    const moveType = movement.type || 'adjustment';
+    const normVId = normalizeId(movement.variant_id);
+    const normWId = normalizeId(movement.warehouse_id);
+
     const saved: InventoryMovement = {
       organization_id: movement.organization_id || 1,
-      variant_id: movement.variant_id || 1,
-      warehouse_id: movement.warehouse_id || 1,
-      type: movement.type || 'adjustment',
-      quantity: Math.max(0, Number(movement.quantity) || 1),
+      variant_id: normVId || 1,
+      warehouse_id: normWId || 1,
+      location_id: normalizeId(movement.location_id),
+      type: moveType,
+      quantity: Math.abs(moveQty),
       reference_type: movement.reference_type || 'manual',
       created_at: new Date().toISOString(),
       ...movement,
       id: validId,
     };
     await this.base.saveItem('inventory_movements', saved);
+
+    // Auto-synchronize inventory item balance
+    try {
+      const inventoryList = await this.base.getItems<InventoryItem>('inventory_items');
+      const existing = inventoryList.find((i) => {
+        const ivId = normalizeId(i.variant_id);
+        const iwId = normalizeId(i.warehouse_id);
+        return ivId === normVId && (normWId ? iwId === normWId : true);
+      });
+
+      if (existing) {
+        let curQty = Number(existing.quantity) || 0;
+        let curDamaged = Number(existing.damaged_quantity) || 0;
+        const curReserved = Number(existing.reserved_quantity) || 0;
+
+        if (moveType === 'purchase' || moveType === 'return' || moveType === 'transfer_in') {
+          curQty += Math.abs(moveQty);
+        } else if (moveType === 'sale' || moveType === 'transfer_out') {
+          curQty = Math.max(0, curQty - Math.abs(moveQty));
+        } else if (moveType === 'damage') {
+          curDamaged += Math.abs(moveQty);
+          curQty = Math.max(0, curQty - Math.abs(moveQty));
+        } else if (moveType === 'adjustment') {
+          curQty = Math.max(0, moveQty);
+        }
+
+        existing.quantity = curQty;
+        existing.damaged_quantity = curDamaged;
+        existing.available_quantity = Math.max(0, curQty - curReserved - curDamaged);
+        if (movement.location_id) existing.location_id = normalizeId(movement.location_id);
+        existing.updated_at = new Date().toISOString();
+        await this.base.saveItem('inventory_items', existing);
+      } else if (normVId && normWId) {
+        const newItemId = this.base.generateUniqueId(inventoryList);
+        let initQty = moveType === 'adjustment' ? Math.max(0, moveQty) : Math.abs(moveQty);
+        let initDamaged = 0;
+        if (moveType === 'damage') {
+          initDamaged = Math.abs(moveQty);
+          initQty = 0;
+        }
+
+        await this.base.saveItem('inventory_items', {
+          id: newItemId,
+          organization_id: movement.organization_id || 1,
+          variant_id: normVId,
+          warehouse_id: normWId,
+          location_id: normalizeId(movement.location_id),
+          quantity: initQty,
+          reserved_quantity: 0,
+          damaged_quantity: initDamaged,
+          available_quantity: Math.max(0, initQty - initDamaged),
+          reorder_point: 5,
+          safety_stock: 2,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      console.warn('[SqliteInventoryStorage] Auto-update inventory item failed:', e);
+    }
+
     return saved;
   }
 

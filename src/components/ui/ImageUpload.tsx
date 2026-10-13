@@ -10,6 +10,10 @@ interface ImageUploadProps {
   value?: string;
   onChange: (urlOrId: string) => void;
   helperText?: string;
+  uploadText?: string;
+  changeText?: string;
+  removeText?: string;
+  placeholderText?: string;
   className?: string;
   productId?: number;
   mode?: 'full' | 'compact' | 'mini' | 'avatar';
@@ -23,6 +27,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   value,
   onChange,
   helperText,
+  uploadText,
+  changeText,
+  removeText,
+  placeholderText,
   className = '',
   productId,
   mode = 'full',
@@ -135,86 +143,93 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // AVATAR / LOGO MODE: Dedicated horizontal card with prominent preview, clear title, actions & limits
+  // AVATAR / LOGO / STAMP MODE: Compact, responsive card with clean preview & actions
   if (mode === 'avatar') {
     return (
-      <div className={`p-4 rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-neutral-50/70 dark:bg-[#15171e] transition-all ${className}`}>
+      <div className={`p-3 sm:p-3.5 rounded-xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-[#181a20] transition-all hover:border-neutral-300 dark:hover:border-neutral-700 ${className}`}>
         {effectiveLabel && (
-          <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-neutral-200/60 dark:border-neutral-800">
-            <div className="space-y-0.5">
-              <label className="block text-xs font-bold text-neutral-900 dark:text-neutral-100">
+          <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-neutral-100 dark:border-neutral-800/80">
+            <div className="min-w-0 pr-1">
+              <label className="block text-xs font-bold text-neutral-900 dark:text-neutral-100 truncate">
                 {effectiveLabel}
               </label>
               {subtitle && (
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                <p className="text-[10.5px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
                   {subtitle}
                 </p>
               )}
             </div>
-            {isTauriEnvironment() && (
-              <span className="text-[10px] text-neutral-400 flex items-center gap-1 font-mono shrink-0">
-                <HardDrive className="w-3 h-3 text-emerald-500" />
-                AppData/media
+            {resolvedDisplayUrl ? (
+              <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 px-2 py-0.5 rounded-md shrink-0">
+                {t('common.registered', 'ثبت‌شده')}
+              </span>
+            ) : (
+              <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 bg-neutral-100 dark:bg-neutral-800/60 px-1.5 py-0.5 rounded-md shrink-0">
+                {t('common.empty', 'خالی')}
               </span>
             )}
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          {/* Logo / Avatar Preview Container */}
+        <div className="flex items-center gap-3">
+          {/* Avatar Preview Box */}
           <div
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
             onClick={() => !disabled && !isUploading && fileInputRef.current?.click()}
-            className={`relative group w-20 h-20 rounded-2xl border-2 overflow-hidden flex items-center justify-center shrink-0 cursor-pointer transition-all shadow-xs ${
+            className={`relative group w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 overflow-hidden flex items-center justify-center shrink-0 cursor-pointer transition-all shadow-2xs ${
               dragActive
                 ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40 scale-105'
-                : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-[#1a1d26] hover:border-blue-400 dark:hover:border-blue-500'
+                : 'border-neutral-200 dark:border-neutral-700 bg-neutral-50/70 dark:bg-[#13151b] hover:border-blue-400 dark:hover:border-blue-500'
             } ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
             title={t('common.clickOrDragImage')}
           >
             {resolvedDisplayUrl ? (
               <img
                 src={resolvedDisplayUrl}
-                alt="Logo Preview"
-                className="w-full h-full object-contain p-1.5"
+                alt="Preview"
+                className="w-full h-full object-contain p-1"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                 }}
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500">
-                <ImageIcon className="w-7 h-7 stroke-1" />
-                <span className="text-[9px] mt-0.5 font-medium">{t('settings.orgLogoLabel', 'لوگو')}</span>
+                <ImageIcon className="w-5 h-5 stroke-1.5" />
+                <span className="text-[8.5px] mt-0.5 font-medium">{placeholderText || t('common.image', 'تصویر')}</span>
               </div>
             )}
 
             {isUploading && (
               <div className="absolute inset-0 bg-neutral-900/75 flex items-center justify-center text-white backdrop-blur-xs">
-                <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+                <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
               </div>
             )}
 
             {!isUploading && !disabled && (
               <div className="absolute inset-0 bg-neutral-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                <Upload className="w-4 h-4" />
+                <Upload className="w-3.5 h-3.5" />
               </div>
             )}
           </div>
 
-          {/* Action Buttons & Description */}
-          <div className="flex-1 min-w-0 space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
+          {/* Action Buttons & Micro-Helper */}
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
                 disabled={disabled || isUploading}
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-white rounded-xl transition-colors cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-white rounded-lg transition-colors cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Upload className="w-3.5 h-3.5" />
-                <span>{resolvedDisplayUrl ? t('settings.orgLogoChange', 'تغییر لوگو') : t('common.clickOrDragImage', 'بارگذاری لوگو')}</span>
+                <Upload className="w-3 h-3" />
+                <span>
+                  {resolvedDisplayUrl
+                    ? (changeText || t('common.changeImage', 'تغییر'))
+                    : (uploadText || t('common.uploadImage', 'بارگذاری'))}
+                </span>
               </button>
 
               {resolvedDisplayUrl && (
@@ -228,38 +243,37 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                     setCompressionInfo(null);
                     setError(null);
                   }}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-0.5 px-2 py-1 text-[11px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <X className="w-3.5 h-3.5" />
-                  <span>{t('settings.orgLogoRemove', 'حذف لوگو')}</span>
+                  <X className="w-3 h-3" />
+                  <span>{removeText || t('common.delete', 'حذف')}</span>
                 </button>
               )}
             </div>
 
-            {/* Format & Size Constraint Text */}
-            <div className="text-[11px] text-neutral-500 dark:text-neutral-400 space-y-1">
-              {helperText ? (
-                <p>{helperText}</p>
-              ) : (
-                <p>فرمت‌های مجاز: PNG، JPG، WEBP یا SVG (حداکثر حجم: {effectiveMaxMB} مگابایت)</p>
-              )}
-              {compressionInfo && (
-                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-mono">
-                  <Sparkles className="w-3 h-3" />
-                  {t('common.autoCompression')}: {formatFileSize(compressionInfo.origSize)} ⟵ {formatFileSize(compressionInfo.compSize)}
-                </p>
-              )}
-            </div>
+            {/* Micro Helper Note */}
+            {helperText && (
+              <p className="text-[10px] text-neutral-400 dark:text-neutral-500 leading-tight">
+                {helperText}
+              </p>
+            )}
 
-            {/* Error Message */}
-            {error && (
-              <div className="flex items-center gap-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 px-2.5 py-1.5 rounded-xl animate-fade-in">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{error}</span>
-              </div>
+            {compressionInfo && (
+              <p className="text-[9.5px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-mono">
+                <Sparkles className="w-2.5 h-2.5" />
+                {formatFileSize(compressionInfo.origSize)} ⟵ {formatFileSize(compressionInfo.compSize)}
+              </p>
             )}
           </div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-rose-600 dark:text-rose-400 bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 px-2 py-1 rounded-lg animate-fade-in">
+            <AlertCircle className="w-3 h-3 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
         <input
           ref={fileInputRef}

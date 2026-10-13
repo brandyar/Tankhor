@@ -412,6 +412,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ activeSubRoute = 'se
                       </div>
                     )}
                   </div>
+                  {/* Stamp / Signature Preview if present */}
+                  {activeOrganization?.signature && (
+                    <div
+                      onClick={() => isOwner && setIsEditOrgOpen(true)}
+                      className={`w-16 h-16 rounded-2xl bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-700/80 p-1 hidden sm:flex items-center justify-center overflow-hidden shrink-0 shadow-xs relative group ${isOwner ? 'cursor-pointer hover:border-blue-500 transition-colors' : ''}`}
+                      title={t('settings.orgSignatureLabel', 'مهر و امضای رسمی سازمان')}
+                    >
+                      <ProductImage
+                        src={activeOrganization.signature}
+                        alt="مهر و امضا"
+                        className="w-full h-full object-contain rounded-xl"
+                        fallbackText="امضا"
+                      />
+                      {isOwner && (
+                        <div className="absolute inset-0 bg-neutral-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold rounded-xl backdrop-blur-2xs">
+                          <Edit3 className="w-4 h-4" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
@@ -421,16 +442,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ activeSubRoute = 'se
                         {activeOrganization?.status === 'active' ? t('settings.statusActive') : activeOrganization?.status || '-'}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
                       <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono dir-ltr text-start">
                         @{activeOrganization?.slug || '-'}
                       </p>
                       <span className="text-[11px] text-neutral-400">•</span>
                       <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
                         {activeOrganization?.logo ? (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">✓ {t('settings.orgLogoLabel', 'لوگوی رسمی')} ثبت شده</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">✓ {t('settings.orgLogoLabel', 'لوگوی رسمی')}</span>
                         ) : (
-                          <span className="text-amber-600 dark:text-amber-400 font-medium">! {t('settings.orgLogoLabel', 'لوگوی رسمی')} تنظیم نشده</span>
+                          <span className="text-amber-600 dark:text-amber-400 font-medium">! {t('settings.orgLogoLabel', 'بدون لوگو')}</span>
+                        )}
+                      </span>
+                      <span className="text-[11px] text-neutral-400">•</span>
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                        {activeOrganization?.signature ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">✓ {t('settings.orgSignatureStatusSet', 'مهر و امضا')}</span>
+                        ) : (
+                          <span className="text-neutral-400 font-medium">○ {t('settings.orgSignatureStatusNotSet', 'بدون مهر و امضا')}</span>
                         )}
                       </span>
                     </div>
@@ -444,7 +473,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ activeSubRoute = 'se
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 rounded-xl transition-colors cursor-pointer self-start sm:self-center shrink-0 shadow-2xs"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
-                    <span>{activeOrganization?.logo ? t('settings.orgLogoChange', 'تغییر لوگو') : t('settings.orgLogoUploadBtn', 'بارگذاری لوگو')}</span>
+                    <span>{t('settings.editOrgDetailsBtn', 'ویرایش مشخصات سازمان')}</span>
                   </button>
                 )}
               </div>

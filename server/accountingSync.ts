@@ -63,29 +63,29 @@ export async function syncAndPersistFinancialAccountBalances(orgIdNum: number) {
     }
 
     const defaultCashbox =
-      accounts.find((a: any) => a.type === 'cashbox' && a.is_default) ||
-      accounts.find((a: any) => a.type === 'cashbox') ||
+      accounts.find((a: any) => a?.type === 'cashbox' && a?.is_default) ||
+      accounts.find((a: any) => a?.type === 'cashbox') ||
       accounts[0];
     const defaultPos =
-      accounts.find((a: any) => a.type === 'pos' && a.is_default) ||
-      accounts.find((a: any) => a.type === 'pos') ||
-      accounts.find((a: any) => a.type === 'bank') ||
+      accounts.find((a: any) => a?.type === 'pos' && a?.is_default) ||
+      accounts.find((a: any) => a?.type === 'pos') ||
+      accounts.find((a: any) => a?.type === 'bank') ||
       defaultCashbox;
     const defaultBank =
-      accounts.find((a: any) => a.type === 'bank' && a.is_default) ||
-      accounts.find((a: any) => a.type === 'bank') ||
+      accounts.find((a: any) => a?.type === 'bank' && a?.is_default) ||
+      accounts.find((a: any) => a?.type === 'bank') ||
       defaultCashbox;
 
     // Check for completed or paid orders that don't have treasury transactions yet
     const existingTracking = new Set(
       (treasuryTxs || [])
-        .map((t: any) => String(t.tracking_code || '').trim())
+        .map((t: any) => String(t?.tracking_code || '').trim())
         .filter(Boolean)
     );
     const allTxs = [...(treasuryTxs || [])];
 
     for (const ord of orders || []) {
-      if (ord.status === 'cancelled') continue;
+      if (!ord || ord.status === 'cancelled') continue;
       const isPaid = ord.payment_status === 'paid' || ord.status === 'completed';
       const ordAmt =
         Number(
@@ -100,18 +100,24 @@ export async function syncAndPersistFinancialAccountBalances(orgIdNum: number) {
         const customAccId = ord.financial_account_id;
 
         if (customAccId) {
+          const rawCustomId =
+            typeof customAccId === 'object' && customAccId !== null ? customAccId.id : customAccId;
           const found = accounts.find(
-            (a: any) =>
-              Number(a.id) ===
-              Number(typeof customAccId === 'object' ? customAccId.id : customAccId)
+            (a: any) => a && Number(a.id) === Number(rawCustomId)
           );
           if (found) destAcc = found;
         } else if (ord.warehouse_id) {
           const rawWhId =
-            typeof ord.warehouse_id === 'object' ? ord.warehouse_id.id : ord.warehouse_id;
+            typeof ord.warehouse_id === 'object' && ord.warehouse_id !== null
+              ? ord.warehouse_id.id
+              : ord.warehouse_id;
           const whAcc = accounts.find((a: any) => {
-            const aWh = typeof a.warehouse_id === 'object' ? a.warehouse_id.id : a.warehouse_id;
-            if (Number(aWh) === Number(rawWhId)) {
+            if (!a) return false;
+            const aWh =
+              typeof a.warehouse_id === 'object' && a.warehouse_id !== null
+                ? a.warehouse_id.id
+                : a.warehouse_id;
+            if (rawWhId && aWh && Number(aWh) === Number(rawWhId)) {
               if (pMethod === 'pos') return a.type === 'pos' || a.type === 'bank';
               return a.type === 'cashbox' || a.type === 'petty_cash';
             }
@@ -126,15 +132,15 @@ export async function syncAndPersistFinancialAccountBalances(orgIdNum: number) {
           destAcc = defaultBank;
         }
 
-        if (destAcc) {
+        if (destAcc && destAcc.id) {
           try {
+            const safeAmt = Math.max(0, Math.round(ordAmt));
             const newTx = await DirectusAdminClient.createItem('treasury_transactions', {
               organization_id: orgIdNum,
               destination_account_id: Number(destAcc.id),
               type: 'deposit',
-              amount: ordAmt,
+              amount: safeAmt,
               tracking_code: trackingCode,
-              description: `دریافت وجه فاکتور فروش #${ordNum} (همگام‌سازی خودکار)`,
               transaction_date: ord.order_date || ord.date_created || new Date().toISOString(),
             });
             allTxs.push(newTx);
@@ -151,30 +157,33 @@ export async function syncAndPersistFinancialAccountBalances(orgIdNum: number) {
 
     // Recalculate each account's exact balance
     const mapped = await Promise.all(
-      accounts.map(async (acc: any) => {
-        const accId = Number(acc.id);
-        let balance = Number(acc.initial_balance) || 0;
+      accounts
+        .filter((a: any) => a && a.id)
+        .map(async (acc: any) => {
+          const accId = Number(acc.id);
+          let balance = Number(acc.initial_balance) || 0;
 
-        allTxs.forEach((tx: any) => {
-          const amt = Number(tx.amount) || 0;
-          const srcId =
-            typeof tx.source_account_id === 'object'
-              ? tx.source_account_id?.id
-              : tx.source_account_id;
-          const dstId =
-            typeof tx.destination_account_id === 'object'
-              ? tx.destination_account_id?.id
-              : tx.destination_account_id;
+          allTxs.forEach((tx: any) => {
+            if (!tx) return;
+            const amt = Number(tx.amount) || 0;
+            const srcId =
+              typeof tx.source_account_id === 'object' && tx.source_account_id !== null
+                ? tx.source_account_id.id
+                : tx.source_account_id;
+            const dstId =
+              typeof tx.destination_account_id === 'object' && tx.destination_account_id !== null
+                ? tx.destination_account_id.id
+                : tx.destination_account_id;
 
-          if (tx.type === 'deposit' && Number(dstId) === accId) {
-            balance += amt;
-          } else if (tx.type === 'withdrawal' && Number(srcId) === accId) {
-            balance -= amt;
-          } else if (tx.type === 'transfer') {
-            if (Number(dstId) === accId) balance += amt;
-            if (Number(srcId) === accId) balance -= amt;
-          }
-        });
+            if (tx.type === 'deposit' && Number(dstId) === accId) {
+              balance += amt;
+            } else if (tx.type === 'withdrawal' && Number(srcId) === accId) {
+              balance -= amt;
+            } else if (tx.type === 'transfer') {
+              if (Number(dstId) === accId) balance += amt;
+              if (Number(srcId) === accId) balance -= amt;
+            }
+          });
 
         // CRITICAL: PERSIST current_balance DIRECTLY INTO DIRECTUS DATABASE!
         if (Number(acc.current_balance) !== balance) {

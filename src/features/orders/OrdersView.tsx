@@ -26,6 +26,7 @@ import { formatDate, formatCurrency, toPersianDigits } from '../../utils/formatt
 import { confirmAction } from '../../utils/confirm';
 import { printElement } from '../../utils/print';
 import { printOrderInvoice, OrderItemPrintData } from '../../utils/orderInvoicePrint';
+import { mediaManager } from '../../utils/mediaManager';
 import {
   ShoppingCart,
   Plus,
@@ -1036,7 +1037,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
                   </div>
                 </div>
 
-                <div className="text-center text-[9px] pt-4 border-t border-black">
+                {activeOrganization?.signature && (
+                  <div className="text-center pt-2">
+                    <img
+                      src={mediaManager.getDisplayUrlSync(activeOrganization.signature)}
+                      alt="مهر و امضا"
+                      className="max-h-11 max-w-[120px] object-contain mx-auto"
+                    />
+                  </div>
+                )}
+
+                <div className="text-center text-[9px] pt-3 border-t border-black">
                   {t('orders.thankYouForPurchase')}
                 </div>
               </div>
@@ -1123,11 +1134,27 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
                 </div>
 
                 <div className="flex justify-between items-end pt-8 text-[11px] text-gray-500">
-                  <div className="text-center w-36 border-t border-gray-400 pt-1">
-                    {t('orders.sellerSignature')}
+                  <div className="text-center w-48 flex flex-col items-center">
+                    {activeOrganization?.signature ? (
+                      <div className="h-16 flex items-center justify-center mb-1">
+                        <img
+                          src={mediaManager.getDisplayUrlSync(activeOrganization.signature)}
+                          alt="مهر و امضا"
+                          className="max-h-16 max-w-[170px] object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-12" />
+                    )}
+                    <div className="w-full border-t border-gray-400 pt-1 font-bold text-gray-700">
+                      {t('orders.sellerSignature')}
+                    </div>
                   </div>
-                  <div className="text-center w-36 border-t border-gray-400 pt-1">
-                    {t('orders.buyerSignature')}
+                  <div className="text-center w-48 flex flex-col items-center">
+                    <div className="h-12" />
+                    <div className="w-full border-t border-gray-400 pt-1 font-bold text-gray-700">
+                      {t('orders.buyerSignature')}
+                    </div>
                   </div>
                 </div>
               </div>

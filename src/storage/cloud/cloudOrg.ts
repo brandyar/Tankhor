@@ -50,7 +50,20 @@ export class CloudOrgStorage {
   async saveOrganization(org: Partial<Organization>): Promise<Organization> {
     try {
       if (org.id) {
-        return await this.base.client.updateItem<Organization>('organizations', org.id, org);
+        const cleanPayload: any = {
+          name: org.name,
+          slug: org.slug,
+          currency: org.currency,
+          timezone: org.timezone,
+          phone: org.phone ?? null,
+          mobile: org.mobile ?? null,
+          address: org.address ?? null,
+          status: org.status ?? 'active',
+          logo: org.logo ?? null,
+          signature: org.signature ?? null,
+        };
+        Object.keys(cleanPayload).forEach((k) => cleanPayload[k] === undefined && delete cleanPayload[k]);
+        return await this.base.client.updateItem<Organization>('organizations', org.id, cleanPayload);
       }
       return await this.base.client.createOrganization({
         name: org.name || 'سازمان جدید',

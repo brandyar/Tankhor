@@ -7,6 +7,7 @@ import { Button } from '../../../components/ui/Button';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
 import { printElement } from '../../../utils/print';
 import { printOrderInvoice, OrderItemPrintData } from '../../../utils/orderInvoicePrint';
+import { mediaManager } from '../../../utils/mediaManager';
 import { CheckCircle2, FileText, Receipt, Printer } from 'lucide-react';
 
 export interface SavedOrderData {
@@ -143,7 +144,17 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
               </div>
             </div>
 
-            <div className="text-center text-[9px] pt-4 border-t border-black">
+            {activeOrganization?.signature && (
+              <div className="text-center pt-2">
+                <img
+                  src={mediaManager.getDisplayUrlSync(activeOrganization.signature)}
+                  alt="مهر و امضا"
+                  className="max-h-11 max-w-[120px] object-contain mx-auto"
+                />
+              </div>
+            )}
+
+            <div className="text-center text-[9px] pt-3 border-t border-black">
               {t('orders.thankYouForPurchase')}
             </div>
           </div>
@@ -229,9 +240,29 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-8 text-center pt-8 border-t border-gray-300 text-xs">
-              <div>{t('orders.sellerSignature')}</div>
-              <div>{t('orders.buyerSignature')}</div>
+            <div className="flex justify-between items-end pt-8 border-t border-gray-300 text-xs">
+              <div className="text-center w-48 flex flex-col items-center">
+                {activeOrganization?.signature ? (
+                  <div className="h-16 flex items-center justify-center mb-1">
+                    <img
+                      src={mediaManager.getDisplayUrlSync(activeOrganization.signature)}
+                      alt="مهر و امضا"
+                      className="max-h-16 max-w-[170px] object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-12" />
+                )}
+                <div className="w-full border-t border-gray-400 pt-1 font-bold">
+                  {t('orders.sellerSignature')}
+                </div>
+              </div>
+              <div className="text-center w-48 flex flex-col items-center">
+                <div className="h-12" />
+                <div className="w-full border-t border-gray-400 pt-1 font-bold">
+                  {t('orders.buyerSignature')}
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -573,6 +573,43 @@ itemsRouter.post(
         }
       }
 
+      // Special handling for treasury_transactions: Validate account FKs and sanitize amount
+      if (collection === 'treasury_transactions') {
+        if (cleanPayload.amount !== undefined) {
+          cleanPayload.amount = Math.max(0, Math.round(Number(cleanPayload.amount) || 0));
+        }
+
+        if (cleanPayload.destination_account_id) {
+          const destId = Number(cleanPayload.destination_account_id);
+          if (isNaN(destId) || destId <= 0 || destId >= 1000000000) {
+            cleanPayload.destination_account_id = null;
+          } else {
+            const acc = await DirectusAdminClient.getItemById('financial_accounts', destId).catch(() => null);
+            if (!acc) {
+              cleanPayload.destination_account_id = null;
+            }
+          }
+        }
+
+        if (cleanPayload.source_account_id) {
+          const srcId = Number(cleanPayload.source_account_id);
+          if (isNaN(srcId) || srcId <= 0 || srcId >= 1000000000) {
+            cleanPayload.source_account_id = null;
+          } else {
+            const acc = await DirectusAdminClient.getItemById('financial_accounts', srcId).catch(() => null);
+            if (!acc) {
+              cleanPayload.source_account_id = null;
+            }
+          }
+        }
+
+        delete cleanPayload.description;
+        delete cleanPayload.source_account_name;
+        delete cleanPayload.destination_account_name;
+        delete cleanPayload.person_transaction_id;
+        delete cleanPayload.expense_id;
+      }
+
       // Special handling for organization_modules: Upsert based on slug to prevent RECORD_NOT_UNIQUE errors
       if (collection === 'organization_modules') {
         const moduleSlug = cleanPayload.slug || payload.slug;
@@ -606,7 +643,24 @@ itemsRouter.post(
         }
       }
 
-      const created = await DirectusAdminClient.createItem(collection, cleanPayload);
+      let created: any;
+      try {
+        created = await DirectusAdminClient.createItem(collection, cleanPayload);
+      } catch (createErr: any) {
+        if (
+          collection === 'treasury_transactions' &&
+          (createErr.message?.includes('out of range') || createErr.message?.includes('syntax for type bigint'))
+        ) {
+          console.warn('[API Proxy] Retrying treasury_transactions create with string amount format...');
+          const retryPayload = {
+            ...cleanPayload,
+            amount: String(Math.max(0, Math.round(Number(cleanPayload.amount) || 0))),
+          };
+          created = await DirectusAdminClient.createItem(collection, retryPayload);
+        } else {
+          throw createErr;
+        }
+      }
 
       // If a financial transaction, order, or expense is created, recalculate and persist account balances
       if (
@@ -712,9 +766,58 @@ itemsRouter.patch(
             .json({ error: 'فقط مالک سازمان (Owner) مجاز به ویرایش مشخصات سازمان است.' });
         }
 
-        const payload = { ...req.body };
-        delete payload.id;
-        delete payload.plan; // Security: Prevent plan mutation via regular proxy PATCH
+        const payload: any = {};
+        const allowedFields = [
+          'name',
+          'slug',
+          'currency',
+          'timezone',
+          'phone',
+          'mobile',
+          'address',
+          'status',
+        ];
+        for (const f of allowedFields) {
+          if (req.body[f] !== undefined) {
+            payload[f] = req.body[f];
+          }
+        }
+
+        // Handle logo and signature with UUID resolution & dataUrl support
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        for (const imageField of ['logo', 'signature']) {
+          if (req.body[imageField] !== undefined) {
+            const rawVal = req.body[imageField];
+            if (!rawVal) {
+              payload[imageField] = null;
+            } else if (typeof rawVal === 'string') {
+              const trimmed = rawVal.trim();
+              if (uuidRegex.test(trimmed)) {
+                payload[imageField] = trimmed;
+              } else if (trimmed.startsWith('data:image/')) {
+                try {
+                  const matches = trimmed.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+                  if (matches && matches.length === 3) {
+                    const mimeType = matches[1];
+                    const buffer = Buffer.from(matches[2], 'base64');
+                    const ext = mimeType.split('/')[1] || 'png';
+                    const fileName = `${imageField}_${Date.now()}.${ext}`;
+                    const fileId = await DirectusAdminClient.uploadFile(buffer, fileName, mimeType);
+                    payload[imageField] = fileId;
+                  }
+                } catch (e) {
+                  console.warn(`[API Proxy] Failed to upload ${imageField} dataUrl to Directus:`, e);
+                }
+              } else {
+                // If value is not a valid UUID and not dataUrl, avoid Postgres UUID syntax errors
+                payload[imageField] = null;
+              }
+            } else if (typeof rawVal === 'object' && rawVal?.id && uuidRegex.test(String(rawVal.id))) {
+              payload[imageField] = String(rawVal.id);
+            }
+          }
+        }
+
         const updated = await DirectusAdminClient.updateItem('organizations', orgId, payload);
         return res.json({ data: updated });
       }

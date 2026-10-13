@@ -14,6 +14,7 @@ export interface Organization {
   name: string;
   slug: string;
   logo?: string | null;
+  signature?: string | null;
   phone?: string | null;
   mobile?: string | null;
   address?: string | null;

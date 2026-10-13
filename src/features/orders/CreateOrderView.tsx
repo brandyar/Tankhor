@@ -456,6 +456,13 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
     setCart(cart.map((c) => (c.variant.id === variantId ? { ...c, quantity: qty } : c)));
   };
 
+  const handleUpdatePrice = (variantId: number, newPrice: number) => {
+    const validPrice = Math.max(0, isNaN(newPrice) ? 0 : newPrice);
+    setCart((prev) =>
+      prev.map((c) => (c.variant.id === variantId ? { ...c, unitPrice: validPrice } : c))
+    );
+  };
+
   const handleRemoveLine = (variantId: number) => {
     setCart(cart.filter((c) => c.variant.id !== variantId));
   };
@@ -602,6 +609,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         variant_id: c.variant.id,
         quantity: c.quantity,
         unit_price: c.unitPrice,
+        unit_cost: c.variant.cost !== undefined ? Number(c.variant.cost) : undefined,
         discount: c.discount,
         total: c.quantity * c.unitPrice - c.discount * c.quantity,
       }));
@@ -831,6 +839,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
           cart={cart}
           onAddToCart={handleAddToCart}
           onUpdateQty={handleUpdateQty}
+          onUpdatePrice={handleUpdatePrice}
           onRemoveLine={handleRemoveLine}
           onClearCart={handleClearCart}
           barcodeQuery={barcodeQuery}
@@ -911,6 +920,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
             <OrderCartTable
               cart={cart}
               onUpdateQty={handleUpdateQty}
+              onUpdatePrice={handleUpdatePrice}
               onRemoveLine={handleRemoveLine}
               extraDiscount={extraDiscount}
               setExtraDiscount={setExtraDiscount}
@@ -1065,6 +1075,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
                 <OrderCartTable
                   cart={cart}
                   onUpdateQty={handleUpdateQty}
+                  onUpdatePrice={handleUpdatePrice}
                   onRemoveLine={handleRemoveLine}
                   extraDiscount={extraDiscount}
                   setExtraDiscount={setExtraDiscount}

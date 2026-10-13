@@ -342,4 +342,27 @@ export class DirectusAdminClient {
     });
     return true;
   }
+
+  public static async uploadFile(fileBuffer: Buffer, fileName: string, mimeType: string): Promise<string> {
+    const formData = new FormData();
+    const blob = new Blob([fileBuffer], { type: mimeType });
+    formData.append('file', blob, fileName);
+
+    const directusUrl = `${this.getBaseUrl()}/files`;
+    const response = await fetch(directusUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.getAdminToken()}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(err.message || 'Directus file upload failed');
+    }
+
+    const result = await response.json();
+    return result?.data?.id || result?.id;
+  }
 }

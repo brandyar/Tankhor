@@ -322,39 +322,42 @@ export class LocalInventoryStorage {
 
     // Update inventory item quantity accordingly
     const invItems = this.base.getItem<InventoryItem>('inventory_items', []);
-    const vId = typeof savedMov.variant_id === 'object' ? (savedMov.variant_id as any)?.id : savedMov.variant_id;
-    const wId = typeof savedMov.warehouse_id === 'object' ? (savedMov.warehouse_id as any)?.id : savedMov.warehouse_id;
+    const vId = normalizeId(savedMov.variant_id);
+    const wId = normalizeId(savedMov.warehouse_id);
 
     let item = invItems.find((i) => {
-      const ivId = typeof i.variant_id === 'object' ? (i.variant_id as any)?.id : i.variant_id;
-      const iwId = typeof i.warehouse_id === 'object' ? (i.warehouse_id as any)?.id : i.warehouse_id;
-      return ivId === vId && iwId === wId;
+      const ivId = normalizeId(i.variant_id);
+      const iwId = normalizeId(i.warehouse_id);
+      return ivId === vId && (wId ? iwId === wId : true);
     });
 
     if (item) {
       if (savedMov.type === 'purchase' || savedMov.type === 'return' || savedMov.type === 'transfer_in') {
-        item.quantity += savedMov.quantity;
+        item.quantity += Math.abs(savedMov.quantity);
       } else if (savedMov.type === 'sale' || savedMov.type === 'transfer_out' || savedMov.type === 'damage') {
-        item.quantity -= savedMov.quantity;
+        item.quantity = Math.max(0, item.quantity - Math.abs(savedMov.quantity));
       } else if (savedMov.type === 'adjustment') {
-        item.quantity = savedMov.quantity;
+        item.quantity = Math.max(0, savedMov.quantity);
       }
-      item.available_quantity = item.quantity - (item.reserved_quantity || 0);
+      item.available_quantity = Math.max(0, item.quantity - (item.reserved_quantity || 0) - (item.damaged_quantity || 0));
+      if (savedMov.location_id) item.location_id = normalizeId(savedMov.location_id);
       item.updated_at = new Date().toISOString();
       this.base.setItem('inventory_items', invItems);
-    } else {
+    } else if (vId && wId) {
       const newItemId = this.base.generateUniqueId(invItems);
-      const qty = savedMov.type === 'adjustment' ? savedMov.quantity : savedMov.quantity;
+      const qty = savedMov.type === 'adjustment' ? Math.max(0, savedMov.quantity) : Math.abs(savedMov.quantity);
       invItems.push({
         id: newItemId,
         organization_id: this.base.getActiveOrgId() || 1,
         variant_id: vId,
         warehouse_id: wId,
-        location_id: savedMov.location_id,
+        location_id: normalizeId(savedMov.location_id),
         quantity: Math.max(0, qty),
         reserved_quantity: 0,
         available_quantity: Math.max(0, qty),
-        damaged_quantity: 0,
+        damaged_quantity: savedMov.type === 'damage' ? Math.abs(savedMov.quantity) : 0,
+        reorder_point: 5,
+        safety_stock: 2,
         updated_at: new Date().toISOString(),
       });
       this.base.setItem('inventory_items', invItems);

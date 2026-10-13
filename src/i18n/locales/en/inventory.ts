@@ -264,4 +264,9 @@ export const inventoryEn = {
   editThresholds: 'Edit Reorder Point & Safety Stock',
   editThresholdsSuccess: 'Stock thresholds updated successfully.',
   editThresholdsDesc: 'Set minimum stock levels and reorder alerts for this variant in the warehouse.',
+  adjustDirectionIncrease: 'Increase Stock (+)',
+  adjustDirectionDecrease: 'Decrease Stock (-)',
+  adjustModeExactBalance: 'Set Exact Final Stock',
+  currentStockInWarehouse: 'Current Stock in this Warehouse',
+  adjustItemIndividual: 'Adjust This Item',
 };

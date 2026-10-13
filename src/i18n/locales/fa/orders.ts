@@ -182,4 +182,8 @@ export const ordersFa = {
   posModeNotice: 'حالت صندوق فروشگاهی تمام‌صفحه فعال است. برای خروج Esc را بزنید.',
   viewCartAndCheckout: 'مشاهده سبد و تسویه',
   viewCart: 'مشاهده سبد خرید',
+  resetPrice: 'بازنشانی قیمت',
+  defaultPrice: 'قیمت اصلی کاتالوگ',
+  customPriceNotice: 'قیمت سفارشی',
+  editUnitPrice: 'تغییر قیمت واحد',
 };

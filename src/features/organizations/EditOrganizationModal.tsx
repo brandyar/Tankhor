@@ -28,6 +28,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const [currency, setCurrency] = useState('TOMAN');
   const [timezone, setTimezone] = useState('Asia/Tehran');
   const [logo, setLogo] = useState('');
+  const [signature, setSignature] = useState('');
   const [phone, setPhone] = useState('');
   const [mobile, setMobile] = useState('');
   const [address, setAddress] = useState('');
@@ -42,6 +43,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       setCurrency(organization.currency || 'TOMAN');
       setTimezone(organization.timezone || 'Asia/Tehran');
       setLogo(organization.logo || '');
+      setSignature(organization.signature || '');
       setPhone(organization.phone || '');
       setMobile(organization.mobile || '');
       setAddress(organization.address || '');
@@ -78,6 +80,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         status: organization.status,
         plan: organization.plan,
         logo: logo ? logo.trim() : null,
+        signature: signature ? signature.trim() : null,
         phone: phone ? phone.trim() : null,
         mobile: mobile ? mobile.trim() : null,
         address: address ? address.trim() : null,
@@ -100,7 +103,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={t('settings.editOrgTitle')}
-      maxWidth="lg"
+      maxWidth="xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4 pt-1">
         {!isOwner && (
@@ -190,18 +193,42 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
           </div>
         </div>
 
-        {/* Official Organization Logo Upload */}
+        {/* Brand & Document Assets (Logo & Signature) */}
         <div>
-          <ImageUpload
-            mode="avatar"
-            label={t('settings.orgLogoLabel', 'لوگوی رسمی سازمان و فروشگاه')}
-            subtitle={t('settings.orgLogoSubtitle', 'این لوگو در سربرگ فاکتورهای فروش، چاپ فیش حرارتی، برچسب بارکد و نوار نرم‌افزار نمایش داده می‌شود.')}
-            value={logo}
-            onChange={(val) => setLogo(val)}
-            helperText={t('settings.orgLogoHelper', 'فرمت‌های مجاز: PNG، JPG، WEBP یا SVG (حداکثر حجم فایل: ۵ مگابایت)')}
-            maxSizeInMB={5}
-            disabled={!isOwner || isSubmitting}
-          />
+          <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-2">
+            {t('settings.brandAssetsTitle', 'تصاویر و نمادهای سازمان')}
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <ImageUpload
+              mode="avatar"
+              label={t('settings.orgLogoShort', 'لوگوی سازمان')}
+              subtitle={t('settings.orgLogoSubtitleShort', 'سربرگ فاکتور و نرم‌افزار')}
+              placeholderText={t('settings.logo', 'لوگو')}
+              value={logo}
+              onChange={(val) => setLogo(val)}
+              helperText={t('settings.orgLogoHelperShort', 'PNG یا JPG (حداکثر ۵MB)')}
+              uploadText={t('settings.uploadLogo', 'بارگذاری لوگو')}
+              changeText={t('common.change', 'تغییر')}
+              removeText={t('common.delete', 'حذف')}
+              maxSizeInMB={5}
+              disabled={!isOwner || isSubmitting}
+            />
+
+            <ImageUpload
+              mode="avatar"
+              label={t('settings.orgSignatureShort', 'مهر و امضای رسمی')}
+              subtitle={t('settings.orgSignatureSubtitleShort', 'پایین فاکتورهای فروش و PDF')}
+              placeholderText={t('settings.signature', 'مهر/امضا')}
+              value={signature}
+              onChange={(val) => setSignature(val)}
+              helperText={t('settings.orgSignatureHelperShort', 'PNG ترجیحاً شفاف (حداکثر ۵MB)')}
+              uploadText={t('settings.uploadSignature', 'بارگذاری مهر/امضا')}
+              changeText={t('common.change', 'تغییر')}
+              removeText={t('common.delete', 'حذف')}
+              maxSizeInMB={5}
+              disabled={!isOwner || isSubmitting}
+            />
+          </div>
         </div>
 
         {/* Contact Numbers (Phone & Mobile) */}
