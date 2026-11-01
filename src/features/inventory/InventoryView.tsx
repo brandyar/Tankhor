@@ -100,6 +100,30 @@ export const InventoryView: React.FC = () => {
   };
 
   const [totalServerCount, setTotalServerCount] = useState<number>(0);
+  const [inventorySummary, setInventorySummary] = useState<{
+    totalItems: number;
+    totalQuantity: number;
+    totalAvailable: number;
+    totalReserved: number;
+    totalDamaged: number;
+    lowStockCount: number;
+  } | null>(null);
+
+  const loadInventorySummary = async () => {
+    try {
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id;
+      if (orgId && adapter.getInventorySummary) {
+        const whId = selectedWarehouseFilter ? Number(selectedWarehouseFilter) : undefined;
+        const res = await adapter.getInventorySummary(orgId, whId);
+        if (res) {
+          setInventorySummary(res);
+        }
+      }
+    } catch (err) {
+      console.warn('[InventoryView] Error loading inventory summary:', err);
+    }
+  };
 
   const loadLookups = async () => {
     try {
@@ -155,10 +179,14 @@ export const InventoryView: React.FC = () => {
     }
   };
 
-  const loadData = loadInventoryData;
+  const loadData = () => {
+    loadInventoryData();
+    loadInventorySummary();
+  };
 
   useEffect(() => {
     loadLookups();
+    loadInventorySummary();
   }, [activeOrganization?.id, selectedWarehouseFilter]);
 
   useEffect(() => {
@@ -169,12 +197,12 @@ export const InventoryView: React.FC = () => {
     setCurrentPage(1);
   }, [selectedWarehouseFilter, lowStockOnly, search]);
 
-  // Calculations for KPI Cards
-  const totalQuantity = inventoryItems.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
-  const totalAvailable = inventoryItems.reduce((acc, curr) => acc + (Number(curr.available_quantity) || Number(curr.quantity) || 0), 0);
-  const totalReserved = inventoryItems.reduce((acc, curr) => acc + (Number(curr.reserved_quantity) || 0), 0);
-  const totalDamaged = inventoryItems.reduce((acc, curr) => acc + (Number(curr.damaged_quantity) || 0), 0);
-  const lowStockCount = inventoryItems.filter(
+  // Calculations for KPI Cards - Unified whole-warehouse totals
+  const totalQuantity = inventorySummary?.totalQuantity ?? inventoryItems.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
+  const totalAvailable = inventorySummary?.totalAvailable ?? inventoryItems.reduce((acc, curr) => acc + (Number(curr.available_quantity) || Number(curr.quantity) || 0), 0);
+  const totalReserved = inventorySummary?.totalReserved ?? inventoryItems.reduce((acc, curr) => acc + (Number(curr.reserved_quantity) || 0), 0);
+  const totalDamaged = inventorySummary?.totalDamaged ?? inventoryItems.reduce((acc, curr) => acc + (Number(curr.damaged_quantity) || 0), 0);
+  const lowStockCount = inventorySummary?.lowStockCount ?? inventoryItems.filter(
     (i) => (Number(i.quantity) || 0) <= (i.reorder_point || 5) || (Number(i.quantity) || 0) <= (i.safety_stock || 2)
   ).length;
 

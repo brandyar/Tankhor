@@ -915,5 +915,70 @@ export class SqliteStorageAdapter implements IStorageProvider {
   deleteProductionOrder(id: number): Promise<boolean> {
     return this.productionStorage.deleteProductionOrder(id);
   }
+
+  async getDashboardSummary(organizationId: number): Promise<any> {
+    const orgId = Number(organizationId);
+    const [products, variants, invItems, orders, movements, categories, warehouses] = await Promise.all([
+      this.getProducts({ organization_id: orgId }),
+      this.getVariants({ organization_id: orgId }),
+      this.getInventoryItems({ organization_id: orgId }),
+      this.getOrders({ organization_id: orgId }),
+      this.getInventoryMovements({ organization_id: orgId }),
+      this.getCategories({ organization_id: orgId }),
+      this.getWarehouses({ organization_id: orgId }),
+    ]);
+
+    const totalStockCount = invItems.reduce((acc, i) => acc + (Number(i.quantity) || 0), 0);
+    const totalAvailableStock = invItems.reduce((acc, i) => acc + (Number(i.available_quantity) || Number(i.quantity) || 0), 0);
+    const totalReservedStock = invItems.reduce((acc, i) => acc + (Number(i.reserved_quantity) || 0), 0);
+    const totalDamagedStock = invItems.reduce((acc, i) => acc + (Number(i.damaged_quantity) || 0), 0);
+    const lowStockCount = invItems.filter((i) => (Number(i.quantity) || 0) > 0 && (Number(i.quantity) || 0) <= (i.reorder_point || 5)).length;
+    const outOfStockCount = invItems.filter((i) => (Number(i.quantity) || 0) <= 0).length;
+
+    const totalOrdersCount = orders.length;
+    const totalSalesRevenue = orders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
+    const averageOrderValue = totalOrdersCount > 0 ? Math.round(totalSalesRevenue / totalOrdersCount) : 0;
+
+    return {
+      totalProducts: products.length,
+      totalVariants: variants.length,
+      totalStockCount,
+      totalAvailableStock,
+      totalReservedStock,
+      totalDamagedStock,
+      lowStockCount,
+      outOfStockCount,
+      totalOrdersCount,
+      totalSalesRevenue,
+      averageOrderValue,
+      recentOrders: orders.slice(0, 10),
+      recentMovements: movements.slice(0, 10),
+      categories,
+      warehouses,
+    };
+  }
+
+  async getInventorySummary(organizationId: number, warehouseId?: number): Promise<any> {
+    const orgId = Number(organizationId);
+    let items = await this.getInventoryItems({ organization_id: orgId });
+    if (warehouseId) {
+      items = items.filter((i) => (typeof i.warehouse_id === 'number' ? i.warehouse_id : (i.warehouse_id as any)?.id) === Number(warehouseId));
+    }
+
+    const totalQuantity = items.reduce((acc, i) => acc + (Number(i.quantity) || 0), 0);
+    const totalAvailable = items.reduce((acc, i) => acc + (Number(i.available_quantity) || Number(i.quantity) || 0), 0);
+    const totalReserved = items.reduce((acc, i) => acc + (Number(i.reserved_quantity) || 0), 0);
+    const totalDamaged = items.reduce((acc, i) => acc + (Number(i.damaged_quantity) || 0), 0);
+    const lowStockCount = items.filter((i) => (Number(i.quantity) || 0) <= (i.reorder_point || 5) || (Number(i.quantity) || 0) <= (i.safety_stock || 2)).length;
+
+    return {
+      totalItems: items.length,
+      totalQuantity,
+      totalAvailable,
+      totalReserved,
+      totalDamaged,
+      lowStockCount,
+    };
+  }
 }
 

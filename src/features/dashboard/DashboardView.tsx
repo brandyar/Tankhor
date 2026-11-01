@@ -41,13 +41,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     autoStartDelayMs: 900,
   });
 
+  const [summary, setSummary] = useState<any>(() => {
+    if (typeof window !== 'undefined' && activeOrganization?.id) {
+      try {
+        const cached = sessionStorage.getItem(`tankhor_dash_summary_${activeOrganization.id}`);
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return null;
+  });
+
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [movements, setMovements] = useState<InventoryMovement[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [movements, setMovements] = useState<InventoryMovement[]>(() => summary?.recentMovements || []);
+  const [orders, setOrders] = useState<Order[]>(() => summary?.recentOrders || []);
+  const [categories, setCategories] = useState<Category[]>(() => summary?.categories || []);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>(() => summary?.warehouses || []);
+  const [isLoading, setIsLoading] = useState(!summary);
   const [isSeedingDemo, setIsSeedingDemo] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
 
@@ -56,6 +66,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const loadDashboardData = async () => {
     const orgId = activeOrganization?.id;
     if (!orgId) {
+      setSummary(null);
       setProducts([]);
       setVariants([]);
       setMovements([]);
@@ -66,25 +77,46 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       return;
     }
 
-    setIsLoading(true);
+    // Only show full loading spinner if we don't have cached data yet
+    if (!summary) {
+      setIsLoading(true);
+    }
+
     try {
       const adapter = storageManager.getAdapter();
 
+      // 1. FAST PATH: Fetch pre-aggregated summary in 1 single call (<150ms)
+      if (adapter.getDashboardSummary) {
+        const sumData = await adapter.getDashboardSummary(orgId);
+        if (sumData) {
+          setSummary(sumData);
+          setIsLoading(false);
+          try {
+            sessionStorage.setItem(`tankhor_dash_summary_${orgId}`, JSON.stringify(sumData));
+          } catch {}
+          if (sumData.recentMovements && sumData.recentMovements.length > 0) setMovements(sumData.recentMovements);
+          if (sumData.recentOrders && sumData.recentOrders.length > 0) setOrders(sumData.recentOrders);
+          if (sumData.categories && sumData.categories.length > 0) setCategories(sumData.categories);
+          if (sumData.warehouses && sumData.warehouses.length > 0) setWarehouses(sumData.warehouses);
+        }
+      }
+
+      // 2. BACKGROUND PATH: Load remaining datasets for detailed charts
       const [pList, vList, mList, oList, cList, wList] = await Promise.all([
-        adapter.getProducts({ organization_id: orgId }),
-        adapter.getVariants({ organization_id: orgId }),
-        adapter.getInventoryMovements({ organization_id: orgId }),
-        adapter.getOrders({ organization_id: orgId }),
-        adapter.getCategories({ organization_id: orgId }),
-        adapter.getWarehouses({ organization_id: orgId }),
+        adapter.getProducts({ organization_id: orgId }).catch(() => []),
+        adapter.getVariants({ organization_id: orgId }).catch(() => []),
+        adapter.getInventoryMovements({ organization_id: orgId }).catch(() => []),
+        adapter.getOrders({ organization_id: orgId }).catch(() => []),
+        adapter.getCategories({ organization_id: orgId }).catch(() => []),
+        adapter.getWarehouses({ organization_id: orgId }).catch(() => []),
       ]);
 
       setProducts(pList);
       setVariants(vList);
-      setMovements(mList);
-      setOrders(oList);
-      setCategories(cList);
-      setWarehouses(wList);
+      if (mList && mList.length > 0) setMovements(mList);
+      if (oList && oList.length > 0) setOrders(oList);
+      if (cList && cList.length > 0) setCategories(cList);
+      if (wList && wList.length > 0) setWarehouses(wList);
     } catch (err) {
       console.error('[DashboardData] Error loading metrics:', err);
     } finally {
@@ -96,6 +128,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     if (activeOrganization?.id) {
       loadDashboardData();
     } else {
+      setSummary(null);
       setProducts([]);
       setVariants([]);
       setMovements([]);
@@ -116,31 +149,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     };
   }, [activeOrganization?.id]);
 
-  // Overall Aggregations
-  const totalStockCount = variants.reduce((acc, v) => acc + (v.stock_quantity || 0), 0);
+  // Overall Aggregations - Unified with InventoryView
+  const totalStockCount = summary?.totalStockCount ?? variants.reduce((acc, v) => acc + (v.stock_quantity || 0), 0);
+  const totalProductsCount = summary?.totalProducts ?? products.length;
+  const totalVariantsCount = summary?.totalVariants ?? variants.length;
   const totalValue = variants.reduce((acc, v) => acc + (v.stock_quantity || 0) * (v.price || 0), 0);
   const lowStockVariants = useMemo(
     () => variants.filter((v) => (v.stock_quantity || 0) <= 5),
     [variants]
   );
-  const lowStockCount = useMemo(
-    () => variants.filter((v) => (v.stock_quantity || 0) > 0 && (v.stock_quantity || 0) <= 5).length,
-    [variants]
-  );
-  const outOfStockCount = useMemo(
-    () => variants.filter((v) => (v.stock_quantity || 0) <= 0).length,
-    [variants]
-  );
+  const lowStockCount = summary?.lowStockCount ?? (variants.filter((v) => (v.stock_quantity || 0) > 0 && (v.stock_quantity || 0) <= 5).length);
+  const outOfStockCount = summary?.outOfStockCount ?? (variants.filter((v) => (v.stock_quantity || 0) <= 0).length);
 
-  const totalSalesRevenue = useMemo(
-    () => orders.reduce((acc, o) => acc + Number(o.total || 0), 0),
-    [orders]
-  );
+  const totalOrdersCount = summary?.totalOrdersCount ?? orders.length;
+  const totalSalesRevenue = summary?.totalSalesRevenue ?? orders.reduce((acc, o) => acc + Number(o.total || 0), 0);
 
-  const averageOrderValue = useMemo(
-    () => (orders.length > 0 ? Math.round(totalSalesRevenue / orders.length) : 0),
-    [orders, totalSalesRevenue]
-  );
+  const averageOrderValue = summary?.averageOrderValue ?? (totalOrdersCount > 0 ? Math.round(totalSalesRevenue / totalOrdersCount) : 0);
 
   // Analytical Computed Data for Charts
   const salesData = useMemo(
@@ -251,13 +275,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       {/* 1. Top Metric Ribbon (KPIs) */}
       <div id="tour-dashboard-ribbon">
         <DashboardMetricsRibbon
-          totalProducts={products.length}
-          totalVariants={variants.length}
+          totalProducts={totalProductsCount}
+          totalVariants={totalVariantsCount}
           totalStockCount={totalStockCount}
           totalValue={totalValue}
           lowStockCount={lowStockCount}
           outOfStockCount={outOfStockCount}
-          totalOrdersCount={orders.length}
+          totalOrdersCount={totalOrdersCount}
           totalSalesRevenue={totalSalesRevenue}
           averageOrderValue={averageOrderValue}
           canViewFinancials={permissions.canViewFinancials}

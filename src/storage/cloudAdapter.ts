@@ -754,5 +754,26 @@ export class CloudDirectusAdapter implements IStorageProvider {
   async deleteProductionOrder(id: number): Promise<boolean> {
     return this.production.deleteProductionOrder(id);
   }
+
+  async getDashboardSummary(organizationId: number): Promise<any> {
+    try {
+      const res = await this.base.client.request(`/dashboard/summary?organization_id=${organizationId}`);
+      return res;
+    } catch (err) {
+      console.warn('[CloudDirectusAdapter] getDashboardSummary error:', err);
+      return null;
+    }
+  }
+
+  async getInventorySummary(organizationId: number, warehouseId?: number): Promise<any> {
+    try {
+      const whQuery = warehouseId ? `&warehouse_id=${warehouseId}` : '';
+      const res = await this.base.client.request(`/inventory/summary?organization_id=${organizationId}${whQuery}`);
+      return res;
+    } catch (err) {
+      console.warn('[CloudDirectusAdapter] getInventorySummary error:', err);
+      return null;
+    }
+  }
 }
 

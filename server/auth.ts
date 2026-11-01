@@ -429,7 +429,6 @@ authRouter.post('/register', async (req: Request, res: Response) => {
         organization_id: newOrg.id,
         name: warehouseTitle,
         code: 'WH-MAIN',
-        is_default: true,
         status: 'active',
       }).catch((e) => console.warn('Could not seed initial warehouse:', e.message));
     } catch (seedErr: any) {
@@ -938,7 +937,6 @@ authRouter.post('/create-org', requireAuth, async (req: AuthenticatedRequest, re
         name: 'انبار مرکزی',
         code: 'WH-CENTRAL',
         status: 'active',
-        is_default: true,
       });
     } catch (e: any) {
       console.warn('[Create Org] Default warehouse auto-creation skipped:', e.message);

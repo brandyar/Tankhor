@@ -265,5 +265,9 @@ export interface IStorageProvider {
     stages?: Partial<ProductionStage>[]
   ): Promise<ProductionOrder>;
   deleteProductionOrder?(id: number): Promise<boolean>;
+
+  // High-Speed Aggregated Summaries (Zero-Latency Dashboard & Inventory Counters)
+  getDashboardSummary?(organizationId: number): Promise<any>;
+  getInventorySummary?(organizationId: number, warehouseId?: number): Promise<any>;
 }
 

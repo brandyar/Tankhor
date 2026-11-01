@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { publicRouter } from './routes/publicRoutes';
 import { userOrgRouter } from './routes/userOrgRoutes';
 import { itemsRouter } from './routes/itemsRoutes';
+import { dashboardRouter } from './routes/dashboardRoutes';
 
 export const proxyRouter = Router();
 
@@ -9,6 +10,7 @@ export const proxyRouter = Router();
 proxyRouter.use(publicRouter);
 proxyRouter.use(userOrgRouter);
 proxyRouter.use(itemsRouter);
+proxyRouter.use(dashboardRouter);
 
 // Re-exports for backward compatibility and internal utilities
 export { syncAndPersistFinancialAccountBalances } from './accountingSync';
