@@ -1,5 +1,5 @@
 import { CloudStorageBase, UUID_REGEX } from './cloudBase';
-import { QueryParams } from '../types';
+import { QueryParams, PaginatedResult } from '../types';
 import { matchesSearchQuery } from '../../utils/formatters';
 import {
   Category,
@@ -24,7 +24,20 @@ export class CloudCatalogStorage {
 
   // Products & Variants
   async getProducts(params?: QueryParams): Promise<Product[]> {
-    const query: any = { sort: '-id' };
+    const query: any = {
+      sort: '-id',
+      fields: [
+        'id',
+        'organization_id',
+        'title',
+        'slug',
+        'category_id',
+        'brand_id',
+        'status',
+        'main_image',
+        'date_created',
+      ],
+    };
     if (params?.organization_id) {
       query.filter = { organization_id: { _eq: params.organization_id } };
     }
@@ -33,9 +46,11 @@ export class CloudCatalogStorage {
       const [variants, inventoryItems] = await Promise.all([
         this.base.client.getItems<ProductVariant>('product_variants', {
           filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+          fields: ['id', 'product_id', 'sku', 'barcode'],
         }).catch(() => []),
         this.base.client.getItems<InventoryItem>('inventory_items', {
           filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+          fields: ['id', 'variant_id', 'quantity'],
         }).catch(() => []),
       ]);
 
@@ -82,9 +97,112 @@ export class CloudCatalogStorage {
     }
   }
 
+  async getPaginatedProducts(params: QueryParams): Promise<PaginatedResult<Product>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const query: any = {
+      sort: params.sort || '-id',
+      limit: pageSize,
+      page,
+      fields: [
+        'id',
+        'organization_id',
+        'title',
+        'slug',
+        'category_id',
+        'brand_id',
+        'status',
+        'main_image',
+        'date_created',
+      ],
+    };
+
+    const filterObj: any = {};
+    if (params.organization_id) {
+      filterObj.organization_id = { _eq: params.organization_id };
+    }
+    if (params.category_id) {
+      filterObj.category_id = { _eq: params.category_id };
+    }
+    if (params.status && params.status !== 'all') {
+      filterObj.status = { _eq: params.status };
+    }
+    if (Object.keys(filterObj).length > 0) {
+      query.filter = filterObj;
+    }
+    if (params.search && params.search.trim()) {
+      query.search = params.search.trim();
+    }
+
+    try {
+      const res = await this.base.client.getPaginatedItems<Product>('products', query);
+      const productIds = res.data.map((p) => this.base.normalizeId(p.id) || Number(p.id)).filter(Boolean);
+
+      let variants: ProductVariant[] = [];
+      let inventoryItems: InventoryItem[] = [];
+      if (productIds.length > 0) {
+        [variants, inventoryItems] = await Promise.all([
+          this.base.client.getItems<ProductVariant>('product_variants', {
+            filter: { product_id: { _in: productIds } },
+            fields: ['id', 'product_id', 'sku', 'barcode'],
+          }).catch(() => []),
+          this.base.client.getItems<InventoryItem>('inventory_items', {
+            filter: params.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+            fields: ['id', 'variant_id', 'quantity'],
+          }).catch(() => []),
+        ]);
+      }
+
+      const items = res.data.map((p) => {
+        const normPId = this.base.normalizeId(p.id) || Number(p.id);
+        const pVariants = variants.filter((v) => {
+          const pId = this.base.normalizeId(v.product_id) || Number(v.product_id);
+          return pId === normPId;
+        });
+        const pVariantIds = new Set(
+          pVariants.map((v) => this.base.normalizeId(v.id) || Number(v.id)).filter(Boolean)
+        );
+        const pInventory = inventoryItems.filter((i) => {
+          const vId = this.base.normalizeId(i.variant_id) || Number(i.variant_id);
+          return pVariantIds.has(vId as number);
+        });
+        const totalStock = pInventory.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
+
+        return {
+          ...p,
+          id: normPId,
+          variants_count: pVariants.length,
+          total_stock: totalStock,
+        };
+      });
+
+      const totalCount = res.meta?.filter_count ?? res.meta?.total_count ?? items.length;
+      return {
+        items,
+        totalCount,
+        page,
+        pageSize,
+        totalPages: Math.ceil(totalCount / pageSize) || 1,
+      };
+    } catch {
+      if (this.base.localAdapter.getPaginatedProducts) {
+        return this.base.localAdapter.getPaginatedProducts(params);
+      }
+      const all = await this.base.localAdapter.getProducts(params);
+      const start = (page - 1) * pageSize;
+      return {
+        items: all.slice(start, start + pageSize),
+        totalCount: all.length,
+        page,
+        pageSize,
+        totalPages: Math.ceil(all.length / pageSize) || 1,
+      };
+    }
+  }
+
   async getProductById(id: number): Promise<Product | null> {
     try {
-      return await this.base.client.getItemById<Product>('products', id);
+      return await this.base.client.getItemById<Product>('products', id, '*');
     } catch {
       return this.base.localAdapter.getProductById(id);
     }
@@ -158,7 +276,23 @@ export class CloudCatalogStorage {
   }
 
   async getVariants(params?: QueryParams): Promise<ProductVariant[]> {
-    const query: any = { sort: '-id' };
+    const query: any = {
+      sort: '-id',
+      fields: [
+        'id',
+        'organization_id',
+        'product_id',
+        'color_id',
+        'size_id',
+        'sku',
+        'barcode',
+        'price',
+        'cost',
+        'image',
+        'status',
+        'sort',
+      ],
+    };
     if (params?.organization_id) {
       query.filter = { organization_id: { _eq: params.organization_id } };
     }
@@ -167,11 +301,17 @@ export class CloudCatalogStorage {
         this.base.client.getItems<ProductVariant>('product_variants', query),
         this.base.client.getItems<Product>('products', {
           filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+          fields: ['id', 'title'],
         }).catch(() => []),
-        this.base.client.getItems<Color>('colors', {}).catch(() => []),
-        this.base.client.getItems<Size>('sizes', {}).catch(() => []),
+        this.base.client.getItems<Color>('colors', {
+          fields: ['id', 'name', 'hex'],
+        }).catch(() => []),
+        this.base.client.getItems<Size>('sizes', {
+          fields: ['id', 'name'],
+        }).catch(() => []),
         this.base.client.getItems<InventoryItem>('inventory_items', {
           filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+          fields: ['id', 'variant_id', 'quantity'],
         }).catch(() => []),
       ]);
 
@@ -218,10 +358,39 @@ export class CloudCatalogStorage {
             { product_id: { _eq: String(normProdId) } },
           ],
         },
+        fields: [
+          'id',
+          'organization_id',
+          'product_id',
+          'color_id',
+          'size_id',
+          'sku',
+          'barcode',
+          'price',
+          'cost',
+          'image',
+          'status',
+          'sort',
+        ],
       }).catch(() => []);
 
       if (variants.length === 0) {
-        const allVariants = await this.base.client.getItems<ProductVariant>('product_variants', {}).catch(() => []);
+        const allVariants = await this.base.client.getItems<ProductVariant>('product_variants', {
+          fields: [
+            'id',
+            'organization_id',
+            'product_id',
+            'color_id',
+            'size_id',
+            'sku',
+            'barcode',
+            'price',
+            'cost',
+            'image',
+            'status',
+            'sort',
+          ],
+        }).catch(() => []);
         variants = allVariants.filter((v) => (this.base.normalizeId(v.product_id) || Number(v.product_id)) === normProdId);
       }
 
@@ -236,11 +405,19 @@ export class CloudCatalogStorage {
                   { variant_id: { _in: variantIds.map(String) } },
                 ],
               },
+              fields: ['id', 'variant_id', 'quantity'],
             }).catch(() => [])
           : Promise.resolve([] as InventoryItem[]),
-        this.base.client.getItems<Color>('colors', {}).catch(() => []),
-        this.base.client.getItems<Size>('sizes', {}).catch(() => []),
-        this.base.client.getItems<Product>('products', { filter: { id: { _eq: normProdId } } }).catch(() => []),
+        this.base.client.getItems<Color>('colors', {
+          fields: ['id', 'name', 'hex'],
+        }).catch(() => []),
+        this.base.client.getItems<Size>('sizes', {
+          fields: ['id', 'name'],
+        }).catch(() => []),
+        this.base.client.getItems<Product>('products', {
+          filter: { id: { _eq: normProdId } },
+          fields: ['id', 'title'],
+        }).catch(() => []),
       ]);
 
       const productTitle = products[0]?.title || 'محصول';

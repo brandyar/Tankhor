@@ -99,20 +99,14 @@ export const InventoryView: React.FC = () => {
     return null;
   };
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const [totalServerCount, setTotalServerCount] = useState<number>(0);
+
+  const loadLookups = async () => {
     try {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
 
-      const [items, vList, cList, wList, locList] = await Promise.all([
-        adapter.getInventoryItems({
-          organization_id: orgId,
-          warehouse_id: selectedWarehouseFilter ? Number(selectedWarehouseFilter) : undefined,
-        }).catch((err) => {
-          console.warn('[InventoryView] Failed to fetch inventory items:', err);
-          return [];
-        }),
+      const [vList, cList, wList, locList] = await Promise.all([
         adapter.getVariants({ organization_id: orgId }).catch(() => []),
         adapter.getColors({ organization_id: orgId }).catch(() => []),
         adapter.getWarehouses({ organization_id: orgId }).catch(() => []),
@@ -121,34 +115,39 @@ export const InventoryView: React.FC = () => {
         ).catch(() => []),
       ]);
 
-      let filtered = items;
-
-      if (lowStockOnly) {
-        filtered = filtered.filter(
-          (i) => i.quantity <= (i.reorder_point || 5) || i.quantity <= (i.safety_stock || 2)
-        );
-      }
-
-      if (search.trim()) {
-        const term = search.toLowerCase();
-        filtered = filtered.filter((i) => {
-          const vId = typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id;
-          const v = vList.find((varObj) => varObj.id === vId);
-          return (
-            (v && v.sku && v.sku.toLowerCase().includes(term)) ||
-            (v && v.product_title && v.product_title.toLowerCase().includes(term)) ||
-            (v && v.barcode && v.barcode.includes(term)) ||
-            (i.sku && i.sku.toLowerCase().includes(term)) ||
-            (i.product_title && i.product_title.toLowerCase().includes(term))
-          );
-        });
-      }
-
-      setInventoryItems(filtered);
       setVariants(vList);
       setColors(cList);
       setWarehouses(wList);
       setLocations(locList);
+    } catch (err) {
+      console.warn('[InventoryView] Error loading lookups:', err);
+    }
+  };
+
+  const loadInventoryData = async () => {
+    setIsLoading(true);
+    try {
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id;
+
+      const res = await adapter.getPaginatedInventoryItems({
+        organization_id: orgId,
+        warehouse_id: selectedWarehouseFilter ? Number(selectedWarehouseFilter) : undefined,
+        search: search.trim() || undefined,
+        page: currentPage,
+        limit: pageSize,
+      });
+
+      let items = res.items;
+
+      if (lowStockOnly) {
+        items = items.filter(
+          (i) => (Number(i.quantity) || 0) <= (i.reorder_point || 5) || (Number(i.quantity) || 0) <= (i.safety_stock || 2)
+        );
+      }
+
+      setInventoryItems(items);
+      setTotalServerCount(res.totalCount || items.length);
     } catch (err) {
       console.error('[InventoryView] Error loading inventory data:', err);
     } finally {
@@ -156,9 +155,15 @@ export const InventoryView: React.FC = () => {
     }
   };
 
+  const loadData = loadInventoryData;
+
   useEffect(() => {
-    loadData();
-  }, [activeOrganization, selectedWarehouseFilter, lowStockOnly, search]);
+    loadLookups();
+  }, [activeOrganization?.id, selectedWarehouseFilter]);
+
+  useEffect(() => {
+    loadInventoryData();
+  }, [activeOrganization?.id, selectedWarehouseFilter, lowStockOnly, search, currentPage, pageSize]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -173,12 +178,9 @@ export const InventoryView: React.FC = () => {
     (i) => (Number(i.quantity) || 0) <= (i.reorder_point || 5) || (Number(i.quantity) || 0) <= (i.safety_stock || 2)
   ).length;
 
-  const totalInventoryCount = inventoryItems.length;
+  const totalInventoryCount = totalServerCount || inventoryItems.length;
   const totalPages = Math.ceil(totalInventoryCount / pageSize) || 1;
-  const paginatedItems = React.useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return inventoryItems.slice(start, start + pageSize);
-  }, [inventoryItems, currentPage, pageSize]);
+  const paginatedItems = inventoryItems;
 
   const columns: Column<InventoryItem>[] = [
     {

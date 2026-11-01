@@ -1,5 +1,5 @@
 import { CloudStorageBase } from './cloudBase';
-import { QueryParams } from '../types';
+import { QueryParams, PaginatedResult } from '../types';
 import {
   ExpenseCategory,
   Expense,
@@ -119,6 +119,58 @@ export class CloudAccountingStorage {
       return Array.from(mergedMap.values()).sort((a, b) => (b.id || 0) - (a.id || 0));
     } catch {
       return await this.base.localAdapter.getExpenses(params);
+    }
+  }
+
+  async getPaginatedExpenses(params: QueryParams): Promise<PaginatedResult<Expense>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const query: any = {
+      sort: params.sort || '-expense_date',
+      limit: pageSize,
+      page,
+      fields: ['*', 'category_id.*'],
+    };
+    const orgId = this.base.normalizeId(params.organization_id);
+    const filter: any = {};
+    if (orgId) filter.organization_id = { _eq: orgId };
+    if (params.category_id) filter.category_id = { _eq: params.category_id };
+    if (Object.keys(filter).length > 0) query.filter = filter;
+    if (params.search) query.search = params.search;
+
+    try {
+      const res = await this.base.client.getPaginatedItems<Expense>('expenses', query);
+      const items = res.data.map((exp) => {
+        const cat = typeof exp.category_id === 'object' ? (exp.category_id as any) : null;
+        return {
+          ...exp,
+          category_title: cat?.title || exp.category_title || 'سایر هزینه‌ها',
+          category_code: cat?.code || exp.category_code,
+          category_icon: cat?.icon || exp.category_icon || 'Receipt',
+        };
+      });
+
+      const totalCount = res.meta?.filter_count ?? res.meta?.total_count ?? items.length;
+      return {
+        items,
+        totalCount,
+        page,
+        pageSize,
+        totalPages: Math.ceil(totalCount / pageSize) || 1,
+      };
+    } catch {
+      if (this.base.localAdapter.getPaginatedExpenses) {
+        return this.base.localAdapter.getPaginatedExpenses(params);
+      }
+      const all = await this.base.localAdapter.getExpenses(params);
+      const start = (page - 1) * pageSize;
+      return {
+        items: all.slice(start, start + pageSize),
+        totalCount: all.length,
+        page,
+        pageSize,
+        totalPages: Math.ceil(all.length / pageSize) || 1,
+      };
     }
   }
 

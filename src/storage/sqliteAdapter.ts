@@ -1,4 +1,4 @@
-import { IStorageProvider, QueryParams, StorageMode } from './types';
+import { IStorageProvider, QueryParams, StorageMode, PaginatedResult } from './types';
 import { SqliteStorageBase, isTauriEnvironment } from './sqlite/sqliteBase';
 import { SqliteOrgStorage } from './sqlite/sqliteOrg';
 import { SqliteCatalogStorage } from './sqlite/sqliteCatalog';
@@ -190,6 +190,20 @@ export class SqliteStorageAdapter implements IStorageProvider {
   // ==========================================
   getProducts(params?: QueryParams): Promise<Product[]> {
     return this.catalogStorage.getProducts(params);
+  }
+
+  async getPaginatedProducts(params: QueryParams): Promise<PaginatedResult<Product>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const all = await this.catalogStorage.getProducts(params);
+    const start = (page - 1) * pageSize;
+    return {
+      items: all.slice(start, start + pageSize),
+      totalCount: all.length,
+      page,
+      pageSize,
+      totalPages: Math.ceil(all.length / pageSize) || 1,
+    };
   }
 
   getProductById(id: number): Promise<Product | null> {
@@ -398,6 +412,20 @@ export class SqliteStorageAdapter implements IStorageProvider {
     return this.inventoryStorage.getInventoryItems(params);
   }
 
+  async getPaginatedInventoryItems(params: QueryParams): Promise<PaginatedResult<InventoryItem>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const all = await this.inventoryStorage.getInventoryItems(params);
+    const start = (page - 1) * pageSize;
+    return {
+      items: all.slice(start, start + pageSize),
+      totalCount: all.length,
+      page,
+      pageSize,
+      totalPages: Math.ceil(all.length / pageSize) || 1,
+    };
+  }
+
   getInventoryItem(variantId: number, warehouseId: number): Promise<InventoryItem | null> {
     return this.inventoryStorage.getInventoryItem(variantId, warehouseId);
   }
@@ -412,6 +440,20 @@ export class SqliteStorageAdapter implements IStorageProvider {
 
   getInventoryMovements(params?: QueryParams): Promise<InventoryMovement[]> {
     return this.inventoryStorage.getInventoryMovements(params);
+  }
+
+  async getPaginatedInventoryMovements(params: QueryParams): Promise<PaginatedResult<InventoryMovement>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const all = await this.inventoryStorage.getInventoryMovements(params);
+    const start = (page - 1) * pageSize;
+    return {
+      items: all.slice(start, start + pageSize),
+      totalCount: all.length,
+      page,
+      pageSize,
+      totalPages: Math.ceil(all.length / pageSize) || 1,
+    };
   }
 
   saveInventoryMovement(movement: Partial<InventoryMovement>): Promise<InventoryMovement> {
@@ -449,6 +491,20 @@ export class SqliteStorageAdapter implements IStorageProvider {
     return this.salesStorage.getCustomers(params);
   }
 
+  async getPaginatedCustomers(params: QueryParams): Promise<PaginatedResult<Customer>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const all = await this.salesStorage.getCustomers(params);
+    const start = (page - 1) * pageSize;
+    return {
+      items: all.slice(start, start + pageSize),
+      totalCount: all.length,
+      page,
+      pageSize,
+      totalPages: Math.ceil(all.length / pageSize) || 1,
+    };
+  }
+
   getCustomerById(id: number): Promise<Customer | null> {
     return this.salesStorage.getCustomerById(id);
   }
@@ -463,6 +519,20 @@ export class SqliteStorageAdapter implements IStorageProvider {
 
   getOrders(params?: QueryParams): Promise<Order[]> {
     return this.salesStorage.getOrders(params);
+  }
+
+  async getPaginatedOrders(params: QueryParams): Promise<PaginatedResult<Order>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const all = await this.salesStorage.getOrders(params);
+    const start = (page - 1) * pageSize;
+    return {
+      items: all.slice(start, start + pageSize),
+      totalCount: all.length,
+      page,
+      pageSize,
+      totalPages: Math.ceil(all.length / pageSize) || 1,
+    };
   }
 
   getOrderById(id: number): Promise<Order | null> {
@@ -492,6 +562,20 @@ export class SqliteStorageAdapter implements IStorageProvider {
     return this.procurementStorage.getSuppliers(params);
   }
 
+  async getPaginatedSuppliers(params: QueryParams): Promise<PaginatedResult<Supplier>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const all = await this.procurementStorage.getSuppliers(params);
+    const start = (page - 1) * pageSize;
+    return {
+      items: all.slice(start, start + pageSize),
+      totalCount: all.length,
+      page,
+      pageSize,
+      totalPages: Math.ceil(all.length / pageSize) || 1,
+    };
+  }
+
   getSupplierById(id: number): Promise<Supplier | null> {
     return this.procurementStorage.getSupplierById(id);
   }
@@ -506,6 +590,20 @@ export class SqliteStorageAdapter implements IStorageProvider {
 
   getPurchaseOrders(params?: QueryParams): Promise<PurchaseOrder[]> {
     return this.procurementStorage.getPurchaseOrders(params);
+  }
+
+  async getPaginatedPurchaseOrders(params: QueryParams): Promise<PaginatedResult<PurchaseOrder>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const all = await this.procurementStorage.getPurchaseOrders(params);
+    const start = (page - 1) * pageSize;
+    return {
+      items: all.slice(start, start + pageSize),
+      totalCount: all.length,
+      page,
+      pageSize,
+      totalPages: Math.ceil(all.length / pageSize) || 1,
+    };
   }
 
   getPurchaseOrderById(id: number): Promise<PurchaseOrder | null> {
@@ -553,6 +651,20 @@ export class SqliteStorageAdapter implements IStorageProvider {
 
   getExpenses(params?: QueryParams): Promise<Expense[]> {
     return this.accountingStorage.getExpenses(params);
+  }
+
+  async getPaginatedExpenses(params: QueryParams): Promise<PaginatedResult<Expense>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const all = await this.accountingStorage.getExpenses(params);
+    const start = (page - 1) * pageSize;
+    return {
+      items: all.slice(start, start + pageSize),
+      totalCount: all.length,
+      page,
+      pageSize,
+      totalPages: Math.ceil(all.length / pageSize) || 1,
+    };
   }
 
   getExpenseById(id: number): Promise<Expense | null> {

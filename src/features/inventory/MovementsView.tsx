@@ -26,6 +26,7 @@ export const MovementsView: React.FC = () => {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [totalMovementsCount, setTotalMovementsCount] = useState(0);
 
   const isPersian = locale === 'fa';
 
@@ -35,28 +36,48 @@ export const MovementsView: React.FC = () => {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
 
-      const [mList, wList] = await Promise.all([
-        adapter.getInventoryMovements({
-          organization_id: orgId,
-          warehouse_id: selectedWarehouseFilter ? Number(selectedWarehouseFilter) : undefined,
-          type: selectedTypeFilter || undefined,
-        }),
-        adapter.getWarehouses({ organization_id: orgId }),
-      ]);
+      if (adapter.getPaginatedInventoryMovements) {
+        const [res, wList] = await Promise.all([
+          adapter.getPaginatedInventoryMovements({
+            organization_id: orgId,
+            warehouse_id: selectedWarehouseFilter ? Number(selectedWarehouseFilter) : undefined,
+            type: selectedTypeFilter || undefined,
+            search: search.trim() || undefined,
+            page: currentPage,
+            limit: pageSize,
+          }),
+          warehouses.length > 0 ? Promise.resolve(warehouses) : adapter.getWarehouses({ organization_id: orgId }),
+        ]);
 
-      let filtered = mList;
-      if (search.trim()) {
-        const term = search.toLowerCase();
-        filtered = mList.filter(
-          (m) =>
-            (m.sku && m.sku.toLowerCase().includes(term)) ||
-            (m.reference_id && m.reference_id.toLowerCase().includes(term)) ||
-            (m.note && m.note.toLowerCase().includes(term))
-        );
+        setMovements(res.items);
+        setTotalMovementsCount(res.totalCount);
+        if (warehouses.length === 0) setWarehouses(wList);
+      } else {
+        const [mList, wList] = await Promise.all([
+          adapter.getInventoryMovements({
+            organization_id: orgId,
+            warehouse_id: selectedWarehouseFilter ? Number(selectedWarehouseFilter) : undefined,
+            type: selectedTypeFilter || undefined,
+          }),
+          adapter.getWarehouses({ organization_id: orgId }),
+        ]);
+
+        let filtered = mList;
+        if (search.trim()) {
+          const term = search.toLowerCase();
+          filtered = mList.filter(
+            (m) =>
+              (m.sku && m.sku.toLowerCase().includes(term)) ||
+              (m.reference_id && m.reference_id.toLowerCase().includes(term)) ||
+              (m.note && m.note.toLowerCase().includes(term))
+          );
+        }
+
+        setTotalMovementsCount(filtered.length);
+        const start = (currentPage - 1) * pageSize;
+        setMovements(filtered.slice(start, start + pageSize));
+        setWarehouses(wList);
       }
-
-      setMovements(filtered);
-      setWarehouses(wList);
     } catch (err) {
       console.error('[MovementsView] Error loading movements:', err);
     } finally {
@@ -66,18 +87,14 @@ export const MovementsView: React.FC = () => {
 
   useEffect(() => {
     loadMovements();
-  }, [activeOrganization, selectedWarehouseFilter, selectedTypeFilter, search]);
+  }, [activeOrganization, selectedWarehouseFilter, selectedTypeFilter, search, currentPage, pageSize]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedWarehouseFilter, selectedTypeFilter, search]);
 
-  const totalMovementsCount = movements.length;
   const totalPages = Math.ceil(totalMovementsCount / pageSize) || 1;
-  const paginatedMovements = React.useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return movements.slice(start, start + pageSize);
-  }, [movements, currentPage, pageSize]);
+  const paginatedMovements = movements;
 
   const getMovementTypeBadge = (type: MovementType, qty: number) => {
     const formattedQty = isPersian ? toPersianDigits(qty) : qty;

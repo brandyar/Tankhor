@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'http';
 import path from 'path';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
@@ -12,6 +13,7 @@ dotenv.config();
 async function startServer() {
   const app = express();
   const PORT = 3000;
+  const server = http.createServer(app);
 
   // CORS configuration for web, desktop (Tauri/Electron), and preview clients
   app.use((req, res, next) => {
@@ -36,8 +38,12 @@ async function startServer() {
 
   // Vite middleware in dev or static serving in production
   if (process.env.NODE_ENV !== 'production') {
+    const isHmrDisabled = process.env.DISABLE_HMR === 'true';
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: isHmrDisabled ? false : { server },
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
@@ -49,7 +55,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`[Tankhor BFF] Server running on http://0.0.0.0:${PORT}`);
   });
 }

@@ -129,6 +129,18 @@ export async function sanitizeAndEnforceOrgPlan(org: any): Promise<any> {
 
 export async function getUserOrganizations(userId: string, targetActiveOrgId?: number, userEmail?: string): Promise<{ activeOrganization: any; organizations: any[] }> {
   try {
+    // Return from in-memory cache if fresh (within 30s) to prevent hammering Directus
+    const existingCache = userOrgsCache.get(userId);
+    if (existingCache && Date.now() - existingCache.timestamp < 30000 && existingCache.organizations.length > 0) {
+      if (!targetActiveOrgId) {
+        return { activeOrganization: existingCache.activeOrganization, organizations: existingCache.organizations };
+      }
+      const matched = existingCache.organizations.find((o) => Number(o.id) === Number(targetActiveOrgId));
+      if (matched) {
+        return { activeOrganization: matched, organizations: existingCache.organizations };
+      }
+    }
+
     // 1. Fetch memberships from organization_users strictly for this userId / email
     let memberships: any[] = [];
     try {

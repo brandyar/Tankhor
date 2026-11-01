@@ -125,7 +125,11 @@ export class DirectusAdminClient {
   // Semi-static cache for endpoints like /items/system_modules and /items/project_settings
   private static requestCache = new Map<string, { data: any; expiresAt: number }>();
 
-  public static async request<T = any>(endpoint: string, options: RequestInit = {}, maxRetries = 3): Promise<T> {
+  public static async request<T = any>(
+    endpoint: string,
+    options: RequestInit & { preserveMeta?: boolean } = {},
+    maxRetries = 3
+  ): Promise<T> {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${this.getBaseUrl()}${cleanEndpoint}`;
 
@@ -149,13 +153,22 @@ export class DirectusAdminClient {
       await this.acquireSlot();
 
       try {
-        const response = await fetch(url, {
-          ...options,
-          headers: {
-            ...baseHeaders,
-            ...(options.headers || {}),
-          },
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        let response: Response;
+        try {
+          response = await fetch(url, {
+            ...options,
+            signal: options.signal || controller.signal,
+            headers: {
+              ...baseHeaders,
+              ...(options.headers || {}),
+            },
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
 
         if (response.status === 204) {
           return {} as T;
@@ -185,9 +198,6 @@ export class DirectusAdminClient {
 
         if (isPressureOrRateLimit && attempt <= maxRetries) {
           const delayMs = attempt * 350 + Math.floor(Math.random() * 200);
-          console.warn(
-            `[DirectusAdminClient] Directus 503/Pressure on ${cleanEndpoint}, retry attempt ${attempt}/${maxRetries} in ${delayMs}ms...`
-          );
           await new Promise((res) => setTimeout(res, delayMs));
           continue; // Retry
         }
@@ -198,7 +208,9 @@ export class DirectusAdminClient {
           throw new Error(errorMsg);
         }
 
-        const result = (data.data !== undefined ? data.data : data) as T;
+        const result = (options.preserveMeta && data.meta !== undefined
+          ? { data: data.data !== undefined ? data.data : [], meta: data.meta }
+          : (data.data !== undefined ? data.data : data)) as T;
 
         if (isCacheable) {
           this.requestCache.set(cleanEndpoint, {
@@ -210,14 +222,14 @@ export class DirectusAdminClient {
         return result;
       } catch (error: any) {
         const isNetworkOrTimeout =
+          error.name === 'AbortError' ||
           error.message?.includes('fetch failed') ||
           error.message?.includes('ECONNRESET') ||
           error.message?.includes('ETIMEDOUT') ||
           error.message?.toLowerCase().includes('under pressure');
 
         if (isNetworkOrTimeout && attempt <= maxRetries) {
-          const delayMs = attempt * 400 + Math.floor(Math.random() * 200);
-          console.warn(`[DirectusAdminClient] Network glitch on ${cleanEndpoint}: ${error.message}. Retrying in ${delayMs}ms...`);
+          const delayMs = attempt * 300 + Math.floor(Math.random() * 200);
           await new Promise((res) => setTimeout(res, delayMs));
           continue;
         }
@@ -265,10 +277,36 @@ export class DirectusAdminClient {
       params.append('limit', query.limit !== undefined ? String(query.limit) : '-1');
       if (query.page) params.append('page', String(query.page));
       if (query.fields) params.append('fields', Array.isArray(query.fields) ? query.fields.join(',') : query.fields);
+      if (query.search) params.append('search', query.search);
       queryString = `?${params.toString()}`;
     }
     const endpoint = `${this.getCollectionEndpoint(collection)}${queryString}`;
     return this.request<T[]>(endpoint);
+  }
+
+  public static async getItemsWithMeta<T = any>(
+    collection: string,
+    query?: Record<string, any>
+  ): Promise<{ data: T[]; meta: { total_count: number; filter_count: number } }> {
+    const params = new URLSearchParams();
+    if (query?.filter) params.append('filter', typeof query.filter === 'string' ? query.filter : JSON.stringify(query.filter));
+    if (query?.sort) params.append('sort', query.sort);
+    params.append('limit', query?.limit !== undefined ? String(query.limit) : '25');
+    if (query?.page) params.append('page', String(query.page));
+    if (query?.fields) params.append('fields', Array.isArray(query.fields) ? query.fields.join(',') : query.fields);
+    if (query?.search) params.append('search', query.search);
+    params.append('meta', 'total_count,filter_count');
+    const endpoint = `${this.getCollectionEndpoint(collection)}?${params.toString()}`;
+    const res = await this.request<any>(endpoint, { preserveMeta: true });
+    const data = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+    const meta = res?.meta || {};
+    return {
+      data,
+      meta: {
+        total_count: Number(meta.total_count ?? data.length),
+        filter_count: Number(meta.filter_count ?? meta.total_count ?? data.length),
+      },
+    };
   }
 
   public static async getItemById<T = any>(collection: string, id: string | number, fields?: string): Promise<T | null> {

@@ -53,6 +53,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [totalServerCount, setTotalServerCount] = useState(0);
 
   // Product Variants Modal
   const [activeProductForVariants, setActiveProductForVariants] = useState<Product | null>(null);
@@ -62,14 +63,11 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
 
   const isPersian = locale === 'fa';
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadAttributes = async () => {
     try {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
-
-      const [pList, cList, colList, seaList, bList, sgList, colorList, sizeList, vList] = await Promise.all([
-        adapter.getProducts({ organization_id: orgId }),
+      const [cList, colList, seaList, bList, sgList, colorList, sizeList, vList] = await Promise.all([
         adapter.getCategories({ organization_id: orgId }),
         adapter.getCollections({ organization_id: orgId }),
         adapter.getSeasons({ organization_id: orgId }),
@@ -79,8 +77,6 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
         adapter.getSizes({ organization_id: orgId }),
         adapter.getVariants({ organization_id: orgId }),
       ]);
-
-      setRawProducts(pList);
       setCategories(cList);
       setCollections(colList);
       setSeasons(seaList);
@@ -90,27 +86,66 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
       setSizes(sizeList);
       setAllVariants(vList);
     } catch (err) {
+      console.error('[ProductsView] Error loading attributes:', err);
+    }
+  };
+
+  const loadProducts = async () => {
+    setIsLoading(true);
+    try {
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id;
+
+      if (adapter.getPaginatedProducts) {
+        const res = await adapter.getPaginatedProducts({
+          organization_id: orgId,
+          page: currentPage,
+          limit: pageSize,
+          search: search.trim() || undefined,
+          category_id: selectedCategoryFilter ? Number(selectedCategoryFilter) : undefined,
+        });
+        setRawProducts(res.items);
+        setTotalServerCount(res.totalCount);
+      } else {
+        const pList = await adapter.getProducts({ organization_id: orgId });
+        setRawProducts(pList);
+        setTotalServerCount(pList.length);
+      }
+    } catch (err) {
       console.error('[ProductsView] Error loading products data:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const loadData = loadProducts;
+
   useEffect(() => {
-    loadData();
+    loadAttributes();
+  }, [activeOrganization]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [activeOrganization, currentPage, pageSize, search, selectedCategoryFilter]);
+
+  useEffect(() => {
     const handleProductsChange = (e: any) => {
       const deletedId = e?.detail?.deletedId;
       if (deletedId !== undefined) {
         const normDelId = normalizeId(deletedId) || Number(deletedId);
         setRawProducts((prev) => prev.filter((p) => (normalizeId(p.id) || Number(p.id)) !== normDelId && p.id !== deletedId));
       }
-      loadData();
+      loadProducts();
     };
     window.addEventListener('tankhor_products_changed', handleProductsChange);
     return () => {
       window.removeEventListener('tankhor_products_changed', handleProductsChange);
     };
-  }, [activeOrganization]);
+  }, [activeOrganization, currentPage, pageSize, search, selectedCategoryFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedCategoryFilter, selectedBrandFilter, selectedCollectionFilter, selectedSeasonFilter, selectedColorFilter]);
 
   // Client-side search and filtering using high-precision Persian/Arabic normalization
   const filteredProducts = useMemo(() => {
@@ -236,12 +271,22 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
     sizes,
   ]);
 
-  const totalProductsCount = filteredProducts.length;
+  const hasClientAdvancedFilters = Boolean(
+    selectedBrandFilter ||
+    selectedCollectionFilter ||
+    selectedSeasonFilter ||
+    selectedColorFilter
+  );
+
+  const totalProductsCount = hasClientAdvancedFilters ? filteredProducts.length : (totalServerCount || rawProducts.length);
   const totalPages = Math.ceil(totalProductsCount / pageSize) || 1;
   const paginatedProducts = useMemo(() => {
+    if (!hasClientAdvancedFilters) {
+      return rawProducts;
+    }
     const start = (currentPage - 1) * pageSize;
     return filteredProducts.slice(start, start + pageSize);
-  }, [filteredProducts, currentPage, pageSize]);
+  }, [hasClientAdvancedFilters, rawProducts, filteredProducts, currentPage, pageSize]);
 
   const handleOpenNewProduct = () => {
     setEditingProductId(null);

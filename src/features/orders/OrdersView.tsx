@@ -22,6 +22,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { DataTable } from '../../components/ui/DataTable';
+import { Pagination } from '../../components/ui/Pagination';
 import { formatDate, formatCurrency, toPersianDigits } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
 import { printElement } from '../../utils/print';
@@ -86,6 +87,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalOrdersCount, setTotalOrdersCount] = useState(0);
+
   // Order Details Modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedOrderItems, setSelectedOrderItems] = useState<OrderItemDisplay[]>([]);
@@ -99,38 +105,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
   const [selectedSettleAccountId, setSelectedSettleAccountId] = useState<number>(0);
   const [isSettlingPayment, setIsSettlingPayment] = useState(false);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadLookups = async () => {
     try {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
-      const [orderList, custList, whList, prodList, varList, accountsList] = await Promise.all([
-        adapter.getOrders({ organization_id: orgId }),
+      const [custList, whList, prodList, varList, accountsList] = await Promise.all([
         adapter.getCustomers({ organization_id: orgId }),
         adapter.getWarehouses({ organization_id: orgId }),
         adapter.getProducts({ organization_id: orgId }),
         adapter.getVariants({ organization_id: orgId }),
         adapter.getFinancialAccounts ? adapter.getFinancialAccounts({ organization_id: orgId }).catch(() => []) : Promise.resolve([]),
       ]);
-
-      const enriched = orderList.map((ord) => {
-        const custId = typeof ord.customer_id === 'object' ? (ord.customer_id as any)?.id : ord.customer_id;
-        const cust = custList.find((c) => Number(c.id) === Number(custId));
-        const whId = typeof ord.warehouse_id === 'object' ? (ord.warehouse_id as any)?.id : ord.warehouse_id;
-        const wh = whList.find((w) => Number(w.id) === Number(whId));
-
-        const rawTotal = (ord as any).total ?? (ord as any).total_amount ?? (ord as any).subtotal ?? 0;
-        const numericTotal = Number(rawTotal) || 0;
-
-        return {
-          ...ord,
-          total: numericTotal,
-          customer_name: cust ? cust.name : ((ord as any).customer_name || t('orders.generalCustomer')),
-          warehouse_name: wh ? wh.name : ((ord as any).warehouse_name || t('orders.defaultWarehouse')),
-        };
-      });
-
-      setOrders(enriched);
       setCustomers(custList);
       setWarehouses(whList);
       setProducts(prodList);
@@ -140,6 +125,67 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
         setSelectedSettleAccountId(accountsList[0].id);
       }
     } catch (err) {
+      console.error('[OrdersView] Error loading lookups:', err);
+    }
+  };
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id;
+
+      if (adapter.getPaginatedOrders) {
+        const res = await adapter.getPaginatedOrders({
+          organization_id: orgId,
+          page: currentPage,
+          limit: pageSize,
+          search: search.trim() || undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+        });
+
+        const enriched = res.items.map((ord) => {
+          const custId = typeof ord.customer_id === 'object' ? (ord.customer_id as any)?.id : ord.customer_id;
+          const cust = customers.find((c) => Number(c.id) === Number(custId));
+          const whId = typeof ord.warehouse_id === 'object' ? (ord.warehouse_id as any)?.id : ord.warehouse_id;
+          const wh = warehouses.find((w) => Number(w.id) === Number(whId));
+
+          const rawTotal = (ord as any).total ?? (ord as any).total_amount ?? (ord as any).subtotal ?? 0;
+          const numericTotal = Number(rawTotal) || 0;
+
+          return {
+            ...ord,
+            total: numericTotal,
+            customer_name: cust ? cust.name : ((ord as any).customer_name || t('orders.generalCustomer')),
+            warehouse_name: wh ? wh.name : ((ord as any).warehouse_name || t('orders.defaultWarehouse')),
+          };
+        });
+
+        setOrders(enriched);
+        setTotalOrdersCount(res.totalCount);
+      } else {
+        const orderList = await adapter.getOrders({ organization_id: orgId });
+        const enriched = orderList.map((ord) => {
+          const custId = typeof ord.customer_id === 'object' ? (ord.customer_id as any)?.id : ord.customer_id;
+          const cust = customers.find((c) => Number(c.id) === Number(custId));
+          const whId = typeof ord.warehouse_id === 'object' ? (ord.warehouse_id as any)?.id : ord.warehouse_id;
+          const wh = warehouses.find((w) => Number(w.id) === Number(whId));
+
+          const rawTotal = (ord as any).total ?? (ord as any).total_amount ?? (ord as any).subtotal ?? 0;
+          const numericTotal = Number(rawTotal) || 0;
+
+          return {
+            ...ord,
+            total: numericTotal,
+            customer_name: cust ? cust.name : ((ord as any).customer_name || t('orders.generalCustomer')),
+            warehouse_name: wh ? wh.name : ((ord as any).warehouse_name || t('orders.defaultWarehouse')),
+          };
+        });
+
+        setOrders(enriched);
+        setTotalOrdersCount(enriched.length);
+      }
+    } catch (err) {
       console.error('[OrdersView] Error loading orders:', err);
     } finally {
       setIsLoading(false);
@@ -147,8 +193,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
   };
 
   useEffect(() => {
-    loadData();
+    loadLookups();
   }, [activeOrganization]);
+
+  useEffect(() => {
+    loadData();
+  }, [activeOrganization, currentPage, pageSize, search, statusFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
 
   // Handle deleting order with inventory restock if it was previously confirmed/completed
   const handleDeleteOrder = async (ord: Order) => {
@@ -458,13 +512,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
     }
   };
 
-  const filteredOrders = orders.filter((ord) => {
-    const matchesSearch =
-      ord.order_number.toLowerCase().includes(search.toLowerCase()) ||
-      (ord.customer_name && ord.customer_name.toLowerCase().includes(search.toLowerCase()));
-    const matchesStatus = statusFilter === 'all' || ord.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredOrders = orders;
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -767,6 +815,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
             ))
           )}
         </div>
+
+        {/* Universal Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(totalOrdersCount / pageSize) || 1}
+          totalItems={totalOrdersCount}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          className="mt-4"
+        />
       </Card>
 
       {/* Modal: Comprehensive Order Details & Product Items List & Printing */}

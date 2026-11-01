@@ -141,7 +141,10 @@ class DirectusClient {
     return headers;
   }
 
-  public async request<T = any>(endpoint: string, options: RequestInit & { skipAuth?: boolean } = {}): Promise<T> {
+  public async request<T = any>(
+    endpoint: string,
+    options: RequestInit & { skipAuth?: boolean; preserveMeta?: boolean } = {}
+  ): Promise<T> {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${this.getBaseUrl()}${cleanEndpoint}`;
 
@@ -216,7 +219,9 @@ class DirectusClient {
         throw new Error(errorMsg);
       }
 
-      return data.data !== undefined ? data.data : (data as T);
+      return (options.preserveMeta && data.meta !== undefined
+        ? data
+        : (data.data !== undefined ? data.data : (data as T)));
     } catch (err: any) {
       console.warn(`[API Client] Request failed for ${endpoint}:`, err.message);
       throw err;
@@ -853,6 +858,7 @@ class DirectusClient {
     }
     if (query?.page) params.append('page', String(query.page));
     if (query?.fields) params.append('fields', Array.isArray(query.fields) ? query.fields.join(',') : query.fields);
+    if (query?.search) params.append('search', query.search);
     queryString = `?${params.toString()}`;
     const result = await this.request<any>(`/items/${collection}${queryString}`);
     if (Array.isArray(result)) return result;
@@ -860,8 +866,36 @@ class DirectusClient {
     return [];
   }
 
-  public async getItemById<T>(collection: string, id: number | string): Promise<T> {
-    const res = await this.request<any>(`/items/${collection}/${id}`);
+  public async getPaginatedItems<T>(
+    collection: string,
+    query?: Record<string, any>
+  ): Promise<{ data: T[]; meta: { total_count: number; filter_count: number } }> {
+    const params = new URLSearchParams();
+    if (query?.filter) params.append('filter', typeof query.filter === 'string' ? query.filter : JSON.stringify(query.filter));
+    if (query?.sort) params.append('sort', query.sort);
+    params.append('limit', String(query?.limit !== undefined ? query.limit : 25));
+    if (query?.page) params.append('page', String(query.page));
+    if (query?.fields) params.append('fields', Array.isArray(query.fields) ? query.fields.join(',') : query.fields);
+    if (query?.search) params.append('search', query.search);
+    params.append('meta', 'total_count,filter_count');
+
+    const result = await this.request<any>(`/items/${collection}?${params.toString()}`, { preserveMeta: true });
+    const data = Array.isArray(result?.data) ? result.data : (Array.isArray(result) ? result : []);
+    const meta = result?.meta || {};
+    return {
+      data,
+      meta: {
+        total_count: Number(meta.total_count ?? data.length),
+        filter_count: Number(meta.filter_count ?? meta.total_count ?? data.length),
+      },
+    };
+  }
+
+  public async getItemById<T>(collection: string, id: number | string, fields?: string | string[]): Promise<T> {
+    const fieldsQuery = fields
+      ? `?fields=${Array.isArray(fields) ? fields.join(',') : fields}`
+      : '';
+    const res = await this.request<any>(`/items/${collection}/${id}${fieldsQuery}`);
     return res?.data || res;
   }
 

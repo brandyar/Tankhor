@@ -16,17 +16,27 @@ import {
 
 export type StorageMode = 'local_offline' | 'cloud_synced';
 
+export interface PaginatedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export interface QueryParams {
   organization_id?: number;
   search?: string;
   status?: string;
   category_id?: number;
+  brand_id?: number | string;
   warehouse_id?: number;
   variant_id?: number;
   type?: string;
   period?: string;
   page?: number;
   limit?: number;
+  sort?: string;
   skipReconcile?: boolean;
 }
 
@@ -54,11 +64,13 @@ export interface IStorageProvider {
 
   // Products & Variants
   getProducts(params?: QueryParams): Promise<Product[]>;
+  getPaginatedProducts?(params: QueryParams): Promise<PaginatedResult<Product>>;
   getProductById(id: number): Promise<Product | null>;
   saveProduct(product: Partial<Product>): Promise<Product>;
   deleteProduct(id: number): Promise<boolean>;
 
   getVariants(params?: QueryParams): Promise<ProductVariant[]>;
+  getPaginatedVariants?(params: QueryParams): Promise<PaginatedResult<ProductVariant>>;
   getVariantsByProductId(productId: number): Promise<ProductVariant[]>;
   saveVariant(variant: Partial<ProductVariant>, warehouseId?: number, locationId?: number): Promise<ProductVariant>;
   deleteVariant(id: number): Promise<boolean>;
@@ -106,28 +118,34 @@ export interface IStorageProvider {
 
   // Inventory
   getInventoryItems(params?: QueryParams): Promise<InventoryItem[]>;
+  getPaginatedInventoryItems?(params: QueryParams): Promise<PaginatedResult<InventoryItem>>;
   saveInventoryItem(item: Partial<InventoryItem>): Promise<InventoryItem>;
   deleteInventoryItem(id: number): Promise<boolean>;
   getInventoryMovements(params?: QueryParams): Promise<InventoryMovement[]>;
+  getPaginatedInventoryMovements?(params: QueryParams): Promise<PaginatedResult<InventoryMovement>>;
   recordMovement(movement: Partial<InventoryMovement>): Promise<InventoryMovement>;
 
   // Orders
   getOrders(params?: QueryParams): Promise<Order[]>;
+  getPaginatedOrders?(params: QueryParams): Promise<PaginatedResult<Order>>;
   getOrderItems(orderId: number): Promise<OrderItem[]>;
   saveOrder(order: Partial<Order>, items?: Partial<OrderItem>[]): Promise<Order>;
   deleteOrder?(id: number): Promise<boolean>;
 
   // Customers
   getCustomers(params?: QueryParams): Promise<Customer[]>;
+  getPaginatedCustomers?(params: QueryParams): Promise<PaginatedResult<Customer>>;
   saveCustomer(cust: Partial<Customer>): Promise<Customer>;
   deleteCustomer?(id: number): Promise<boolean>;
 
   // Suppliers & Purchase Orders
   getSuppliers(params?: QueryParams): Promise<Supplier[]>;
+  getPaginatedSuppliers?(params: QueryParams): Promise<PaginatedResult<Supplier>>;
   saveSupplier(sup: Partial<Supplier>): Promise<Supplier>;
   deleteSupplier?(id: number): Promise<boolean>;
 
   getPurchaseOrders(params?: QueryParams): Promise<PurchaseOrder[]>;
+  getPaginatedPurchaseOrders?(params: QueryParams): Promise<PaginatedResult<PurchaseOrder>>;
   getPurchaseOrderItems(purchaseOrderId?: number): Promise<PurchaseOrderItem[]>;
   savePurchaseOrder(po: Partial<PurchaseOrder>, items?: Partial<PurchaseOrderItem>[]): Promise<PurchaseOrder>;
   deletePurchaseOrder?(id: number): Promise<boolean>;
@@ -168,6 +186,7 @@ export interface IStorageProvider {
   deleteExpenseCategory(id: number): Promise<boolean>;
 
   getExpenses(params?: QueryParams): Promise<Expense[]>;
+  getPaginatedExpenses?(params: QueryParams): Promise<PaginatedResult<Expense>>;
   saveExpense(exp: Partial<Expense>): Promise<Expense>;
   deleteExpense(id: number): Promise<boolean>;
 

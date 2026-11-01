@@ -1,5 +1,5 @@
 import { CloudStorageBase } from './cloudBase';
-import { QueryParams } from '../types';
+import { QueryParams, PaginatedResult } from '../types';
 import {
   Warehouse,
   WarehouseLocation,
@@ -116,21 +116,44 @@ export class CloudInventoryStorage {
       const items = await this.base.client.getItems<InventoryItem>('inventory_items', {
         filter: Object.keys(filter).length > 0 ? filter : undefined,
         sort: '-id',
+        fields: [
+          'id',
+          'organization_id',
+          'variant_id',
+          'warehouse_id',
+          'location_id',
+          'quantity',
+          'reserved_quantity',
+          'damaged_quantity',
+          'available_quantity',
+          'reorder_point',
+          'safety_stock',
+          'updated_at',
+        ],
       });
 
       const [variants, products, colors, sizes, warehouses, locations] = await Promise.all([
         this.base.client.getItems<ProductVariant>('product_variants', {
           filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+          fields: ['id', 'sku', 'product_id', 'color_id', 'size_id'],
         }).catch(() => []),
         this.base.client.getItems<Product>('products', {
           filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+          fields: ['id', 'title'],
         }).catch(() => []),
-        this.base.client.getItems<Color>('colors', {}).catch(() => []),
-        this.base.client.getItems<Size>('sizes', {}).catch(() => []),
+        this.base.client.getItems<Color>('colors', {
+          fields: ['id', 'name'],
+        }).catch(() => []),
+        this.base.client.getItems<Size>('sizes', {
+          fields: ['id', 'name'],
+        }).catch(() => []),
         this.base.client.getItems<Warehouse>('warehouses', {
           filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+          fields: ['id', 'name'],
         }).catch(() => []),
-        this.base.client.getItems<WarehouseLocation>('warehouse_locations', {}).catch(() => []),
+        this.base.client.getItems<WarehouseLocation>('warehouse_locations', {
+          fields: ['id', 'name'],
+        }).catch(() => []),
       ]);
 
       return items.map((item) => {
@@ -167,6 +190,100 @@ export class CloudInventoryStorage {
     } catch (err) {
       console.warn('[CloudInventoryStorage] Error fetching inventory items from cloud:', err);
       return this.base.localAdapter.getInventoryItems(params);
+    }
+  }
+
+  async getPaginatedInventoryItems(params: QueryParams): Promise<PaginatedResult<InventoryItem>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const filter: any = {};
+    if (params.organization_id) filter.organization_id = { _eq: params.organization_id };
+    if (params.warehouse_id) filter.warehouse_id = { _eq: params.warehouse_id };
+    if (params.variant_id) filter.variant_id = { _eq: params.variant_id };
+
+    try {
+      const res = await this.base.client.getPaginatedItems<InventoryItem>('inventory_items', {
+        filter: Object.keys(filter).length > 0 ? filter : undefined,
+        limit: pageSize,
+        page,
+        sort: params.sort || '-id',
+        search: params.search,
+        fields: [
+          'id',
+          'organization_id',
+          'variant_id',
+          'warehouse_id',
+          'location_id',
+          'quantity',
+          'reserved_quantity',
+          'damaged_quantity',
+          'available_quantity',
+          'reorder_point',
+          'safety_stock',
+          'updated_at',
+        ],
+      });
+
+      const pageItems = res.data;
+      const variantIds = pageItems
+        .map((i) => (typeof i.variant_id === 'number' ? i.variant_id : (i.variant_id as any)?.id))
+        .filter(Boolean);
+      const warehouseIds = pageItems
+        .map((i) => (typeof i.warehouse_id === 'number' ? i.warehouse_id : (i.warehouse_id as any)?.id))
+        .filter(Boolean);
+
+      const [variants, warehouses] = await Promise.all([
+        variantIds.length > 0
+          ? this.base.client.getItems<ProductVariant>('product_variants', {
+              filter: { id: { _in: variantIds } },
+              fields: ['id', 'sku', 'product_id.id', 'product_id.title', 'color_id.name', 'size_id.name'],
+            }).catch(() => [])
+          : Promise.resolve([]),
+        warehouseIds.length > 0
+          ? this.base.client.getItems<Warehouse>('warehouses', {
+              filter: { id: { _in: warehouseIds } },
+              fields: ['id', 'name'],
+            }).catch(() => [])
+          : Promise.resolve([]),
+      ]);
+
+      const items = pageItems.map((item) => {
+        const vId = typeof item.variant_id === 'number' ? item.variant_id : (item.variant_id as any)?.id;
+        const wId = typeof item.warehouse_id === 'number' ? item.warehouse_id : (item.warehouse_id as any)?.id;
+        const variant: any = variants.find((v) => v.id === vId);
+        const warehouse = warehouses.find((w) => w.id === wId);
+
+        return {
+          ...item,
+          sku: variant?.sku || (vId ? `SKU-${vId}` : '-'),
+          product_title: variant?.product_id?.title || 'محصول',
+          color_name: variant?.color_id?.name || '-',
+          size_name: variant?.size_id?.name || '-',
+          warehouse_name: warehouse?.name || 'انبار مرکزی',
+        };
+      });
+
+      const totalCount = res.meta?.filter_count ?? res.meta?.total_count ?? items.length;
+      return {
+        items,
+        totalCount,
+        page,
+        pageSize,
+        totalPages: Math.ceil(totalCount / pageSize) || 1,
+      };
+    } catch {
+      if (this.base.localAdapter.getPaginatedInventoryItems) {
+        return this.base.localAdapter.getPaginatedInventoryItems(params);
+      }
+      const all = await this.base.localAdapter.getInventoryItems(params);
+      const start = (page - 1) * pageSize;
+      return {
+        items: all.slice(start, start + pageSize),
+        totalCount: all.length,
+        page,
+        pageSize,
+        totalPages: Math.ceil(all.length / pageSize) || 1,
+      };
     }
   }
 
@@ -227,12 +344,28 @@ export class CloudInventoryStorage {
         this.base.client.getItems<InventoryMovement>('inventory_movements', {
           filter: Object.keys(filter).length > 0 ? filter : undefined,
           sort: '-created_at',
+          fields: [
+            'id',
+            'organization_id',
+            'variant_id',
+            'warehouse_id',
+            'location_id',
+            'type',
+            'quantity',
+            'reference_type',
+            'reference_id',
+            'note',
+            'user_id',
+            'created_at',
+          ],
         }),
         this.base.client.getItems<ProductVariant>('product_variants', {
           filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+          fields: ['id', 'sku'],
         }).catch(() => []),
         this.base.client.getItems<Warehouse>('warehouses', {
           filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+          fields: ['id', 'name'],
         }).catch(() => []),
       ]);
 
@@ -253,6 +386,98 @@ export class CloudInventoryStorage {
     }
   }
 
+  async getPaginatedInventoryMovements(params: QueryParams): Promise<PaginatedResult<InventoryMovement>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const filter: any = {};
+    if (params.organization_id) filter.organization_id = { _eq: params.organization_id };
+    if (params.warehouse_id) filter.warehouse_id = { _eq: params.warehouse_id };
+    if (params.variant_id) filter.variant_id = { _eq: params.variant_id };
+    if (params.type && params.type !== 'all') filter.type = { _eq: params.type };
+
+    try {
+      const res = await this.base.client.getPaginatedItems<InventoryMovement>('inventory_movements', {
+        filter: Object.keys(filter).length > 0 ? filter : undefined,
+        limit: pageSize,
+        page,
+        sort: params.sort || '-created_at',
+        search: params.search,
+        fields: [
+          'id',
+          'organization_id',
+          'variant_id',
+          'warehouse_id',
+          'location_id',
+          'type',
+          'quantity',
+          'reference_type',
+          'reference_id',
+          'note',
+          'user_id',
+          'created_at',
+        ],
+      });
+
+      const pageMovements = res.data;
+      const variantIds = pageMovements
+        .map((m) => (typeof m.variant_id === 'number' ? m.variant_id : (m.variant_id as any)?.id))
+        .filter(Boolean);
+      const warehouseIds = pageMovements
+        .map((m) => (typeof m.warehouse_id === 'number' ? m.warehouse_id : (m.warehouse_id as any)?.id))
+        .filter(Boolean);
+
+      const [variants, warehouses] = await Promise.all([
+        variantIds.length > 0
+          ? this.base.client.getItems<ProductVariant>('product_variants', {
+              filter: { id: { _in: variantIds } },
+              fields: ['id', 'sku'],
+            }).catch(() => [])
+          : Promise.resolve([]),
+        warehouseIds.length > 0
+          ? this.base.client.getItems<Warehouse>('warehouses', {
+              filter: { id: { _in: warehouseIds } },
+              fields: ['id', 'name'],
+            }).catch(() => [])
+          : Promise.resolve([]),
+      ]);
+
+      const items = pageMovements.map((m) => {
+        const vId = typeof m.variant_id === 'number' ? m.variant_id : (m.variant_id as any)?.id;
+        const wId = typeof m.warehouse_id === 'number' ? m.warehouse_id : (m.warehouse_id as any)?.id;
+        const variant = variants.find((v) => v.id === vId);
+        const warehouse = warehouses.find((w) => w.id === wId);
+
+        return {
+          ...m,
+          sku: variant?.sku || m.sku || (vId ? `VAR-#${vId}` : '-'),
+          warehouse_name: warehouse?.name || m.warehouse_name || 'انبار مرکزی',
+        };
+      });
+
+      const totalCount = res.meta?.filter_count ?? res.meta?.total_count ?? items.length;
+      return {
+        items,
+        totalCount,
+        page,
+        pageSize,
+        totalPages: Math.ceil(totalCount / pageSize) || 1,
+      };
+    } catch {
+      if (this.base.localAdapter.getPaginatedInventoryMovements) {
+        return this.base.localAdapter.getPaginatedInventoryMovements(params);
+      }
+      const all = await this.base.localAdapter.getInventoryMovements(params);
+      const start = (page - 1) * pageSize;
+      return {
+        items: all.slice(start, start + pageSize),
+        totalCount: all.length,
+        page,
+        pageSize,
+        totalPages: Math.ceil(all.length / pageSize) || 1,
+      };
+    }
+  }
+
   async saveInventoryMovement(movement: Partial<InventoryMovement>): Promise<InventoryMovement> {
     return this.recordMovement(movement);
   }
@@ -261,6 +486,10 @@ export class CloudInventoryStorage {
     const payload: any = { ...movement };
     delete payload.sku;
     delete payload.warehouse_name;
+    if (payload.notes !== undefined && payload.note === undefined) {
+      payload.note = payload.notes;
+    }
+    delete payload.notes;
 
     payload.organization_id = this.base.cleanInt(payload.organization_id) || 1;
     payload.variant_id = this.base.cleanInt(payload.variant_id);

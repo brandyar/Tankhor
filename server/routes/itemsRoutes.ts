@@ -226,6 +226,12 @@ itemsRouter.get(
       query.limit = req.query.limit !== undefined ? req.query.limit : -1;
       if (req.query.page) query.page = req.query.page;
       if (req.query.fields) query.fields = req.query.fields;
+      if (req.query.search) query.search = req.query.search;
+
+      if (req.query.meta) {
+        const result = await DirectusAdminClient.getItemsWithMeta(collection, query);
+        return res.json({ data: result.data, meta: result.meta });
+      }
 
       const items = await DirectusAdminClient.getItems(collection, query);
 

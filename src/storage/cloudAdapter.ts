@@ -1,4 +1,4 @@
-import { IStorageProvider, StorageMode, QueryParams } from './types';
+import { IStorageProvider, StorageMode, QueryParams, PaginatedResult } from './types';
 import {
   Organization, OrganizationUser, Category, Collection, Season, Color, Brand,
   SizeGroup, Size, Product, ProductVariant, Warehouse, WarehouseLocation,
@@ -116,6 +116,10 @@ export class CloudDirectusAdapter implements IStorageProvider {
   // ==========================================
   async getProducts(params?: QueryParams): Promise<Product[]> {
     return this.catalog.getProducts(params);
+  }
+
+  async getPaginatedProducts(params: QueryParams): Promise<PaginatedResult<Product>> {
+    return this.catalog.getPaginatedProducts(params);
   }
 
   async getProductById(id: number): Promise<Product | null> {
@@ -330,6 +334,10 @@ export class CloudDirectusAdapter implements IStorageProvider {
     return this.inventory.getInventoryItems(params);
   }
 
+  async getPaginatedInventoryItems(params: QueryParams): Promise<PaginatedResult<InventoryItem>> {
+    return this.inventory.getPaginatedInventoryItems(params);
+  }
+
   async getInventoryItem(variantId: number, warehouseId: number): Promise<InventoryItem | null> {
     return this.inventory.getInventoryItem(variantId, warehouseId);
   }
@@ -344,6 +352,10 @@ export class CloudDirectusAdapter implements IStorageProvider {
 
   async getInventoryMovements(params?: QueryParams): Promise<InventoryMovement[]> {
     return this.inventory.getInventoryMovements(params);
+  }
+
+  async getPaginatedInventoryMovements(params: QueryParams): Promise<PaginatedResult<InventoryMovement>> {
+    return this.inventory.getPaginatedInventoryMovements(params);
   }
 
   async saveInventoryMovement(movement: Partial<InventoryMovement>): Promise<InventoryMovement> {
@@ -384,6 +396,10 @@ export class CloudDirectusAdapter implements IStorageProvider {
     return this.sales.getOrders(params);
   }
 
+  async getPaginatedOrders(params: QueryParams): Promise<PaginatedResult<Order>> {
+    return this.sales.getPaginatedOrders(params);
+  }
+
   async getOrderById(id: number): Promise<Order | null> {
     return this.sales.getOrderById(id);
   }
@@ -405,6 +421,10 @@ export class CloudDirectusAdapter implements IStorageProvider {
   // ==========================================
   async getCustomers(params?: QueryParams): Promise<Customer[]> {
     return this.sales.getCustomers(params);
+  }
+
+  async getPaginatedCustomers(params: QueryParams): Promise<PaginatedResult<Customer>> {
+    return this.sales.getPaginatedCustomers(params);
   }
 
   async getCustomerById(id: number): Promise<Customer | null> {
@@ -449,6 +469,10 @@ export class CloudDirectusAdapter implements IStorageProvider {
     return this.procurement.getSuppliers(params);
   }
 
+  async getPaginatedSuppliers(params: QueryParams): Promise<PaginatedResult<Supplier>> {
+    return this.procurement.getPaginatedSuppliers(params);
+  }
+
   async getSupplierById(id: number): Promise<Supplier | null> {
     return this.procurement.getSupplierById(id);
   }
@@ -463,6 +487,10 @@ export class CloudDirectusAdapter implements IStorageProvider {
 
   async getPurchaseOrders(params?: QueryParams): Promise<PurchaseOrder[]> {
     return this.procurement.getPurchaseOrders(params);
+  }
+
+  async getPaginatedPurchaseOrders(params: QueryParams): Promise<PaginatedResult<PurchaseOrder>> {
+    return this.procurement.getPaginatedPurchaseOrders(params);
   }
 
   async getPurchaseOrderById(id: number): Promise<PurchaseOrder | null> {
@@ -498,6 +526,10 @@ export class CloudDirectusAdapter implements IStorageProvider {
 
   async getExpenses(params?: QueryParams): Promise<Expense[]> {
     return this.accounting.getExpenses(params);
+  }
+
+  async getPaginatedExpenses(params: QueryParams): Promise<PaginatedResult<Expense>> {
+    return this.accounting.getPaginatedExpenses(params);
   }
 
   async saveExpense(exp: Partial<Expense>): Promise<Expense> {

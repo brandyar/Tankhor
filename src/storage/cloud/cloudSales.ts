@@ -1,5 +1,5 @@
 import { CloudStorageBase } from './cloudBase';
-import { QueryParams } from '../types';
+import { QueryParams, PaginatedResult } from '../types';
 import {
   Order,
   OrderItem,
@@ -17,6 +17,22 @@ export class CloudSalesStorage {
       const orders = await this.base.client.getItems<Order>('orders', {
         filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
         sort: '-date_created',
+        fields: [
+          'id',
+          'organization_id',
+          'customer_id',
+          'warehouse_id',
+          'order_number',
+          'status',
+          'payment_status',
+          'currency',
+          'subtotal',
+          'discount',
+          'tax',
+          'total',
+          'notes',
+          'date_created',
+        ],
       });
       return orders;
     } catch {
@@ -24,9 +40,66 @@ export class CloudSalesStorage {
     }
   }
 
+  async getPaginatedOrders(params: QueryParams): Promise<PaginatedResult<Order>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const filter: any = {};
+    if (params.organization_id) filter.organization_id = { _eq: params.organization_id };
+    if (params.status && params.status !== 'all') filter.status = { _eq: params.status };
+    if (params.warehouse_id) filter.warehouse_id = { _eq: params.warehouse_id };
+
+    try {
+      const res = await this.base.client.getPaginatedItems<Order>('orders', {
+        filter: Object.keys(filter).length > 0 ? filter : undefined,
+        limit: pageSize,
+        page,
+        sort: params.sort || '-date_created',
+        search: params.search,
+        fields: [
+          'id',
+          'organization_id',
+          'customer_id',
+          'warehouse_id',
+          'order_number',
+          'status',
+          'payment_status',
+          'currency',
+          'subtotal',
+          'discount',
+          'tax',
+          'total',
+          'notes',
+          'date_created',
+        ],
+      });
+
+      const totalCount = res.meta?.filter_count ?? res.meta?.total_count ?? res.data.length;
+      return {
+        items: res.data,
+        totalCount,
+        page,
+        pageSize,
+        totalPages: Math.ceil(totalCount / pageSize) || 1,
+      };
+    } catch {
+      if (this.base.localAdapter.getPaginatedOrders) {
+        return this.base.localAdapter.getPaginatedOrders(params);
+      }
+      const all = await this.base.localAdapter.getOrders(params);
+      const start = (page - 1) * pageSize;
+      return {
+        items: all.slice(start, start + pageSize),
+        totalCount: all.length,
+        page,
+        pageSize,
+        totalPages: Math.ceil(all.length / pageSize) || 1,
+      };
+    }
+  }
+
   async getOrderById(id: number): Promise<Order | null> {
     try {
-      return await this.base.client.getItemById<Order>('orders', id);
+      return await this.base.client.getItemById<Order>('orders', id, '*');
     } catch {
       return this.base.localAdapter.getOrderById(id);
     }
@@ -34,9 +107,15 @@ export class CloudSalesStorage {
 
   async getOrderItems(orderId: number): Promise<OrderItem[]> {
     try {
-      return await this.base.client.getItems<OrderItem>('order_items', {
+      const rawItems = await this.base.client.getItems<any>('order_items', {
         filter: { order_id: { _eq: orderId } },
+        fields: ['id', 'organization_id', 'order_id', 'variant_id', 'quantity', 'unit_price', 'discount', 'total', 'created_at'],
       });
+      return rawItems.map((item) => ({
+        ...item,
+        price: item.unit_price ?? item.price ?? 0,
+        unit_price: item.unit_price ?? item.price ?? 0,
+      }));
     } catch {
       return this.base.localAdapter.getOrderItems(orderId);
     }
@@ -103,15 +182,80 @@ export class CloudSalesStorage {
     try {
       return await this.base.client.getItems<Customer>('customers', {
         filter: params?.organization_id ? { organization_id: { _eq: params.organization_id } } : undefined,
+        sort: '-id',
+        fields: [
+          'id',
+          'organization_id',
+          'name',
+          'phone',
+          'email',
+          'address',
+          'status',
+          'balance',
+          'credit_limit',
+          'date_created',
+        ],
       });
     } catch {
       return this.base.localAdapter.getCustomers(params);
     }
   }
 
+  async getPaginatedCustomers(params: QueryParams): Promise<PaginatedResult<Customer>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const filter: any = {};
+    if (params.organization_id) filter.organization_id = { _eq: params.organization_id };
+    if (params.status && params.status !== 'all') filter.status = { _eq: params.status };
+
+    try {
+      const res = await this.base.client.getPaginatedItems<Customer>('customers', {
+        filter: Object.keys(filter).length > 0 ? filter : undefined,
+        limit: pageSize,
+        page,
+        sort: params.sort || '-id',
+        search: params.search,
+        fields: [
+          'id',
+          'organization_id',
+          'name',
+          'phone',
+          'email',
+          'address',
+          'status',
+          'balance',
+          'credit_limit',
+          'date_created',
+        ],
+      });
+
+      const totalCount = res.meta?.filter_count ?? res.meta?.total_count ?? res.data.length;
+      return {
+        items: res.data,
+        totalCount,
+        page,
+        pageSize,
+        totalPages: Math.ceil(totalCount / pageSize) || 1,
+      };
+    } catch {
+      if (this.base.localAdapter.getPaginatedCustomers) {
+        return this.base.localAdapter.getPaginatedCustomers(params);
+      }
+      const all = await this.base.localAdapter.getCustomers(params);
+      const start = (page - 1) * pageSize;
+      return {
+        items: all.slice(start, start + pageSize),
+        totalCount: all.length,
+        page,
+        pageSize,
+        totalPages: Math.ceil(all.length / pageSize) || 1,
+      };
+    }
+  }
+
   async getCustomerById(id: number): Promise<Customer | null> {
     try {
-      return await this.base.client.getItemById<Customer>('customers', id);
+      return await this.base.client.getItemById<Customer>('customers', id, '*');
     } catch {
       return this.base.localAdapter.getCustomerById(id);
     }
