@@ -76,6 +76,9 @@ export class SqliteStorageBase {
     if (typeof window !== 'undefined') {
       window.addEventListener('tankhor_data_restored', async (e: any) => {
         this.loadLocalStorageFallback();
+        if (e?.detail?.skipSqliteSync) {
+          return;
+        }
         const isClear = e?.detail?.type === 'cleared';
         await this.syncAllFromLocalStorage(isClear);
       });

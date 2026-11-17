@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { DirectusAdminClient } from '../directusAdmin';
-import { requireAuth, AuthenticatedRequest, getUserOrganizations } from '../auth';
+import { requireAuth, AuthenticatedRequest, getUserOrganizations, invalidateUserCaches } from '../auth';
 import {
   TENANT_SCOPED_COLLECTIONS,
   checkRolePermission,
@@ -8,11 +8,20 @@ import {
 } from '../permissions';
 import { syncAndPersistFinancialAccountBalances } from '../accountingSync';
 import { DEFAULT_SYSTEM_MODULES } from '../../src/utils/license';
+import { registerCacheInvalidator, invalidateOrgCaches } from '../serverCache';
 
 export const itemsRouter = Router();
 
 // In-memory cache for tenant items queries to ride through momentary Directus 503 / Under pressure errors
 const tenantItemsCache = new Map<string, { data: any; timestamp: number }>();
+
+registerCacheInvalidator((orgId, collection) => {
+  for (const key of tenantItemsCache.keys()) {
+    if (key.includes(`:${orgId}:`) && (!collection || key.startsWith(`${collection}:`))) {
+      tenantItemsCache.delete(key);
+    }
+  }
+});
 
 // Generic List items with injected Tenant Scope
 itemsRouter.get(
@@ -668,6 +677,9 @@ itemsRouter.post(
         }
       }
 
+      invalidateOrgCaches(orgIdNum, collection);
+      DirectusAdminClient.invalidateCollectionCache(collection);
+
       // If a financial transaction, order, or expense is created, recalculate and persist account balances
       if (
         collection === 'treasury_transactions' ||
@@ -675,7 +687,7 @@ itemsRouter.post(
         collection === 'orders' ||
         collection === 'expenses'
       ) {
-        syncAndPersistFinancialAccountBalances(orgIdNum).catch((err) =>
+        syncAndPersistFinancialAccountBalances(orgIdNum, true).catch((err) =>
           console.warn('[API Proxy] Error syncing balances on create:', err?.message)
         );
       }
@@ -825,6 +837,8 @@ itemsRouter.patch(
         }
 
         const updated = await DirectusAdminClient.updateItem('organizations', orgId, payload);
+        invalidateUserCaches(userId);
+        invalidateOrgCaches(orgId, 'organizations');
         return res.json({ data: updated });
       }
 
@@ -946,6 +960,9 @@ itemsRouter.patch(
       const cleanPayload = sanitizePayloadForDirectus(collection, payload);
       const updated = await DirectusAdminClient.updateItem(collection, id, cleanPayload);
 
+      invalidateOrgCaches(orgIdNum, collection);
+      DirectusAdminClient.invalidateCollectionCache(collection);
+
       // If a financial transaction, order, or expense is updated, recalculate and persist account balances
       if (
         collection === 'treasury_transactions' ||
@@ -953,7 +970,7 @@ itemsRouter.patch(
         collection === 'orders' ||
         collection === 'expenses'
       ) {
-        syncAndPersistFinancialAccountBalances(orgIdNum).catch((err) =>
+        syncAndPersistFinancialAccountBalances(orgIdNum, true).catch((err) =>
           console.warn('[API Proxy] Error syncing balances on update:', err?.message)
         );
       }
@@ -1013,6 +1030,9 @@ itemsRouter.delete(
 
       await DirectusAdminClient.deleteItem(collection, id);
 
+      invalidateOrgCaches(orgIdNum, collection);
+      DirectusAdminClient.invalidateCollectionCache(collection);
+
       // If a financial transaction, order, or expense is deleted, recalculate and persist account balances
       if (
         collection === 'treasury_transactions' ||
@@ -1020,7 +1040,7 @@ itemsRouter.delete(
         collection === 'orders' ||
         collection === 'expenses'
       ) {
-        syncAndPersistFinancialAccountBalances(orgIdNum).catch((err) =>
+        syncAndPersistFinancialAccountBalances(orgIdNum, true).catch((err) =>
           console.warn('[API Proxy] Error syncing balances on delete:', err?.message)
         );
       }

@@ -10,14 +10,17 @@ import { Badge } from '../../components/ui/Badge';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Pagination } from '../../components/ui/Pagination';
 import { Product, Category, Collection, Season, SizeGuideTemplate, Color, Size, Brand, ProductVariant } from '../../types';
-import { toPersianDigits, formatDate, normalizeId, matchesSearchQuery } from '../../utils/formatters';
+import { toPersianDigits, formatDate, normalizeId, matchesSearchQuery, normalizeSearchText } from '../../utils/formatters';
 import { ProductEditView } from './ProductEditView';
 import { ProductVariantsModal } from './ProductVariantsModal';
 import { ProductImage } from '../../components/ui/ProductImage';
+import { WebcamScanButton } from '../../components/ui/WebcamScanButton';
+import { WebcamBarcodeScannerModal } from '../../components/modals/WebcamBarcodeScannerModal';
 import { directusClient } from '../../api/directus';
 import { confirmAction } from '../../utils/confirm';
-import { Plus, Search, Trash2, Edit, Layers, Filter, X, RefreshCw, FileSpreadsheet, Download, Upload } from 'lucide-react';
+import { Plus, Search, Trash2, Edit, Layers, Filter, X, RefreshCw, FileSpreadsheet, Download, Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { exportProductsToExcel, parseProductsFromExcel } from '../../utils/excelUtils';
+import { useSwrRefresh } from '../../hooks/useSwrRefresh';
 
 interface ProductsViewProps {
   initialCreateMode?: boolean;
@@ -60,6 +63,14 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
   const [isVariantsModalOpen, setIsVariantsModalOpen] = useState(false);
 
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isImportingExcel, setIsImportingExcel] = useState(false);
+  const [isWebcamScannerOpen, setIsWebcamScannerOpen] = useState(false);
+  const [excelFeedback, setExcelFeedback] = useState<{
+    type: 'success' | 'error' | 'warning';
+    message: string;
+    details?: string[];
+  } | null>(null);
 
   const isPersian = locale === 'fa';
 
@@ -90,8 +101,8 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
     }
   };
 
-  const loadProducts = async () => {
-    setIsLoading(true);
+  const loadProducts = async (silent: boolean | unknown = false) => {
+    if (silent !== true) setIsLoading(true);
     try {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
@@ -127,6 +138,14 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
   useEffect(() => {
     loadProducts();
   }, [activeOrganization, currentPage, pageSize, search, selectedCategoryFilter]);
+
+  useSwrRefresh(
+    ['products', 'product_variants', 'inventory_items', 'categories', 'collections', 'seasons', 'brands', 'colors', 'sizes'],
+    () => {
+      loadAttributes();
+      loadProducts(true);
+    }
+  );
 
   useEffect(() => {
     const handleProductsChange = (e: any) => {
@@ -449,33 +468,427 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleExportExcel = () => {
-    exportProductsToExcel(
-      filteredProducts,
-      allVariants,
-      categories,
-      brands,
-      colors,
-      sizes
-    );
+  const handleExportExcel = async () => {
+    setIsExportingExcel(true);
+    setExcelFeedback(null);
+    try {
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id;
+      const [allProds, freshVars] = await Promise.all([
+        adapter.getProducts({ organization_id: orgId }),
+        adapter.getVariants({ organization_id: orgId }),
+      ]);
+
+      let list = allProds;
+      if (search && search.trim()) {
+        const term = search.trim();
+        list = list.filter((p) => {
+          const pId = normalizeId(p.id) || Number(p.id);
+          const brandName =
+            typeof p.brand === 'string'
+              ? p.brand
+              : p.brand?.name ||
+                (typeof p.brand_id === 'object' ? (p.brand_id as any)?.name : '') ||
+                (typeof p.brand_id === 'number' ? brands.find((b) => b.id === p.brand_id)?.name : '') ||
+                '';
+          const catId = normalizeId(p.category_id) || Number(p.category_id);
+          const catName = categories.find((c) => (normalizeId(c.id) || Number(c.id)) === catId)?.name || '';
+          const colId = normalizeId(p.collection_id) || Number(p.collection_id);
+          const colName = collections.find((c) => (normalizeId(c.id) || Number(c.id)) === colId)?.name || '';
+          const seaId = normalizeId(p.season_id) || Number(p.season_id);
+          const seaName = seasons.find((s) => (normalizeId(s.id) || Number(s.id)) === seaId)?.name || '';
+          const pVariants = freshVars.filter((v) => (normalizeId(v.product_id) || Number(v.product_id)) === pId);
+          const variantTexts = pVariants
+            .map((v) => {
+              const colorName =
+                colors.find((c) => (normalizeId(c.id) || Number(c.id)) === (normalizeId(v.color_id) || Number(v.color_id)))?.name ||
+                v.color_name ||
+                '';
+              const sizeName =
+                sizes.find((s) => (normalizeId(s.id) || Number(s.id)) === (normalizeId(v.size_id) || Number(v.size_id)))?.name ||
+                v.size_name ||
+                '';
+              return `${v.sku || ''} ${v.barcode || ''} ${colorName} ${sizeName}`;
+            })
+            .join(' ');
+          return matchesSearchQuery(
+            term,
+            p.title,
+            p.slug,
+            (p as any).sku,
+            (p as any).barcode,
+            (p as any).code,
+            p.description,
+            p.tags,
+            brandName,
+            catName,
+            colName,
+            seaName,
+            variantTexts
+          );
+        });
+      }
+      if (selectedCategoryFilter) {
+        list = list.filter((p) => (normalizeId(p.category_id) || Number(p.category_id)) === Number(selectedCategoryFilter));
+      }
+      if (selectedBrandFilter) {
+        list = list.filter((p) => {
+          const brandVal =
+            typeof p.brand === 'string' ? p.brand : p.brand?.name || (typeof p.brand_id === 'object' ? (p.brand_id as any)?.name : '');
+          if (typeof p.brand_id === 'number') {
+            const matchedBrand = brands.find((b) => b.id === p.brand_id);
+            if (matchedBrand && matchedBrand.name === selectedBrandFilter) return true;
+          }
+          return brandVal === selectedBrandFilter;
+        });
+      }
+      if (selectedCollectionFilter) {
+        list = list.filter((p) => (normalizeId(p.collection_id) || Number(p.collection_id)) === Number(selectedCollectionFilter));
+      }
+      if (selectedSeasonFilter) {
+        list = list.filter((p) => (normalizeId(p.season_id) || Number(p.season_id)) === Number(selectedSeasonFilter));
+      }
+      if (selectedColorFilter) {
+        const matchingProductIds = new Set<number>();
+        freshVars.forEach((v) => {
+          const cId = normalizeId(v.color_id);
+          if (cId === Number(selectedColorFilter)) {
+            const pId = normalizeId(v.product_id);
+            if (pId) matchingProductIds.add(pId);
+          }
+        });
+        list = list.filter((p) => matchingProductIds.has(normalizeId(p.id) || Number(p.id)));
+      }
+
+      const exportedCount = exportProductsToExcel(
+        list,
+        freshVars,
+        categories,
+        brands,
+        colors,
+        sizes,
+        undefined,
+        { collections, seasons }
+      );
+
+      if (exportedCount === 0) {
+        setExcelFeedback({
+          type: 'warning',
+          message: 'هیچ محصولی مطابق فیلترهای فعلی برای خروجی اکسل یافت نشد.',
+        });
+      } else {
+        setExcelFeedback({
+          type: 'success',
+          message: `خروجی اکسل با موفقیت تهیه شد (${isPersian ? toPersianDigits(list.length) : list.length} محصول و ${isPersian ? toPersianDigits(exportedCount) : exportedCount} سطر تنوع).`,
+        });
+      }
+    } catch (err: any) {
+      setExcelFeedback({
+        type: 'error',
+        message: `خطا در تهیه خروجی اکسل: ${err?.message || err}`,
+      });
+    } finally {
+      setIsExportingExcel(false);
+    }
   };
 
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setIsImportingExcel(true);
+    setExcelFeedback(null);
     try {
       const buffer = await file.arrayBuffer();
       const res = parseProductsFromExcel(buffer);
-      if (!res.success) {
-        alert(res.errors.join('\n') || 'خطا در خواندن فایل اکسل');
+      if (!res.success || res.items.length === 0) {
+        setExcelFeedback({
+          type: 'error',
+          message: 'خطا در خواندن فایل اکسل محصولات',
+          details: res.errors.length > 0 ? res.errors.slice(0, 10) : ['هیچ ردیف معتبری یافت نشد.'],
+        });
         return;
       }
 
-      alert(`فایل اکسل با موفقیت بررسی شد. ${res.importedCount} ردیف کالا و تنوع شناسایی گردید.`);
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id || 1;
+
+      // Load fresh catalogs and attributes for accurate deduplication
+      const [
+        existingProducts,
+        existingVariants,
+        existingCats,
+        existingBrands,
+        existingCols,
+        existingSeasons,
+        existingColors,
+        existingSizeGroups,
+        existingSizes,
+      ] = await Promise.all([
+        adapter.getProducts({ organization_id: orgId }),
+        adapter.getVariants({ organization_id: orgId }),
+        adapter.getCategories({ organization_id: orgId }),
+        adapter.getBrands({ organization_id: orgId }),
+        adapter.getCollections({ organization_id: orgId }),
+        adapter.getSeasons({ organization_id: orgId }),
+        adapter.getColors({ organization_id: orgId }),
+        adapter.getSizeGroups({ organization_id: orgId }),
+        adapter.getSizes({ organization_id: orgId }),
+      ]);
+
+      const catByName = new Map(existingCats.map((c) => [normalizeSearchText(c.name), c]));
+      const brandByName = new Map(existingBrands.map((b) => [normalizeSearchText(b.name), b]));
+      const colByName = new Map(existingCols.map((c) => [normalizeSearchText(c.name), c]));
+      const seasonByName = new Map(existingSeasons.map((s) => [normalizeSearchText(s.name), s]));
+      const colorByName = new Map(existingColors.map((c) => [normalizeSearchText(c.name), c]));
+      const sizeByName = new Map(existingSizes.map((s) => [normalizeSearchText(s.name), s]));
+
+      const prodByCode = new Map<string, Product>();
+      const prodByTitle = new Map<string, Product>();
+      existingProducts.forEach((p) => {
+        if ((p as any).code) prodByCode.set(normalizeSearchText((p as any).code), p);
+        if (p.slug) prodByCode.set(normalizeSearchText(p.slug), p);
+        if (p.title) prodByTitle.set(normalizeSearchText(p.title), p);
+      });
+
+      const varBySku = new Map<string, ProductVariant>();
+      const varByBarcode = new Map<string, ProductVariant>();
+      const varByComposite = new Map<string, ProductVariant>();
+      existingVariants.forEach((v) => {
+        if (v.sku) varBySku.set(normalizeSearchText(v.sku), v);
+        if (v.barcode) varByBarcode.set(normalizeSearchText(v.barcode), v);
+        const pId = normalizeId(v.product_id) || Number(v.product_id);
+        const cId = normalizeId(v.color_id) || 0;
+        const sId = normalizeId(v.size_id) || 0;
+        varByComposite.set(`${pId}_${cId}_${sId}`, v);
+      });
+
+      let defaultSizeGroupId = existingSizeGroups[0]?.id;
+      const getDefaultSizeGroupId = async () => {
+        if (defaultSizeGroupId) return defaultSizeGroupId;
+        const createdGroup = await adapter.saveSizeGroup({
+          organization_id: orgId,
+          name: 'سایزهای عمومی',
+          category: 'apparel',
+          status: 'active',
+        });
+        defaultSizeGroupId = createdGroup.id;
+        return defaultSizeGroupId;
+      };
+
+      let createdProducts = 0;
+      let updatedProducts = 0;
+      let createdVariants = 0;
+      let updatedVariants = 0;
+      const importErrors: string[] = [...res.errors];
+
+      for (const row of res.items) {
+        try {
+          // 1. Category
+          let categoryId: number | undefined;
+          if (row.categoryName) {
+            const key = normalizeSearchText(row.categoryName);
+            let cat = catByName.get(key);
+            if (!cat) {
+              cat = await adapter.saveCategory({
+                organization_id: orgId,
+                name: row.categoryName,
+                slug: `cat-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                status: 'active',
+              });
+              catByName.set(key, cat);
+            }
+            categoryId = cat.id;
+          }
+
+          // 2. Brand
+          let brandId: number | undefined;
+          if (row.brandName) {
+            const key = normalizeSearchText(row.brandName);
+            let br = brandByName.get(key);
+            if (!br) {
+              br = await adapter.saveBrand({
+                organization_id: orgId,
+                name: row.brandName,
+                code: `BR-${Date.now().toString().slice(-4)}`,
+                status: 'active',
+              });
+              brandByName.set(key, br);
+            }
+            brandId = br.id;
+          }
+
+          // 3. Collection
+          let collectionId: number | undefined;
+          if (row.collectionName) {
+            const key = normalizeSearchText(row.collectionName);
+            let col = colByName.get(key);
+            if (!col) {
+              col = await adapter.saveCollection({
+                organization_id: orgId,
+                name: row.collectionName,
+                slug: `col-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                status: 'active',
+              });
+              colByName.set(key, col);
+            }
+            collectionId = col.id;
+          }
+
+          // 4. Season
+          let seasonId: number | undefined;
+          if (row.seasonName) {
+            const key = normalizeSearchText(row.seasonName);
+            let sea = seasonByName.get(key);
+            if (!sea) {
+              sea = await adapter.saveSeason({
+                organization_id: orgId,
+                name: row.seasonName,
+                code: row.seasonName.slice(0, 16),
+                status: 'active',
+              });
+              seasonByName.set(key, sea);
+            }
+            seasonId = sea.id;
+          }
+
+          // 5. Find or Create Product
+          const codeKey = row.productCode ? normalizeSearchText(row.productCode) : '';
+          const titleKey = normalizeSearchText(row.title);
+          let product = (codeKey && prodByCode.get(codeKey)) || prodByTitle.get(titleKey);
+
+          if (product) {
+            const savedProd = await adapter.saveProduct({
+              id: product.id,
+              organization_id: orgId,
+              title: row.title,
+              ...(row.productCode ? { slug: row.productCode } : {}),
+              ...(categoryId ? { category_id: categoryId } : {}),
+              ...(brandId ? { brand_id: brandId } : {}),
+              ...(collectionId ? { collection_id: collectionId } : {}),
+              ...(seasonId ? { season_id: seasonId } : {}),
+              ...(row.material ? { tags: row.material } : {}),
+              status: row.productStatus,
+            });
+            product = savedProd;
+            updatedProducts++;
+          } else {
+            const created = await adapter.saveProduct({
+              organization_id: orgId,
+              title: row.title,
+              slug: row.productCode || `prod-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              category_id: categoryId,
+              brand_id: brandId,
+              collection_id: collectionId,
+              season_id: seasonId,
+              tags: row.material || undefined,
+              status: row.productStatus,
+            });
+            product = created;
+            createdProducts++;
+          }
+          if (codeKey) prodByCode.set(codeKey, product);
+          prodByTitle.set(titleKey, product);
+
+          // 6. Variant (if row contains variant attributes/SKU/price)
+          const hasVariantInfo = Boolean(
+            row.sku ||
+              row.barcode ||
+              row.colorName ||
+              row.sizeName ||
+              row.price > 0 ||
+              row.cost > 0 ||
+              row.stockQuantity !== undefined
+          );
+
+          if (hasVariantInfo && product.id) {
+            let colorId: number | undefined;
+            if (row.colorName) {
+              const key = normalizeSearchText(row.colorName);
+              let colObj = colorByName.get(key);
+              if (!colObj) {
+                colObj = await adapter.saveColor({
+                  organization_id: orgId,
+                  name: row.colorName,
+                  hex: row.colorHex || '#71717a',
+                  code: row.colorHex || undefined,
+                  status: 'active',
+                });
+                colorByName.set(key, colObj);
+              }
+              colorId = colObj.id;
+            }
+
+            let sizeId: number | undefined;
+            if (row.sizeName) {
+              const key = normalizeSearchText(row.sizeName);
+              let szObj = sizeByName.get(key);
+              if (!szObj) {
+                const sgId = await getDefaultSizeGroupId();
+                szObj = await adapter.saveSize({
+                  organization_id: orgId,
+                  size_group_id: sgId,
+                  name: row.sizeName,
+                  code: row.sizeName.slice(0, 10),
+                  status: 'active',
+                });
+                sizeByName.set(key, szObj);
+              }
+              sizeId = szObj.id;
+            }
+
+            const skuKey = row.sku ? normalizeSearchText(row.sku) : '';
+            const barcodeKey = row.barcode ? normalizeSearchText(row.barcode) : '';
+            const compKey = `${product.id}_${colorId || 0}_${sizeId || 0}`;
+
+            const existingVar =
+              (skuKey && varBySku.get(skuKey)) ||
+              (barcodeKey && varByBarcode.get(barcodeKey)) ||
+              varByComposite.get(compKey);
+
+            const savedVar = await adapter.saveVariant({
+              id: existingVar?.id,
+              organization_id: orgId,
+              product_id: product.id,
+              color_id: colorId ?? (existingVar ? normalizeId(existingVar.color_id) : undefined),
+              size_id: sizeId ?? (existingVar ? normalizeId(existingVar.size_id) : undefined),
+              sku: row.sku || existingVar?.sku || `SKU-${product.id}-${Date.now().toString().slice(-4)}`,
+              barcode: row.barcode || existingVar?.barcode || undefined,
+              price: row.price,
+              cost: row.cost,
+              ...(row.stockQuantity !== undefined ? { stock_quantity: row.stockQuantity } : {}),
+              status: row.variantStatus,
+            });
+
+            if (existingVar) {
+              updatedVariants++;
+            } else {
+              createdVariants++;
+            }
+            if (savedVar.sku) varBySku.set(normalizeSearchText(savedVar.sku), savedVar);
+            if (savedVar.barcode) varByBarcode.set(normalizeSearchText(savedVar.barcode), savedVar);
+            varByComposite.set(`${product.id}_${colorId || 0}_${sizeId || 0}`, savedVar);
+          }
+        } catch (rowErr: any) {
+          importErrors.push(`سطر ${row.rowNumber} (${row.title}): ${rowErr?.message || rowErr}`);
+        }
+      }
+
+      await Promise.all([loadAttributes(), loadProducts()]);
+
+      const formatCount = (n: number) => (isPersian ? toPersianDigits(n) : String(n));
+      setExcelFeedback({
+        type: importErrors.length > 0 && createdProducts + createdVariants + updatedVariants === 0 ? 'error' : importErrors.length > 0 ? 'warning' : 'success',
+        message: `ورود اطلاعات از اکسل انجام شد: ${formatCount(createdProducts)} محصول جدید، ${formatCount(updatedProducts)} محصول به‌روزرسانی، ${formatCount(createdVariants)} تنوع جدید و ${formatCount(updatedVariants)} تنوع به‌روزرسانی گردید.`,
+        details: importErrors.length > 0 ? importErrors.slice(0, 10) : undefined,
+      });
     } catch (err: any) {
-      alert(`خطا در پردازش فایل اکسل: ${err?.message || err}`);
+      setExcelFeedback({
+        type: 'error',
+        message: `خطا در پردازش فایل اکسل: ${err?.message || err}`,
+      });
     } finally {
+      setIsImportingExcel(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -507,6 +920,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
             <Button
               variant="outline"
               size="sm"
+              isLoading={isImportingExcel}
               onClick={() => fileInputRef.current?.click()}
               icon={<Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 dark:text-neutral-400" />}
             >
@@ -516,6 +930,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
             <Button
               variant="outline"
               size="sm"
+              isLoading={isExportingExcel}
               onClick={handleExportExcel}
               icon={<FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400" />}
             >
@@ -531,29 +946,70 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
         }
       />
 
+      {excelFeedback && (
+        <div
+          className={`flex items-start gap-3 p-4 rounded-xl border text-xs font-medium ${
+            excelFeedback.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200'
+              : excelFeedback.type === 'warning'
+              ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200'
+              : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/60 text-red-900 dark:text-red-200'
+          }`}
+        >
+          {excelFeedback.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+          ) : (
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          )}
+          <div className="flex-1 space-y-1">
+            <p className="font-bold">{excelFeedback.message}</p>
+            {excelFeedback.details && excelFeedback.details.length > 0 && (
+              <ul className="list-disc list-inside text-[11px] opacity-90 space-y-0.5">
+                {excelFeedback.details.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setExcelFeedback(null)}
+            className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 px-1"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
         {/* Search & Filters Bar */}
         <div className="space-y-3 mb-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5">
             {/* Search Input */}
-            <div className="sm:col-span-2 lg:col-span-2 relative">
-              <Input
-                placeholder={t('products.searchPlaceholder', 'جستجو در نام، کد مدل، بارکد، رنگ، سایز، برند و...')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                icon={<Search className="w-4 h-4" />}
-                className={search ? 'pe-8' : ''}
+            <div className="sm:col-span-2 lg:col-span-2 flex items-center gap-1.5">
+              <div className="relative flex-1">
+                <Input
+                  placeholder={t('products.searchPlaceholder', 'جستجو در نام، کد مدل، بارکد، رنگ، سایز، برند و...')}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  icon={<Search className="w-4 h-4" />}
+                  className={search ? 'pe-8' : ''}
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="absolute inset-y-0 end-0 pe-2.5 flex items-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
+                    title={t('common.clear') || 'پاک کردن'}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <WebcamScanButton
+                size="md"
+                onClick={() => setIsWebcamScannerOpen(true)}
               />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  className="absolute inset-y-0 end-0 pe-2.5 flex items-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
-                  title={t('common.clear') || 'پاک کردن'}
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
             </div>
 
             {/* Category Filter */}
@@ -840,6 +1296,13 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ initialCreateMode = 
         colors={colors}
         sizes={sizes}
         onEditProduct={(p) => handleEditProduct(p)}
+      />
+
+      {/* Webcam Barcode Scanner Modal */}
+      <WebcamBarcodeScannerModal
+        isOpen={isWebcamScannerOpen}
+        onClose={() => setIsWebcamScannerOpen(false)}
+        onScan={(code) => setSearch(code)}
       />
     </div>
   );

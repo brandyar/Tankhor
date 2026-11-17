@@ -40,10 +40,14 @@ export const LocalBackupRestoreCard: React.FC = () => {
   const isPersian = locale === 'fa';
   const formatNum = (val: number | string) => (isPersian ? toPersianDigits(val) : String(val));
 
-  // Local storage statistics
+  // Storage statistics (supports Browser, Desktop SQLite, and Cloud modes)
   const [stats, setStats] = useState<Record<string, number>>({});
+  const getLastBackupKey = (orgId?: number) => `tankhor_last_backup_${orgId || 'default'}`;
   const [lastBackupTime, setLastBackupTime] = useState<string | null>(() => {
-    return localStorage.getItem('tankhor_last_backup_at');
+    return (
+      localStorage.getItem(getLastBackupKey(activeOrganization?.id)) ||
+      localStorage.getItem('tankhor_last_backup_at')
+    );
   });
 
   // Modal & Notification states
@@ -64,13 +68,23 @@ export const LocalBackupRestoreCard: React.FC = () => {
   // File input ref
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadStats = () => {
-    const s = BackupManager.getLocalStats(activeOrganization?.id);
-    setStats(s);
+  const loadStats = async () => {
+    try {
+      const s = await BackupManager.getBackupStatsAsync(activeOrganization?.id);
+      setStats(s);
+    } catch {
+      const s = BackupManager.getLocalStats(activeOrganization?.id);
+      setStats(s);
+    }
   };
 
   useEffect(() => {
+    const storedTime =
+      localStorage.getItem(getLastBackupKey(activeOrganization?.id)) ||
+      localStorage.getItem('tankhor_last_backup_at');
+    setLastBackupTime(storedTime);
     loadStats();
+
     const handleDataRestored = () => {
       loadStats();
     };
@@ -81,16 +95,18 @@ export const LocalBackupRestoreCard: React.FC = () => {
   }, [activeOrganization?.id]);
 
   // Handle Full JSON Backup Export
-  const handleExportBackup = () => {
+  const handleExportBackup = async () => {
     setIsExporting(true);
+    setFeedback(null);
     try {
-      BackupManager.exportBackupFile(activeOrganization);
+      const exportRes = await BackupManager.exportBackupFileAsync(activeOrganization);
       const now = new Date().toISOString();
-      localStorage.setItem(`tankhor_last_backup_${activeOrganization?.id || 'default'}`, now);
+      localStorage.setItem(getLastBackupKey(activeOrganization?.id), now);
+      localStorage.setItem('tankhor_last_backup_at', now);
       setLastBackupTime(now);
       setFeedback({
         type: 'success',
-        message: `فایل پشتیبان سازمان "${activeOrganization?.name || 'فعلی'}" با موفقیت دانلود شد. این فایل را در مکانی امن نگهداری کنید.`,
+        message: `فایل پشتیبان سازمان "${activeOrganization?.name || 'فعلی'}" با ${formatNum(exportRes.totalRecords)} رکورد با موفقیت دانلود شد. این فایل را در مکانی امن نگهداری کنید.`,
       });
     } catch (err: any) {
       setFeedback({
@@ -103,12 +119,20 @@ export const LocalBackupRestoreCard: React.FC = () => {
   };
 
   // Handle CSV Spreadsheet Exports
-  const handleExportCsv = (collection: BackupCollectionKey, label: string) => {
+  const handleExportCsv = async (collection: BackupCollectionKey, label: string) => {
+    setFeedback(null);
     try {
-      BackupManager.exportToCsv(collection, activeOrganization?.id);
+      const res = await BackupManager.exportToCsvAsync(collection, activeOrganization?.id);
+      if (!res.success || res.count === 0) {
+        setFeedback({
+          type: 'info',
+          message: `هیچ رکوردی در بخش "${label}" برای خروجی اکسل یافت نشد.`,
+        });
+        return;
+      }
       setFeedback({
         type: 'success',
-        message: `خروجی اکسل ${label} با موفقیت دانلود شد.`,
+        message: `خروجی اکسل ${label} (${formatNum(res.count)} ردیف) با موفقیت دانلود شد.`,
       });
     } catch (err: any) {
       setFeedback({
@@ -147,15 +171,19 @@ export const LocalBackupRestoreCard: React.FC = () => {
   const handleExecuteRestore = async () => {
     if (!inspectedData || !inspectedData.data) return;
     setIsRestoring(true);
+    setFeedback(null);
     try {
       const res = await BackupManager.restoreBackup(inspectedData.data, restoreMode, activeOrganization?.id);
       if (res.success) {
         setInspectionModalOpen(false);
         setInspectedData(null);
         await refreshOrganizations();
+        await loadStats();
         setFeedback({
-          type: 'success',
-          message: `اطلاعات با موفقیت بازیابی شد (${toPersianDigits(res.restoredCount)} رکورد بازگردانی شد).`,
+          type: res.warning ? 'info' : 'success',
+          message:
+            res.warning ||
+            `اطلاعات با موفقیت بازیابی شد (${formatNum(res.restoredCount)} رکورد بازگردانی شد).`,
         });
       } else {
         setFeedback({
@@ -232,17 +260,25 @@ export const LocalBackupRestoreCard: React.FC = () => {
 
   // Handle Clear Local Data
   const handleClearData = async () => {
+    setFeedback(null);
     try {
       const res = await BackupManager.clearLocalData(true, activeOrganization?.id);
+      setClearConfirmModalOpen(false);
       if (res.success) {
-        setClearConfirmModalOpen(false);
         await refreshOrganizations();
+        await loadStats();
         setFeedback({
           type: 'success',
           message: res.message,
         });
+      } else {
+        setFeedback({
+          type: 'error',
+          message: res.message,
+        });
       }
     } catch (err: any) {
+      setClearConfirmModalOpen(false);
       setFeedback({
         type: 'error',
         message: `خطا در پاکسازی: ${err.message}`,

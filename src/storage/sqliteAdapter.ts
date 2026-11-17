@@ -980,5 +980,49 @@ export class SqliteStorageAdapter implements IStorageProvider {
       lowStockCount,
     };
   }
+
+  async getPosInitData(organizationId: number): Promise<any> {
+    const orgId = Number(organizationId);
+    const [customers, warehouses, categories, variants, products, inventoryItems, accounts] = await Promise.all([
+      this.getCustomers({ organization_id: orgId }),
+      this.getWarehouses({ organization_id: orgId }),
+      this.getCategories({ organization_id: orgId }),
+      this.getVariants({ organization_id: orgId }),
+      this.getProducts({ organization_id: orgId }),
+      this.getInventoryItems({ organization_id: orgId }),
+      this.getFinancialAccounts({ organization_id: orgId }),
+    ]);
+
+    return {
+      customers,
+      warehouses,
+      categories,
+      variants,
+      products,
+      inventoryItems,
+      financialAccounts: accounts,
+    };
+  }
+
+  async getBarcodeInitData(organizationId: number): Promise<any> {
+    const orgId = Number(organizationId);
+    const [variants, products, colors, sizes, brands, categories] = await Promise.all([
+      this.getVariants({ organization_id: orgId }),
+      this.getProducts({ organization_id: orgId }),
+      this.getColors({ organization_id: orgId }),
+      this.getSizes({ organization_id: orgId }),
+      this.getBrands({ organization_id: orgId }),
+      this.getCategories({ organization_id: orgId }),
+    ]);
+
+    return {
+      variants,
+      products,
+      colors,
+      sizes,
+      brands,
+      categories,
+    };
+  }
 }
 

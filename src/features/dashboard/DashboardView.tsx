@@ -26,6 +26,7 @@ import { DashboardMetricsRibbon } from './DashboardMetricsRibbon';
 import { DashboardAnalyticsCharts } from './DashboardAnalyticsCharts';
 import { DashboardStockAlerts } from './DashboardStockAlerts';
 import { useOnboardingTour } from '../onboarding';
+import { useSwrRefresh } from '../../hooks/useSwrRefresh';
 
 interface DashboardViewProps {
   onNavigate: (route: string) => void;
@@ -148,6 +149,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       window.removeEventListener('tankhor_data_restored', handleDataRestored);
     };
   }, [activeOrganization?.id]);
+
+  useSwrRefresh(
+    ['dashboard_summary', 'products', 'product_variants', 'inventory_movements', 'orders', 'categories', 'warehouses'],
+    () => {
+      if (activeOrganization?.id) {
+        loadDashboardData();
+      }
+    }
+  );
 
   // Overall Aggregations - Unified with InventoryView
   const totalStockCount = summary?.totalStockCount ?? variants.reduce((acc, v) => acc + (v.stock_quantity || 0), 0);
@@ -452,7 +462,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onNavigate('settings/org')}
+              onClick={() => onNavigate('settings/sync')}
               icon={<HardDriveUpload className="w-4 h-4 text-blue-600" />}
               className="text-xs font-bold border-neutral-300 hover:bg-white"
             >

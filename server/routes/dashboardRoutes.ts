@@ -1,12 +1,22 @@
 import { Router, Response } from 'express';
 import { DirectusAdminClient } from '../directusAdmin';
 import { requireAuth, AuthenticatedRequest } from '../auth';
+import { registerCacheInvalidator } from '../serverCache';
 
 export const dashboardRouter = Router();
 
-// In-memory cache for dashboard summary (TTL: 15 seconds) to make subsequent loads instant (0-5ms)
+// In-memory cache for dashboard summary (TTL: 30 seconds, invalidated immediately on mutations)
 const dashboardSummaryCache = new Map<number, { data: any; expiresAt: number }>();
 const inventorySummaryCache = new Map<string, { data: any; expiresAt: number }>();
+
+registerCacheInvalidator((orgId) => {
+  dashboardSummaryCache.delete(orgId);
+  for (const key of inventorySummaryCache.keys()) {
+    if (key.startsWith(`${orgId}_`)) {
+      inventorySummaryCache.delete(key);
+    }
+  }
+});
 
 /**
  * High-Speed Aggregated Dashboard Summary Route

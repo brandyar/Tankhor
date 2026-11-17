@@ -32,6 +32,7 @@ import { OrderPaymentSection, POSPaymentType } from './components/OrderPaymentSe
 import { OrderReceiptModal, SavedOrderData } from './components/OrderReceiptModal';
 import { QuickCustomerModal } from './components/QuickCustomerModal';
 import { FullscreenPosTerminal } from './components/FullscreenPosTerminal';
+import { WebcamBarcodeScannerModal, WebcamScanResult } from '../../components/modals/WebcamBarcodeScannerModal';
 
 export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onOrderCreated }) => {
   const { t, locale } = useTranslation();
@@ -218,8 +219,11 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
 
   // Cart & Scanner
   const [cart, setCart] = useState<CartLine[]>([]);
+  const cartRef = useRef<CartLine[]>([]);
+  cartRef.current = cart;
   const [productSearch, setProductSearch] = useState('');
   const [barcodeQuery, setBarcodeQuery] = useState('');
+  const [isWebcamScannerOpen, setIsWebcamScannerOpen] = useState(false);
   const [scannerToast, setScannerToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Financial Calculations
@@ -254,18 +258,44 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
   };
 
   const loadData = async () => {
-    setIsLoading(true);
+    const orgId = activeOrganization?.id;
+    const cacheKey = `tankhor_pos_data_${orgId || 'default'}`;
+
+    // 1. Instant Cache Hydration (SWR)
+    try {
+      const cachedRaw = sessionStorage.getItem(cacheKey);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        if (cached && Array.isArray(cached.products) && cached.products.length > 0) {
+          setCustomers(cached.customers || []);
+          setWarehouses(cached.warehouses || []);
+          setCategories(cached.categories || []);
+          setVariants(cached.variants || []);
+          setProducts(cached.products || []);
+          setInventoryItems(cached.inventoryItems || []);
+          if (cached.warehouses && cached.warehouses.length > 0 && !selectedWarehouseId) {
+            setSelectedWarehouseId(cached.warehouses[0].id);
+          }
+          setIsLoading(false);
+        }
+      }
+    } catch {}
+
+    // 2. Fetch fresh data in background using optimized composite endpoint
     try {
       const adapter = storageManager.getAdapter();
-      const orgId = activeOrganization?.id;
-      const [custList, whList, catList, varList, prodList, invList] = await Promise.all([
-        adapter.getCustomers({ organization_id: orgId }),
-        adapter.getWarehouses({ organization_id: orgId }),
-        adapter.getCategories({ organization_id: orgId }),
-        adapter.getVariants({ organization_id: orgId }),
-        adapter.getProducts({ organization_id: orgId }),
-        adapter.getInventoryItems({ organization_id: orgId }),
-      ]);
+      let posData: any = null;
+
+      if (adapter.getPosInitData && orgId) {
+        posData = await adapter.getPosInitData(Number(orgId));
+      }
+
+      const custList = posData?.customers || (await adapter.getCustomers({ organization_id: orgId }));
+      const whList = posData?.warehouses || (await adapter.getWarehouses({ organization_id: orgId }));
+      const catList = posData?.categories || (await adapter.getCategories({ organization_id: orgId }));
+      const varList = posData?.variants || (await adapter.getVariants({ organization_id: orgId }));
+      const prodList = posData?.products || (await adapter.getProducts({ organization_id: orgId }));
+      const invList = posData?.inventoryItems || (await adapter.getInventoryItems({ organization_id: orgId }));
 
       setCustomers(custList);
       setWarehouses(whList);
@@ -274,16 +304,31 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
       setProducts(prodList);
       setInventoryItems(invList || []);
 
+      // Persist to session storage for instant subsequent navigation
+      try {
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            customers: custList,
+            warehouses: whList,
+            categories: catList,
+            variants: varList,
+            products: prodList,
+            inventoryItems: invList,
+          })
+        );
+      } catch {}
+
       let activeWhId = selectedWarehouseId;
       if (currentUserMember?.warehouse_id) {
         const rawAssignedWh = typeof currentUserMember.warehouse_id === 'object' && currentUserMember.warehouse_id
           ? (currentUserMember.warehouse_id as any).id
           : currentUserMember.warehouse_id;
-        if (whList.some((w) => w.id === Number(rawAssignedWh))) {
+        if (whList.some((w: any) => w.id === Number(rawAssignedWh))) {
           activeWhId = Number(rawAssignedWh);
         }
       } else if (whList.length > 0) {
-        activeWhId = activeWhId && whList.some((w) => w.id === activeWhId) ? activeWhId : whList[0].id;
+        activeWhId = activeWhId && whList.some((w: any) => w.id === activeWhId) ? activeWhId : whList[0].id;
       }
       setSelectedWarehouseId(activeWhId);
 
@@ -294,8 +339,17 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         setActiveShift(openShift || null);
       }
 
-      // Load Financial Accounts for Settlement
-      await loadFinancialAccounts(activeWhId);
+      // Fast-path Financial Accounts if delivered in composite response
+      if (posData?.financialAccounts && Array.isArray(posData.financialAccounts) && posData.financialAccounts.length > 0) {
+        const activeAccs = posData.financialAccounts.filter((a: any) => a.status !== 'archived' && a.status !== 'inactive');
+        setFinancialAccounts(activeAccs);
+        setSelectedAccountId((prev) => {
+          if (prev && activeAccs.some((a: any) => a.id === prev)) return prev;
+          return resolveDefaultAccount(activeAccs, paymentType, activeWhId);
+        });
+      } else {
+        await loadFinancialAccounts(activeWhId);
+      }
     } catch (err) {
       console.error('[CreateOrderView] Error loading order form data:', err);
     } finally {
@@ -374,31 +428,38 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
     }, 3000);
   };
 
-  // Add Variant to Cart with warehouse stock validation
-  const handleAddToCart = (variant: ProductVariant) => {
-    const prod = products.find((p) => p.id === (variant.product_id && typeof variant.product_id === 'object' ? (variant.product_id as any).id : variant.product_id));
+  // Add Variant to Cart with warehouse stock validation (uses cartRef for safe rapid/continuous scanning)
+  const addVariantToCartSafe = (variant: ProductVariant): { ok: boolean; message?: string } => {
+    const prod = products.find(
+      (p) => p.id === (variant.product_id && typeof variant.product_id === 'object' ? (variant.product_id as any).id : variant.product_id)
+    );
     const title = prod ? prod.title : t('orders.untitledProduct');
     const price = variant.price || 0;
 
     const available = getVariantAvailableStock(variant.id, selectedWarehouseId);
     if (available <= 0) {
-      showToast('error', t('orders.outOfStockInSelectedWarehouse'));
-      return;
+      const msg = t('orders.outOfStockInSelectedWarehouse');
+      showToast('error', msg);
+      return { ok: false, message: msg };
     }
 
-    const existingIdx = cart.findIndex((c) => c.variant.id === variant.id);
+    const currentCart = cartRef.current;
+    const existingIdx = currentCart.findIndex((c) => c.variant.id === variant.id);
     if (existingIdx !== -1) {
-      const currentQty = cart[existingIdx].quantity;
+      const currentQty = currentCart[existingIdx].quantity;
       if (currentQty + 1 > available) {
-        showToast('error', t('orders.maxStockReached', { max: available }));
-        return;
+        const msg = t('orders.maxStockReached', { max: available });
+        showToast('error', msg);
+        return { ok: false, message: msg };
       }
-      const updated = [...cart];
-      updated[existingIdx].quantity += 1;
-      setCart(updated);
+      const nextCart = currentCart.map((c, idx) =>
+        idx === existingIdx ? { ...c, quantity: c.quantity + 1 } : c
+      );
+      cartRef.current = nextCart;
+      setCart(nextCart);
     } else {
-      setCart([
-        ...cart,
+      const nextCart = [
+        ...currentCart,
         {
           variant,
           productTitle: title,
@@ -406,39 +467,61 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
           unitPrice: price,
           discount: 0,
         },
-      ]);
+      ];
+      cartRef.current = nextCart;
+      setCart(nextCart);
     }
+    return { ok: true, message: t('orders.itemAddedToCart', { title }) };
   };
 
-  // Handle Unified Search / Barcode Scan Quick Add
-  const handleBarcodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!productSearch.trim()) return;
+  const handleAddToCart = (variant: ProductVariant) => {
+    addVariantToCartSafe(variant);
+  };
 
-    const query = productSearch.trim().toLowerCase();
+  // Process a scanned barcode string (from webcam or physical scanner)
+  const processScannedBarcode = (rawCode: string, allowSingleFilteredFallback = false): WebcamScanResult => {
+    const query = rawCode.trim().toLowerCase();
+    if (!query) {
+      return { success: false };
+    }
+
     let matched = variants.find((v) => {
-      const sku = (v.sku || '').toLowerCase();
-      const barcode = (v.barcode || '').toLowerCase();
+      const sku = (v.sku || '').trim().toLowerCase();
+      const barcode = (v.barcode || '').trim().toLowerCase();
       return sku === query || barcode === query;
     });
 
-    if (!matched && filteredVariants.length === 1) {
+    if (!matched && allowSingleFilteredFallback && filteredVariants.length === 1) {
       matched = filteredVariants[0];
     }
 
     if (matched) {
-      const available = getVariantAvailableStock(matched.id, selectedWarehouseId);
-      if (available <= 0) {
-        showToast('error', t('orders.outOfStockInSelectedWarehouse'));
-        return;
+      const res = addVariantToCartSafe(matched);
+      if (res.ok && res.message) {
+        showToast('success', res.message);
       }
-      handleAddToCart(matched);
-      const prod = products.find((p) => p.id === (matched.product_id && typeof matched.product_id === 'object' ? (matched.product_id as any).id : matched.product_id));
-      const title = prod ? prod.title : t('orders.untitledProduct');
-      showToast('success', t('orders.itemAddedToCart', { title }));
-      setProductSearch('');
-    } else {
-      showToast('error', t('orders.itemNotFoundWithBarcode', { barcode: productSearch }));
+      return { success: res.ok, message: res.message };
+    }
+
+    const notFoundMsg = t('orders.itemNotFoundWithBarcode', { barcode: rawCode.trim() });
+    showToast('error', notFoundMsg);
+    return { success: false, message: notFoundMsg };
+  };
+
+  // Handle Unified Search / Barcode Scan Quick Add (Standard & Fullscreen POS)
+  const handleBarcodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const activeRaw = barcodeQuery.trim() || productSearch.trim();
+    if (!activeRaw) return;
+
+    const usedBarcodeBox = Boolean(barcodeQuery.trim());
+    const result = processScannedBarcode(activeRaw, !usedBarcodeBox);
+    if (result.success) {
+      if (usedBarcodeBox) {
+        setBarcodeQuery('');
+      } else {
+        setProductSearch('');
+      }
     }
   };
 
@@ -876,6 +959,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
           }
           scannerToast={scannerToast}
           errorMsg={errorMsg}
+          onOpenWebcamScanner={() => setIsWebcamScannerOpen(true)}
         />
       )}
 
@@ -902,6 +986,7 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
           productSearch={productSearch}
           setProductSearch={setProductSearch}
           onBarcodeSubmit={handleBarcodeSubmit}
+          onOpenWebcamScanner={() => setIsWebcamScannerOpen(true)}
           categories={categories}
           selectedCategoryId={selectedCategoryId}
           setSelectedCategoryId={setSelectedCategoryId}
@@ -1158,6 +1243,15 @@ export const CreateOrderView: React.FC<{ onOrderCreated?: () => void }> = ({ onO
         isOpen={isShiftModalOpen}
         onClose={() => setIsShiftModalOpen(false)}
         onShiftChanged={(newShift) => setActiveShift(newShift)}
+      />
+
+      {/* Webcam Barcode Scanner Modal (Standard & Fullscreen POS) */}
+      <WebcamBarcodeScannerModal
+        isOpen={isWebcamScannerOpen}
+        onClose={() => setIsWebcamScannerOpen(false)}
+        onScan={(code) => processScannedBarcode(code, false)}
+        allowContinuous
+        defaultContinuous
       />
     </div>
   );

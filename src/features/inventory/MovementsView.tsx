@@ -11,6 +11,7 @@ import { DataTable, Column } from '../../components/ui/DataTable';
 import { Pagination } from '../../components/ui/Pagination';
 import { toPersianDigits, formatDate } from '../../utils/formatters';
 import { History, Search, ArrowUpRight, ArrowDownLeft, AlertCircle, RefreshCw, FileText, Warehouse as WarehouseIcon, Package } from 'lucide-react';
+import { useSwrRefresh } from '../../hooks/useSwrRefresh';
 
 export const MovementsView: React.FC = () => {
   const { t, locale } = useTranslation();
@@ -30,8 +31,8 @@ export const MovementsView: React.FC = () => {
 
   const isPersian = locale === 'fa';
 
-  const loadMovements = async () => {
-    setIsLoading(true);
+  const loadMovements = async (silent: boolean | unknown = false) => {
+    if (silent !== true) setIsLoading(true);
     try {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
@@ -88,6 +89,10 @@ export const MovementsView: React.FC = () => {
   useEffect(() => {
     loadMovements();
   }, [activeOrganization, selectedWarehouseFilter, selectedTypeFilter, search, currentPage, pageSize]);
+
+  useSwrRefresh(['inventory_movements', 'warehouses'], () => {
+    loadMovements(true);
+  });
 
   useEffect(() => {
     setCurrentPage(1);

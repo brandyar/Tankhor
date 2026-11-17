@@ -4,6 +4,8 @@ import { ProductImage } from './ProductImage';
 import { useTranslation } from '../../i18n';
 import { Search, Check, ChevronDown, X, Package } from 'lucide-react';
 import { toPersianDigits } from '../../utils/formatters';
+import { WebcamScanButton } from './WebcamScanButton';
+import { WebcamBarcodeScannerModal } from '../modals/WebcamBarcodeScannerModal';
 
 export interface SearchableVariantSelectProps {
   variants: ProductVariant[];
@@ -39,6 +41,7 @@ export const SearchableVariantSelect: React.FC<SearchableVariantSelectProps> = (
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // Selected variant resolution
   const selectedVariant = useMemo(() => {
@@ -218,6 +221,11 @@ export const SearchableVariantSelect: React.FC<SearchableVariantSelectProps> = (
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
+            <WebcamScanButton
+              size="xs"
+              disabled={disabled}
+              onClick={() => setIsScannerOpen(true)}
+            />
           </div>
 
           {/* Results List */}
@@ -326,6 +334,26 @@ export const SearchableVariantSelect: React.FC<SearchableVariantSelectProps> = (
       )}
 
       {error && <p className="text-xs text-rose-600 mt-1">{error}</p>}
+
+      <WebcamBarcodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={(code) => {
+          const clean = code.trim().toLowerCase();
+          const exact = variants.find(
+            (v) =>
+              (v.barcode || '').trim().toLowerCase() === clean ||
+              (v.sku || '').trim().toLowerCase() === clean
+          );
+          if (exact) {
+            onChange(exact.id);
+            setIsOpen(false);
+          } else {
+            setSearchTerm(code.trim());
+            setIsOpen(true);
+          }
+        }}
+      />
     </div>
   );
 };

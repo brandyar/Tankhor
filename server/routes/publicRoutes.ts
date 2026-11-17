@@ -19,6 +19,12 @@ publicRouter.get('/health', (req, res) => {
   });
 });
 
+// Lightweight connection warmup endpoint called when browser tab resumes from idle
+publicRouter.get('/warmup', async (_req, res) => {
+  const ok = await DirectusAdminClient.ping().catch(() => false);
+  res.json({ ok, timestamp: Date.now() });
+});
+
 // Public Project Settings (Desktop & Mobile Download Links from Directus project_settings collection)
 publicRouter.get('/project-settings', async (req, res) => {
   try {

@@ -1,9 +1,10 @@
-import React, { RefObject } from 'react';
+import React, { useState, useEffect, useMemo, RefObject } from 'react';
 import { useTranslation } from '../../../i18n';
 import { Product, ProductVariant, Category } from '../../../types';
 import { Button } from '../../../components/ui/Button';
+import { WebcamScanButton } from '../../../components/ui/WebcamScanButton';
 import { formatCurrency, toPersianDigits } from '../../../utils/formatters';
-import { Barcode, Search, Plus, X } from 'lucide-react';
+import { Barcode, Search, Plus, X, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface OrderQuickProductGridProps {
   barcodeInputRef: RefObject<HTMLInputElement>;
@@ -20,6 +21,7 @@ interface OrderQuickProductGridProps {
   cart: { variant: ProductVariant; quantity: number }[];
   onAddToCart: (variant: ProductVariant) => void;
   isLoading: boolean;
+  onOpenWebcamScanner?: () => void;
 }
 
 export const OrderQuickProductGrid: React.FC<OrderQuickProductGridProps> = ({
@@ -37,9 +39,25 @@ export const OrderQuickProductGrid: React.FC<OrderQuickProductGridProps> = ({
   cart,
   onAddToCart,
   isLoading,
+  onOpenWebcamScanner,
 }) => {
   const { t, locale } = useTranslation();
   const isPersian = locale === 'fa';
+
+  // Catalog Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+
+  // Reset to page 1 whenever search query or category filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [productSearch, selectedCategoryId]);
+
+  const totalPages = Math.ceil(filteredVariants.length / pageSize) || 1;
+  const paginatedVariants = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredVariants.slice(start, start + pageSize);
+  }, [filteredVariants, currentPage, pageSize]);
 
   return (
     <div className="w-full lg:col-span-7 space-y-3 sm:space-y-4 pb-24 lg:pb-0">
@@ -53,7 +71,7 @@ export const OrderQuickProductGrid: React.FC<OrderQuickProductGridProps> = ({
             value={productSearch}
             onChange={(e) => setProductSearch(e.target.value)}
             placeholder={t('orders.searchAndScanPlaceholder') || 'جستجوی کالا، اسکن بارکد یا کد SKU...'}
-            className="w-full ps-9 pe-24 sm:pe-28 py-2.5 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 focus:border-[#171717] dark:focus:border-neutral-400 focus:bg-white dark:focus:bg-[#13151a] rounded-xl text-xs text-[#171717] dark:text-neutral-100 placeholder:text-[#a1a1a1] dark:placeholder:text-neutral-500 focus:outline-none transition-all shadow-inner"
+            className="w-full ps-9 pe-32 sm:pe-36 py-2.5 bg-[#fafafa] dark:bg-[#181a20] border border-[#ebebeb] dark:border-neutral-700 focus:border-[#171717] dark:focus:border-neutral-400 focus:bg-white dark:focus:bg-[#13151a] rounded-xl text-xs text-[#171717] dark:text-neutral-100 placeholder:text-[#a1a1a1] dark:placeholder:text-neutral-500 focus:outline-none transition-all shadow-inner"
           />
           <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-neutral-400">
             <Search className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -69,6 +87,9 @@ export const OrderQuickProductGrid: React.FC<OrderQuickProductGridProps> = ({
               >
                 <X className="w-3.5 h-3.5" />
               </button>
+            )}
+            {onOpenWebcamScanner && (
+              <WebcamScanButton onClick={onOpenWebcamScanner} size="sm" />
             )}
             <Button
               type="submit"
@@ -120,13 +141,29 @@ export const OrderQuickProductGrid: React.FC<OrderQuickProductGridProps> = ({
       {/* Catalog Items Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 max-h-[60vh] sm:max-h-[500px] lg:max-h-[620px] overflow-y-auto custom-scrollbar p-0.5">
         {isLoading ? (
-          <div className="col-span-3 p-12 text-center text-[#888888] dark:text-neutral-400 text-xs">{t('orders.loadingCatalog')}</div>
+          // Elegant animated skeleton cards
+          Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={`skel_ord_${i}`}
+              className="p-3 bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-800 rounded-xl animate-pulse space-y-3"
+            >
+              <div className="h-16 bg-neutral-100 dark:bg-neutral-800/80 rounded-lg w-full" />
+              <div className="space-y-1.5">
+                <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-4/5" />
+                <div className="h-2.5 bg-neutral-100 dark:bg-neutral-800/60 rounded w-1/2" />
+              </div>
+              <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
+                <div className="h-3.5 bg-neutral-200 dark:bg-neutral-800 rounded w-16" />
+                <div className="w-6 h-6 bg-neutral-100 dark:bg-neutral-800 rounded-lg" />
+              </div>
+            </div>
+          ))
         ) : filteredVariants.length === 0 ? (
-          <div className="col-span-3 p-12 text-center text-[#888888] dark:text-neutral-400 text-xs bg-white dark:bg-[#13151a] rounded-xl border border-[#ebebeb] dark:border-neutral-800">
+          <div className="col-span-2 sm:col-span-3 p-12 text-center text-[#888888] dark:text-neutral-400 text-xs bg-white dark:bg-[#13151a] rounded-xl border border-[#ebebeb] dark:border-neutral-800">
             {t('orders.noProductsFound')}
           </div>
         ) : (
-          filteredVariants.map((v, vIdx) => {
+          paginatedVariants.map((v, vIdx) => {
             const prod = products.find((p) => p.id === (v.product_id && typeof v.product_id === 'object' ? (v.product_id as any).id : v.product_id));
             const stock = getVariantAvailableStock(v.id, selectedWarehouseId);
             const inCart = cart.find((c) => c.variant.id === v.id);
@@ -216,6 +253,62 @@ export const OrderQuickProductGrid: React.FC<OrderQuickProductGridProps> = ({
           })
         )}
       </div>
+
+      {/* Grid Pagination Controls */}
+      {!isLoading && filteredVariants.length > pageSize && (
+        <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-800 rounded-xl text-xs">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-50 dark:hover:bg-neutral-800"
+              title={isPersian ? 'صفحه قبلی' : 'Previous Page'}
+            >
+              {isPersian ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
+
+            <span className="text-neutral-600 dark:text-neutral-400 font-mono text-[11px]">
+              {isPersian ? (
+                <>صفحه {toPersianDigits(currentPage)} از {toPersianDigits(totalPages)}</>
+              ) : (
+                <>Page {currentPage} of {totalPages}</>
+              )}
+            </span>
+
+            <button
+              type="button"
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-50 dark:hover:bg-neutral-800"
+              title={isPersian ? 'صفحه بعدی' : 'Next Page'}
+            >
+              {isPersian ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
+            <span>{isPersian ? 'تعداد در صفحه:' : 'Per page:'}</span>
+            {[12, 24, 48].map((size) => (
+              <button
+                key={`ps_${size}`}
+                type="button"
+                onClick={() => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                }}
+                className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-colors ${
+                  pageSize === size
+                    ? 'bg-[#171717] dark:bg-neutral-100 text-white dark:text-neutral-900'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                }`}
+              >
+                {isPersian ? toPersianDigits(size) : size}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

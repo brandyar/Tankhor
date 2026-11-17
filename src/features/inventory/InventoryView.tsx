@@ -14,8 +14,11 @@ import { toPersianDigits, formatCurrency } from '../../utils/formatters';
 import { StockAdjustmentModal } from './StockAdjustmentModal';
 import { Modal } from '../../components/ui/Modal';
 import { ProductImage } from '../../components/ui/ProductImage';
-import { Package, Warehouse as WarehouseIcon, AlertTriangle, RefreshCw, Plus, Search, Layers, ShieldAlert, Barcode as BarcodeIcon, FileSpreadsheet, Download, Upload, SlidersHorizontal, MapPin } from 'lucide-react';
+import { WebcamScanButton } from '../../components/ui/WebcamScanButton';
+import { WebcamBarcodeScannerModal } from '../../components/modals/WebcamBarcodeScannerModal';
+import { Package, Warehouse as WarehouseIcon, AlertTriangle, RefreshCw, Plus, Search, Layers, ShieldAlert, Barcode as BarcodeIcon, FileSpreadsheet, Download, Upload, SlidersHorizontal, MapPin, CheckCircle2, X } from 'lucide-react';
 import { exportInventoryToExcel, parseInventoryFromExcel } from '../../utils/excelUtils';
+import { useSwrRefresh } from '../../hooks/useSwrRefresh';
 
 export const InventoryView: React.FC = () => {
   const { t, locale } = useTranslation();
@@ -51,6 +54,7 @@ export const InventoryView: React.FC = () => {
   const [editReorderPoint, setEditReorderPoint] = useState<number>(5);
   const [editSafetyStock, setEditSafetyStock] = useState<number>(2);
   const [isSavingThreshold, setIsSavingThreshold] = useState(false);
+  const [isWebcamScannerOpen, setIsWebcamScannerOpen] = useState(false);
 
   const isPersian = locale === 'fa';
 
@@ -148,8 +152,8 @@ export const InventoryView: React.FC = () => {
     }
   };
 
-  const loadInventoryData = async () => {
-    setIsLoading(true);
+  const loadInventoryData = async (silent: boolean | unknown = false) => {
+    if (silent !== true) setIsLoading(true);
     try {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
@@ -192,6 +196,15 @@ export const InventoryView: React.FC = () => {
   useEffect(() => {
     loadInventoryData();
   }, [activeOrganization?.id, selectedWarehouseFilter, lowStockOnly, search, currentPage, pageSize]);
+
+  useSwrRefresh(
+    ['inventory_items', 'inventory_summary', 'product_variants', 'colors', 'warehouses', 'warehouse_locations'],
+    () => {
+      loadLookups();
+      loadInventorySummary();
+      loadInventoryData(true);
+    }
+  );
 
   useEffect(() => {
     setCurrentPage(1);
@@ -360,27 +373,258 @@ export const InventoryView: React.FC = () => {
   };
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isImportingExcel, setIsImportingExcel] = useState(false);
+  const [excelFeedback, setExcelFeedback] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+    details?: string[];
+  } | null>(null);
 
-  const handleExportExcel = () => {
-    exportInventoryToExcel(inventoryItems, variants, warehouses);
+  const handleExportExcel = async () => {
+    setIsExportingExcel(true);
+    setExcelFeedback(null);
+    try {
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id;
+      const whId = selectedWarehouseFilter ? Number(selectedWarehouseFilter) : undefined;
+
+      const allItems = await adapter.getInventoryItems({
+        organization_id: orgId,
+        warehouse_id: whId,
+      });
+
+      const q = search.trim().toLowerCase();
+      const filteredForExport = allItems.filter((item) => {
+        if (lowStockOnly) {
+          const qty = Number(item.quantity) || 0;
+          if (qty > (item.reorder_point || 5) && qty > (item.safety_stock || 2)) {
+            return false;
+          }
+        }
+        if (q) {
+          const vId = typeof item.variant_id === 'number' ? item.variant_id : (item.variant_id as any)?.id;
+          const v = variants.find((varObj) => varObj.id === vId);
+          const sku = (item.sku || v?.sku || '').toLowerCase();
+          const title = (item.product_title || v?.product_title || '').toLowerCase();
+          const barcode = (v?.barcode || '').toLowerCase();
+          if (!sku.includes(q) && !title.includes(q) && !barcode.includes(q)) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      const exportedCount = exportInventoryToExcel(filteredForExport, variants, warehouses);
+      if (exportedCount === 0) {
+        setExcelFeedback({
+          type: 'info',
+          message: 'موردی مطابق فیلتر فعلی برای خروجی اکسل یافت نشد.',
+        });
+      } else {
+        setExcelFeedback({
+          type: 'success',
+          message: `فایل اکسل موجودی انبار با ${isPersian ? toPersianDigits(exportedCount) : exportedCount} ردیف با موفقیت دانلود شد.`,
+        });
+      }
+    } catch (err: any) {
+      setExcelFeedback({
+        type: 'error',
+        message: `خطا در تهیه خروجی اکسل موجودی: ${err?.message || err}`,
+      });
+    } finally {
+      setIsExportingExcel(false);
+    }
   };
 
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setIsImportingExcel(true);
+    setExcelFeedback(null);
     try {
       const buffer = await file.arrayBuffer();
       const res = parseInventoryFromExcel(buffer);
-      if (!res.success) {
-        alert(res.errors.join('\n') || 'خطا در خواندن فایل اکسل');
+      if (!res.success || res.items.length === 0) {
+        setExcelFeedback({
+          type: 'error',
+          message: 'خطا در خواندن فایل اکسل موجودی',
+          details: res.errors.slice(0, 10),
+        });
         return;
       }
 
-      alert(`فایل اکسل موجودی انبار با موفقیت بررسی شد. ${res.importedCount} ردیف داده شناسایی گردید.`);
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id || 1;
+      const normalize = (s?: string) => (s || '').trim().toLowerCase();
+
+      const [latestVariants, latestWarehouses, latestLocations, existingInvItems] = await Promise.all([
+        adapter.getVariants({ organization_id: orgId }),
+        adapter.getWarehouses({ organization_id: orgId }),
+        adapter.getWarehouseLocations(),
+        adapter.getInventoryItems({ organization_id: orgId }),
+      ]);
+
+      const skuMap = new Map<string, ProductVariant>();
+      const barcodeMap = new Map<string, ProductVariant>();
+      latestVariants.forEach((v) => {
+        if (v.sku) skuMap.set(normalize(v.sku), v);
+        if (v.barcode) barcodeMap.set(normalize(v.barcode), v);
+      });
+
+      const whByName = new Map<string, Warehouse>();
+      latestWarehouses.forEach((w) => {
+        if (w.name) whByName.set(normalize(w.name), w);
+      });
+
+      let defaultWarehouse =
+        (selectedWarehouseFilter
+          ? latestWarehouses.find((w) => Number(w.id) === Number(selectedWarehouseFilter))
+          : undefined) ||
+        latestWarehouses.find((w) => w.is_default) ||
+        latestWarehouses[0];
+
+      if (!defaultWarehouse) {
+        defaultWarehouse = await adapter.saveWarehouse({
+          organization_id: orgId,
+          name: 'انبار مرکزی',
+          code: 'WH-MAIN',
+          is_default: true,
+          status: 'active',
+        });
+        whByName.set(normalize(defaultWarehouse.name), defaultWarehouse);
+      }
+
+      let updatedCount = 0;
+      let createdCount = 0;
+      const runtimeErrors = [...res.errors];
+
+      for (const row of res.items) {
+        try {
+          const variant =
+            (row.sku ? skuMap.get(normalize(row.sku)) : undefined) ||
+            (row.barcode ? barcodeMap.get(normalize(row.barcode)) : undefined);
+
+          if (!variant) {
+            runtimeErrors.push(
+              `سطر ${row.rowNumber}: تنوع با شناسه "${row.sku || row.barcode}" در سیستم یافت نشد.`
+            );
+            continue;
+          }
+
+          let targetWh = row.warehouseName ? whByName.get(normalize(row.warehouseName)) : defaultWarehouse;
+          if (!targetWh && row.warehouseName) {
+            targetWh = await adapter.saveWarehouse({
+              organization_id: orgId,
+              name: row.warehouseName,
+              code: `WH-${Date.now().toString().slice(-4)}`,
+              is_default: false,
+              status: 'active',
+            });
+            whByName.set(normalize(targetWh.name), targetWh);
+          }
+          const whId = Number(targetWh?.id || defaultWarehouse.id);
+
+          let resolvedLocationId: number | undefined;
+          if (row.locationName) {
+            const existingLoc = latestLocations.find(
+              (l) =>
+                Number(typeof l.warehouse_id === 'object' ? (l.warehouse_id as any)?.id : l.warehouse_id) === whId &&
+                normalize(l.name) === normalize(row.locationName)
+            );
+            resolvedLocationId = existingLoc?.id;
+          }
+
+          const existingItem = existingInvItems.find((item) => {
+            const vId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
+            const wId = typeof item.warehouse_id === 'object' ? (item.warehouse_id as any)?.id : item.warehouse_id;
+            return Number(vId) === Number(variant.id) && Number(wId) === whId;
+          });
+
+          if (existingItem) {
+            const currentQty = Number(existingItem.quantity) || 0;
+            if (currentQty !== row.quantity) {
+              await adapter.recordMovement({
+                organization_id: orgId,
+                variant_id: variant.id,
+                warehouse_id: whId,
+                location_id: resolvedLocationId ?? (typeof existingItem.location_id === 'object' ? (existingItem.location_id as any)?.id : existingItem.location_id),
+                type: 'adjustment',
+                quantity: row.quantity,
+                reference_type: 'manual',
+                note: 'تعدیل موجودی از طریق ورود فایل اکسل',
+              });
+            }
+
+            const finalReserved = row.reservedQuantity ?? Number(existingItem.reserved_quantity) ?? 0;
+            const finalReorder = row.reorderPoint ?? existingItem.reorder_point ?? 5;
+            const finalSafety = row.safetyStock ?? existingItem.safety_stock ?? 2;
+            const finalLocId =
+              resolvedLocationId ??
+              (typeof existingItem.location_id === 'object'
+                ? (existingItem.location_id as any)?.id
+                : existingItem.location_id);
+
+            await adapter.saveInventoryItem({
+              id: existingItem.id,
+              organization_id: orgId,
+              variant_id: variant.id,
+              warehouse_id: whId,
+              location_id: finalLocId,
+              quantity: row.quantity,
+              reserved_quantity: finalReserved,
+              damaged_quantity: Number(existingItem.damaged_quantity) || 0,
+              reorder_point: finalReorder,
+              safety_stock: finalSafety,
+            });
+            updatedCount++;
+          } else {
+            const createdItem = await adapter.saveInventoryItem({
+              organization_id: orgId,
+              variant_id: variant.id,
+              warehouse_id: whId,
+              location_id: resolvedLocationId,
+              quantity: row.quantity,
+              reserved_quantity: row.reservedQuantity ?? 0,
+              damaged_quantity: 0,
+              reorder_point: row.reorderPoint ?? 5,
+              safety_stock: row.safetyStock ?? 2,
+            });
+            existingInvItems.push(createdItem);
+
+            // Log initial adjustment movement without letting a 0 qty fail
+            await adapter.recordMovement({
+              organization_id: orgId,
+              variant_id: variant.id,
+              warehouse_id: whId,
+              location_id: resolvedLocationId,
+              type: 'adjustment',
+              quantity: row.quantity,
+              reference_type: 'manual',
+              note: 'ثبت اولیه موجودی از طریق ورود فایل اکسل',
+            });
+            createdCount++;
+          }
+        } catch (rowErr: any) {
+          runtimeErrors.push(`سطر ${row.rowNumber}: ${rowErr?.message || 'خطا در ذخیره‌سازی'}`);
+        }
+      }
+
+      await Promise.all([loadLookups(), loadInventorySummary(), loadInventoryData()]);
+      const totalProcessed = createdCount + updatedCount;
+      setExcelFeedback({
+        type: totalProcessed > 0 ? 'success' : 'error',
+        message: `ورود اکسل موجودی انجام شد (${isPersian ? toPersianDigits(createdCount) : createdCount} ثبت جدید، ${isPersian ? toPersianDigits(updatedCount) : updatedCount} به‌روزرسانی).`,
+        details: runtimeErrors.slice(0, 10),
+      });
     } catch (err: any) {
-      alert(`خطا در پردازش فایل اکسل: ${err?.message || err}`);
+      setExcelFeedback({
+        type: 'error',
+        message: `خطا در پردازش فایل اکسل: ${err?.message || err}`,
+      });
     } finally {
+      setIsImportingExcel(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -403,6 +647,7 @@ export const InventoryView: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
+              isLoading={isImportingExcel}
               icon={<Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 dark:text-neutral-400" />}
             >
               <span className="hidden sm:inline">ورود اکسل</span>
@@ -412,6 +657,7 @@ export const InventoryView: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={handleExportExcel}
+              isLoading={isExportingExcel}
               icon={<FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400" />}
             >
               <span className="hidden sm:inline">خروجی اکسل</span>
@@ -428,6 +674,43 @@ export const InventoryView: React.FC = () => {
           </div>
         }
       />
+
+      {excelFeedback && (
+        <div
+          className={`flex items-start justify-between gap-3 p-3.5 rounded-xl border text-xs ${
+            excelFeedback.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200'
+              : excelFeedback.type === 'error'
+              ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/60 text-red-900 dark:text-red-200'
+              : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/60 text-blue-900 dark:text-blue-200'
+          }`}
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 font-bold">
+              {excelFeedback.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+              )}
+              <span>{excelFeedback.message}</span>
+            </div>
+            {excelFeedback.details && excelFeedback.details.length > 0 && (
+              <ul className="list-disc list-inside text-[11px] opacity-85 space-y-0.5 ps-5">
+                {excelFeedback.details.map((d, i) => (
+                  <li key={i}>{d}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setExcelFeedback(null)}
+            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
@@ -484,12 +767,16 @@ export const InventoryView: React.FC = () => {
 
       {/* Filter Toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="w-full sm:w-80">
+        <div className="w-full sm:w-80 flex items-center gap-1.5">
           <Input
             placeholder={t('common.search')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             icon={<Search className="w-4 h-4" />}
+          />
+          <WebcamScanButton
+            size="md"
+            onClick={() => setIsWebcamScannerOpen(true)}
           />
         </div>
 
@@ -839,6 +1126,13 @@ export const InventoryView: React.FC = () => {
         locations={locations}
         initialItem={adjustingItem}
         onAdjustmentComplete={loadData}
+      />
+
+      {/* Webcam Barcode Scanner Modal */}
+      <WebcamBarcodeScannerModal
+        isOpen={isWebcamScannerOpen}
+        onClose={() => setIsWebcamScannerOpen(false)}
+        onScan={(code) => setSearch(code)}
       />
     </div>
   );

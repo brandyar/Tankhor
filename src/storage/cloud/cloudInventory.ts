@@ -495,7 +495,8 @@ export class CloudInventoryStorage {
     payload.variant_id = this.base.cleanInt(payload.variant_id);
     payload.warehouse_id = this.base.cleanInt(payload.warehouse_id) || 1;
     payload.location_id = this.base.cleanInt(payload.location_id);
-    payload.quantity = Math.max(0, Number(payload.quantity) || 1);
+    const parsedQty = Number(payload.quantity);
+    payload.quantity = Number.isFinite(parsedQty) ? Math.max(0, parsedQty) : 0;
     if (!payload.type) payload.type = 'adjustment';
     if (!payload.reference_type) payload.reference_type = 'manual';
 

@@ -18,6 +18,7 @@ import { DateInput } from '../../components/ui/DateInput';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { formatCurrency, toPersianDigits, formatDate } from '../../utils/formatters';
 import { printElement } from '../../utils/print';
+import { downloadCsvContent, escapeCsvCell } from '../../utils/excelUtils';
 import {
   calculateDateRange,
   DatePresetKey,
@@ -66,6 +67,7 @@ export const SalesReportPage: React.FC = () => {
   const [channelFilter, setChannelFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [chartGrouping, setChartGrouping] = useState<'day' | 'month'>('day');
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   // Initialize date range
   useEffect(() => {
@@ -315,6 +317,12 @@ export const SalesReportPage: React.FC = () => {
 
   // Export to CSV with UTF-8 BOM
   const handleExportCsv = () => {
+    setExportNotice(null);
+    if (searchedOrders.length === 0) {
+      setExportNotice(t('reports.noOrdersInPeriod'));
+      return;
+    }
+
     const headers = [
       t('reports.colOrderNumber'),
       t('reports.colDate'),
@@ -338,13 +346,21 @@ export const SalesReportPage: React.FC = () => {
       items.forEach((item) => {
         const qty = Number(item.quantity) || 1;
         units += qty;
+        const unitPrice = Number(item.unit_price) || 0;
         const vId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
         const v = vId ? variantMap.get(Number(vId)) : undefined;
-        const cost = item.unit_cost !== undefined ? Number(item.unit_cost) : (v?.cost || (Number(item.unit_price) * 0.6));
-        cogs += (qty * cost);
+        const cost =
+          item.unit_cost !== undefined && item.unit_cost !== null
+            ? Number(item.unit_cost)
+            : v?.cost !== undefined && v?.cost !== null
+            ? Number(v.cost)
+            : (v as any)?.cost_price !== undefined && (v as any)?.cost_price !== null
+            ? Number((v as any).cost_price)
+            : unitPrice * 0.6;
+        cogs += qty * cost;
       });
 
-      const net = Number(o.total) || 0;
+      const net = Number(o.total) || Number((o as any).total_amount) || 0;
       const finalCogs = cogs > 0 ? cogs : net * 0.6;
       const profit = net - finalCogs;
       const margin = net > 0 ? ((profit / net) * 100).toFixed(1) : '0';
@@ -358,19 +374,15 @@ export const SalesReportPage: React.FC = () => {
         finalCogs,
         profit,
         `${margin}%`,
-        o.payment_status || 'unpaid',
+        o.payment_status || 'pending',
       ];
     });
 
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `tankhor_sales_profit_${customFrom}_${customTo}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const csvContent = [
+      headers.map((h) => escapeCsvCell(h)).join(','),
+      ...rows.map((r) => r.map((c) => escapeCsvCell(c)).join(',')),
+    ].join('\n');
+    downloadCsvContent(csvContent, `tankhor_sales_profit_${customFrom}_${customTo}.csv`);
   };
 
   const handlePrint = () => {
@@ -516,6 +528,19 @@ export const SalesReportPage: React.FC = () => {
             </Button>
           </div>
         </div>
+
+        {exportNotice && (
+          <div className="p-3 rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-2">
+            <span>{exportNotice}</span>
+            <button
+              type="button"
+              onClick={() => setExportNotice(null)}
+              className="px-1.5 py-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+            >
+              ×
+            </button>
+          </div>
+        )}
       </Card>
 
       {/* Main Printable Container */}

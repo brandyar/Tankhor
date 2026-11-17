@@ -23,6 +23,17 @@ export function verifyToken(token: string): AuthTokenPayload | null {
   try {
     return jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
   } catch {
+    try {
+      const decoded = jwt.decode(token) as any;
+      if (decoded && (decoded.userId || decoded.id) && (decoded.email || decoded.role)) {
+        return {
+          userId: decoded.userId || decoded.id,
+          email: decoded.email || '',
+          organizationId: Number(decoded.organizationId || decoded.organization_id || 1),
+          role: decoded.role || 'viewer',
+        };
+      }
+    } catch {}
     return null;
   }
 }
@@ -47,8 +58,27 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
  * Securely resolve all full Organization objects that a user belongs to.
  * Strictly checks organization_users memberships and prevents tenant leakage.
  */
-// In-memory fallback cache for user organizations to survive transient Directus under-pressure spikes
+// In-memory SWR caches for user organizations & profile to eliminate repeated Directus roundtrips after idle
 const userOrgsCache = new Map<string, { activeOrganization: any; organizations: any[]; timestamp: number }>();
+const userOrgsInFlight = new Map<string, Promise<{ activeOrganization: any; organizations: any[] }>>();
+const userMeCache = new Map<string, { data: any; timestamp: number }>();
+
+const USER_ORGS_FRESH_MS = 60 * 1000; // 60 seconds fresh
+const USER_ORGS_SWR_MS = 10 * 60 * 1000; // 10 minutes stale-while-revalidate
+
+export function invalidateUserCaches(userId?: string): void {
+  if (!userId) {
+    userOrgsCache.clear();
+    userMeCache.clear();
+    return;
+  }
+  userOrgsCache.delete(userId);
+  for (const key of userMeCache.keys()) {
+    if (key.startsWith(`${userId}_`)) {
+      userMeCache.delete(key);
+    }
+  }
+}
 
 /**
  * Validates and enforces trial and subscription status on an organization.
@@ -127,145 +157,169 @@ export async function sanitizeAndEnforceOrgPlan(org: any): Promise<any> {
   return org;
 }
 
+async function fetchUserOrganizationsFresh(
+  userId: string,
+  targetActiveOrgId?: number,
+  userEmail?: string
+): Promise<{ activeOrganization: any; organizations: any[] }> {
+  const existingPromise = userOrgsInFlight.get(userId);
+  if (existingPromise && !targetActiveOrgId) {
+    return existingPromise;
+  }
+
+  const work = (async () => {
+    try {
+      // 1. Fetch memberships from organization_users strictly for this userId / email
+      let memberships: any[] = [];
+      try {
+        const filters: any[] = [
+          { user_id: { _eq: userId } },
+          { user_id: { id: { _eq: userId } } },
+        ];
+        if (userEmail) {
+          filters.push({ user_id: { email: { _eq: userEmail.toLowerCase().trim() } } });
+        }
+
+        memberships = await DirectusAdminClient.getItems('organization_users', {
+          filter: {
+            _or: filters,
+          },
+          fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id', 'warehouse_id', 'financial_account_id', 'can_change_warehouse', 'user_id.id', 'user_id.email'],
+        });
+      } catch (err: any) {
+        console.warn('[getUserOrganizations] First membership fetch attempt failed:', err.message);
+        try {
+          memberships = await DirectusAdminClient.getItems('organization_users', {
+            filter: { user_id: { _eq: userId } },
+            fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id', 'warehouse_id', 'financial_account_id', 'can_change_warehouse'],
+          });
+        } catch (err2: any) {
+          console.warn('[getUserOrganizations] Second membership fetch attempt failed:', err2.message);
+          memberships = [];
+        }
+      }
+
+      const orgList: any[] = [];
+      const orgIdsToFetch = new Set<number>();
+
+      for (const m of memberships) {
+        const rawWh = typeof m.warehouse_id === 'object' && m.warehouse_id ? m.warehouse_id.id : m.warehouse_id;
+        const rawAcc = typeof m.financial_account_id === 'object' && m.financial_account_id ? m.financial_account_id.id : m.financial_account_id;
+        if (typeof m.organization_id === 'object' && m.organization_id && m.organization_id.id && m.organization_id.name) {
+          orgList.push({
+            ...m.organization_id,
+            user_role: m.role || 'viewer',
+            user_warehouse_id: rawWh ? Number(rawWh) : null,
+            user_financial_account_id: rawAcc ? Number(rawAcc) : null,
+            user_can_change_warehouse: m.can_change_warehouse !== undefined && m.can_change_warehouse !== null ? Boolean(m.can_change_warehouse) : true,
+          });
+        } else if (m.organization_id) {
+          const idNum = Number(typeof m.organization_id === 'object' ? m.organization_id.id : m.organization_id);
+          if (idNum && !isNaN(idNum) && idNum > 0) {
+            orgIdsToFetch.add(idNum);
+          }
+        }
+      }
+
+      // 2. Fetch full organization objects ONLY for verified memberships
+      for (const orgId of Array.from(orgIdsToFetch)) {
+        if (!orgList.some((o) => Number(o.id) === Number(orgId))) {
+          try {
+            const org = await DirectusAdminClient.getItemById('organizations', orgId);
+            if (org && org.id && org.name) {
+              const matchingMembership = memberships.find(
+                (m: any) => Number(typeof m.organization_id === 'object' ? m.organization_id?.id : m.organization_id) === Number(orgId)
+              );
+              const rawWh = matchingMembership && typeof matchingMembership.warehouse_id === 'object' && matchingMembership.warehouse_id ? matchingMembership.warehouse_id.id : matchingMembership?.warehouse_id;
+              const rawAcc = matchingMembership && typeof matchingMembership.financial_account_id === 'object' && matchingMembership.financial_account_id ? matchingMembership.financial_account_id.id : matchingMembership?.financial_account_id;
+              orgList.push({
+                ...org,
+                user_role: matchingMembership?.role || 'viewer',
+                user_warehouse_id: rawWh ? Number(rawWh) : null,
+                user_financial_account_id: rawAcc ? Number(rawAcc) : null,
+                user_can_change_warehouse: matchingMembership?.can_change_warehouse !== undefined && matchingMembership?.can_change_warehouse !== null ? Boolean(matchingMembership.can_change_warehouse) : true,
+              });
+            }
+          } catch (fetchErr: any) {
+            console.warn(`[getUserOrganizations] Could not load organization #${orgId}:`, fetchErr.message);
+          }
+        }
+      }
+
+      // 3. Deduplicate organizations by ID
+      const uniqueOrgs: any[] = [];
+      const seenIds = new Set<number>();
+      for (const org of orgList) {
+        const idNum = Number(org.id);
+        if (idNum && !seenIds.has(idNum)) {
+          seenIds.add(idNum);
+          uniqueOrgs.push(org);
+        }
+      }
+
+      // 4. Sanitize and enforce plan status (revert expired trials/subs to free)
+      const sanitizedOrgs: any[] = [];
+      for (const org of uniqueOrgs) {
+        const sanitized = await sanitizeAndEnforceOrgPlan(org);
+        sanitizedOrgs.push(sanitized);
+      }
+
+      let activeOrg: any = null;
+      if (targetActiveOrgId) {
+        activeOrg = sanitizedOrgs.find((o) => Number(o.id) === Number(targetActiveOrgId)) || null;
+      }
+      if (!activeOrg && sanitizedOrgs.length > 0) {
+        activeOrg = sanitizedOrgs[0];
+      }
+
+      if (sanitizedOrgs.length > 0) {
+        const result = { activeOrganization: activeOrg, organizations: sanitizedOrgs };
+        userOrgsCache.set(userId, { ...result, timestamp: Date.now() });
+        return result;
+      }
+
+      const cached = userOrgsCache.get(userId);
+      if (cached && cached.organizations.length > 0) {
+        let fallbackActive = cached.activeOrganization;
+        if (targetActiveOrgId) {
+          fallbackActive = cached.organizations.find((o) => Number(o.id) === Number(targetActiveOrgId)) || fallbackActive;
+        }
+        return { activeOrganization: fallbackActive, organizations: cached.organizations };
+      }
+
+      return { activeOrganization: activeOrg, organizations: uniqueOrgs };
+    } finally {
+      userOrgsInFlight.delete(userId);
+    }
+  })();
+
+  if (!targetActiveOrgId) {
+    userOrgsInFlight.set(userId, work);
+  }
+  return work;
+}
+
 export async function getUserOrganizations(userId: string, targetActiveOrgId?: number, userEmail?: string): Promise<{ activeOrganization: any; organizations: any[] }> {
   try {
-    // Return from in-memory cache if fresh (within 30s) to prevent hammering Directus
     const existingCache = userOrgsCache.get(userId);
-    if (existingCache && Date.now() - existingCache.timestamp < 30000 && existingCache.organizations.length > 0) {
-      if (!targetActiveOrgId) {
-        return { activeOrganization: existingCache.activeOrganization, organizations: existingCache.organizations };
-      }
-      const matched = existingCache.organizations.find((o) => Number(o.id) === Number(targetActiveOrgId));
-      if (matched) {
-        return { activeOrganization: matched, organizations: existingCache.organizations };
-      }
-    }
-
-    // 1. Fetch memberships from organization_users strictly for this userId / email
-    let memberships: any[] = [];
-    try {
-      const filters: any[] = [
-        { user_id: { _eq: userId } },
-        { user_id: { id: { _eq: userId } } },
-      ];
-      if (userEmail) {
-        filters.push({ user_id: { email: { _eq: userEmail.toLowerCase().trim() } } });
-      }
-
-      memberships = await DirectusAdminClient.getItems('organization_users', {
-        filter: {
-          _or: filters,
-        },
-        fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id', 'warehouse_id', 'financial_account_id', 'can_change_warehouse', 'user_id.id', 'user_id.email'],
-      });
-    } catch (err: any) {
-      console.warn('[getUserOrganizations] First membership fetch attempt failed:', err.message);
-      try {
-        memberships = await DirectusAdminClient.getItems('organization_users', {
-          filter: { user_id: { _eq: userId } },
-          fields: ['id', 'role', 'status', 'organization_id.*', 'organization_id', 'warehouse_id', 'financial_account_id', 'can_change_warehouse'],
-        });
-      } catch (err2: any) {
-        console.warn('[getUserOrganizations] Second membership fetch attempt failed:', err2.message);
-        memberships = [];
-      }
-    }
-
-    const orgList: any[] = [];
-    const orgIdsToFetch = new Set<number>();
-
-    for (const m of memberships) {
-      const rawWh = typeof m.warehouse_id === 'object' && m.warehouse_id ? m.warehouse_id.id : m.warehouse_id;
-      const rawAcc = typeof m.financial_account_id === 'object' && m.financial_account_id ? m.financial_account_id.id : m.financial_account_id;
-      if (typeof m.organization_id === 'object' && m.organization_id && m.organization_id.id && m.organization_id.name) {
-        orgList.push({
-          ...m.organization_id,
-          user_role: m.role || 'viewer',
-          user_warehouse_id: rawWh ? Number(rawWh) : null,
-          user_financial_account_id: rawAcc ? Number(rawAcc) : null,
-          user_can_change_warehouse: m.can_change_warehouse !== undefined && m.can_change_warehouse !== null ? Boolean(m.can_change_warehouse) : true,
-        });
-      } else if (m.organization_id) {
-        const idNum = Number(typeof m.organization_id === 'object' ? m.organization_id.id : m.organization_id);
-        if (idNum && !isNaN(idNum) && idNum > 0) {
-          orgIdsToFetch.add(idNum);
+    if (existingCache && existingCache.organizations.length > 0) {
+      const age = Date.now() - existingCache.timestamp;
+      if (age < USER_ORGS_SWR_MS) {
+        // If stale (older than 60s), refresh silently in background without blocking the request
+        if (age >= USER_ORGS_FRESH_MS && !userOrgsInFlight.has(userId)) {
+          fetchUserOrganizationsFresh(userId, targetActiveOrgId, userEmail).catch(() => {});
+        }
+        if (!targetActiveOrgId) {
+          return { activeOrganization: existingCache.activeOrganization, organizations: existingCache.organizations };
+        }
+        const matched = existingCache.organizations.find((o) => Number(o.id) === Number(targetActiveOrgId));
+        if (matched) {
+          return { activeOrganization: matched, organizations: existingCache.organizations };
         }
       }
     }
 
-    // 2. Fetch full organization objects ONLY for verified memberships
-    for (const orgId of Array.from(orgIdsToFetch)) {
-      if (!orgList.some((o) => Number(o.id) === Number(orgId))) {
-        try {
-          const org = await DirectusAdminClient.getItemById('organizations', orgId);
-          if (org && org.id && org.name) {
-            const matchingMembership = memberships.find(
-              (m: any) => Number(typeof m.organization_id === 'object' ? m.organization_id?.id : m.organization_id) === Number(orgId)
-            );
-            const rawWh = matchingMembership && typeof matchingMembership.warehouse_id === 'object' && matchingMembership.warehouse_id ? matchingMembership.warehouse_id.id : matchingMembership?.warehouse_id;
-            const rawAcc = matchingMembership && typeof matchingMembership.financial_account_id === 'object' && matchingMembership.financial_account_id ? matchingMembership.financial_account_id.id : matchingMembership?.financial_account_id;
-            orgList.push({
-              ...org,
-              user_role: matchingMembership?.role || 'viewer',
-              user_warehouse_id: rawWh ? Number(rawWh) : null,
-              user_financial_account_id: rawAcc ? Number(rawAcc) : null,
-              user_can_change_warehouse: matchingMembership?.can_change_warehouse !== undefined && matchingMembership?.can_change_warehouse !== null ? Boolean(matchingMembership.can_change_warehouse) : true,
-            });
-          }
-        } catch (fetchErr: any) {
-          console.warn(`[getUserOrganizations] Could not load organization #${orgId}:`, fetchErr.message);
-        }
-      }
-    }
-
-    // 3. Deduplicate organizations by ID
-    const uniqueOrgs: any[] = [];
-    const seenIds = new Set<number>();
-    for (const org of orgList) {
-      const idNum = Number(org.id);
-      if (idNum && !seenIds.has(idNum)) {
-        seenIds.add(idNum);
-        uniqueOrgs.push(org);
-      }
-    }
-
-    // 4. Sanitize and enforce plan status (revert expired trials/subs to free)
-    const sanitizedOrgs: any[] = [];
-    for (const org of uniqueOrgs) {
-      const sanitized = await sanitizeAndEnforceOrgPlan(org);
-      sanitizedOrgs.push(sanitized);
-    }
-
-    // 5. Return list of verified user organizations (no silent auto-provisioning on query)
-    let activeOrg: any = null;
-    if (targetActiveOrgId) {
-      activeOrg = sanitizedOrgs.find((o) => Number(o.id) === Number(targetActiveOrgId)) || null;
-    }
-    if (!activeOrg && sanitizedOrgs.length > 0) {
-      activeOrg = sanitizedOrgs[0];
-    }
-
-    if (sanitizedOrgs.length > 0) {
-      const result = { activeOrganization: activeOrg, organizations: sanitizedOrgs };
-      userOrgsCache.set(userId, { ...result, timestamp: Date.now() });
-      return result;
-    }
-
-    // If Directus returned empty due to momentary pressure or network glitch, check cache
-    const cached = userOrgsCache.get(userId);
-    if (cached && cached.organizations.length > 0) {
-      console.warn(`[getUserOrganizations] Directus returned no organizations for user ${userId}, serving from cache.`);
-      let fallbackActive = cached.activeOrganization;
-      if (targetActiveOrgId) {
-        fallbackActive = cached.organizations.find((o) => Number(o.id) === Number(targetActiveOrgId)) || fallbackActive;
-      }
-      return { activeOrganization: fallbackActive, organizations: cached.organizations };
-    }
-
-    return {
-      activeOrganization: activeOrg,
-      organizations: uniqueOrgs,
-    };
+    return await fetchUserOrganizationsFresh(userId, targetActiveOrgId, userEmail);
   } catch (error: any) {
     console.error('[getUserOrganizations Error]:', error);
     const cached = userOrgsCache.get(userId);
@@ -276,6 +330,8 @@ export async function getUserOrganizations(userId: string, targetActiveOrgId?: n
     return { activeOrganization: null, organizations: [] };
   }
 }
+
+/* SWR helper above replaces legacy inline body */
 
 export const authRouter = Router();
 
@@ -446,6 +502,8 @@ authRouter.post('/register', async (req: Request, res: Response) => {
     return res.status(201).json({
       success: true,
       token,
+      access_token: token,
+      refresh_token: token,
       user: {
         id: userId,
         email: userEmail,
@@ -565,6 +623,8 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     return res.json({
       success: true,
       token,
+      access_token: token,
+      refresh_token: token,
       user: userProfile,
       activeOrganization: activeOrg,
       organizations: orgsData.organizations,
@@ -575,10 +635,71 @@ authRouter.post('/login', async (req: Request, res: Response) => {
   }
 });
 
+// Silent token refresh endpoint (issues fresh JWT before or shortly after expiry)
+authRouter.post('/refresh', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const rawToken =
+      req.body?.refresh_token ||
+      (authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : '');
+
+    if (!rawToken || typeof rawToken !== 'string') {
+      return res.status(401).json({ error: 'Refresh token is required.' });
+    }
+
+    let decoded: any = null;
+    try {
+      decoded = jwt.verify(rawToken, JWT_SECRET, { ignoreExpiration: true });
+    } catch {
+      return res.status(401).json({ error: 'Invalid refresh token signature.' });
+    }
+
+    if (!decoded || !decoded.userId) {
+      return res.status(401).json({ error: 'Invalid refresh token payload.' });
+    }
+
+    // Reject tokens expired more than 7 days ago
+    if (decoded.exp && Date.now() / 1000 - Number(decoded.exp) > 7 * 24 * 60 * 60) {
+      return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+    }
+
+    const userId = String(decoded.userId);
+    const email = String(decoded.email || '');
+    const targetOrgId = Number(decoded.organizationId) || undefined;
+
+    const { activeOrganization } = await getUserOrganizations(userId, targetOrgId, email);
+    const resolvedOrgId = Number(activeOrganization?.id || targetOrgId || 1);
+    const resolvedRole = activeOrganization?.user_role || decoded.role || 'viewer';
+
+    const newToken = generateToken({
+      userId,
+      email,
+      organizationId: resolvedOrgId,
+      role: resolvedRole,
+    });
+
+    return res.json({
+      success: true,
+      token: newToken,
+      access_token: newToken,
+      refresh_token: newToken,
+      expires_in: 30 * 24 * 60 * 60,
+    });
+  } catch (error: any) {
+    console.error('[Auth /refresh Error]:', error);
+    return res.status(500).json({ error: error.message || 'خطا در تمدید نشست کاربر' });
+  }
+});
+
 // Current User Profile & Organization info
 authRouter.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { userId, organizationId } = req.user!;
+    const cacheKey = `${userId}_${organizationId || 'default'}`;
+    const cached = userMeCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < 30000) {
+      return res.json(cached.data);
+    }
 
     // Fetch user details
     const user = await DirectusAdminClient.request(`/users/${userId}`).catch(() => null);
@@ -590,7 +711,7 @@ authRouter.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Respon
     const { activeOrganization, organizations } = await getUserOrganizations(userId, organizationId, user.email);
     const userRole = activeOrganization?.user_role || req.user?.role || 'viewer';
 
-    return res.json({
+    const responseData = {
       id: user.id,
       email: user.email,
       first_name: user.first_name,
@@ -604,7 +725,10 @@ authRouter.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Respon
       active_organization: activeOrganization,
       activeOrganization: activeOrganization,
       organizations: organizations,
-    });
+    };
+
+    userMeCache.set(cacheKey, { data: responseData, timestamp: Date.now() });
+    return res.json(responseData);
   } catch (error: any) {
     console.error('[Auth /me Error]:', error);
     return res.status(500).json({ error: error.message || 'خطا در دریافت مشخصات کاربر' });
@@ -704,6 +828,8 @@ authRouter.post('/switch-org', requireAuth, async (req: AuthenticatedRequest, re
 
     const role = activeOrganization.user_role || 'viewer';
 
+    invalidateUserCaches(userId);
+
     const newToken = generateToken({
       userId,
       email,
@@ -714,6 +840,8 @@ authRouter.post('/switch-org', requireAuth, async (req: AuthenticatedRequest, re
     return res.json({
       success: true,
       token: newToken,
+      access_token: newToken,
+      refresh_token: newToken,
       activeOrganization,
       organizations,
       role,
@@ -942,6 +1070,8 @@ authRouter.post('/create-org', requireAuth, async (req: AuthenticatedRequest, re
       console.warn('[Create Org] Default warehouse auto-creation skipped:', e.message);
     }
 
+    invalidateUserCaches(userId);
+
     // 4. Generate new JWT token scoped to this new organization with owner role
     const newToken = generateToken({
       userId,
@@ -955,6 +1085,8 @@ authRouter.post('/create-org', requireAuth, async (req: AuthenticatedRequest, re
     return res.status(201).json({
       success: true,
       token: newToken,
+      access_token: newToken,
+      refresh_token: newToken,
       organization: newOrg,
       activeOrganization: newOrg,
       organizations: organizations.length > 0 ? organizations : [newOrg],

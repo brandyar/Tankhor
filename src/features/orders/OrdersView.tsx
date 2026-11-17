@@ -50,8 +50,10 @@ import {
   CreditCard,
   Wallet,
   ArrowRightLeft,
+  X,
 } from 'lucide-react';
 import { exportOrdersToExcel, parseOrdersFromExcel } from '../../utils/excelUtils';
+import { useSwrRefresh } from '../../hooks/useSwrRefresh';
 
 interface OrdersViewProps {
   onNavigateToCreate?: () => void;
@@ -129,8 +131,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
     }
   };
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (silent: boolean | unknown = false) => {
+    if (silent !== true) setIsLoading(true);
     try {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
@@ -199,6 +201,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
   useEffect(() => {
     loadData();
   }, [activeOrganization, currentPage, pageSize, search, statusFilter]);
+
+  useSwrRefresh(
+    ['orders', 'customers', 'warehouses', 'products', 'product_variants', 'financial_accounts'],
+    () => {
+      loadLookups();
+      loadData(true);
+    }
+  );
 
   useEffect(() => {
     setCurrentPage(1);
@@ -515,27 +525,198 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
   const filteredOrders = orders;
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isImportingExcel, setIsImportingExcel] = useState(false);
+  const [excelFeedback, setExcelFeedback] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+    details?: string[];
+  } | null>(null);
 
-  const handleExportExcel = () => {
-    exportOrdersToExcel(orders);
+  const handleExportExcel = async () => {
+    setIsExportingExcel(true);
+    setExcelFeedback(null);
+    try {
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id;
+      const allOrders = await adapter.getOrders({ organization_id: orgId });
+
+      const q = search.trim().toLowerCase();
+      const filteredForExport = allOrders.filter((ord) => {
+        if (statusFilter !== 'all' && ord.status !== statusFilter) return false;
+        if (q) {
+          const custId = typeof ord.customer_id === 'object' ? (ord.customer_id as any)?.id : ord.customer_id;
+          const cust = customers.find((c) => Number(c.id) === Number(custId));
+          const custName = (ord.customer_name || cust?.name || '').toLowerCase();
+          const ordNum = (ord.order_number || '').toLowerCase();
+          if (!ordNum.includes(q) && !custName.includes(q)) return false;
+        }
+        return true;
+      });
+
+      const exportedCount = exportOrdersToExcel(
+        filteredForExport,
+        `tankhor_orders_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        { customers, warehouses, isPersian }
+      );
+
+      if (exportedCount === 0) {
+        setExcelFeedback({
+          type: 'info',
+          message: 'سفارشی مطابق فیلتر فعلی برای خروجی اکسل یافت نشد.',
+        });
+      } else {
+        setExcelFeedback({
+          type: 'success',
+          message: `فایل اکسل سفارشات (${isPersian ? toPersianDigits(exportedCount) : exportedCount} فاکتور) با موفقیت دانلود شد.`,
+        });
+      }
+    } catch (err: any) {
+      setExcelFeedback({
+        type: 'error',
+        message: `خطا در تهیه خروجی اکسل سفارشات: ${err?.message || err}`,
+      });
+    } finally {
+      setIsExportingExcel(false);
+    }
   };
 
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setIsImportingExcel(true);
+    setExcelFeedback(null);
     try {
       const buffer = await file.arrayBuffer();
       const res = parseOrdersFromExcel(buffer);
-      if (!res.success) {
-        alert(res.errors.join('\n') || 'خطا در خواندن فایل اکسل');
+      if (!res.success || res.items.length === 0) {
+        setExcelFeedback({
+          type: 'error',
+          message: 'خطا در خواندن فایل اکسل سفارشات',
+          details: res.errors.slice(0, 10),
+        });
         return;
       }
 
-      alert(`فایل اکسل سفارشات با موفقیت بررسی شد. ${res.importedCount} ردیف سفارش شناسایی گردید.`);
+      const adapter = storageManager.getAdapter();
+      const orgId = activeOrganization?.id || 1;
+      const normalize = (s?: string) => (s || '').trim().toLowerCase();
+
+      const [existingOrders, existingCustomers, existingWarehouses] = await Promise.all([
+        adapter.getOrders({ organization_id: orgId }),
+        adapter.getCustomers({ organization_id: orgId }),
+        adapter.getWarehouses({ organization_id: orgId }),
+      ]);
+
+      const orderByNumber = new Map<string, Order>();
+      existingOrders.forEach((o) => {
+        if (o.order_number) orderByNumber.set(normalize(o.order_number), o);
+      });
+
+      const customerByPhone = new Map<string, Customer>();
+      const customerByName = new Map<string, Customer>();
+      existingCustomers.forEach((c) => {
+        if (c.phone) customerByPhone.set(c.phone.replace(/\s+/g, ''), c);
+        if (c.name) customerByName.set(normalize(c.name), c);
+      });
+
+      const warehouseByName = new Map<string, Warehouse>();
+      existingWarehouses.forEach((w) => {
+        if (w.name) warehouseByName.set(normalize(w.name), w);
+      });
+
+      let defaultWh = existingWarehouses.find((w) => w.is_default) || existingWarehouses[0];
+      if (!defaultWh) {
+        defaultWh = await adapter.saveWarehouse({
+          organization_id: orgId,
+          name: 'انبار مرکزی',
+          code: 'WH-MAIN',
+          is_default: true,
+          status: 'active',
+        });
+        warehouseByName.set(normalize(defaultWh.name), defaultWh);
+      }
+
+      let createdCount = 0;
+      let updatedCount = 0;
+      const runtimeErrors = [...res.errors];
+
+      for (const row of res.items) {
+        try {
+          // Resolve or create customer unless generic walk-in
+          let customerId: number | undefined;
+          const isGenericCustomer =
+            !row.customerName ||
+            row.customerName === 'مشتری عمومی' ||
+            row.customerName === 'مصرف‌کننده نهایی';
+
+          if (!isGenericCustomer || row.customerPhone) {
+            let matchedCust =
+              (row.customerPhone ? customerByPhone.get(row.customerPhone.replace(/\s+/g, '')) : undefined) ||
+              customerByName.get(normalize(row.customerName));
+
+            if (!matchedCust) {
+              matchedCust = await adapter.saveCustomer({
+                organization_id: orgId,
+                name: row.customerName || 'مشتری عمومی',
+                phone: row.customerPhone || '',
+                status: 'active',
+              });
+              if (matchedCust.phone) customerByPhone.set(matchedCust.phone.replace(/\s+/g, ''), matchedCust);
+              if (matchedCust.name) customerByName.set(normalize(matchedCust.name), matchedCust);
+            }
+            customerId = matchedCust.id;
+          }
+
+          // Resolve warehouse
+          const matchedWh =
+            (row.warehouseName ? warehouseByName.get(normalize(row.warehouseName)) : undefined) ||
+            defaultWh;
+
+          const existingOrder = orderByNumber.get(normalize(row.orderNumber));
+          const savedOrder = await adapter.saveOrder({
+            id: existingOrder?.id,
+            organization_id: orgId,
+            order_number: row.orderNumber,
+            customer_id: customerId ?? existingOrder?.customer_id,
+            warehouse_id: matchedWh.id,
+            status: row.status,
+            payment_status: row.paymentStatus,
+            currency: existingOrder?.currency || 'TOMAN',
+            subtotal: row.subtotal,
+            discount: row.discount,
+            tax: row.tax,
+            total: row.total,
+            notes: row.notes,
+            date_created: existingOrder?.date_created || row.dateCreated,
+          });
+
+          orderByNumber.set(normalize(savedOrder.order_number), savedOrder);
+          if (existingOrder) {
+            updatedCount++;
+          } else {
+            createdCount++;
+          }
+        } catch (rowErr: any) {
+          runtimeErrors.push(`سطر ${row.rowNumber} (${row.orderNumber}): ${rowErr?.message || 'خطا در ثبت سفارش'}`);
+        }
+      }
+
+      await Promise.all([loadLookups(), loadData()]);
+      const totalProcessed = createdCount + updatedCount;
+      setExcelFeedback({
+        type: totalProcessed > 0 ? 'success' : 'error',
+        message: `ورود اکسل سفارشات انجام شد (${isPersian ? toPersianDigits(createdCount) : createdCount} سفارش جدید، ${isPersian ? toPersianDigits(updatedCount) : updatedCount} به‌روزرسانی).`,
+        details: runtimeErrors.slice(0, 10),
+      });
     } catch (err: any) {
-      alert(`خطا در پردازش فایل اکسل: ${err?.message || err}`);
+      setExcelFeedback({
+        type: 'error',
+        message: `خطا در پردازش فایل اکسل: ${err?.message || err}`,
+      });
     } finally {
+      setIsImportingExcel(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -558,6 +739,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
               variant="outline"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
+              isLoading={isImportingExcel}
               icon={<Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 dark:text-neutral-400" />}
             >
               <span className="hidden sm:inline">ورود اکسل</span>
@@ -567,6 +749,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
               variant="outline"
               size="sm"
               onClick={handleExportExcel}
+              isLoading={isExportingExcel}
               icon={<FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400" />}
             >
               <span className="hidden sm:inline">خروجی اکسل</span>
@@ -584,6 +767,43 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
           </div>
         }
       />
+
+      {excelFeedback && (
+        <div
+          className={`flex items-start justify-between gap-3 p-3.5 rounded-xl border text-xs ${
+            excelFeedback.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200'
+              : excelFeedback.type === 'error'
+              ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/60 text-red-900 dark:text-red-200'
+              : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/60 text-blue-900 dark:text-blue-200'
+          }`}
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 font-bold">
+              {excelFeedback.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 shrink-0" />
+              )}
+              <span>{excelFeedback.message}</span>
+            </div>
+            {excelFeedback.details && excelFeedback.details.length > 0 && (
+              <ul className="list-disc list-inside text-[11px] opacity-85 space-y-0.5 ps-5">
+                {excelFeedback.details.map((d, i) => (
+                  <li key={i}>{d}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setExcelFeedback(null)}
+            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Unified Orders Container */}
       <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">

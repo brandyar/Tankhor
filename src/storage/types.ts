@@ -269,5 +269,9 @@ export interface IStorageProvider {
   // High-Speed Aggregated Summaries (Zero-Latency Dashboard & Inventory Counters)
   getDashboardSummary?(organizationId: number): Promise<any>;
   getInventorySummary?(organizationId: number, warehouseId?: number): Promise<any>;
+
+  // High-Speed Consolidated Init Endpoints (POS & Barcode Print)
+  getPosInitData?(organizationId: number): Promise<any>;
+  getBarcodeInitData?(organizationId: number): Promise<any>;
 }
 

@@ -6,6 +6,7 @@ import { FinancialAccount } from '../../../types/accounting';
 import { CartLine } from './OrderCartTable';
 import { POSPaymentType } from './OrderPaymentSection';
 import { ProductImage } from '../../../components/ui/ProductImage';
+import { WebcamScanButton } from '../../../components/ui/WebcamScanButton';
 import { formatCurrency, toPersianDigits, formatDate } from '../../../utils/formatters';
 import {
   Minimize2,
@@ -85,6 +86,7 @@ interface FullscreenPosTerminalProps {
   userName?: string;
   scannerToast: { type: 'success' | 'error'; message: string } | null;
   errorMsg: string | null;
+  onOpenWebcamScanner?: () => void;
 }
 
 export const FullscreenPosTerminal: React.FC<FullscreenPosTerminalProps> = ({
@@ -141,6 +143,7 @@ export const FullscreenPosTerminal: React.FC<FullscreenPosTerminalProps> = ({
   userName,
   scannerToast,
   errorMsg,
+  onOpenWebcamScanner,
 }) => {
   const { t, locale } = useTranslation();
   const isPersian = locale === 'fa';
@@ -463,12 +466,15 @@ export const FullscreenPosTerminal: React.FC<FullscreenPosTerminalProps> = ({
                   value={barcodeQuery}
                   onChange={(e) => setBarcodeQuery(e.target.value)}
                   placeholder={t('orders.barcodeScannerActivePlaceholder')}
-                  className="w-full ps-10 pe-20 h-12 bg-[#f8f9fa] dark:bg-[#181a20] border-2 border-emerald-500/40 focus:border-emerald-600 focus:bg-white dark:focus:bg-[#13151a] rounded-xl text-xs font-mono text-[#171717] dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none transition-all shadow-inner"
+                  className="w-full ps-10 pe-28 h-12 bg-[#f8f9fa] dark:bg-[#181a20] border-2 border-emerald-500/40 focus:border-emerald-600 focus:bg-white dark:focus:bg-[#13151a] rounded-xl text-xs font-mono text-[#171717] dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none transition-all shadow-inner"
                 />
                 <div className="absolute inset-y-0 start-0 ps-3.5 flex items-center pointer-events-none text-emerald-600 dark:text-emerald-400">
                   <Barcode className="w-5 h-5" />
                 </div>
-                <div className="absolute inset-y-0 end-1.5 flex items-center">
+                <div className="absolute inset-y-0 end-1.5 flex items-center gap-1.5">
+                  {onOpenWebcamScanner && (
+                    <WebcamScanButton onClick={onOpenWebcamScanner} size="md" />
+                  )}
                   <button
                     type="submit"
                     className="h-9 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-2xs"

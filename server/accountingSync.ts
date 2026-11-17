@@ -1,13 +1,42 @@
 import { DirectusAdminClient } from './directusAdmin';
+import { registerCacheInvalidator } from './serverCache';
+
+const syncBalanceCache = new Map<number, { data: any[]; timestamp: number }>();
+const syncBalanceInFlight = new Map<number, Promise<any[]>>();
+const SYNC_BALANCE_TTL_MS = 60 * 1000;
+
+registerCacheInvalidator((orgId, collection) => {
+  if (
+    !collection ||
+    collection === 'treasury_transactions' ||
+    collection === 'financial_accounts' ||
+    collection === 'orders' ||
+    collection === 'expenses'
+  ) {
+    syncBalanceCache.delete(orgId);
+  }
+});
 
 // Helper to calculate, reconcile orders, and strictly persist current_balance in Directus financial_accounts table
-export async function syncAndPersistFinancialAccountBalances(orgIdNum: number) {
-  try {
-    const [accItems, treasuryTxs, orders] = await Promise.all([
-      DirectusAdminClient.getItems('financial_accounts', {
-        filter: { organization_id: { _eq: orgIdNum } },
-        limit: -1,
-      }).catch(() => []),
+export async function syncAndPersistFinancialAccountBalances(orgIdNum: number, force = false) {
+  if (!force) {
+    const cached = syncBalanceCache.get(orgIdNum);
+    if (cached && Date.now() - cached.timestamp < SYNC_BALANCE_TTL_MS) {
+      return cached.data;
+    }
+    const inFlight = syncBalanceInFlight.get(orgIdNum);
+    if (inFlight) {
+      return inFlight;
+    }
+  }
+
+  const work = (async () => {
+    try {
+      const [accItems, treasuryTxs, orders] = await Promise.all([
+        DirectusAdminClient.getItems('financial_accounts', {
+          filter: { organization_id: { _eq: orgIdNum } },
+          limit: -1,
+        }).catch(() => []),
       DirectusAdminClient.getItems('treasury_transactions', {
         filter: { organization_id: { _eq: orgIdNum } },
         limit: -1,
@@ -204,9 +233,16 @@ export async function syncAndPersistFinancialAccountBalances(orgIdNum: number) {
       })
     );
 
-    return mapped;
-  } catch (error: any) {
-    console.error('[API Proxy] Error in syncAndPersistFinancialAccountBalances:', error.message);
-    return [];
-  }
+      syncBalanceCache.set(orgIdNum, { data: mapped, timestamp: Date.now() });
+      return mapped;
+    } catch (error: any) {
+      console.error('[API Proxy] Error in syncAndPersistFinancialAccountBalances:', error.message);
+      return [];
+    } finally {
+      syncBalanceInFlight.delete(orgIdNum);
+    }
+  })();
+
+  syncBalanceInFlight.set(orgIdNum, work);
+  return work;
 }

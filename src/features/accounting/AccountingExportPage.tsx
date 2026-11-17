@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../../i18n';
+import { useOrganization } from '../../context/OrganizationContext';
 import { storageManager } from '../../storage';
 import {
   AccountingJournalEntry,
@@ -16,6 +17,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { formatCurrency, formatPersianDate, formatDateNumeric, toPersianDigits } from '../../utils/formatters';
 import { isoToJalali, jalaliToIsoString } from '../../utils/dateUtils';
+import { downloadCsvContent, escapeCsvCell } from '../../utils/excelUtils';
 import {
   FileSpreadsheet,
   Download,
@@ -31,9 +33,11 @@ import {
 
 export const AccountingExportPage: React.FC = () => {
   const { t, locale } = useTranslation();
+  const { activeOrganization } = useOrganization();
   const [loading, setLoading] = useState(true);
   const [exportFormat, setExportFormat] = useState<'moadian' | 'sepidar' | 'holo' | 'journal'>('moadian');
   const [periodFilter, setPeriodFilter] = useState<'all' | 'month' | 'quarter' | 'year'>('month');
+  const [exportFeedback, setExportFeedback] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null);
 
   // Loaded raw data
   const [orders, setOrders] = useState<Order[]>([]);
@@ -47,13 +51,14 @@ export const AccountingExportPage: React.FC = () => {
     try {
       setLoading(true);
       const storage = storageManager.getAdapter();
+      const orgParams = activeOrganization?.id ? { organization_id: activeOrganization.id } : {};
       const [allOrders, allPos, allExpenses, allTrans, allAccounts, allCheques] = await Promise.all([
-        storage.getOrders(),
-        storage.getPurchaseOrders(),
-        storage.getExpenses(),
-        storage.getPersonTransactions(),
-        storage.getFinancialAccounts(),
-        storage.getCheques(),
+        storage.getOrders(orgParams),
+        storage.getPurchaseOrders(orgParams),
+        storage.getExpenses(orgParams),
+        storage.getPersonTransactions(orgParams),
+        storage.getFinancialAccounts(orgParams),
+        storage.getCheques(orgParams),
       ]);
 
       setOrders(allOrders || []);
@@ -71,7 +76,7 @@ export const AccountingExportPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [activeOrganization?.id]);
 
   // Filter raw data according to date period
   const filterDate = useMemo(() => {
@@ -107,18 +112,26 @@ export const AccountingExportPage: React.FC = () => {
   }, [periodFilter, locale]);
 
   const filteredOrders = useMemo(() => {
-    if (!filterDate) return orders;
-    return orders.filter((o) => (o.date_created ? o.date_created.slice(0, 10) >= filterDate : true));
+    return orders.filter((o) => {
+      if (o.status === 'cancelled') return false;
+      const ordDate = (o.order_date || o.date_created || '').slice(0, 10);
+      if (filterDate && ordDate) return ordDate >= filterDate;
+      return true;
+    });
   }, [orders, filterDate]);
 
   const filteredExpenses = useMemo(() => {
     if (!filterDate) return expenses;
-    return expenses.filter((e) => (e.expense_date ? e.expense_date >= filterDate : true));
+    return expenses.filter((e) => (e.expense_date ? e.expense_date.slice(0, 10) >= filterDate : true));
   }, [expenses, filterDate]);
 
   const filteredPurchases = useMemo(() => {
-    if (!filterDate) return purchaseOrders;
-    return purchaseOrders.filter((p) => (p.date_created ? p.date_created.slice(0, 10) >= filterDate : true));
+    return purchaseOrders.filter((p) => {
+      if (p.status === 'cancelled') return false;
+      const poDate = ((p as any).order_date || p.date_created || p.expected_date || '').slice(0, 10);
+      if (filterDate && poDate) return poDate >= filterDate;
+      return true;
+    });
   }, [purchaseOrders, filterDate]);
 
   // Construct Double-Entry Journal Articles
@@ -127,10 +140,15 @@ export const AccountingExportPage: React.FC = () => {
 
     // 1. Sales Entries
     filteredOrders.forEach((order) => {
-      const date = order.date_created?.slice(0, 10) || new Date().toISOString().split('T')[0];
-      const total = order.total || 0;
-      const tax = order.tax || Math.round((total / 1.1) * 0.1);
-      const subtotal = total - tax;
+      const date = (order.order_date || order.date_created || new Date().toISOString()).slice(0, 10);
+      const total = Number(order.total ?? (order as any).final_amount ?? 0) || 0;
+      const tax =
+        order.tax !== undefined && order.tax !== null
+          ? Number(order.tax) || 0
+          : (order as any).tax_amount !== undefined && (order as any).tax_amount !== null
+          ? Number((order as any).tax_amount) || 0
+          : 0;
+      const subtotal = Math.max(0, total - tax);
 
       // Debit: Accounts Receivable or Cash/Bank
       list.push({
@@ -279,54 +297,153 @@ export const AccountingExportPage: React.FC = () => {
 
   // Export to CSV Generator
   const handleExportCsv = () => {
-    let csvContent = '';
+    setExportFeedback(null);
+    const lines: string[] = [];
     let fileName = '';
 
     if (exportFormat === 'moadian') {
+      if (filteredOrders.length === 0) {
+        setExportFeedback({
+          type: 'info',
+          message: 'فاکتور فروشی در این بازه زمانی برای خروجی سامانه مودیان وجود ندارد.',
+        });
+        return;
+      }
       // Moadian & Art 169 Periodic Report Format
       fileName = `moadian_sales_report_${new Date().toISOString().slice(0, 10)}.csv`;
-      csvContent = 'شماره فاکتور,تاریخ شمسی,شناسه خریدار,نام خریدار,مبلغ ناخالص (تومان),نرخ ارزش افزوده,مبلغ ارزش افزوده (تومان),مبلغ کل فاکتور\n';
+      lines.push(
+        [
+          'شماره فاکتور',
+          'تاریخ شمسی',
+          'شناسه خریدار',
+          'نام خریدار',
+          'مبلغ ناخالص (تومان)',
+          'نرخ ارزش افزوده',
+          'مبلغ ارزش افزوده (تومان)',
+          'مبلغ کل فاکتور',
+        ]
+          .map(escapeCsvCell)
+          .join(',')
+      );
       filteredOrders.forEach((o) => {
-        const taxable = o.subtotal || Math.round((o.total || 0) / 1.1);
-        const tax = o.tax || Math.round(taxable * 0.1);
-        csvContent += `"${o.order_number || o.id}","${formatPersianDate(o.date_created)}","${o.customer_id || 'CONSUMER'}","${o.customer_name || 'مصرف‌کننده نهایی'}",${taxable},"10%",${tax},${o.total}\n`;
+        const total = Number(o.total ?? (o as any).final_amount ?? 0) || 0;
+        const tax =
+          o.tax !== undefined && o.tax !== null
+            ? Number(o.tax) || 0
+            : (o as any).tax_amount !== undefined && (o as any).tax_amount !== null
+            ? Number((o as any).tax_amount) || 0
+            : 0;
+        const taxable = Math.max(0, total - tax);
+        const taxRateStr = taxable > 0 && tax > 0 ? `${Math.round((tax / taxable) * 100)}%` : '0%';
+        const custId = typeof o.customer_id === 'object' ? (o.customer_id as any)?.id : o.customer_id;
+
+        lines.push(
+          [
+            escapeCsvCell(o.order_number || o.id),
+            escapeCsvCell(formatPersianDate(o.order_date || o.date_created)),
+            escapeCsvCell(custId || 'CONSUMER'),
+            escapeCsvCell(o.customer_name || 'مصرف‌کننده نهایی'),
+            taxable,
+            escapeCsvCell(taxRateStr),
+            tax,
+            total,
+          ].join(',')
+        );
       });
     } else if (exportFormat === 'sepidar') {
+      if (journalEntries.length === 0) {
+        setExportFeedback({
+          type: 'info',
+          message: 'آرتیکل حسابداری در این بازه زمانی برای خروجی سپیدار یافت نشد.',
+        });
+        return;
+      }
       // Sepidar Standard Accounting Entry Format
       fileName = `sepidar_accounting_entries_${new Date().toISOString().slice(0, 10)}.csv`;
-      csvContent = 'شماره سند,تاریخ,کد حساب معین,نام حساب معین,شرح آرتیکل,بدهکار,بستانکار,مرجع\n';
+      lines.push(
+        ['شماره سند', 'تاریخ', 'کد حساب معین', 'نام حساب معین', 'شرح آرتیکل', 'بدهکار', 'بستانکار', 'مرجع']
+          .map(escapeCsvCell)
+          .join(',')
+      );
       journalEntries.forEach((entry) => {
         const formattedDate = formatDateNumeric(entry.entry_date);
-        csvContent += `"${entry.entry_number}","${formattedDate}","${entry.account_code}","${entry.account_name}","${entry.description}",${entry.debit},${entry.credit},"${entry.reference_type || ''}"\n`;
+        lines.push(
+          [
+            escapeCsvCell(entry.entry_number),
+            escapeCsvCell(formattedDate),
+            escapeCsvCell(entry.account_code),
+            escapeCsvCell(entry.account_name),
+            escapeCsvCell(entry.description),
+            entry.debit,
+            entry.credit,
+            escapeCsvCell(entry.reference_type || ''),
+          ].join(',')
+        );
       });
     } else if (exportFormat === 'holo') {
+      if (journalEntries.length === 0) {
+        setExportFeedback({
+          type: 'info',
+          message: 'آرتیکل حسابداری در این بازه زمانی برای خروجی هلو یافت نشد.',
+        });
+        return;
+      }
       // Holo Standard Accounting Format
       fileName = `holo_sanad_${new Date().toISOString().slice(0, 10)}.csv`;
-      csvContent = 'کد حساب,عنوان حساب,بدهکار,بستانکار,شرح سند,تاریخ\n';
+      lines.push(
+        ['کد حساب', 'عنوان حساب', 'بدهکار', 'بستانکار', 'شرح سند', 'تاریخ']
+          .map(escapeCsvCell)
+          .join(',')
+      );
       journalEntries.forEach((entry) => {
         const formattedDate = formatDateNumeric(entry.entry_date);
-        csvContent += `"${entry.account_code}","${entry.account_name}",${entry.debit},${entry.credit},"${entry.description}","${formattedDate}"\n`;
+        lines.push(
+          [
+            escapeCsvCell(entry.account_code),
+            escapeCsvCell(entry.account_name),
+            entry.debit,
+            entry.credit,
+            escapeCsvCell(entry.description),
+            escapeCsvCell(formattedDate),
+          ].join(',')
+        );
       });
     } else {
+      if (journalEntries.length === 0) {
+        setExportFeedback({
+          type: 'info',
+          message: 'آرتیکل حسابداری در این بازه زمانی برای خروجی دفتر روزنامه یافت نشد.',
+        });
+        return;
+      }
       // General Double Entry Journal Format
       fileName = `general_journal_double_entry_${new Date().toISOString().slice(0, 10)}.csv`;
-      csvContent = 'شناسه سند,تاریخ,کد معین,نام معین حسابداری,شرح رویداد مالی,بدهکار (تومان),بستانکار (تومان)\n';
+      lines.push(
+        ['شناسه سند', 'تاریخ', 'کد معین', 'نام معین حسابداری', 'شرح رویداد مالی', 'بدهکار (تومان)', 'بستانکار (تومان)']
+          .map(escapeCsvCell)
+          .join(',')
+      );
       journalEntries.forEach((entry) => {
         const formattedDate = formatDateNumeric(entry.entry_date);
-        csvContent += `"${entry.entry_number}","${formattedDate}","${entry.account_code}","${entry.account_name}","${entry.description}",${entry.debit},${entry.credit}\n`;
+        lines.push(
+          [
+            escapeCsvCell(entry.entry_number),
+            escapeCsvCell(formattedDate),
+            escapeCsvCell(entry.account_code),
+            escapeCsvCell(entry.account_name),
+            escapeCsvCell(entry.description),
+            entry.debit,
+            entry.credit,
+          ].join(',')
+        );
       });
     }
 
-    // Prepend UTF-8 BOM so Persian characters display correctly in Excel
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', fileName);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadCsvContent(lines.join('\n'), fileName);
+    setExportFeedback({
+      type: 'success',
+      message: `فایل خروجی "${fileName}" با موفقیت تولید و دانلود شد.`,
+    });
   };
 
   return (
@@ -447,6 +564,27 @@ export const AccountingExportPage: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {exportFeedback && (
+        <div
+          className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+            exportFeedback.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200'
+              : exportFeedback.type === 'error'
+              ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/60 text-red-900 dark:text-red-200'
+              : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200'
+          }`}
+        >
+          <span>{exportFeedback.message}</span>
+          <button
+            type="button"
+            onClick={() => setExportFeedback(null)}
+            className="px-1.5 py-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Balance Indicator Banner */}
       <div

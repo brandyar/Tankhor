@@ -14,6 +14,7 @@ import { printElement } from '../../utils/print';
 import { generateBarcodeSvg, generateRandomBarcode } from '../../utils/barcode';
 import { useModuleAccess } from '../../hooks/useModuleAccess';
 import { ModuleLockedCard } from '../../components/modules/ModuleLockedCard';
+import { Pagination } from '../../components/ui/Pagination';
 import {
   Printer,
   Barcode as BarcodeIcon,
@@ -56,6 +57,10 @@ export const BarcodePrintView: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
   // Filters
   const [search, setSearch] = useState('');
   const [selectedProductId, setSelectedProductId] = useState<number | ''>('');
@@ -81,19 +86,41 @@ export const BarcodePrintView: React.FC = () => {
   const printSectionRef = useRef<HTMLDivElement>(null);
 
   const loadData = async () => {
-    setIsLoading(true);
+    const orgId = activeOrganization?.id;
+    const cacheKey = `tankhor_barcode_data_${orgId || 'default'}`;
+
+    // 1. Instant Cache Hydration (SWR)
+    try {
+      const cachedRaw = sessionStorage.getItem(cacheKey);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        if (cached && Array.isArray(cached.variants) && cached.variants.length > 0) {
+          setVariants(cached.variants || []);
+          setProducts(cached.products || []);
+          setColors(cached.colors || []);
+          setSizes(cached.sizes || []);
+          setBrands(cached.brands || []);
+          setCategories(cached.categories || []);
+          setIsLoading(false);
+        }
+      }
+    } catch {}
+
+    // 2. Fetch Fresh Data using optimized composite endpoint
     try {
       const adapter = storageManager.getAdapter();
-      const orgId = activeOrganization?.id;
+      let initData: any = null;
 
-      const [vList, pList, cList, sList, bList, catList] = await Promise.all([
-        adapter.getVariants({ organization_id: orgId }),
-        adapter.getProducts({ organization_id: orgId }),
-        adapter.getColors({ organization_id: orgId }),
-        adapter.getSizes({ organization_id: orgId }),
-        adapter.getBrands({ organization_id: orgId }),
-        adapter.getCategories({ organization_id: orgId }),
-      ]);
+      if (adapter.getBarcodeInitData && orgId) {
+        initData = await adapter.getBarcodeInitData(Number(orgId));
+      }
+
+      const vList = initData?.variants || (await adapter.getVariants({ organization_id: orgId }));
+      const pList = initData?.products || (await adapter.getProducts({ organization_id: orgId }));
+      const cList = initData?.colors || (await adapter.getColors({ organization_id: orgId }));
+      const sList = initData?.sizes || (await adapter.getSizes({ organization_id: orgId }));
+      const bList = initData?.brands || (await adapter.getBrands({ organization_id: orgId }));
+      const catList = initData?.categories || (await adapter.getCategories({ organization_id: orgId }));
 
       setVariants(vList);
       setProducts(pList);
@@ -101,6 +128,20 @@ export const BarcodePrintView: React.FC = () => {
       setSizes(sList);
       setBrands(bList);
       setCategories(catList);
+
+      try {
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            variants: vList,
+            products: pList,
+            colors: cList,
+            sizes: sList,
+            brands: bList,
+            categories: catList,
+          })
+        );
+      } catch {}
     } catch (err) {
       console.error('[BarcodePrintView] Error loading data:', err);
     } finally {
@@ -111,6 +152,11 @@ export const BarcodePrintView: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [activeOrganization]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedProductId, selectedBrandId, selectedCategoryId]);
 
   // Filtered variants
   const filteredVariants = useMemo(() => {
@@ -150,6 +196,12 @@ export const BarcodePrintView: React.FC = () => {
       return true;
     });
   }, [variants, products, search, selectedProductId, selectedBrandId, selectedCategoryId]);
+
+  const totalPages = Math.ceil(filteredVariants.length / pageSize) || 1;
+  const paginatedVariants = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredVariants.slice(start, start + pageSize);
+  }, [filteredVariants, currentPage, pageSize]);
 
   // Selection handlers
   const handleToggleSelect = (variantId: number) => {
@@ -411,8 +463,8 @@ export const BarcodePrintView: React.FC = () => {
               </div>
             </div>
 
-            {/* Variants Selection List Table */}
-            <div className="max-h-[520px] overflow-y-auto overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+            {/* Desktop View: Tabular Grid (hidden on mobile) */}
+            <div className="hidden md:block max-h-[520px] overflow-y-auto overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
               <table className="w-full text-right text-xs">
                 <thead className="bg-neutral-100 dark:bg-[#181a20] text-neutral-700 dark:text-neutral-300 font-bold border-b border-neutral-200 dark:border-neutral-800 sticky top-0 z-10">
                   <tr>
@@ -427,11 +479,32 @@ export const BarcodePrintView: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60 bg-white dark:bg-[#13151a]">
                   {isLoading ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-10 text-neutral-500 dark:text-neutral-400">
-                        {t('common.loading')}
-                      </td>
-                    </tr>
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <tr key={`bar_skel_row_${i}`} className="animate-pulse">
+                        <td className="px-3 py-3 text-center">
+                          <div className="w-4 h-4 bg-neutral-200 dark:bg-neutral-800 rounded mx-auto" />
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="h-3.5 bg-neutral-200 dark:bg-neutral-800 rounded w-36 mb-1.5" />
+                          <div className="h-2.5 bg-neutral-100 dark:bg-neutral-800/60 rounded w-20" />
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-16" />
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-20" />
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-10" />
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="h-3.5 bg-neutral-200 dark:bg-neutral-800 rounded w-16" />
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <div className="h-7 w-24 bg-neutral-200 dark:bg-neutral-800 rounded mx-auto" />
+                        </td>
+                      </tr>
+                    ))
                   ) : filteredVariants.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="text-center py-10 text-neutral-500 dark:text-neutral-400">
@@ -439,7 +512,7 @@ export const BarcodePrintView: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    filteredVariants.map((v, vIdx) => {
+                    paginatedVariants.map((v, vIdx) => {
                       const isSelected = !!selectedItems[v.id];
                       const copies = selectedItems[v.id] || 0;
                       const color = colors.find((c) => c.id === (typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id));
@@ -531,6 +604,145 @@ export const BarcodePrintView: React.FC = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile View: Touch Cards (visible only on mobile) */}
+            <div className="block md:hidden space-y-2.5 max-h-[500px] overflow-y-auto p-0.5">
+              {isLoading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={`bar_mob_skel_${i}`}
+                    className="p-3 bg-white dark:bg-[#13151a] border border-neutral-200/80 dark:border-neutral-800 rounded-xl animate-pulse space-y-2"
+                  >
+                    <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-2/3" />
+                    <div className="h-3 bg-neutral-100 dark:bg-neutral-800/60 rounded w-1/3" />
+                    <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex justify-between">
+                      <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-20" />
+                      <div className="h-7 w-24 bg-neutral-200 dark:bg-neutral-800 rounded" />
+                    </div>
+                  </div>
+                ))
+              ) : filteredVariants.length === 0 ? (
+                <div className="p-8 text-center text-neutral-500 dark:text-neutral-400 text-xs bg-white dark:bg-[#13151a] rounded-xl border border-neutral-200 dark:border-neutral-800">
+                  {t('inventory.noVariantsMatchingFilter')}
+                </div>
+              ) : (
+                paginatedVariants.map((v, vIdx) => {
+                  const isSelected = !!selectedItems[v.id];
+                  const copies = selectedItems[v.id] || 0;
+                  const color = colors.find((c) => c.id === (typeof v.color_id === 'number' ? v.color_id : (v.color_id as any)?.id));
+                  const size = sizes.find((s) => s.id === (typeof v.size_id === 'number' ? v.size_id : (v.size_id as any)?.id));
+
+                  return (
+                    <div
+                      key={`bar_mob_var_${v.id}_${vIdx}`}
+                      className={`p-3 bg-white dark:bg-[#13151a] border rounded-xl transition-all ${
+                        isSelected
+                          ? 'border-emerald-500 ring-1 ring-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/20'
+                          : 'border-neutral-200/80 dark:border-neutral-800'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <label className="flex items-start gap-2.5 cursor-pointer flex-1">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelect(v.id)}
+                            className="w-4 h-4 mt-0.5 rounded border-neutral-300 dark:border-neutral-700 text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <div>
+                            <p className="font-bold text-xs text-neutral-900 dark:text-neutral-100">
+                              {v.product_title || '-'}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-neutral-500">
+                              {color && (
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full border border-black/20"
+                                  style={{ backgroundColor: color.hex || '#000' }}
+                                />
+                              )}
+                              <span>{v.color_name || color?.name || '-'}</span>
+                              <span>/</span>
+                              <span className="font-bold text-neutral-700 dark:text-neutral-300">
+                                {v.size_name || size?.name || '-'}
+                              </span>
+                            </div>
+                          </div>
+                        </label>
+
+                        <div className="text-end shrink-0 font-mono text-xs font-bold text-neutral-900 dark:text-neutral-100">
+                          {v.price ? formatCurrency(v.price, activeOrganization?.currency, isPersian) : '-'}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 mt-2.5 pt-2 border-t border-neutral-100 dark:border-neutral-800 text-[11px] font-mono">
+                        <div className="text-neutral-500">
+                          SKU: <span className="text-neutral-800 dark:text-neutral-200">{v.sku}</span>
+                        </div>
+                        {v.barcode ? (
+                          <div className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-neutral-800 dark:text-neutral-200">
+                            {isPersian ? toPersianDigits(v.barcode) : v.barcode}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateBarcodeForVariant(v)}
+                            className="text-[10px] text-amber-600 hover:underline flex items-center gap-1"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                            {t('inventory.generateBarcodeBtn')}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Copies Adjustment */}
+                      <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">
+                          {t('inventory.printCopiesCol')}:
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleSetCopies(v.id, copies - 1)}
+                            className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 flex items-center justify-center font-bold text-sm"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            min="0"
+                            value={copies}
+                            onChange={(e) => handleSetCopies(v.id, parseInt(e.target.value) || 0)}
+                            className="w-14 h-8 text-center text-xs font-mono font-bold bg-white dark:bg-[#181a20] text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700 rounded-lg focus:ring-1 focus:ring-emerald-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSetCopies(v.id, copies + 1)}
+                            className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 flex items-center justify-center font-bold text-sm"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Universal Pagination */}
+            {filteredVariants.length > 0 && (
+              <div className="mt-3">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredVariants.length}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  pageSizeOptions={[10, 25, 50, 100]}
+                />
+              </div>
+            )}
           </Card>
         </div>
 

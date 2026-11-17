@@ -775,5 +775,25 @@ export class CloudDirectusAdapter implements IStorageProvider {
       return null;
     }
   }
+
+  async getPosInitData(organizationId: number): Promise<any> {
+    try {
+      const res = await this.base.client.request(`/orders/pos-init?organization_id=${organizationId}`);
+      return res;
+    } catch (err) {
+      console.warn('[CloudDirectusAdapter] getPosInitData error:', err);
+      return null;
+    }
+  }
+
+  async getBarcodeInitData(organizationId: number): Promise<any> {
+    try {
+      const res = await this.base.client.request(`/inventory/barcode-init?organization_id=${organizationId}`);
+      return res;
+    } catch (err) {
+      console.warn('[CloudDirectusAdapter] getBarcodeInitData error:', err);
+      return null;
+    }
+  }
 }
 

@@ -14,9 +14,12 @@ import { DataTable, Column } from '../../components/ui/DataTable';
 import { Pagination } from '../../components/ui/Pagination';
 import { ProductImage } from '../../components/ui/ProductImage';
 import { ImageUpload } from '../../components/ui/ImageUpload';
+import { WebcamScanButton } from '../../components/ui/WebcamScanButton';
+import { WebcamBarcodeScannerModal } from '../../components/modals/WebcamBarcodeScannerModal';
 import { formatCurrency, toPersianDigits } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
 import { Search, Shirt, Barcode as BarcodeIcon, Tag, Trash2, Edit, Save, Plus } from 'lucide-react';
+import { useSwrRefresh } from '../../hooks/useSwrRefresh';
 
 export const VariantsView: React.FC = () => {
   const { t, locale } = useTranslation();
@@ -44,11 +47,12 @@ export const VariantsView: React.FC = () => {
   const [editSizeId, setEditSizeId] = useState<number | ''>('');
   const [editImage, setEditImage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [scannerTarget, setScannerTarget] = useState<'search' | 'edit' | null>(null);
 
   const isPersian = locale === 'fa';
 
-  const loadVariants = async () => {
-    setIsLoading(true);
+  const loadVariants = async (silent: boolean | unknown = false) => {
+    if (silent !== true) setIsLoading(true);
     try {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
@@ -82,6 +86,10 @@ export const VariantsView: React.FC = () => {
   useEffect(() => {
     loadVariants();
   }, [activeOrganization, search]);
+
+  useSwrRefresh(['product_variants', 'products', 'colors', 'sizes'], () => {
+    loadVariants(true);
+  });
 
   useEffect(() => {
     setCurrentPage(1);
@@ -240,12 +248,16 @@ export const VariantsView: React.FC = () => {
 
       <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
-          <div className="w-full sm:w-80">
+          <div className="w-full sm:w-80 flex items-center gap-1.5">
             <Input
               placeholder={t('products.searchVariants')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search className="w-4 h-4" />}
+            />
+            <WebcamScanButton
+              size="md"
+              onClick={() => setScannerTarget('search')}
             />
           </div>
         </div>
@@ -421,11 +433,17 @@ export const VariantsView: React.FC = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">{t('products.variantBarcode')}</label>
-              <Input
-                value={editBarcode}
-                onChange={(e) => setEditBarcode(e.target.value)}
-                placeholder="EAN / Barcode..."
-              />
+              <div className="flex items-center gap-1.5">
+                <Input
+                  value={editBarcode}
+                  onChange={(e) => setEditBarcode(e.target.value)}
+                  placeholder="EAN / Barcode..."
+                />
+                <WebcamScanButton
+                  size="md"
+                  onClick={() => setScannerTarget('edit')}
+                />
+              </div>
             </div>
           </div>
 
@@ -504,6 +522,18 @@ export const VariantsView: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      <WebcamBarcodeScannerModal
+        isOpen={scannerTarget !== null}
+        onClose={() => setScannerTarget(null)}
+        onScan={(code) => {
+          if (scannerTarget === 'search') {
+            setSearch(code);
+          } else if (scannerTarget === 'edit') {
+            setEditBarcode(code);
+          }
+        }}
+      />
     </div>
   );
 };

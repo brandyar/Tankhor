@@ -6,6 +6,8 @@ import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { Modal } from '../../../components/ui/Modal';
 import { ImageUpload } from '../../../components/ui/ImageUpload';
+import { WebcamScanButton } from '../../../components/ui/WebcamScanButton';
+import { WebcamBarcodeScannerModal } from '../../../components/modals/WebcamBarcodeScannerModal';
 import { formatCurrency, toPersianDigits } from '../../../utils/formatters';
 import { Shirt, Sliders, Trash2 } from 'lucide-react';
 
@@ -50,6 +52,9 @@ export const ProductVariantTable: React.FC<ProductVariantTableProps> = ({
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
   const [bulkCost, setBulkCost] = useState<number | ''>('');
   const [bulkStock, setBulkStock] = useState<number | ''>('');
+
+  // Webcam Scanner State
+  const [scanningRowIndex, setScanningRowIndex] = useState<number | null>(null);
 
   const totalVariants = variants.length;
   const totalStockSum = variants.reduce((acc, v) => acc + (Number(v.stock_quantity) || 0), 0);
@@ -221,13 +226,19 @@ export const ProductVariantTable: React.FC<ProductVariantTableProps> = ({
 
                   {/* Barcode Input */}
                   <td className="py-2.5 px-3">
-                    <input
-                      type="text"
-                      value={v.barcode || ''}
-                      onChange={(e) => onUpdateVariantRow(index, 'barcode', e.target.value)}
-                      placeholder="62600000000"
-                      className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-neutral-100 text-xs px-2.5 py-1.5 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
+                    <div className="relative flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={v.barcode || ''}
+                        onChange={(e) => onUpdateVariantRow(index, 'barcode', e.target.value)}
+                        placeholder="62600000000"
+                        className="w-full bg-white dark:bg-[#181a20] border border-slate-300 dark:border-neutral-700 rounded-lg text-slate-900 dark:text-neutral-100 text-xs px-2.5 py-1.5 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <WebcamScanButton
+                        size="xs"
+                        onClick={() => setScanningRowIndex(index)}
+                      />
+                    </div>
                   </td>
 
                   {/* Price Input */}
@@ -360,6 +371,17 @@ export const ProductVariantTable: React.FC<ProductVariantTableProps> = ({
           </div>
         </div>
       </Modal>
+
+      {/* Webcam Barcode Scanner for Variant Row */}
+      <WebcamBarcodeScannerModal
+        isOpen={scanningRowIndex !== null}
+        onClose={() => setScanningRowIndex(null)}
+        onScan={(code) => {
+          if (scanningRowIndex !== null) {
+            onUpdateVariantRow(scanningRowIndex, 'barcode', code);
+          }
+        }}
+      />
     </>
   );
 };

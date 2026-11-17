@@ -3,6 +3,7 @@ import { publicRouter } from './routes/publicRoutes';
 import { userOrgRouter } from './routes/userOrgRoutes';
 import { itemsRouter } from './routes/itemsRoutes';
 import { dashboardRouter } from './routes/dashboardRoutes';
+import { fastInitRouter } from './routes/fastInitRoutes';
 
 export const proxyRouter = Router();
 
@@ -11,6 +12,7 @@ proxyRouter.use(publicRouter);
 proxyRouter.use(userOrgRouter);
 proxyRouter.use(itemsRouter);
 proxyRouter.use(dashboardRouter);
+proxyRouter.use(fastInitRouter);
 
 // Re-exports for backward compatibility and internal utilities
 export { syncAndPersistFinancialAccountBalances } from './accountingSync';

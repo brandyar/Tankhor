@@ -101,7 +101,7 @@ export class DirectusAdminClient {
   // Internal concurrency limiter to prevent overwhelming Directus Fastify under-pressure detector
   private static activeRequests = 0;
   private static requestQueue: Array<() => void> = [];
-  private static readonly MAX_CONCURRENCY = 3;
+  private static readonly MAX_CONCURRENCY = 5;
 
   private static async acquireSlot(): Promise<void> {
     if (this.activeRequests < this.MAX_CONCURRENCY) {
@@ -122,8 +122,35 @@ export class DirectusAdminClient {
     }
   }
 
-  // Semi-static cache for endpoints like /items/system_modules and /items/project_settings
+  // Semi-static cache for reference endpoints like /items/system_modules, /items/project_settings, /items/colors, /items/sizes
   private static requestCache = new Map<string, { data: any; expiresAt: number }>();
+
+  public static invalidateCollectionCache(collection: string): void {
+    const prefix = `/items/${collection}`;
+    for (const key of this.requestCache.keys()) {
+      if (key.includes(prefix)) {
+        this.requestCache.delete(key);
+      }
+    }
+  }
+
+  public static async ping(): Promise<boolean> {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      try {
+        const res = await fetch(`${this.getBaseUrl()}/server/ping`, {
+          method: 'GET',
+          signal: controller.signal,
+        });
+        return res.ok;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    } catch {
+      return false;
+    }
+  }
 
   public static async request<T = any>(
     endpoint: string,
@@ -135,7 +162,12 @@ export class DirectusAdminClient {
 
     // Check cache for GET requests on semi-static collections
     const isGet = !options.method || options.method.toUpperCase() === 'GET';
-    const isCacheable = isGet && (cleanEndpoint.includes('/items/system_modules') || cleanEndpoint.includes('/items/project_settings'));
+    const isCacheable =
+      isGet &&
+      (cleanEndpoint.includes('/items/system_modules') ||
+        cleanEndpoint.includes('/items/project_settings') ||
+        cleanEndpoint.includes('/items/colors') ||
+        cleanEndpoint.includes('/items/sizes'));
     if (isCacheable) {
       const cached = this.requestCache.get(cleanEndpoint);
       if (cached && cached.expiresAt > Date.now()) {

@@ -4,6 +4,7 @@
  */
 
 import { SystemModule } from '../types';
+import { swrCache } from './swrCache';
 
 export interface DirectusConfig {
   baseUrl: string;
@@ -72,44 +73,107 @@ class DirectusClient {
     return null;
   }
 
-  private isRefreshing = false;
+  private refreshPromise: Promise<string | null> | null = null;
+  private lastWarmupAt = 0;
+
+  private decodeJwtPayload(token: string): { exp?: number; iat?: number } | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+      const json = atob(padded);
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  }
+
+  public isTokenNearExpiryOrStale(maxAgeSeconds = 6 * 60 * 60, renewBeforeExpirySeconds = 7 * 24 * 60 * 60): boolean {
+    const token = this.getToken();
+    if (!token) return false;
+    const payload = this.decodeJwtPayload(token);
+    if (!payload) return false;
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp - nowSec < renewBeforeExpirySeconds) {
+      return true;
+    }
+    if (payload.iat && nowSec - payload.iat > maxAgeSeconds) {
+      return true;
+    }
+    return false;
+  }
+
+  public async warmupConnection(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    const now = Date.now();
+    if (now - this.lastWarmupAt < 30000) return;
+    this.lastWarmupAt = now;
+    try {
+      await fetch(`${this.getBaseUrl()}/warmup`, { method: 'GET' });
+    } catch {
+      // Non-blocking warmup ping
+    }
+  }
+
+  public async ensureFreshTokenIfNeeded(): Promise<void> {
+    if (!this.getToken()) return;
+    if (this.isTokenNearExpiryOrStale()) {
+      await this.refreshAccessToken();
+    }
+  }
 
   private async refreshAccessToken(): Promise<string | null> {
-    const rToken = this.getRefreshToken();
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    const currentToken = this.getToken();
+    const rToken = this.getRefreshToken() || currentToken;
     if (!rToken) return null;
 
-    try {
-      this.isRefreshing = true;
-      const url = `${this.getBaseUrl()}/auth/refresh`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: rToken, mode: 'json' }),
-      });
+    this.refreshPromise = (async () => {
+      try {
+        const url = `${this.getBaseUrl()}/auth/refresh`;
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (currentToken) {
+          headers['Authorization'] = `Bearer ${currentToken}`;
+        }
+        const response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ refresh_token: rToken, mode: 'json' }),
+        });
 
-      if (!response.ok) {
-        this.setToken(null, null);
+        if (response.status === 401 || response.status === 403) {
+          this.setToken(null, null);
+          return null;
+        }
+
+        if (!response.ok) {
+          // Transient 5xx/rate-limit: preserve existing session token rather than logging out
+          return null;
+        }
+
+        const json = await response.json();
+        const resData = json.data || json;
+        const newToken = resData.access_token || resData.token;
+        const newRefreshToken = resData.refresh_token || newToken || rToken;
+
+        if (newToken) {
+          this.setToken(newToken, newRefreshToken);
+          return newToken;
+        }
         return null;
-      }
-
-      const json = await response.json();
-      const resData = json.data || json;
-      const newToken = resData.access_token || resData.token;
-      const newRefreshToken = resData.refresh_token || rToken;
-
-      if (newToken) {
-        this.setToken(newToken, newRefreshToken);
-        return newToken;
-      } else {
-        this.setToken(null, null);
+      } catch {
+        // Network error: preserve existing cached session
         return null;
+      } finally {
+        this.refreshPromise = null;
       }
-    } catch {
-      this.setToken(null, null);
-      return null;
-    } finally {
-      this.isRefreshing = false;
-    }
+    })();
+
+    return this.refreshPromise;
   }
 
   public getBaseUrl(): string {
@@ -143,9 +207,30 @@ class DirectusClient {
 
   public async request<T = any>(
     endpoint: string,
-    options: RequestInit & { skipAuth?: boolean; preserveMeta?: boolean } = {}
+    options: RequestInit & { skipAuth?: boolean; preserveMeta?: boolean; bypassCache?: boolean } = {}
   ): Promise<T> {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const method = (options.method || 'GET').toUpperCase();
+
+    if (method === 'GET' && !options.bypassCache) {
+      return swrCache.fetchWithSWR<T>(
+        cleanEndpoint,
+        () => this.executeRequest<T>(cleanEndpoint, options),
+        { preserveMeta: options.preserveMeta, bypassCache: options.bypassCache }
+      );
+    }
+
+    const result = await this.executeRequest<T>(cleanEndpoint, options);
+    if (method !== 'GET') {
+      swrCache.invalidateByMutation(cleanEndpoint);
+    }
+    return result;
+  }
+
+  private async executeRequest<T = any>(
+    cleanEndpoint: string,
+    options: RequestInit & { skipAuth?: boolean; preserveMeta?: boolean; bypassCache?: boolean } = {}
+  ): Promise<T> {
     const url = `${this.getBaseUrl()}${cleanEndpoint}`;
 
     try {
@@ -186,7 +271,7 @@ class DirectusClient {
           const delayMs = (retryCount + 1) * 600;
           console.warn(`[API Client] Server pressure on ${cleanEndpoint}, retrying in ${delayMs}ms (attempt ${retryCount + 1}/2)...`);
           await new Promise((res) => setTimeout(res, delayMs));
-          return this.request<T>(endpoint, {
+          return this.executeRequest<T>(cleanEndpoint, {
             ...options,
             _retryCount: retryCount + 1,
           } as any);
@@ -199,18 +284,23 @@ class DirectusClient {
           errorMsg.includes('TOKEN_EXPIRED') ||
           errorMsg.includes('INVALID_TOKEN');
 
-        if (isExpiredOrUnauthorized && !this.isRefreshing && !this.isAuthPublicEndpoint(cleanEndpoint)) {
+        const alreadyRetriedAuth = Boolean((options as any)._authRetried);
+        if (isExpiredOrUnauthorized && !alreadyRetriedAuth && !this.isAuthPublicEndpoint(cleanEndpoint)) {
           const newToken = await this.refreshAccessToken();
           if (newToken) {
-            return this.request<T>(endpoint, options);
-          } else {
-            this.setToken(null, null);
+            return this.executeRequest<T>(cleanEndpoint, {
+              ...options,
+              _authRetried: true,
+            } as any);
+          } else if (!this.getToken()) {
+            swrCache.clearAll();
             if (typeof window !== 'undefined') {
               localStorage.removeItem('tankhor_cached_user_profile');
             }
           }
         } else if (isExpiredOrUnauthorized) {
           this.setToken(null, null);
+          swrCache.clearAll();
           if (typeof window !== 'undefined') {
             localStorage.removeItem('tankhor_cached_user_profile');
           }
@@ -223,7 +313,7 @@ class DirectusClient {
         ? data
         : (data.data !== undefined ? data.data : (data as T)));
     } catch (err: any) {
-      console.warn(`[API Client] Request failed for ${endpoint}:`, err.message);
+      console.warn(`[API Client] Request failed for ${cleanEndpoint}:`, err.message);
       throw err;
     }
   }
@@ -286,6 +376,7 @@ class DirectusClient {
 
   public async logout(): Promise<void> {
     this.setToken(null, null);
+    swrCache.clearAll();
     if (typeof window !== 'undefined') {
       localStorage.removeItem('tankhor_cached_user_profile');
       localStorage.removeItem('tankhor_active_org_id');
@@ -616,6 +707,7 @@ class DirectusClient {
       method: 'POST',
       body: JSON.stringify({ targetOrganizationId }),
     });
+    swrCache.clearAll();
     if (res.token) {
       this.setToken(res.token, res.refresh_token);
     }
@@ -637,6 +729,7 @@ class DirectusClient {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    swrCache.clearAll();
     if (res.token) {
       this.setToken(res.token, res.refresh_token);
     }

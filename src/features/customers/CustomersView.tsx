@@ -14,6 +14,7 @@ import { DataTable } from '../../components/ui/DataTable';
 import { formatDate, formatCurrency, toPersianDigits } from '../../utils/formatters';
 import { confirmAction } from '../../utils/confirm';
 import { exportCustomersToExcel, parseCustomersFromExcel } from '../../utils/excelUtils';
+import { useSwrRefresh } from '../../hooks/useSwrRefresh';
 import {
   Users,
   Plus,
@@ -30,6 +31,8 @@ import {
   Download,
   Upload,
   RefreshCw,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 
 export const CustomersView: React.FC = () => {
@@ -43,6 +46,11 @@ export const CustomersView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
   const [search, setSearch] = useState('');
+  const [excelFeedback, setExcelFeedback] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+    details?: string[];
+  } | null>(null);
 
   // Add/Edit Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,8 +66,8 @@ export const CustomersView: React.FC = () => {
   const [historyCustomer, setHistoryCustomer] = useState<Customer | null>(null);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (silent: boolean | unknown = false) => {
+    if (silent !== true) setIsLoading(true);
     try {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
@@ -79,6 +87,10 @@ export const CustomersView: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [activeOrganization]);
+
+  useSwrRefresh(['customers', 'orders'], () => {
+    loadData(true);
+  });
 
   const handleOpenModal = (cust?: Customer) => {
     if (cust) {
@@ -165,12 +177,20 @@ export const CustomersView: React.FC = () => {
   };
 
   const handleExportExcel = () => {
-    const listToExport = filteredCustomers.length > 0 ? filteredCustomers : customers;
+    setExcelFeedback(null);
+    const listToExport = search.trim() ? filteredCustomers : customers;
     if (listToExport.length === 0) {
-      alert('مشتری‌ای جهت خروجی اکسل وجود ندارد.');
+      setExcelFeedback({
+        type: 'info',
+        message: 'مشتری‌ای جهت خروجی اکسل وجود ندارد.',
+      });
       return;
     }
-    exportCustomersToExcel(listToExport);
+    const exportedCount = exportCustomersToExcel(listToExport);
+    setExcelFeedback({
+      type: 'success',
+      message: `فایل اکسل مشتریان (${isPersian ? toPersianDigits(exportedCount) : exportedCount} مشتری) با موفقیت دانلود شد.`,
+    });
   };
 
   const handleImportExcelClick = () => {
@@ -185,42 +205,83 @@ export const CustomersView: React.FC = () => {
     if (!file) return;
 
     setIsImporting(true);
+    setExcelFeedback(null);
     try {
       const buffer = await file.arrayBuffer();
       const result = parseCustomersFromExcel(buffer);
 
       if (!result.success || result.items.length === 0) {
-        alert(result.errors.length > 0 ? result.errors.join('\n') : t('customers.importError'));
+        setExcelFeedback({
+          type: 'error',
+          message: t('customers.importError'),
+          details: result.errors.slice(0, 10),
+        });
         return;
       }
 
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id || 1;
+      const existingCustomers = await adapter.getCustomers({ organization_id: orgId });
+      const byPhone = new Map<string, Customer>();
+      const byName = new Map<string, Customer>();
+      existingCustomers.forEach((c) => {
+        if (c.phone) byPhone.set(c.phone.replace(/\s+/g, ''), c);
+        if (c.name) byName.set(c.name.trim().toLowerCase(), c);
+      });
 
-      let savedCount = 0;
+      let createdCount = 0;
+      let updatedCount = 0;
+      const runtimeErrors = [...result.errors];
+
       for (const cust of result.items) {
         if (!cust.name) continue;
-        const custAny = cust as any;
-        const fullAddress = [custAny.province, custAny.city, cust.address].filter(Boolean).join(' - ') || cust.address || '';
-        await adapter.saveCustomer({
-          organization_id: orgId,
-          name: cust.name,
-          phone: cust.phone || custAny.mobile || '',
-          email: cust.email || '',
-          address: fullAddress,
-          notes: cust.notes || '',
-          status: cust.status || 'active',
-        });
-        savedCount++;
+        try {
+          const cleanPhone = (cust.phone || '').replace(/\s+/g, '');
+          const cleanName = cust.name.trim().toLowerCase();
+          const existing =
+            (cleanPhone ? byPhone.get(cleanPhone) : undefined) ||
+            byName.get(cleanName);
+
+          const saved = await adapter.saveCustomer({
+            id: existing?.id,
+            organization_id: orgId,
+            name: cust.name,
+            phone: cust.phone || existing?.phone || '',
+            email: cust.email || existing?.email || '',
+            address: cust.address || existing?.address || '',
+            notes: cust.notes || existing?.notes || '',
+            status: cust.status || existing?.status || 'active',
+          });
+
+          if (saved.phone) byPhone.set(saved.phone.replace(/\s+/g, ''), saved);
+          if (saved.name) byName.set(saved.name.trim().toLowerCase(), saved);
+
+          if (existing) {
+            updatedCount++;
+          } else {
+            createdCount++;
+          }
+        } catch (rowErr: any) {
+          runtimeErrors.push(`${cust.name}: ${rowErr?.message || 'خطا در ذخیره‌سازی'}`);
+        }
       }
 
       await loadData();
-      alert(t('customers.importSuccess', { count: isPersian ? toPersianDigits(savedCount) : savedCount }));
-    } catch (err) {
+      const totalSaved = createdCount + updatedCount;
+      setExcelFeedback({
+        type: totalSaved > 0 ? 'success' : 'error',
+        message: `ورود اکسل مشتریان با موفقیت انجام شد (${isPersian ? toPersianDigits(createdCount) : createdCount} جدید، ${isPersian ? toPersianDigits(updatedCount) : updatedCount} به‌روزرسانی).`,
+        details: runtimeErrors.slice(0, 10),
+      });
+    } catch (err: any) {
       console.error('[CustomersView] Excel import error:', err);
-      alert(t('customers.importError'));
+      setExcelFeedback({
+        type: 'error',
+        message: `${t('customers.importError')}: ${err?.message || ''}`,
+      });
     } finally {
       setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -230,7 +291,7 @@ export const CustomersView: React.FC = () => {
         type="file"
         ref={fileInputRef}
         onChange={handleFileImport}
-        accept=".xlsx,.xls"
+        accept=".xlsx,.xls,.csv"
         className="hidden"
       />
 
@@ -268,6 +329,43 @@ export const CustomersView: React.FC = () => {
           </div>
         }
       />
+
+      {excelFeedback && (
+        <div
+          className={`flex items-start justify-between gap-3 p-3.5 rounded-xl border text-xs ${
+            excelFeedback.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200'
+              : excelFeedback.type === 'error'
+              ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/60 text-red-900 dark:text-red-200'
+              : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/60 text-blue-900 dark:text-blue-200'
+          }`}
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 font-bold">
+              {excelFeedback.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+              )}
+              <span>{excelFeedback.message}</span>
+            </div>
+            {excelFeedback.details && excelFeedback.details.length > 0 && (
+              <ul className="list-disc list-inside text-[11px] opacity-85 space-y-0.5 ps-5">
+                {excelFeedback.details.map((d, i) => (
+                  <li key={i}>{d}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setExcelFeedback(null)}
+            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Unified Customers Container */}
       <Card className="border-0 sm:border bg-transparent sm:bg-white dark:sm:bg-[#181a20] shadow-none sm:shadow-sm p-0 sm:p-5 md:p-6">

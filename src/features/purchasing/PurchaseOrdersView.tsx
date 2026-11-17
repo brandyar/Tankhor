@@ -39,6 +39,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { useModuleAccess } from '../../hooks/useModuleAccess';
+import { useSwrRefresh } from '../../hooks/useSwrRefresh';
 
 interface PurchaseOrdersViewProps {
   initialCreateMode?: boolean;
@@ -96,8 +97,8 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (silent: boolean | unknown = false) => {
+    if (silent !== true) setIsLoading(true);
     try {
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id;
@@ -152,6 +153,13 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
   useEffect(() => {
     loadData();
   }, [activeOrganization, hasProduction]);
+
+  useSwrRefresh(
+    ['purchase_orders', 'suppliers', 'warehouses', 'product_variants', 'products', 'raw_materials'],
+    () => {
+      loadData(true);
+    }
+  );
 
   const getVariantLabel = (v: ProductVariant) => {
     const prod = products.find((p) => p.id === (typeof v.product_id === 'object' ? (v.product_id as any).id : v.product_id));

@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { directusClient } from '../api/directus';
+import { swrCache } from '../api/swrCache';
 import { storageManager } from '../storage';
 
 export interface UserRole {
@@ -88,9 +89,41 @@ function sanitizeOrgPlanClient(org: any): any {
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isCloudAuthenticated, setIsCloudAuthenticated] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const token = localStorage.getItem('tankhor_directus_token');
+      const cached = localStorage.getItem(CACHED_USER_KEY);
+      if (token && cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && (parsed.id || parsed.email)) {
+          return parsed;
+        }
+      }
+    } catch {}
+    return null;
+  });
+
+  const [isCloudAuthenticated, setIsCloudAuthenticated] = useState<boolean>(() => {
+    try {
+      const token = localStorage.getItem('tankhor_directus_token');
+      const cached = localStorage.getItem(CACHED_USER_KEY);
+      return Boolean(token && cached);
+    } catch {
+      return false;
+    }
+  });
+
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    try {
+      const token = localStorage.getItem('tankhor_directus_token');
+      const cached = localStorage.getItem(CACHED_USER_KEY);
+      // If we have token and cached profile, don't show full-screen blocking loader
+      return Boolean(token && !cached);
+    } catch {
+      return false;
+    }
+  });
+
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
 
@@ -107,7 +140,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const clearAllSessionData = useCallback(() => {
-    directusClient.setToken(null);
+    directusClient.setToken(null, null);
+    swrCache.clearAll();
     localStorage.removeItem(CACHED_USER_KEY);
     localStorage.removeItem('tankhor_directus_token');
     localStorage.removeItem('tankhor_directus_refresh_token');
@@ -118,9 +152,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     storageManager.setMode('local_offline');
   }, []);
 
+  const lastActiveTimestampRef = useRef<number>(Date.now());
+
   // Monitor user inactivity
   useEffect(() => {
     const handleUserInteraction = () => {
+      lastActiveTimestampRef.current = Date.now();
       updateActivity();
     };
 
@@ -134,6 +171,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       window.removeEventListener('touchstart', handleUserInteraction);
     };
   }, [updateActivity]);
+
+  // Proactive Silent Token Refresh & Connection Warmup on idle resume or periodic keep-alive
+  useEffect(() => {
+    if (!isCloudAuthenticated) return;
+
+    const handleResumeOrWarmup = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      const idleMs = Date.now() - lastActiveTimestampRef.current;
+      if (idleMs >= 45_000) {
+        lastActiveTimestampRef.current = Date.now();
+        directusClient.warmupConnection().catch(() => {});
+        directusClient.ensureFreshTokenIfNeeded().catch(() => {});
+      }
+    };
+
+    // Initial check on mount
+    directusClient.ensureFreshTokenIfNeeded().catch(() => {});
+
+    document.addEventListener('visibilitychange', handleResumeOrWarmup);
+    window.addEventListener('focus', handleResumeOrWarmup);
+
+    // Gentle 4-minute keep-alive & silent refresh check while tab is active
+    const keepAliveTimer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        directusClient.ensureFreshTokenIfNeeded().catch(() => {});
+        directusClient.warmupConnection().catch(() => {});
+      }
+    }, 4 * 60 * 1000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleResumeOrWarmup);
+      window.removeEventListener('focus', handleResumeOrWarmup);
+      clearInterval(keepAliveTimer);
+    };
+  }, [isCloudAuthenticated]);
 
   useEffect(() => {
     const token = localStorage.getItem('tankhor_directus_token');
@@ -151,7 +223,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (token) {
-      setIsLoading(true);
+      // Only set loading true if we don't already have hydrated cached user
+      if (!user) {
+        setIsLoading(true);
+      }
+
       directusClient.getMe()
         .then(async (meData) => {
           if (meData && (meData.id || meData.email)) {
@@ -187,21 +263,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             if (activeOrg && activeOrg.id) {
               localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
-              await storageManager.getLocalAdapter().saveOrganization(activeOrg);
-            }
-            for (const org of orgsList) {
-              if (org && org.id && org.name) {
-                await storageManager.getLocalAdapter().saveOrganization(org);
-              }
+              storageManager.getLocalAdapter().saveOrganization(activeOrg).catch(() => {});
             }
           } else {
             // Token was invalid or unauthenticated
             clearAllSessionData();
           }
         })
-        .catch(() => {
-          // In case of any validation or authentication failure, force user to login screen
-          clearAllSessionData();
+        .catch((err: any) => {
+          const isAuthError =
+            err?.status === 401 ||
+            err?.message?.includes('401') ||
+            err?.message?.toLowerCase().includes('token expired') ||
+            err?.message?.toLowerCase().includes('invalid token') ||
+            err?.message?.includes('TOKEN_EXPIRED') ||
+            err?.message?.includes('INVALID_TOKEN');
+
+          if (isAuthError) {
+            clearAllSessionData();
+          } else {
+            // Network glitch or transient offline: keep active cached session
+            console.warn('[Auth] Background check error, keeping local cached session:', err?.message);
+          }
         })
         .finally(() => setIsLoading(false));
     } else {
@@ -247,8 +330,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, pass: string): Promise<boolean> => {
     setLoginError(null);
     setIsLoading(true);
-    // Always clear old tokens before attempting login
-    directusClient.setToken(null);
+    // Always clear old tokens and caches before attempting login
+    directusClient.setToken(null, null);
+    swrCache.clearAll();
     try {
       const loginRes = await directusClient.login(email, pass);
       let userData = await directusClient.getMe().catch(() => null);
@@ -314,8 +398,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ): Promise<boolean> => {
     setLoginError(null);
     setIsLoading(true);
-    // Always clear old tokens before attempting registration
-    directusClient.setToken(null);
+    // Always clear old tokens and caches before attempting registration
+    directusClient.setToken(null, null);
+    swrCache.clearAll();
     try {
       let finalParams: RegisterParams;
       if (typeof paramOrFirst === 'object' && paramOrFirst !== null) {
