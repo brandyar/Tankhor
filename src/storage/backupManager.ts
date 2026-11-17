@@ -388,7 +388,7 @@ export class BackupManager {
     const metadata: TankhorBackupMetadata = {
       app: 'TANKHOR (تن‌خور)',
       signature: 'tankhor_full_backup_v1',
-      version: APP_VERSION || '1.1.10',
+      version: APP_VERSION || '1.2.0',
       exported_at: now.toISOString(),
       exported_at_jalali: formatDate(now.toISOString(), true),
       total_records: totalRecords,
