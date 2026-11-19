@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../../i18n';
+import { useOrganization } from '../../context/OrganizationContext';
 import { storageManager } from '../../storage';
 import { RawMaterial, RawMaterialCategory } from '../../types';
 import { Card } from '../../components/ui/Card';
@@ -10,33 +11,29 @@ import { Modal } from '../../components/ui/Modal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Pagination } from '../../components/ui/Pagination';
 import { formatCurrency, toPersianDigits } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import {
-  Boxes,
   Plus,
   Search,
-  Filter,
   Edit2,
   Trash2,
   AlertTriangle,
-  ArrowDownRight,
-  ArrowUpRight,
-  RefreshCw,
-  Tag,
 } from 'lucide-react';
 
-const MATERIAL_CATEGORIES: { key: RawMaterialCategory; label: string }[] = [
-  { key: 'fabric', label: 'پارچه (متر / طاقه)' },
-  { key: 'thread', label: 'نخ و دوک (عدد / کیلو)' },
-  { key: 'zipper', label: 'زیپ و سرزیپ (عدد / متر)' },
-  { key: 'button', label: 'دکمه (عدد / جین)' },
-  { key: 'lining', label: 'لایی و آستر (متر)' },
-  { key: 'label', label: 'مارک و لیبل (عدد)' },
-  { key: 'packaging', label: 'کاور و بسته‌بندی (عدد)' },
-  { key: 'other', label: 'سایر خرج‌کار' },
+const MATERIAL_CATEGORY_KEYS: { key: RawMaterialCategory; optionKey: string; shortKey: string }[] = [
+  { key: 'fabric', optionKey: 'production.catOptionFabric', shortKey: 'production.categoryFabric' },
+  { key: 'thread', optionKey: 'production.catOptionThread', shortKey: 'production.categoryThread' },
+  { key: 'zipper', optionKey: 'production.catOptionZipper', shortKey: 'production.categoryZipper' },
+  { key: 'button', optionKey: 'production.catOptionButton', shortKey: 'production.categoryButton' },
+  { key: 'lining', optionKey: 'production.catOptionLining', shortKey: 'production.categoryLining' },
+  { key: 'label', optionKey: 'production.catOptionLabel', shortKey: 'production.categoryLabel' },
+  { key: 'packaging', optionKey: 'production.catOptionPackaging', shortKey: 'production.categoryPackaging' },
+  { key: 'other', optionKey: 'production.catOptionOther', shortKey: 'production.categoryOther' },
 ];
 
 export const RawMaterialsView: React.FC = () => {
   const { t, isPersian } = useTranslation();
+  const { activeOrganization } = useOrganization();
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -55,7 +52,7 @@ export const RawMaterialsView: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     code: '',
-    unit: 'متر',
+    unit: t('production.defaultUnitMeter'),
     category: 'fabric' as RawMaterialCategory,
     current_stock: 0,
     min_stock: 10,
@@ -106,7 +103,7 @@ export const RawMaterialsView: React.FC = () => {
     setFormData({
       name: '',
       code: `MAT-${Math.floor(100 + Math.random() * 900)}`,
-      unit: 'متر',
+      unit: t('production.defaultUnitMeter'),
       category: 'fabric',
       current_stock: 0,
       min_stock: 10,
@@ -176,7 +173,8 @@ export const RawMaterialsView: React.FC = () => {
   };
 
   const handleDeleteMaterial = async (id: number) => {
-    if (window.confirm('آیا از حذف این متریال اطمینان دارید؟')) {
+    const confirmed = await confirmAction(t('production.confirmDeleteMaterial'), t('common.confirmDeleteTitle'));
+    if (confirmed) {
       try {
         await storageManager.deleteRawMaterial(id);
         await loadMaterials();
@@ -189,18 +187,18 @@ export const RawMaterialsView: React.FC = () => {
   const formatNum = (num: number) => (isPersian ? toPersianDigits(num) : num.toString());
 
   const getCategoryLabel = (catKey: string) => {
-    const found = MATERIAL_CATEGORIES.find((c) => c.key === catKey);
-    return found ? found.label.split(' ')[0] : catKey;
+    const found = MATERIAL_CATEGORY_KEYS.find((c) => c.key === catKey);
+    return found ? t(found.shortKey) : catKey;
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="انبار مواد اولیه و خرج‌کار"
-        subtitle="ثبت موجودی پارچه، زیپ، نخ، دکمه، لایی و محاسبه بهای متریال مصرفی در تولید"
+        title={t('production.rawMaterialsTitle')}
+        subtitle={t('production.rawMaterialsSubtitle')}
         action={
           <Button variant="primary" onClick={handleOpenAddModal} icon={<Plus className="w-4 h-4" />}>
-            افزودن متریال جدید
+            {t('production.addMaterialBtn')}
           </Button>
         }
       />
@@ -212,7 +210,7 @@ export const RawMaterialsView: React.FC = () => {
             <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-neutral-400" />
             <Input
               type="text"
-              placeholder="جستجو بر اساس نام متریال یا کد شناسه..."
+              placeholder={t('production.searchMaterialsPlaceholder')}
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -231,10 +229,10 @@ export const RawMaterialsView: React.FC = () => {
               }}
               className="text-xs"
             >
-              <option value="all">همه دسته‌بندی‌ها</option>
-              {MATERIAL_CATEGORIES.map((cat) => (
+              <option value="all">{t('production.allCategories')}</option>
+              {MATERIAL_CATEGORY_KEYS.map((cat) => (
                 <option key={`mcat_opt_${cat.key}`} value={cat.key}>
-                  {cat.label}
+                  {t(cat.optionKey)}
                 </option>
               ))}
             </Select>
@@ -244,10 +242,10 @@ export const RawMaterialsView: React.FC = () => {
 
       {/* Data Section */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-neutral-400">در حال دریافت داده‌های انبار...</div>
+        <div className="py-12 text-center text-xs text-neutral-400">{t('production.loadingMaterials')}</div>
       ) : paginatedMaterials.length === 0 ? (
         <Card className="p-8 text-center border-dashed border-neutral-200 dark:border-neutral-800">
-          <p className="text-xs text-neutral-500">هیچ متریالی یافت نشد.</p>
+          <p className="text-xs text-neutral-500">{t('production.noMaterialsFound')}</p>
         </Card>
       ) : (
         <div className="space-y-4">
@@ -278,14 +276,14 @@ export const RawMaterialsView: React.FC = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleOpenStockModal(mat)}
-                        title="افزایش موجودی"
+                        title={t('production.increaseStockTooltip')}
                       >
                         <Plus className="w-3.5 h-3.5 text-emerald-600" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(mat)}>
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(mat)} title={t('common.edit')}>
                         <Edit2 className="w-3.5 h-3.5 text-blue-600" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteMaterial(mat.id)}>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteMaterial(mat.id)} title={t('common.delete')}>
                         <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                       </Button>
                     </div>
@@ -293,16 +291,16 @@ export const RawMaterialsView: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800 text-xs">
                     <div>
-                      <span className="text-[10px] text-neutral-400 block">موجودی فعلی:</span>
+                      <span className="text-[10px] text-neutral-400 block">{t('production.currentStock')}:</span>
                       <span className={`font-bold font-mono ${isLow ? 'text-rose-600' : 'text-neutral-900 dark:text-white'}`}>
                         {formatNum(mat.current_stock)} {mat.unit}
                       </span>
                     </div>
 
                     <div>
-                      <span className="text-[10px] text-neutral-400 block">فی واحد:</span>
+                      <span className="text-[10px] text-neutral-400 block">{t('production.unitCostLabel')}:</span>
                       <span className="font-bold font-mono text-neutral-900 dark:text-white">
-                        {formatCurrency(mat.unit_cost)}
+                        {formatCurrency(mat.unit_cost, activeOrganization?.currency, isPersian)}
                       </span>
                     </div>
                   </div>
@@ -316,13 +314,13 @@ export const RawMaterialsView: React.FC = () => {
             <table className="w-full text-start text-xs">
               <thead className="bg-neutral-50 dark:bg-[#181a20] border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold">
                 <tr>
-                  <th className="px-4 py-3 text-start">کد متریال</th>
-                  <th className="px-4 py-3 text-start">عنوان متریال</th>
-                  <th className="px-4 py-3 text-start">دسته‌بندی</th>
-                  <th className="px-4 py-3 text-center">موجودی فعلی</th>
-                  <th className="px-4 py-3 text-center">حداقل نقطه سفارش</th>
-                  <th className="px-4 py-3 text-end">فی هر واحد (تومان)</th>
-                  <th className="px-4 py-3 text-end">عملیات</th>
+                  <th className="px-4 py-3 text-start">{t('production.materialCode')}</th>
+                  <th className="px-4 py-3 text-start">{t('production.materialName')}</th>
+                  <th className="px-4 py-3 text-start">{t('production.category')}</th>
+                  <th className="px-4 py-3 text-center">{t('production.currentStock')}</th>
+                  <th className="px-4 py-3 text-center">{t('production.minStockReorderLabel')}</th>
+                  <th className="px-4 py-3 text-end">{t('production.unitCostTableHeader')}</th>
+                  <th className="px-4 py-3 text-end">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
@@ -338,7 +336,7 @@ export const RawMaterialsView: React.FC = () => {
                           <span>{mat.name}</span>
                           {isLow && (
                             <span className="px-1.5 py-0.5 rounded text-[10px] bg-rose-100 text-rose-800 font-bold flex items-center gap-1">
-                              <AlertTriangle className="w-3 h-3" /> کسری
+                              <AlertTriangle className="w-3 h-3" /> {t('production.shortageBadge')}
                             </span>
                           )}
                         </div>
@@ -355,7 +353,7 @@ export const RawMaterialsView: React.FC = () => {
                         {formatNum(mat.min_stock || 0)} {mat.unit}
                       </td>
                       <td className="px-4 py-3 text-end font-mono font-bold text-neutral-900 dark:text-white">
-                        {formatCurrency(mat.unit_cost)}
+                        {formatCurrency(mat.unit_cost, activeOrganization?.currency, isPersian)}
                       </td>
                       <td className="px-4 py-3 text-end whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
@@ -365,13 +363,13 @@ export const RawMaterialsView: React.FC = () => {
                             onClick={() => handleOpenStockModal(mat)}
                             className="text-emerald-600 hover:bg-emerald-50"
                           >
-                            + موجودی
+                            {t('production.plusStockBtn')}
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(mat)}>
-                            ویرایش
+                            {t('common.edit')}
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => handleDeleteMaterial(mat.id)} className="text-rose-600">
-                            حذف
+                            {t('common.delete')}
                           </Button>
                         </div>
                       </td>
@@ -399,22 +397,26 @@ export const RawMaterialsView: React.FC = () => {
         <Modal
           isOpen={isAddEditModalOpen}
           onClose={() => setIsAddEditModalOpen(false)}
-          title={selectedMaterial ? 'ویرایش متریال' : 'افزودن متریال / خرج‌کار جدید'}
+          title={selectedMaterial ? t('production.editMaterialModalTitle') : t('production.addMaterialModalTitle')}
         >
           <div className="space-y-4 text-xs">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">نام متریال *</label>
+                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                  {t('production.materialNameLabel')}
+                </label>
                 <Input
                   type="text"
-                  placeholder="مثال: پارچه کرپ مازراتی مشکی"
+                  placeholder={t('production.materialNamePlaceholder')}
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
 
               <div>
-                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">کد شناسه متریال</label>
+                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                  {t('production.materialCodeLabel')}
+                </label>
                 <Input
                   type="text"
                   placeholder="MAT-001"
@@ -426,24 +428,28 @@ export const RawMaterialsView: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">دسته‌بندی</label>
+                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                  {t('production.category')}
+                </label>
                 <Select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value as RawMaterialCategory })}
                 >
-                  {MATERIAL_CATEGORIES.map((cat) => (
+                  {MATERIAL_CATEGORY_KEYS.map((cat) => (
                     <option key={`mform_cat_${cat.key}`} value={cat.key}>
-                      {cat.label}
+                      {t(cat.optionKey)}
                     </option>
                   ))}
                 </Select>
               </div>
 
               <div>
-                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">واحد سنجش</label>
+                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                  {t('production.materialUnitLabel')}
+                </label>
                 <Input
                   type="text"
-                  placeholder="متر، کیلو، عدد، طاقه، جین..."
+                  placeholder={t('production.materialUnitPlaceholder')}
                   value={formData.unit}
                   onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                 />
@@ -452,7 +458,9 @@ export const RawMaterialsView: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">موجودی فعلی</label>
+                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                  {t('production.currentStock')}
+                </label>
                 <Input
                   type="number"
                   value={formData.current_stock}
@@ -461,7 +469,9 @@ export const RawMaterialsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">حداقل نقطه سفارش</label>
+                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                  {t('production.minStockReorderLabel')}
+                </label>
                 <Input
                   type="number"
                   value={formData.min_stock}
@@ -470,7 +480,9 @@ export const RawMaterialsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">فی واحد (تومان)</label>
+                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                  {t('production.unitCostLabel')}
+                </label>
                 <Input
                   type="number"
                   value={formData.unit_cost}
@@ -480,10 +492,12 @@ export const RawMaterialsView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">توضیحات تکمیلی</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                {t('production.materialDescriptionLabel')}
+              </label>
               <Input
                 type="text"
-                placeholder="گرماژ، عرض پارچه، کد رنگ، برند تولیدکننده..."
+                placeholder={t('production.materialDescriptionPlaceholder')}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
@@ -491,10 +505,10 @@ export const RawMaterialsView: React.FC = () => {
 
             <div className="flex justify-end gap-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
               <Button variant="ghost" onClick={() => setIsAddEditModalOpen(false)}>
-                انصراف
+                {t('common.cancel')}
               </Button>
               <Button variant="primary" onClick={handleSaveMaterial}>
-                ذخیره اطلاعات
+                {t('production.saveInfoBtn')}
               </Button>
             </div>
           </div>
@@ -506,11 +520,11 @@ export const RawMaterialsView: React.FC = () => {
         <Modal
           isOpen={isStockModalOpen}
           onClose={() => setIsStockModalOpen(false)}
-          title={`افزایش موجودی: ${selectedMaterial.name}`}
+          title={t('production.increaseStockModalTitle', { name: selectedMaterial.name })}
         >
           <div className="space-y-4 text-xs">
             <p className="text-neutral-600 dark:text-neutral-400">
-              موجودی فعلی:{' '}
+              {t('production.currentStock')}:{' '}
               <strong className="text-neutral-900 dark:text-white font-mono">
                 {formatNum(selectedMaterial.current_stock)} {selectedMaterial.unit}
               </strong>
@@ -518,7 +532,7 @@ export const RawMaterialsView: React.FC = () => {
 
             <div>
               <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
-                مقدار افزایشی ({selectedMaterial.unit})
+                {t('production.increaseAmountLabel', { unit: selectedMaterial.unit })}
               </label>
               <Input
                 type="number"
@@ -528,7 +542,7 @@ export const RawMaterialsView: React.FC = () => {
             </div>
 
             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-emerald-800 dark:text-emerald-300">
-              موجودی نهایی پس از ثبت:{' '}
+              {t('production.finalStockAfterSave')}{' '}
               <strong className="font-mono font-bold">
                 {formatNum(selectedMaterial.current_stock + Number(stockAddAmount))} {selectedMaterial.unit}
               </strong>
@@ -536,10 +550,10 @@ export const RawMaterialsView: React.FC = () => {
 
             <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
               <Button variant="ghost" onClick={() => setIsStockModalOpen(false)}>
-                انصراف
+                {t('common.cancel')}
               </Button>
               <Button variant="primary" onClick={handleUpdateStock}>
-                ثبت افزایش موجودی
+                {t('production.confirmIncreaseStockBtn')}
               </Button>
             </div>
           </div>

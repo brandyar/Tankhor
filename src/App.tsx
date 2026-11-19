@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { I18nProvider } from './i18n';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -35,7 +35,7 @@ import { PublicCatalogView } from './features/online-catalog/public/PublicCatalo
 import { SettingsView } from './features/settings/SettingsView';
 import { ReportsView } from './features/reports/ReportsView';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
-import { isTauriEnvironment } from './storage';
+import { isTauriEnvironment, storageManager } from './storage';
 import { WebFreePlanGuardModal } from './components/modals/WebFreePlanGuardModal';
 import { ConfirmModalHost } from './components/ui/ConfirmModal';
 import { UpdateNotificationModal } from './components/modals/UpdateNotificationModal';
@@ -72,9 +72,20 @@ const AccessDeniedCard: React.FC<{ userRole: string; onReturn: () => void }> = (
 
 const AuthenticatedApp: React.FC = () => {
   const [currentRoute, setCurrentRoute] = useState<string>('dashboard');
+  const [storageMode, setStorageMode] = useState<string>(() => storageManager.getMode());
   const { permissions, userRole, activeOrganization } = useOrganization();
   const isDesktop = isTauriEnvironment();
   const isWebFreeLocked = !isDesktop && !!activeOrganization && activeOrganization.plan === 'free';
+
+  useEffect(() => {
+    const handleStorageModeChanged = () => {
+      setStorageMode(storageManager.getMode());
+    };
+    window.addEventListener('tankhor_storage_mode_changed', handleStorageModeChanged);
+    return () => {
+      window.removeEventListener('tankhor_storage_mode_changed', handleStorageModeChanged);
+    };
+  }, []);
 
   const isRouteAllowed = (route: string): boolean => {
     switch (route) {
@@ -295,7 +306,10 @@ const AuthenticatedApp: React.FC = () => {
 
   return (
     <AppShell currentRoute={currentRoute} onNavigate={setCurrentRoute}>
-      <ErrorBoundary key={currentRoute} onReset={() => setCurrentRoute('dashboard')}>
+      <ErrorBoundary
+        key={`${currentRoute}:${activeOrganization?.id ?? 'none'}:${storageMode}`}
+        onReset={() => setCurrentRoute('dashboard')}
+      >
         {renderCurrentView()}
       </ErrorBoundary>
     </AppShell>

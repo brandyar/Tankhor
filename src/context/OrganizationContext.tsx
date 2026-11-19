@@ -3,7 +3,32 @@ import { Organization, OrganizationUser, UserRole } from '../types';
 import { storageManager } from '../storage';
 import { useAuth } from './AuthContext';
 import { directusClient } from '../api/directus';
+import { swrCache } from '../api/swrCache';
 import { getRolePermissions, RolePermissions } from '../utils/permissions';
+
+function syncCachedOrganizationState(orgsList: Organization[], activeOrg: Organization | null) {
+  if (typeof window !== 'undefined') {
+    if (activeOrg?.id) {
+      localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+    }
+    try {
+      const cachedRaw = localStorage.getItem('tankhor_cached_user_profile');
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        const updatedCache = {
+          ...cached,
+          ...(activeOrg ? { activeOrganization: activeOrg, active_organization: activeOrg } : {}),
+          ...(orgsList.length > 0 ? { organizations: orgsList } : {}),
+        };
+        localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(updatedCache));
+      }
+    } catch {}
+  }
+
+  if (activeOrg) {
+    storageManager.syncModeWithOrganization(activeOrg);
+  }
+}
 
 interface OrganizationContextType {
   organizations: Organization[];
@@ -220,10 +245,8 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       }
 
+      syncCachedOrganizationState(list, found);
       setActiveOrganization(found);
-      if (found && (!savedOrgId || savedOrgId !== String(found.id))) {
-        localStorage.setItem('tankhor_active_org_id', String(found.id));
-      }
     } catch (err) {
       console.error('[OrganizationContext] Failed to load organizations:', err);
     }
@@ -257,13 +280,15 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       if (isCloudAuthenticated && directusClient.getToken()) {
         await directusClient.switchOrganization(id);
       }
+      swrCache.clearAll();
+      syncCachedOrganizationState(organizations, found);
       setActiveOrganization(found);
-      localStorage.setItem('tankhor_active_org_id', String(id));
     } catch (err) {
       console.error('[OrganizationContext] Failed to switch organization:', err);
       // Still update local UI state if switch failed or offline
+      swrCache.clearAll();
+      syncCachedOrganizationState(organizations, found);
       setActiveOrganization(found);
-      localStorage.setItem('tankhor_active_org_id', String(id));
     }
   };
 
@@ -313,9 +338,9 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       };
       const updated = await adapter.saveOrganization(payload);
 
-      setOrganizations((prev) =>
-        prev.map((o) => (o.id === updated.id ? updated : o))
-      );
+      const nextList = organizations.map((o) => (o.id === updated.id ? updated : o));
+      setOrganizations(nextList);
+      syncCachedOrganizationState(nextList, updated);
       setActiveOrganization(updated);
 
       return updated;

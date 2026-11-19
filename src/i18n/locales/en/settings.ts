@@ -102,6 +102,8 @@ export const settingsEn = {
   localOfflineBrowserDesc: 'Data is stored in local browser memory. Completely free, offline-first, and fast.',
   cloudSyncMode: 'Cloud Synchronization (Advanced)',
   cloudSyncModeDesc: 'Connect to cloud server for real-time data sharing across multi-branch devices.',
+  proCloudOnlyNote: 'With an active Pro subscription, the application automatically runs exclusively in Cloud Sync mode to keep data consistent across all devices.',
+  proAutoOnlineBadge: 'Auto-Online (Pro)',
   desktopUpdaterTitle: 'Desktop App Updater',
   desktopUpdaterSubtitle: 'Check for new releases of TANKHOR via private update server and release channels',
   installedDesktopVersion: 'Installed Desktop Version',

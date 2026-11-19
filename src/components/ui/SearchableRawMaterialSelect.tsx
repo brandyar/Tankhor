@@ -143,11 +143,11 @@ export const SearchableRawMaterialSelect: React.FC<SearchableRawMaterialSelectPr
                 </span>
               </div>
               <div className="flex items-center gap-2 text-[11px] text-neutral-500 dark:text-neutral-400 font-mono">
-                <span>واحد: {selectedMaterial.unit}</span>
+                <span>{t('production.unitPrefix')} {selectedMaterial.unit}</span>
                 {selectedMaterial.unit_cost > 0 && (
                   <>
                     <span>•</span>
-                    <span>فی: {formatCurrency(selectedMaterial.unit_cost, currency, isPersian)}</span>
+                    <span>{t('production.costPrefix')} {formatCurrency(selectedMaterial.unit_cost, currency, isPersian)}</span>
                   </>
                 )}
               </div>
@@ -155,7 +155,7 @@ export const SearchableRawMaterialSelect: React.FC<SearchableRawMaterialSelectPr
           </div>
         ) : (
           <span className="text-xs text-neutral-400 dark:text-neutral-500">
-            {placeholder || 'انتخاب متریال اولیه یا خرج‌کار...'}
+            {placeholder || t('production.selectRawMaterialPlaceholder')}
           </span>
         )}
 
@@ -179,7 +179,7 @@ export const SearchableRawMaterialSelect: React.FC<SearchableRawMaterialSelectPr
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="جستجو در نام متریال، کد یا واحد..."
+              placeholder={t('production.searchRawMaterialPlaceholder')}
               className="w-full bg-transparent border-0 text-xs text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none py-1.5"
             />
             {searchTerm && (
@@ -197,7 +197,7 @@ export const SearchableRawMaterialSelect: React.FC<SearchableRawMaterialSelectPr
           <div className="overflow-y-auto p-1.5 space-y-1 divide-y divide-neutral-100 dark:divide-neutral-800/60 flex-1">
             {filteredMaterials.length === 0 ? (
               <div className="p-4 text-center text-xs text-neutral-400 dark:text-neutral-500">
-                متریال اولیه‌ای یافت نشد.
+                {t('production.noRawMaterialMatch')}
               </div>
             ) : (
               filteredMaterials.map((mat) => {
@@ -226,14 +226,14 @@ export const SearchableRawMaterialSelect: React.FC<SearchableRawMaterialSelectPr
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-neutral-500 dark:text-neutral-400 font-mono mt-0.5">
-                          <span>واحد: {mat.unit}</span>
+                          <span>{t('production.unitPrefix')} {mat.unit}</span>
                           <span>•</span>
-                          <span>موجودی: {toPersianDigits(mat.current_stock)}</span>
+                          <span>{t('production.stockPrefix')} {isPersian ? toPersianDigits(mat.current_stock) : mat.current_stock}</span>
                           {mat.unit_cost > 0 && (
                             <>
                               <span>•</span>
                               <span className="text-emerald-600 dark:text-emerald-400">
-                                فی: {formatCurrency(mat.unit_cost, currency, isPersian)}
+                                {t('production.costPrefix')} {formatCurrency(mat.unit_cost, currency, isPersian)}
                               </span>
                             </>
                           )}

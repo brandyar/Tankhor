@@ -54,8 +54,8 @@ export const PaymentResultModal: React.FC<{ onRetryPayment?: () => void }> = ({ 
 
         // If subscription success, refresh organization and unlock cloud mode
         if (paymentStatus === 'success') {
+          storageManager.setMode('cloud_synced', { verifiedPro: true });
           refreshOrganizations().catch(console.error);
-          storageManager.setMode('cloud_synced');
         }
 
         // If module success, dispatch an event so all useModuleAccess hooks re-fetch

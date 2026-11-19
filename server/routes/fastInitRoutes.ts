@@ -77,7 +77,7 @@ fastInitRouter.get(
       ] = await Promise.all([
         DirectusAdminClient.getItems<any>('customers', {
           filter: orgFilter,
-          fields: ['id', 'full_name', 'phone', 'mobile', 'status', 'notes'],
+          fields: ['id', 'name', 'phone', 'email', 'address', 'status', 'notes', 'balance', 'credit_limit'],
           limit: -1,
         }).catch(() => []),
 
@@ -133,7 +133,7 @@ fastInitRouter.get(
             'pos_terminal_id',
             'is_default',
             'warehouse_id',
-            'status',
+            'current_balance',
           ],
           limit: 50,
         }).catch(() => []),

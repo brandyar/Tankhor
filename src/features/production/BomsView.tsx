@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../../i18n';
+import { useOrganization } from '../../context/OrganizationContext';
 import { storageManager } from '../../storage';
-import { BillOfMaterials, BomItem, RawMaterial, Product } from '../../types';
+import { BillOfMaterials, RawMaterial, Product } from '../../types';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -10,21 +11,18 @@ import { Modal } from '../../components/ui/Modal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Pagination } from '../../components/ui/Pagination';
 import { formatCurrency, toPersianDigits } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import {
-  FileText,
   Plus,
   Search,
   Trash2,
   Edit2,
   Eye,
-  Layers,
-  Calculator,
-  Shirt,
-  Percent,
 } from 'lucide-react';
 
 export const BomsView: React.FC = () => {
   const { t, isPersian } = useTranslation();
+  const { activeOrganization } = useOrganization();
   const [boms, setBoms] = useState<BillOfMaterials[]>([]);
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -100,13 +98,19 @@ export const BomsView: React.FC = () => {
     setSelectedBom(null);
     setFormData({
       product_id: products[0]?.id || 0,
-      name: products[0] ? `فرمول ساخت - ${products[0].title}` : 'فرمول ساخت جدید',
+      name: products[0]
+        ? t('production.defaultBomNamePrefix', { title: products[0].title })
+        : t('production.defaultBomNameNew'),
       version: 'v1.0',
       waste_percentage: 5,
       notes: '',
     });
     setBomItems([
-      { raw_material_id: materials[0]?.id || 0, quantity_required: 1.5, notes: 'پارچه اصلی' },
+      {
+        raw_material_id: materials[0]?.id || 0,
+        quantity_required: 1.5,
+        notes: t('production.defaultBomMainFabricNote'),
+      },
     ]);
     setIsEditorModalOpen(true);
   };
@@ -182,7 +186,8 @@ export const BomsView: React.FC = () => {
   };
 
   const handleDeleteBom = async (id: number) => {
-    if (window.confirm('آیا از حذف این فرمول ساخت اطمینان دارید؟')) {
+    const confirmed = await confirmAction(t('production.confirmDeleteBom'), t('common.confirmDeleteTitle'));
+    if (confirmed) {
       try {
         await storageManager.deleteBillOfMaterials(id);
         await loadData();
@@ -193,15 +198,16 @@ export const BomsView: React.FC = () => {
   };
 
   const formatNum = (num: number) => (isPersian ? toPersianDigits(num) : num.toString());
+  const percentSymbol = isPersian ? '٪' : '%';
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="شناسنامه الگوی تولید و فرمول ساخت (BOM)"
-        subtitle="تعریف متریال، پارچه و خرج‌کار لازم برای تولید هر عدد محصول همراه با محاسبه خودکار هزینه تولید"
+        title={t('production.bomsTitle')}
+        subtitle={t('production.bomsSubtitle')}
         action={
           <Button variant="primary" onClick={handleOpenCreateModal} icon={<Plus className="w-4 h-4" />}>
-            ایجاد فرمول ساخت جدید
+            {t('production.createBomBtn')}
           </Button>
         }
       />
@@ -212,7 +218,7 @@ export const BomsView: React.FC = () => {
           <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-neutral-400" />
           <Input
             type="text"
-            placeholder="جستجو بر اساس نام محصول یا فرمول ساخت..."
+            placeholder={t('production.searchBomPlaceholder')}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -225,10 +231,10 @@ export const BomsView: React.FC = () => {
 
       {/* Data Section */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-neutral-400">در حال دریافت اطلاعات فرمول‌های ساخت...</div>
+        <div className="py-12 text-center text-xs text-neutral-400">{t('production.loadingBoms')}</div>
       ) : paginatedBoms.length === 0 ? (
         <Card className="p-8 text-center border-dashed border-neutral-200 dark:border-neutral-800">
-          <p className="text-xs text-neutral-500">هیچ فرمول ساخت ثبت‌شده‌ای یافت نشد.</p>
+          <p className="text-xs text-neutral-500">{t('production.noBomsFound')}</p>
         </Card>
       ) : (
         <div className="space-y-4">
@@ -246,18 +252,18 @@ export const BomsView: React.FC = () => {
                     </span>
                     <h4 className="text-sm font-bold text-neutral-900 dark:text-white mt-1">{bom.name}</h4>
                     <p className="text-[11px] text-neutral-500 mt-0.5">
-                      محصول: {bom.product_name || `محصول کد ${bom.product_id}`}
+                      {t('production.productLabel')} {bom.product_name || t('production.productCodeFallback', { id: bom.product_id })}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenDetails(bom)} title="مشاهده جزییات">
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenDetails(bom)} title={t('production.viewDetailsTooltip')}>
                       <Eye className="w-3.5 h-3.5 text-neutral-600" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(bom)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(bom)} title={t('common.edit')}>
                       <Edit2 className="w-3.5 h-3.5 text-blue-600" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteBom(bom.id)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteBom(bom.id)} title={t('common.delete')}>
                       <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                     </Button>
                   </div>
@@ -265,16 +271,16 @@ export const BomsView: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800 text-xs">
                   <div>
-                    <span className="text-[10px] text-neutral-400 block">درصد ضایعات:</span>
+                    <span className="text-[10px] text-neutral-400 block">{t('production.wasteLabel')}</span>
                     <span className="font-bold font-mono text-neutral-900 dark:text-white">
-                      {formatNum(bom.waste_percentage || 0)}٪
+                      {formatNum(bom.waste_percentage || 0)}{percentSymbol}
                     </span>
                   </div>
 
                   <div>
-                    <span className="text-[10px] text-neutral-400 block">هزینه تخمینی متریال:</span>
+                    <span className="text-[10px] text-neutral-400 block">{t('production.estMaterialCostLabel')}</span>
                     <span className="font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(bom.estimated_cost || 0)}
+                      {formatCurrency(bom.estimated_cost || 0, activeOrganization?.currency, isPersian)}
                     </span>
                   </div>
                 </div>
@@ -287,13 +293,13 @@ export const BomsView: React.FC = () => {
             <table className="w-full text-start text-xs">
               <thead className="bg-neutral-50 dark:bg-[#181a20] border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold">
                 <tr>
-                  <th className="px-4 py-3 text-start">نسخه</th>
-                  <th className="px-4 py-3 text-start">عنوان فرمول ساخت</th>
-                  <th className="px-4 py-3 text-start">محصول مرتبط</th>
-                  <th className="px-4 py-3 text-center">تعداد قلم متریال</th>
-                  <th className="px-4 py-3 text-center">ضایعات</th>
-                  <th className="px-4 py-3 text-end">هزینه متریال ۱ عدد</th>
-                  <th className="px-4 py-3 text-end">عملیات</th>
+                  <th className="px-4 py-3 text-start">{t('production.colVersion')}</th>
+                  <th className="px-4 py-3 text-start">{t('production.colBomTitle')}</th>
+                  <th className="px-4 py-3 text-start">{t('production.colRelatedProduct')}</th>
+                  <th className="px-4 py-3 text-center">{t('production.colMaterialCount')}</th>
+                  <th className="px-4 py-3 text-center">{t('production.wasteShort')}</th>
+                  <th className="px-4 py-3 text-end">{t('production.colUnitMaterialCost')}</th>
+                  <th className="px-4 py-3 text-end">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
@@ -304,27 +310,27 @@ export const BomsView: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 font-bold text-neutral-900 dark:text-white">{bom.name}</td>
                     <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">
-                      {bom.product_name || `محصول کد ${bom.product_id}`}
+                      {bom.product_name || t('production.productCodeFallback', { id: bom.product_id })}
                     </td>
                     <td className="px-4 py-3 text-center font-mono font-bold">
-                      {formatNum(bom.items?.length || 0)} آیتم
+                      {t('production.itemsCountLabel', { count: formatNum(bom.items?.length || 0) })}
                     </td>
                     <td className="px-4 py-3 text-center font-mono text-neutral-500">
-                      {formatNum(bom.waste_percentage || 0)}٪
+                      {formatNum(bom.waste_percentage || 0)}{percentSymbol}
                     </td>
                     <td className="px-4 py-3 text-end font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(bom.estimated_cost || 0)}
+                      {formatCurrency(bom.estimated_cost || 0, activeOrganization?.currency, isPersian)}
                     </td>
                     <td className="px-4 py-3 text-end whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="sm" onClick={() => handleOpenDetails(bom)}>
-                          جزییات
+                          {t('common.details')}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(bom)}>
-                          ویرایش
+                          {t('common.edit')}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => handleDeleteBom(bom.id)} className="text-rose-600">
-                          حذف
+                          {t('common.delete')}
                         </Button>
                       </div>
                     </td>
@@ -351,12 +357,14 @@ export const BomsView: React.FC = () => {
         <Modal
           isOpen={isEditorModalOpen}
           onClose={() => setIsEditorModalOpen(false)}
-          title={selectedBom ? 'ویرایش فرمول ساخت (BOM)' : 'تعریف فرمول ساخت جدید (BOM)'}
+          title={selectedBom ? t('production.editBomModalTitle') : t('production.createBomModalTitle')}
         >
           <div className="space-y-4 text-xs max-h-[80vh] overflow-y-auto pe-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">محصول مرتبط *</label>
+                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                  {t('production.relatedProductRequired')}
+                </label>
                 <Select
                   value={formData.product_id}
                   onChange={(e) => {
@@ -365,7 +373,7 @@ export const BomsView: React.FC = () => {
                     setFormData({
                       ...formData,
                       product_id: pid,
-                      name: prod ? `فرمول ساخت - ${prod.title}` : formData.name,
+                      name: prod ? t('production.defaultBomNamePrefix', { title: prod.title }) : formData.name,
                     });
                   }}
                 >
@@ -378,7 +386,9 @@ export const BomsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">عنوان فرمول *</label>
+                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                  {t('production.bomTitleRequired')}
+                </label>
                 <Input
                   type="text"
                   value={formData.name}
@@ -389,7 +399,9 @@ export const BomsView: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">نسخه / کد شناسه</label>
+                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                  {t('production.versionCodeLabel')}
+                </label>
                 <Input
                   type="text"
                   placeholder="v1.0"
@@ -399,7 +411,9 @@ export const BomsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">درصد ضایعات استاندارد (٪)</label>
+                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                  {t('production.standardWasteLabel')}
+                </label>
                 <Input
                   type="number"
                   placeholder="5"
@@ -413,10 +427,10 @@ export const BomsView: React.FC = () => {
             <div className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center justify-between">
                 <label className="block text-neutral-900 dark:text-white font-bold">
-                  جدول متریال و خرج‌کار مصرفی (به ازای ۱ عدد لباس)
+                  {t('production.bomItemsTableTitle')}
                 </label>
                 <Button variant="outline" size="sm" onClick={handleAddItemRow} icon={<Plus className="w-3 h-3" />}>
-                  افزودن ردیف متریال
+                  {t('production.addMaterialRowBtn')}
                 </Button>
               </div>
 
@@ -429,7 +443,9 @@ export const BomsView: React.FC = () => {
                       className="p-3 bg-neutral-50 dark:bg-neutral-900/60 rounded-xl border border-neutral-200/80 dark:border-neutral-800 flex flex-col sm:flex-row items-center gap-2"
                     >
                       <div className="flex-1 w-full">
-                        <label className="text-[10px] text-neutral-400 block mb-0.5">متریال / پارچه</label>
+                        <label className="text-[10px] text-neutral-400 block mb-0.5">
+                          {t('production.materialSelectLabel')}
+                        </label>
                         <Select
                           value={item.raw_material_id}
                           onChange={(e) => {
@@ -440,7 +456,7 @@ export const BomsView: React.FC = () => {
                         >
                           {materials.map((m) => (
                             <option key={`bom_mopt_${m.id}`} value={m.id}>
-                              {m.name} ({m.unit} - {formatCurrency(m.unit_cost)})
+                              {m.name} ({m.unit} - {formatCurrency(m.unit_cost, activeOrganization?.currency, isPersian)})
                             </option>
                           ))}
                         </Select>
@@ -448,7 +464,7 @@ export const BomsView: React.FC = () => {
 
                       <div className="w-full sm:w-32">
                         <label className="text-[10px] text-neutral-400 block mb-0.5">
-                          مقدار مصرف ({selectedMat?.unit || 'واحد'})
+                          {t('production.consumedQtyLabel', { unit: selectedMat?.unit || t('production.defaultUnit') })}
                         </label>
                         <Input
                           type="number"
@@ -463,10 +479,12 @@ export const BomsView: React.FC = () => {
                       </div>
 
                       <div className="flex-1 w-full">
-                        <label className="text-[10px] text-neutral-400 block mb-0.5">یادداشت کاربری</label>
+                        <label className="text-[10px] text-neutral-400 block mb-0.5">
+                          {t('production.usageNoteLabel')}
+                        </label>
                         <Input
                           type="text"
-                          placeholder="مثال: آستر یا خرج‌کار یقه"
+                          placeholder={t('production.usageNotePlaceholder')}
                           value={item.notes}
                           onChange={(e) => {
                             const newArr = [...bomItems];
@@ -481,7 +499,7 @@ export const BomsView: React.FC = () => {
                         size="sm"
                         onClick={() => handleRemoveItemRow(idx)}
                         className="text-rose-600 self-end sm:self-center"
-                        title="حذف ردیف"
+                        title={t('production.removeRowTooltip')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -495,23 +513,23 @@ export const BomsView: React.FC = () => {
             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800/50 flex items-center justify-between">
               <div>
                 <p className="text-xs text-emerald-800 dark:text-emerald-300 font-bold">
-                  محاسبه تخمینی بهای متریال برای ۱ عدد لباس:
+                  {t('production.liveEstimatedCostTitle')}
                 </p>
                 <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">
-                  شامل ضایعات {formatNum(formData.waste_percentage)}٪
+                  {t('production.includesWaste', { percent: formatNum(formData.waste_percentage) })}
                 </p>
               </div>
               <span className="text-base font-bold font-mono text-emerald-700 dark:text-emerald-300">
-                {formatCurrency(calculatedEstimatedCost)}
+                {formatCurrency(calculatedEstimatedCost, activeOrganization?.currency, isPersian)}
               </span>
             </div>
 
             <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
               <Button variant="ghost" onClick={() => setIsEditorModalOpen(false)}>
-                انصراف
+                {t('common.cancel')}
               </Button>
               <Button variant="primary" onClick={handleSaveBom}>
-                ذخیره فرمول ساخت
+                {t('production.saveBomBtn')}
               </Button>
             </div>
           </div>
@@ -523,25 +541,25 @@ export const BomsView: React.FC = () => {
         <Modal
           isOpen={isDetailsModalOpen}
           onClose={() => setIsDetailsModalOpen(false)}
-          title={`شناسنامه تولید: ${selectedBom.name}`}
+          title={t('production.bomDetailsModalTitle', { name: selectedBom.name })}
         >
           <div className="space-y-4 text-xs">
             <div className="grid grid-cols-2 gap-2 bg-neutral-50 dark:bg-neutral-900 p-3 rounded-xl border border-neutral-200/80 dark:border-neutral-800">
               <div>
-                <span className="text-neutral-400 block text-[10px]">محصول:</span>
+                <span className="text-neutral-400 block text-[10px]">{t('production.productLabel')}</span>
                 <span className="font-bold text-neutral-900 dark:text-white">
-                  {selectedBom.product_name || `محصول کد ${selectedBom.product_id}`}
+                  {selectedBom.product_name || t('production.productCodeFallback', { id: selectedBom.product_id })}
                 </span>
               </div>
               <div>
-                <span className="text-neutral-400 block text-[10px]">هزینه تخمینی متریال:</span>
+                <span className="text-neutral-400 block text-[10px]">{t('production.estMaterialCostLabel')}</span>
                 <span className="font-bold font-mono text-emerald-600">
-                  {formatCurrency(selectedBom.estimated_cost || 0)}
+                  {formatCurrency(selectedBom.estimated_cost || 0, activeOrganization?.currency, isPersian)}
                 </span>
               </div>
             </div>
 
-            <h4 className="font-bold text-neutral-900 dark:text-white">ریز آیتم‌های مصرفی فرمول ساخت:</h4>
+            <h4 className="font-bold text-neutral-900 dark:text-white">{t('production.bomBreakdownTitle')}</h4>
 
             <div className="space-y-2">
               {selectedBom.items?.map((item) => (
@@ -551,12 +569,12 @@ export const BomsView: React.FC = () => {
                 >
                   <div>
                     <h5 className="font-bold text-neutral-900 dark:text-white">
-                      {item.raw_material?.name || `متریال کد ${item.raw_material_id}`}
+                      {item.raw_material?.name || t('production.materialCodeFallback', { id: item.raw_material_id })}
                     </h5>
                     {item.notes && <p className="text-[10px] text-neutral-500 mt-0.5">{item.notes}</p>}
                   </div>
                   <span className="font-bold font-mono text-neutral-900 dark:text-white">
-                    {formatNum(item.quantity_required)} {item.raw_material?.unit || 'واحد'}
+                    {formatNum(item.quantity_required)} {item.raw_material?.unit || t('production.defaultUnit')}
                   </span>
                 </div>
               ))}
@@ -564,7 +582,7 @@ export const BomsView: React.FC = () => {
 
             <div className="flex justify-end pt-3 border-t border-neutral-100 dark:border-neutral-800">
               <Button variant="primary" onClick={() => setIsDetailsModalOpen(false)}>
-                بستن
+                {t('common.close')}
               </Button>
             </div>
           </div>

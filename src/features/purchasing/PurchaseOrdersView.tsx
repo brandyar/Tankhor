@@ -195,7 +195,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
       setSelectedVariantId(0);
     } else {
       if (!selectedRawMaterialId || selectedRawMaterialId <= 0) {
-        alert('لطفاً متریال اولیه را انتخاب کنید');
+        alert(t('purchasing.pleaseSelectRawMaterial'));
         return;
       }
       const rm = rawMaterials.find((r) => r.id === selectedRawMaterialId);
@@ -228,7 +228,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
 
   const handleQuickCreateSupplier = async () => {
     if (!newSupplierName.trim()) {
-      alert('لطفاً نام تامین‌کننده یا شرکت را وارد کنید.');
+      alert(t('purchasing.quickSupplierErrorEmpty'));
       return;
     }
     setIsSavingSupplier(true);
@@ -253,7 +253,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
       setIsQuickSupplierModalOpen(false);
     } catch (err) {
       console.error('[PurchaseOrdersView] Error creating quick supplier:', err);
-      alert('خطا در ثبت تامین‌کننده جدید');
+      alert(t('purchasing.quickSupplierErrorCreate'));
     } finally {
       setIsSavingSupplier(false);
     }
@@ -261,15 +261,15 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
 
   const handleCreatePO = async (status: PurchaseOrderStatus = 'draft') => {
     if (!supplierId || supplierId <= 0) {
-      alert('لطفاً ابتدا یک تامین‌کننده انتخاب کنید (یا از دکمه «تامین‌کننده جدید» ایجاد کنید).');
+      alert(t('purchasing.selectSupplierRequiredAlert'));
       return;
     }
     if (!warehouseId || warehouseId <= 0) {
-      alert('لطفاً انبار تحویل را انتخاب کنید.');
+      alert(t('purchasing.selectWarehouseRequiredAlert'));
       return;
     }
     if (items.length === 0) {
-      alert('لطفاً حداقل یک قلم کالا یا متریال اولیه به فاکتور اضافه کنید.');
+      alert(t('purchasing.addAtLeastOneItemAlert'));
       return;
     }
 
@@ -339,12 +339,15 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
         if (hasAccounting && supplierId) {
           try {
             const supp = suppliers.find((s) => Number(s.id) === Number(supplierId));
-            const itemDesc = purchaseType === 'raw_material' ? 'خرید متریال و مواد اولیه' : 'خرید کالا و انبارداری';
+            const itemDesc =
+              purchaseType === 'raw_material'
+                ? t('purchasing.rawMaterialPurchaseDesc')
+                : t('purchasing.productPurchaseDesc');
             await adapter.savePersonTransaction({
               organization_id: Number(orgId),
               supplier_id: Number(supplierId),
               party_type: 'supplier',
-              party_name: supp?.name || `تامین‌کننده #${supplierId}`,
+              party_name: supp?.name || t('purchasing.supplierFallback', { id: supplierId }),
               type: 'creditor',
               transaction_type: 'purchase_invoice',
               amount: totalAmount,
@@ -352,7 +355,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
               status: 'pending',
               reference_number: poNumber,
               purchase_order_id: savedPO.id,
-              description: `فاکتور ${itemDesc} #${poNumber}`,
+              description: t('purchasing.invoiceDescPrefix', { desc: itemDesc, number: poNumber }),
               transaction_date: new Date().toISOString(),
             });
           } catch (accErr) {
@@ -424,7 +427,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
               organization_id: Number(orgId),
               supplier_id: Number(suppId),
               party_type: 'supplier',
-              party_name: supp?.name || `تامین‌کننده #${suppId}`,
+              party_name: supp?.name || t('purchasing.supplierFallback', { id: suppId }),
               type: 'creditor',
               transaction_type: 'purchase_invoice',
               amount: poTotal,
@@ -432,7 +435,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
               status: 'pending',
               reference_number: po.purchase_number,
               purchase_order_id: po.id,
-              description: `فاکتور خرید #${po.purchase_number} (تحویل در انبار)`,
+              description: t('purchasing.poReceiveInvoiceDesc', { number: po.purchase_number }),
               transaction_date: new Date().toISOString(),
             });
           } catch (accErr) {
@@ -457,7 +460,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
               quantity: -qty,
               reference_type: 'purchase_order',
               reference_id: String(po.id),
-              note: `برگشت ورود کالا بابت لغو سفارش خرید #${po.purchase_number}`,
+              note: t('purchasing.poCancelRollbackNote', { number: po.purchase_number }),
             });
           } else if (rawMatId && qty > 0 && adapter.getRawMaterialById && adapter.saveRawMaterial) {
             const mat = await adapter.getRawMaterialById(Number(rawMatId));
@@ -505,7 +508,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
               quantity: -qty,
               reference_type: 'purchase_order',
               reference_id: String(po.id),
-              note: `کسر ورود کالا بابت حذف سفارش خرید #${po.purchase_number}`,
+              note: t('purchasing.poDeleteRollbackNote', { number: po.purchase_number }),
             });
           } else if (rawMatId && qty > 0 && adapter.getRawMaterialById && adapter.saveRawMaterial) {
             const mat = await adapter.getRawMaterialById(Number(rawMatId));
@@ -568,14 +571,14 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200/80 dark:border-amber-900/50">
           <Boxes className="w-3 h-3" />
-          مواد اولیه
+          {t('purchasing.poTypeRawMaterial')}
         </span>
       );
     }
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200/80 dark:border-blue-900/50">
         <Shirt className="w-3 h-3" />
-        محصول آماده
+        {t('purchasing.poTypeProduct')}
       </span>
     );
   };
@@ -846,7 +849,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
                 }`}
               >
                 <Shirt className="w-4 h-4" />
-                خرید کالای آماده (بازرگانی)
+                {t('purchasing.purchaseTypeProduct')}
               </button>
               <button
                 type="button"
@@ -861,7 +864,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
                 }`}
               >
                 <Boxes className="w-4 h-4" />
-                خرید مواد اولیه و خرج‌کار (تولید)
+                {t('purchasing.purchaseTypeRawMaterial')}
               </button>
             </div>
           )}
@@ -879,7 +882,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
                   className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3 h-3" />
-                  تامین‌کننده جدید
+                  {t('purchasing.newSupplierBtn')}
                 </button>
               </div>
               <Select
@@ -888,7 +891,10 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
                 options={[
                   {
                     value: 0,
-                    label: suppliers.length === 0 ? 'هیچ تامین‌کننده‌ای یافت نشد - تامین‌کننده جدید بسازید' : 'انتخاب تامین‌کننده...',
+                    label:
+                      suppliers.length === 0
+                        ? t('purchasing.noSuppliersFoundCreate')
+                        : t('purchasing.selectSupplierPlaceholder'),
                   },
                   ...suppliers.map((s) => ({ value: s.id, label: s.name })),
                 ]}
@@ -898,7 +904,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
             <Select
               label={
                 purchaseType === 'raw_material'
-                  ? 'انبار تحویل مواد اولیه'
+                  ? t('purchasing.rawMaterialWarehouseLabel')
                   : t('purchasing.selectWarehouseLabel')
               }
               value={warehouseId}
@@ -911,7 +917,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
             <h4 className="text-xs font-bold text-slate-900 dark:text-neutral-100 flex items-center gap-1.5">
               <Package className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               {purchaseType === 'raw_material'
-                ? 'انتخاب مواد اولیه و خرج‌کار سفارش'
+                ? t('purchasing.selectRawMaterialsBoxTitle')
                 : t('purchasing.selectItemsBoxTitle')}
             </h4>
 
@@ -944,7 +950,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
             ) : (
               <div className="w-full">
                 <SearchableRawMaterialSelect
-                  label="انتخاب متریال / خرج‌کار"
+                  label={t('purchasing.selectRawMaterialLabel')}
                   value={selectedRawMaterialId || ''}
                   onChange={(id) => {
                     setSelectedRawMaterialId(id);
@@ -957,7 +963,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
                   }}
                   rawMaterials={rawMaterials}
                   currency={activeOrganization?.currency}
-                  placeholder="جستجو و انتخاب متریال اولیه یا خرج‌کار..."
+                  placeholder={t('purchasing.selectRawMaterialPlaceholder')}
                 />
               </div>
             )}
@@ -968,7 +974,11 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
                 <Input
                   label={
                     purchaseType === 'raw_material' && selectedRawMaterialId
-                      ? `مقدار (${rawMaterials.find((r) => r.id === selectedRawMaterialId)?.unit || 'واحد'})`
+                      ? t('purchasing.quantityWithUnit', {
+                          unit:
+                            rawMaterials.find((r) => r.id === selectedRawMaterialId)?.unit ||
+                            t('purchasing.unitDefault'),
+                        })
                       : t('purchasing.quantityLabel')
                   }
                   type="number"
@@ -1019,7 +1029,8 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
                           {item.name}
                         </span>
                         <span className="text-slate-500 dark:text-neutral-400 text-[11px] font-mono">
-                          {toPersianDigits(item.quantity)} {item.unit || 'عدد'} ×{' '}
+                          {isPersian ? toPersianDigits(item.quantity) : item.quantity}{' '}
+                          {item.unit || t('purchasing.unitPiece')} ×{' '}
                           {formatCurrency(item.unit_cost, activeOrganization?.currency, isPersian)}
                         </span>
                       </div>
@@ -1069,7 +1080,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
       <Modal
         isOpen={isQuickSupplierModalOpen}
         onClose={() => setIsQuickSupplierModalOpen(false)}
-        title="ثبت سریع تامین‌کننده جدید"
+        title={t('purchasing.quickSupplierModalTitle')}
         maxWidth="md"
         footer={
           <div className="flex items-center justify-end gap-2 w-full">
@@ -1082,27 +1093,27 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
               isLoading={isSavingSupplier}
               icon={<UserPlus className="w-4 h-4" />}
             >
-              ثبت و انتخاب
+              {t('purchasing.quickSupplierSaveBtn')}
             </Button>
           </div>
         }
       >
         <div className="space-y-3.5 text-xs">
           <Input
-            label="نام تامین‌کننده / کارخانه / فروشنده *"
-            placeholder="مثلا: پارچه‌بافی همکاران یا آقای رضایی"
+            label={t('purchasing.quickSupplierNameLabel')}
+            placeholder={t('purchasing.quickSupplierNamePlaceholder')}
             value={newSupplierName}
             onChange={(e) => setNewSupplierName(e.target.value)}
             required
           />
           <Input
-            label="نام مسئول یا رابط (اختیاری)"
-            placeholder="مثلا: آقای محمدی"
+            label={t('purchasing.quickSupplierContactLabel')}
+            placeholder={t('purchasing.quickSupplierContactPlaceholder')}
             value={newSupplierContact}
             onChange={(e) => setNewSupplierContact(e.target.value)}
           />
           <Input
-            label="شماره تماس / همراه (اختیاری)"
+            label={t('purchasing.quickSupplierPhoneLabel')}
             placeholder="09121234567"
             value={newSupplierPhone}
             onChange={(e) => setNewSupplierPhone(e.target.value)}
@@ -1125,7 +1136,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
               </div>
               {hasProduction && (
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-600 dark:text-neutral-400">نوع سفارش:</span>
+                  <span className="text-slate-600 dark:text-neutral-400">{t('purchasing.orderTypeLabel')}:</span>
                   <div>{getPOTypeBadge((selectedPO as any).purchase_type)}</div>
                 </div>
               )}
@@ -1145,19 +1156,19 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ initialC
             <div className="space-y-2">
               <h4 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5 text-indigo-500" />
-                لیست اقلام فاکتور خرید
+                {t('purchasing.poItemsListTitle')}
               </h4>
               {isLoadingDetails ? (
-                <div className="text-center py-4 text-slate-400">در حال بارگذاری اقلام...</div>
+                <div className="text-center py-4 text-slate-400">{t('purchasing.loadingItems')}</div>
               ) : poDetailsItems.length === 0 ? (
                 <div className="text-center py-4 text-slate-400 border border-dashed border-slate-200 dark:border-neutral-800 rounded-xl">
-                  اقلامی یافت نشد.
+                  {t('purchasing.noItemsFound')}
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100 dark:divide-neutral-800 border border-slate-200 dark:border-neutral-800 rounded-xl overflow-hidden bg-white dark:bg-[#13151a]">
                   {poDetailsItems.map((item, idx) => {
                     let title = `#${item.id}`;
-                    let unitStr = 'عدد';
+                    let unitStr = t('purchasing.unitPiece');
 
                     if (item.variant_id) {
                       const v = variants.find(

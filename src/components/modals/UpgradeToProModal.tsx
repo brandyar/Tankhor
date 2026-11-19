@@ -132,7 +132,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
           clearInterval(checkInterval);
           pollingTimerRef.current = null;
           await refreshOrganizations();
-          storageManager.setMode('cloud_synced');
+          storageManager.setMode('cloud_synced', { verifiedPro: true });
           setWaitingPayment(null);
           setSuccess(true);
         }
@@ -288,7 +288,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
         };
         updateUserOrganization(updatedOrg);
         await refreshOrganizations(updatedOrg);
-        storageManager.setMode('cloud_synced');
+        storageManager.setMode('cloud_synced', { verifiedPro: true });
         setSuccess(true);
         setSubscriptionDetails({
           Transaction_id: 'هدیه ویژه تن‌خور (تست ۱۴ روزه)',
@@ -335,7 +335,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
         }
       );
 
-      storageManager.setMode('cloud_synced');
+      storageManager.setMode('cloud_synced', { verifiedPro: true });
       setMigrationDone(true);
       setMigrationStats({ total: res.totalMigrated, errors: res.errors });
     } catch (err: any) {
@@ -346,7 +346,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
   };
 
   const handleFinishAndActivate = () => {
-    storageManager.setMode('cloud_synced');
+    storageManager.setMode('cloud_synced', { verifiedPro: true });
     onClose();
     if (onSuccess) onSuccess();
   };
@@ -382,7 +382,7 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({
   };
 
   const handleFinishOfflineSession = () => {
-    storageManager.setMode('local_offline');
+    storageManager.setMode('local_offline', { verifiedPro: false, force: true });
     onClose();
     if (typeof window !== 'undefined') {
       window.location.reload();

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../../i18n';
+import { useOrganization } from '../../context/OrganizationContext';
 import { storageManager } from '../../storage';
 import { Contractor, ContractorSpecialty, FinancialAccount } from '../../types';
 import { Card } from '../../components/ui/Card';
@@ -9,33 +10,28 @@ import { Select } from '../../components/ui/Select';
 import { Modal } from '../../components/ui/Modal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Pagination } from '../../components/ui/Pagination';
-import { formatCurrency, toPersianDigits } from '../../utils/formatters';
+import { formatCurrency } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import {
-  Users,
   Plus,
   Search,
-  Wallet,
-  Phone,
-  MapPin,
   Edit2,
   Trash2,
-  CheckCircle2,
-  Receipt,
-  ArrowUpRight,
 } from 'lucide-react';
 
-const CONTRACTOR_SPECIALTIES: { key: ContractorSpecialty; label: string }[] = [
-  { key: 'sewing', label: 'خیاط / مزد‌دوز' },
-  { key: 'cutting', label: 'برش‌کار' },
-  { key: 'embroidery', label: 'گلدوز' },
-  { key: 'printing', label: 'چاپ‌کار' },
-  { key: 'washing', label: 'شست‌وشو / سنگ‌شور' },
-  { key: 'iron_pack', label: 'اتو و بسته‌بندی' },
-  { key: 'general', label: 'پیمانکار عمومی' },
+const CONTRACTOR_SPECIALTY_KEYS: { key: ContractorSpecialty; labelKey: string }[] = [
+  { key: 'sewing', labelKey: 'production.specialtySewing' },
+  { key: 'cutting', labelKey: 'production.specialtyCutting' },
+  { key: 'embroidery', labelKey: 'production.specialtyEmbroidery' },
+  { key: 'printing', labelKey: 'production.specialtyPrinting' },
+  { key: 'washing', labelKey: 'production.specialtyWashing' },
+  { key: 'iron_pack', labelKey: 'production.specialtyIronPack' },
+  { key: 'general', labelKey: 'production.specialtyGeneral' },
 ];
 
 export const ContractorsView: React.FC = () => {
   const { t, isPersian } = useTranslation();
+  const { activeOrganization } = useOrganization();
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [financialAccounts, setFinancialAccounts] = useState<FinancialAccount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +59,7 @@ export const ContractorsView: React.FC = () => {
   const [settlementData, setSettlementData] = useState({
     amount: 0,
     financial_account_id: 0,
-    notes: 'پرداخت کارمزدی به پیمانکار',
+    notes: t('production.defaultSettlementNote'),
   });
 
   useEffect(() => {
@@ -132,7 +128,7 @@ export const ContractorsView: React.FC = () => {
     setSettlementData({
       amount: ctr.current_balance || 0,
       financial_account_id: financialAccounts[0]?.id || 0,
-      notes: `پرداخت کارمزدی به ${ctr.name}`,
+      notes: t('production.defaultSettlementNoteFor', { name: ctr.name }),
     });
     setIsSettlementModalOpen(true);
   };
@@ -184,7 +180,8 @@ export const ContractorsView: React.FC = () => {
   };
 
   const handleDeleteContractor = async (id: number) => {
-    if (window.confirm('آیا از حذف این پیمانکار اطمینان دارید؟')) {
+    const confirmed = await confirmAction(t('production.confirmDeleteContractor'), t('common.confirmDeleteTitle'));
+    if (confirmed) {
       try {
         await storageManager.deleteContractor(id);
         await loadData();
@@ -194,21 +191,19 @@ export const ContractorsView: React.FC = () => {
     }
   };
 
-  const formatNum = (num: number) => (isPersian ? toPersianDigits(num) : num.toString());
-
   const getSpecialtyLabel = (specKey: string) => {
-    const found = CONTRACTOR_SPECIALTIES.find((s) => s.key === specKey);
-    return found ? found.label : specKey;
+    const found = CONTRACTOR_SPECIALTY_KEYS.find((s) => s.key === specKey);
+    return found ? t(found.labelKey) : specKey;
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="معین و حساب پیمانکاران"
-        subtitle="ثبت اطلاعات خیاط، چاپ‌کار، گلدوز و محاسبه بدهکاری/طلبکاری همراه با تسویه سریع"
+        title={t('production.contractorsTitle')}
+        subtitle={t('production.contractorsSubtitle')}
         action={
           <Button variant="primary" onClick={handleOpenAddModal} icon={<Plus className="w-4 h-4" />}>
-            تعریف پیمانکار جدید
+            {t('production.addContractorBtn')}
           </Button>
         }
       />
@@ -220,7 +215,7 @@ export const ContractorsView: React.FC = () => {
             <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-neutral-400" />
             <Input
               type="text"
-              placeholder="جستجو بر اساس نام پیمانکار یا شماره تماس..."
+              placeholder={t('production.searchContractorsPlaceholder')}
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -239,10 +234,10 @@ export const ContractorsView: React.FC = () => {
               }}
               className="text-xs"
             >
-              <option value="all">همه تخصص‌ها</option>
-              {CONTRACTOR_SPECIALTIES.map((spec) => (
+              <option value="all">{t('production.allSpecialties')}</option>
+              {CONTRACTOR_SPECIALTY_KEYS.map((spec) => (
                 <option key={`spec_opt_${spec.key}`} value={spec.key}>
-                  {spec.label}
+                  {t(spec.labelKey)}
                 </option>
               ))}
             </Select>
@@ -252,10 +247,10 @@ export const ContractorsView: React.FC = () => {
 
       {/* Data Section */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-neutral-400">در حال دریافت حساب پیمانکاران...</div>
+        <div className="py-12 text-center text-xs text-neutral-400">{t('production.loadingContractors')}</div>
       ) : paginatedContractors.length === 0 ? (
         <Card className="p-8 text-center border-dashed border-neutral-200 dark:border-neutral-800">
-          <p className="text-xs text-neutral-500">هیچ پیمانکاری یافت نشد.</p>
+          <p className="text-xs text-neutral-500">{t('production.noContractorsFound')}</p>
         </Card>
       ) : (
         <div className="space-y-4">
@@ -267,7 +262,7 @@ export const ContractorsView: React.FC = () => {
                 <Card key={`ctr_mcard_${ctr.id}`} className="p-4 bg-white dark:bg-[#13151a]">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-800">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
                         {getSpecialtyLabel(ctr.specialty)}
                       </span>
                       <h4 className="text-sm font-bold text-neutral-900 dark:text-white mt-1">{ctr.name}</h4>
@@ -280,23 +275,32 @@ export const ContractorsView: React.FC = () => {
                         size="sm"
                         onClick={() => handleOpenSettlementModal(ctr)}
                         className="text-emerald-600"
-                        title="تسویه وجه"
+                        title={t('production.settleTooltip')}
                       >
-                        تسویه
+                        {t('production.settleShortBtn')}
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(ctr)}>
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(ctr)} title={t('common.edit')}>
                         <Edit2 className="w-3.5 h-3.5 text-blue-600" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteContractor(ctr.id)}>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteContractor(ctr.id)} title={t('common.delete')}>
                         <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                       </Button>
                     </div>
                   </div>
 
                   <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-xs">
-                    <span className="text-neutral-500">مانده حساب:</span>
-                    <span className={`font-bold font-mono ${balance > 0 ? 'text-emerald-600' : balance < 0 ? 'text-rose-600' : 'text-neutral-900'}`}>
-                      {formatCurrency(Math.abs(balance))} {balance > 0 ? '(طلبکار)' : balance < 0 ? '(بدهکار)' : '(بی‌حساب)'}
+                    <span className="text-neutral-500">{t('production.accountBalanceLabel')}</span>
+                    <span
+                      className={`font-bold font-mono ${
+                        balance > 0 ? 'text-emerald-600' : balance < 0 ? 'text-rose-600' : 'text-neutral-900 dark:text-white'
+                      }`}
+                    >
+                      {formatCurrency(Math.abs(balance), activeOrganization?.currency, isPersian)}{' '}
+                      {balance > 0
+                        ? t('production.creditorLabel')
+                        : balance < 0
+                        ? t('production.debtorLabel')
+                        : t('production.settledLabel')}
                     </span>
                   </div>
                 </Card>
@@ -309,11 +313,11 @@ export const ContractorsView: React.FC = () => {
             <table className="w-full text-start text-xs">
               <thead className="bg-neutral-50 dark:bg-[#181a20] border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold">
                 <tr>
-                  <th className="px-4 py-3 text-start">نام پیمانکار</th>
-                  <th className="px-4 py-3 text-start">تخصص / کاربری</th>
-                  <th className="px-4 py-3 text-start">شماره تماس</th>
-                  <th className="px-4 py-3 text-end">مانده حساب کارمزدی</th>
-                  <th className="px-4 py-3 text-end">عملیات</th>
+                  <th className="px-4 py-3 text-start">{t('production.colContractorName')}</th>
+                  <th className="px-4 py-3 text-start">{t('production.colSpecialty')}</th>
+                  <th className="px-4 py-3 text-start">{t('production.colPhone')}</th>
+                  <th className="px-4 py-3 text-end">{t('production.colLedgerBalance')}</th>
+                  <th className="px-4 py-3 text-end">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
@@ -329,8 +333,21 @@ export const ContractorsView: React.FC = () => {
                         {ctr.phone || '-'}
                       </td>
                       <td className="px-4 py-3 text-end font-mono font-bold">
-                        <span className={balance > 0 ? 'text-emerald-600' : balance < 0 ? 'text-rose-600' : 'text-neutral-900 dark:text-white'}>
-                          {formatCurrency(Math.abs(balance))} {balance > 0 ? '(طلبکار)' : balance < 0 ? '(بدهکار)' : ''}
+                        <span
+                          className={
+                            balance > 0
+                              ? 'text-emerald-600'
+                              : balance < 0
+                              ? 'text-rose-600'
+                              : 'text-neutral-900 dark:text-white'
+                          }
+                        >
+                          {formatCurrency(Math.abs(balance), activeOrganization?.currency, isPersian)}{' '}
+                          {balance > 0
+                            ? t('production.creditorLabel')
+                            : balance < 0
+                            ? t('production.debtorLabel')
+                            : ''}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-end whitespace-nowrap">
@@ -341,13 +358,18 @@ export const ContractorsView: React.FC = () => {
                             onClick={() => handleOpenSettlementModal(ctr)}
                             className="text-emerald-600 font-bold"
                           >
-                            تسویه و پرداخت
+                            {t('production.settleAndPayBtn')}
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(ctr)}>
-                            ویرایش
+                            {t('common.edit')}
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteContractor(ctr.id)} className="text-rose-600">
-                            حذف
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteContractor(ctr.id)}
+                            className="text-rose-600"
+                          >
+                            {t('common.delete')}
                           </Button>
                         </div>
                       </td>
@@ -375,14 +397,16 @@ export const ContractorsView: React.FC = () => {
         <Modal
           isOpen={isAddEditModalOpen}
           onClose={() => setIsAddEditModalOpen(false)}
-          title={selectedContractor ? 'ویرایش اطلاعات پیمانکار' : 'تعریف پیمانکار / خیاط جدید'}
+          title={selectedContractor ? t('production.editContractorModalTitle') : t('production.addContractorModalTitle')}
         >
           <div className="space-y-4 text-xs">
             <div>
-              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">نام و نام‌خانوادگی پیمانکار *</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                {t('production.contractorNameRequired')}
+              </label>
               <Input
                 type="text"
-                placeholder="مثال: استاد علیرضا رضایی (کارگاه دوخت)"
+                placeholder={t('production.contractorNamePlaceholder')}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
@@ -390,21 +414,25 @@ export const ContractorsView: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">تخصص اصلی</label>
+                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                  {t('production.mainSpecialtyLabel')}
+                </label>
                 <Select
                   value={formData.specialty}
                   onChange={(e) => setFormData({ ...formData, specialty: e.target.value as ContractorSpecialty })}
                 >
-                  {CONTRACTOR_SPECIALTIES.map((spec) => (
+                  {CONTRACTOR_SPECIALTY_KEYS.map((spec) => (
                     <option key={`ctr_form_spec_${spec.key}`} value={spec.key}>
-                      {spec.label}
+                      {t(spec.labelKey)}
                     </option>
                   ))}
                 </Select>
               </div>
 
               <div>
-                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">شماره همراه / تماس</label>
+                <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                  {t('production.mobilePhoneLabel')}
+                </label>
                 <Input
                   type="text"
                   placeholder="09121112233"
@@ -415,10 +443,12 @@ export const ContractorsView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">آدرس کارگاه</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                {t('production.workshopAddressLabel')}
+              </label>
               <Input
                 type="text"
-                placeholder="تهران، بازار بزرگ، راسته‌خیاط‌ها..."
+                placeholder={t('production.workshopAddressPlaceholder')}
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               />
@@ -426,10 +456,10 @@ export const ContractorsView: React.FC = () => {
 
             <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
               <Button variant="ghost" onClick={() => setIsAddEditModalOpen(false)}>
-                انصراف
+                {t('common.cancel')}
               </Button>
               <Button variant="primary" onClick={handleSaveContractor}>
-                ذخیره اطلاعات
+                {t('production.saveInfoBtn')}
               </Button>
             </div>
           </div>
@@ -441,18 +471,20 @@ export const ContractorsView: React.FC = () => {
         <Modal
           isOpen={isSettlementModalOpen}
           onClose={() => setIsSettlementModalOpen(false)}
-          title={`تسویه وجه کارمزدی: ${selectedContractor.name}`}
+          title={t('production.settlementModalTitle', { name: selectedContractor.name })}
         >
           <div className="space-y-4 text-xs">
             <p className="text-neutral-600 dark:text-neutral-400">
-              طلب فعلی پیمانکار:{' '}
+              {t('production.currentContractorCreditLabel')}{' '}
               <strong className="font-mono text-emerald-600 font-bold">
-                {formatCurrency(selectedContractor.current_balance || 0)}
+                {formatCurrency(selectedContractor.current_balance || 0, activeOrganization?.currency, isPersian)}
               </strong>
             </p>
 
             <div>
-              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">مبلغ پرداختی (تومان)</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                {t('production.paymentAmountLabel')}
+              </label>
               <Input
                 type="number"
                 value={settlementData.amount}
@@ -461,21 +493,29 @@ export const ContractorsView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">منبع پرداخت (بانک / صندوق)</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                {t('production.paymentSourceLabel')}
+              </label>
               <Select
                 value={settlementData.financial_account_id}
                 onChange={(e) => setSettlementData({ ...settlementData, financial_account_id: Number(e.target.value) })}
               >
                 {financialAccounts.map((acc) => (
                   <option key={`settle_acc_${acc.id}`} value={acc.id}>
-                    {acc.name} (موجودی: {formatCurrency(acc.current_balance || 0)})
+                    {acc.name} (
+                    {t('production.accountBalanceShort', {
+                      amount: formatCurrency(acc.current_balance || 0, activeOrganization?.currency, isPersian),
+                    })}
+                    )
                   </option>
                 ))}
               </Select>
             </div>
 
             <div>
-              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">بابت / توضیحات سند</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                {t('production.settlementNotesLabel')}
+              </label>
               <Input
                 type="text"
                 value={settlementData.notes}
@@ -485,10 +525,10 @@ export const ContractorsView: React.FC = () => {
 
             <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
               <Button variant="ghost" onClick={() => setIsSettlementModalOpen(false)}>
-                انصراف
+                {t('common.cancel')}
               </Button>
               <Button variant="primary" onClick={handleExecuteSettlement}>
-                ثبت پرداخت و تسویه
+                {t('production.confirmSettlementBtn')}
               </Button>
             </div>
           </div>

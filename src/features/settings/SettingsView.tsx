@@ -167,20 +167,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ activeSubRoute = 'se
     };
   }, []);
 
+  const isProOrg = storageManager.isOrganizationPro(activeOrganization);
+
   const handleModeChange = (newMode: 'local_offline' | 'cloud_synced') => {
+    if (isProOrg && newMode === 'local_offline') {
+      // Pro organizations always operate in online cloud_synced mode
+      storageManager.setMode('cloud_synced', { verifiedPro: true });
+      setMode(storageManager.getMode());
+      return;
+    }
     if (newMode === 'cloud_synced') {
       if (!isCloudAuthenticated) {
         openLoginModal();
         return;
       }
-      const currentPlan = activeOrganization?.plan || 'free';
-      if (currentPlan !== 'pro') {
+      if (!isProOrg) {
         setIsUpgradeModalOpen(true);
         return;
       }
+      storageManager.setMode('cloud_synced', { verifiedPro: true });
+      setMode(storageManager.getMode());
+      return;
     }
-    storageManager.setMode(newMode);
-    setMode(newMode);
+    storageManager.setMode(newMode, { verifiedPro: isProOrg });
+    setMode(storageManager.getMode());
   };
 
   const handleManualSync = async () => {
@@ -585,11 +595,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ activeSubRoute = 'se
           {/* Storage Mode Selector */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div
-              onClick={() => handleModeChange('local_offline')}
-              className={`p-6 bg-white dark:bg-[#13151a] border rounded-2xl cursor-pointer transition-all ${
-                mode === 'local_offline'
-                  ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-md'
-                  : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+              onClick={() => {
+                if (!isProOrg) handleModeChange('local_offline');
+              }}
+              aria-disabled={isProOrg}
+              className={`p-6 bg-white dark:bg-[#13151a] border rounded-2xl transition-all ${
+                isProOrg
+                  ? 'opacity-60 cursor-not-allowed border-neutral-200 dark:border-neutral-800'
+                  : mode === 'local_offline'
+                  ? 'cursor-pointer border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-md'
+                  : 'cursor-pointer border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
               }`}
             >
               <div className="flex items-center justify-between mb-4">
@@ -602,7 +617,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ activeSubRoute = 'se
                   ) : (
                     <Badge variant="neutral">Local Storage</Badge>
                   )}
-                  {mode === 'local_offline' && <Badge variant="success">{t('settings.themeActive')}</Badge>}
+                  {mode === 'local_offline' && !isProOrg && <Badge variant="success">{t('settings.themeActive')}</Badge>}
                 </div>
               </div>
               <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
@@ -610,7 +625,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ activeSubRoute = 'se
                 {isTauriEnvironment() ? t('settings.localOfflineSQLite') : t('settings.localOfflineBrowser')}
               </h3>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
-                {isTauriEnvironment()
+                {isProOrg
+                  ? t('settings.proCloudOnlyNote')
+                  : isTauriEnvironment()
                   ? t('settings.localOfflineSQLiteDesc')
                   : t('settings.localOfflineBrowserDesc')}
               </p>
@@ -629,18 +646,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ activeSubRoute = 'se
                   <Cloud className="w-5 h-5" />
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {activeOrganization?.plan !== 'pro' && (
+                  {!isProOrg && (
                     <Badge variant="warning" className="flex items-center gap-1 text-[10px]">
                       <Sparkles className="w-3 h-3 text-amber-500" />
                       {t('settings.planPro')}
                     </Badge>
                   )}
+                  {isProOrg && <Badge variant="info">{t('settings.proAutoOnlineBadge')}</Badge>}
                   {mode === 'cloud_synced' && <Badge variant="info">{t('settings.themeActive')}</Badge>}
                 </div>
               </div>
               <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 flex items-center justify-between">
                 <span>{t('settings.cloudSyncMode')}</span>
-                {activeOrganization?.plan !== 'pro' && (
+                {!isProOrg && (
                   <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline">
                     {t('settings.upgradeToPro')}
                   </span>

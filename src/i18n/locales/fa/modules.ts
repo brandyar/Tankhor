@@ -50,4 +50,7 @@ export const modulesFa = {
   licenseRevoked: 'غیرفعال / لغو شده توسط سرور',
   licenseExpired: 'منقضی شده',
   checkLicenses: 'بررسی مجدد',
+  payWithZibal: 'خرید آنلاین و فعال‌سازی فوری',
+  buyAndActivate: 'خرید و فعال‌سازی',
+  licenseVerifyError: 'خطا در اعتبارسنجی لایسنس',
 };

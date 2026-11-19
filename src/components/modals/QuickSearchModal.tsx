@@ -49,6 +49,7 @@ import {
   CornerDownLeft,
   SlidersHorizontal,
   MessageSquare,
+  Scissors,
 } from 'lucide-react';
 
 interface QuickSearchModalProps {
@@ -95,6 +96,7 @@ export const QuickSearchModal: React.FC<QuickSearchModalProps> = ({
   const hasBarcode = hasAccess('barcode');
   const hasAccounting = hasAccess('accounting');
   const hasWooCommerce = hasAccess('woocommerce');
+  const hasProduction = hasAccess('production') || hasAccess('produce');
 
   // Build the complete searchable catalog
   const allItems: SearchableItem[] = useMemo(() => {
@@ -286,6 +288,58 @@ export const QuickSearchModal: React.FC<QuickSearchModalProps> = ({
         icon: Tag,
         route: 'products/sizes',
         visible: permissions.canViewProducts,
+      },
+
+      // 4.5 Production & Manufacturing
+      {
+        id: 'nav_production_overview',
+        title: t('navigation.productionOverview', 'پیشخوان و آمار تولید'),
+        category: t('navigation.productionGroup', 'مدیریت تولید'),
+        keywords: ['تولید', 'کارگاه', 'آمار تولید', 'production', 'manufacturing', 'overview'],
+        icon: Scissors,
+        route: 'production/overview',
+        badge: !hasProduction ? t('navigation.moduleBadge', 'ماژول') : undefined,
+        visible: true,
+      },
+      {
+        id: 'nav_production_materials',
+        title: t('navigation.rawMaterials', 'انبار متریال و مواد اولیه'),
+        category: t('navigation.productionGroup', 'مدیریت تولید'),
+        keywords: ['مواد اولیه', 'متریال', 'پارچه', 'خرج‌کار', 'نخ', 'زیپ', 'raw materials', 'fabric', 'trims'],
+        icon: Boxes,
+        route: 'production/materials',
+        badge: !hasProduction ? t('navigation.moduleBadge', 'ماژول') : undefined,
+        visible: true,
+      },
+      {
+        id: 'nav_production_boms',
+        title: t('navigation.boms', 'فرمول ساخت (BOM)'),
+        category: t('navigation.productionGroup', 'مدیریت تولید'),
+        keywords: ['فرمول ساخت', 'شناسنامه تولید', 'bom', 'bill of materials', 'recipe'],
+        icon: FileText,
+        route: 'production/boms',
+        badge: !hasProduction ? t('navigation.moduleBadge', 'ماژول') : undefined,
+        visible: true,
+      },
+      {
+        id: 'nav_production_orders',
+        title: t('navigation.productionOrders', 'دستور کار و حواله برش'),
+        category: t('navigation.productionGroup', 'مدیریت تولید'),
+        keywords: ['دستور کار', 'دستور تولید', 'حواله برش', 'work order', 'cut order', 'production order'],
+        icon: Shirt,
+        route: 'production/orders',
+        badge: !hasProduction ? t('navigation.moduleBadge', 'ماژول') : undefined,
+        visible: true,
+      },
+      {
+        id: 'nav_production_contractors',
+        title: t('navigation.contractors', 'معین و حساب پیمانکاران'),
+        category: t('navigation.productionGroup', 'مدیریت تولید'),
+        keywords: ['پیمانکار', 'خیاط', 'مزدی‌دوز', 'برشکار', 'کارمزد', 'contractors', 'tailors'],
+        icon: Users,
+        route: 'production/contractors',
+        badge: !hasProduction ? t('navigation.moduleBadge', 'ماژول') : undefined,
+        visible: true,
       },
 
       // 5. Purchasing & Suppliers
@@ -571,7 +625,7 @@ export const QuickSearchModal: React.FC<QuickSearchModalProps> = ({
           ]
         : []),
     ].filter((item) => item.visible !== false);
-  }, [t, permissions, isOwner, hasBarcode, hasAccounting, hasWooCommerce, isDesktop, setTheme, onSyncNow, onOpenCreateOrg, onOpenFeedback]);
+  }, [t, permissions, isOwner, hasBarcode, hasAccounting, hasWooCommerce, hasProduction, isDesktop, setTheme, onSyncNow, onOpenCreateOrg, onOpenFeedback]);
 
   // Persian string normalizer for search
   const normalize = (str: string) => {

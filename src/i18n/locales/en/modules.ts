@@ -50,4 +50,7 @@ export const modulesEn = {
   licenseRevoked: 'Revoked by Server',
   licenseExpired: 'Expired',
   checkLicenses: 'Check Now',
+  payWithZibal: 'Buy Online & Activate Instantly',
+  buyAndActivate: 'Buy & Activate',
+  licenseVerifyError: 'Error validating license key',
 };

@@ -87,27 +87,30 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onNavigate }) =
   }, []);
 
   const toggleStorageMode = () => {
+    const isPro = storageManager.isOrganizationPro(activeOrganization);
+
+    if (isPro) {
+      // Pro organizations always remain in cloud_synced mode on both Desktop and Web
+      if (mode !== 'cloud_synced') {
+        storageManager.setMode('cloud_synced', { verifiedPro: true });
+        setModeState(storageManager.getMode());
+      } else {
+        handleSyncNow();
+      }
+      return;
+    }
+
     if (mode === 'local_offline') {
       if (!isCloudAuthenticated) {
         openLoginModal();
         return;
       }
-      const currentPlan = activeOrganization?.plan || 'free';
-      if (currentPlan !== 'pro') {
-        setIsUpgradeModalOpen(true);
-        return;
-      }
-      storageManager.setMode('cloud_synced');
-      setModeState('cloud_synced');
-    } else {
-      // In web environment, keep in cloud mode if Pro
-      if (!isTauriEnvironment() && activeOrganization?.plan === 'pro') {
-        handleSyncNow();
-        return;
-      }
-      storageManager.setMode('local_offline');
-      setModeState('local_offline');
+      setIsUpgradeModalOpen(true);
+      return;
     }
+
+    storageManager.setMode('local_offline', { verifiedPro: false });
+    setModeState(storageManager.getMode());
   };
 
   const handleSyncNow = async () => {

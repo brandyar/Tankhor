@@ -34,7 +34,7 @@ const DIRECTUS_ALLOWED_FIELDS: Record<string, Set<string>> = {
   inventory_items: new Set(['organization_id', 'variant_id', 'warehouse_id', 'location_id', 'quantity', 'reserved_quantity', 'reorder_point', 'last_counted_at']),
   inventory_movements: new Set(['organization_id', 'variant_id', 'warehouse_id', 'location_id', 'type', 'quantity', 'reference_type', 'reference_id', 'note', 'user_id', 'created_at']),
   suppliers: new Set(['organization_id', 'company_name', 'contact_name', 'phone', 'email', 'address', 'city', 'province', 'notes', 'status']),
-  customers: new Set(['organization_id', 'full_name', 'phone', 'mobile', 'email', 'address', 'postal_code', 'city', 'province', 'notes', 'status']),
+  customers: new Set(['organization_id', 'name', 'phone', 'email', 'address', 'notes', 'status', 'balance', 'credit_limit']),
   orders: new Set(['organization_id', 'order_number', 'customer_id', 'warehouse_id', 'status', 'payment_status', 'fulfillment_status', 'subtotal', 'discount', 'tax', 'total', 'paid_amount', 'notes']),
   order_items: new Set(['organization_id', 'order_id', 'variant_id', 'quantity', 'unit_price', 'discount', 'total']),
   purchase_orders: new Set(['organization_id', 'po_number', 'supplier_id', 'warehouse_id', 'status', 'total_amount', 'paid_amount', 'notes', 'expected_date']),
@@ -44,7 +44,7 @@ const DIRECTUS_ALLOWED_FIELDS: Record<string, Set<string>> = {
   expense_categories: new Set(['organization_id', 'title', 'code', 'icon', 'status']),
   expenses: new Set(['organization_id', 'category_id', 'title', 'amount', 'expense_date', 'payment_method', 'account_id', 'receipt_attachment', 'paid_to', 'description', 'reference_code', 'notes', 'created_by']),
   person_transactions: new Set(['organization_id', 'party_type', 'customer_id', 'supplier_id', 'type', 'transaction_type', 'amount', 'debit_amount', 'credit_amount', 'running_balance', 'balance_after', 'order_id', 'purchase_order_id', 'reference_code', 'reference_number', 'payment_method', 'transaction_date', 'description', 'status']),
-  financial_accounts: new Set(['organization_id', 'name', 'type', 'bank_name', 'account_number', 'card_number', 'shaba_number', 'pos_terminal_id', 'initial_balance', 'current_balance', 'is_default', 'status']),
+  financial_accounts: new Set(['organization_id', 'name', 'type', 'bank_name', 'account_number', 'card_number', 'shaba_number', 'pos_terminal_id', 'initial_balance', 'current_balance', 'is_default', 'warehouse_id']),
   treasury_transactions: new Set(['organization_id', 'source_account_id', 'destination_account_id', 'type', 'amount', 'tracking_code', 'transaction_date', 'person_transaction_id', 'expense_id', 'description', 'receipt_attachment']),
   cheques: new Set(['organization_id', 'type', 'sayad_id', 'cheque_number', 'bank_name', 'branch_name', 'account_number', 'drawer_name', 'customer_id', 'supplier_id', 'amount', 'issue_date', 'due_date', 'status', 'target_account_id', 'alert_days_before', 'image_front', 'image_back', 'notes']),
   landed_costs: new Set(['organization_id', 'purchase_order_id', 'cost_type', 'title', 'amount', 'allocation_method', 'expense_id', 'date_applied', 'notes']),
@@ -916,11 +916,19 @@ export class CloudMigrationManager {
             if (cached.activeOrganization) {
               cached.activeOrganization.plan = 'free';
             }
+            if (cached.active_organization) {
+              cached.active_organization.plan = 'free';
+            }
+            if (Array.isArray(cached.organizations)) {
+              cached.organizations = cached.organizations.map((o: any) =>
+                o && String(o.id) === String(orgId) ? { ...o, plan: 'free' } : o
+              );
+            }
             localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(cached));
           } catch {}
         }
 
-        storageManager.setMode('local_offline');
+        storageManager.setMode('local_offline', { verifiedPro: false, force: true });
       } catch (err) {
         console.warn('[CloudMigrationManager] Mode switch warning:', err);
       }

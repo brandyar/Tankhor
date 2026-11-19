@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../../i18n';
+import { useOrganization } from '../../context/OrganizationContext';
 import { storageManager } from '../../storage';
 import {
   ProductionOrder,
@@ -20,34 +21,37 @@ import { Modal } from '../../components/ui/Modal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Pagination } from '../../components/ui/Pagination';
 import { formatCurrency, toPersianDigits } from '../../utils/formatters';
+import { confirmAction } from '../../utils/confirm';
 import {
-  Scissors,
   Plus,
   Search,
   CheckCircle2,
-  AlertCircle,
-  Users,
-  Shirt,
-  Calendar,
-  Layers,
-  Edit2,
   Trash2,
-  Eye,
-  CheckSquare,
 } from 'lucide-react';
 
-const STAGE_TYPES: { key: ProductionStageType; label: string }[] = [
-  { key: 'cutting', label: 'برش' },
-  { key: 'printing', label: 'چاپ' },
-  { key: 'embroidery', label: 'گلدوزی' },
-  { key: 'sewing', label: 'دوخت / کارمزدی' },
-  { key: 'washing', label: 'شست‌وشو / سنگ‌شور' },
-  { key: 'iron_pack', label: 'اتو و بسته‌بندی' },
-  { key: 'qc', label: 'کنترل کیفیت' },
+const STAGE_TYPE_KEYS: { key: ProductionStageType; labelKey: string }[] = [
+  { key: 'cutting', labelKey: 'production.stageTypeCutting' },
+  { key: 'printing', labelKey: 'production.stageTypePrinting' },
+  { key: 'embroidery', labelKey: 'production.stageTypeEmbroidery' },
+  { key: 'sewing', labelKey: 'production.stageTypeSewing' },
+  { key: 'washing', labelKey: 'production.stageTypeWashing' },
+  { key: 'iron_pack', labelKey: 'production.stageTypeIronPack' },
+  { key: 'qc', labelKey: 'production.stageTypeQc' },
 ];
+
+const SPECIALTY_LABEL_KEYS: Record<string, string> = {
+  cutting: 'production.specialtyCutting',
+  sewing: 'production.specialtySewing',
+  embroidery: 'production.specialtyEmbroidery',
+  printing: 'production.specialtyPrinting',
+  washing: 'production.specialtyWashing',
+  iron_pack: 'production.specialtyIronPack',
+  general: 'production.specialtyGeneral',
+};
 
 export const ProductionOrdersView: React.FC = () => {
   const { t, isPersian } = useTranslation();
+  const { activeOrganization } = useOrganization();
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
@@ -184,7 +188,7 @@ export const ProductionOrdersView: React.FC = () => {
         })
       );
 
-      const stagesPayload: Partial<ProductionStage>[] = STAGE_TYPES.map((stg) => ({
+      const stagesPayload: Partial<ProductionStage>[] = STAGE_TYPE_KEYS.map((stg) => ({
         stage_type: stg.key,
         status: stg.key === 'cutting' ? 'in_progress' : 'pending',
         unit_fee: 0,
@@ -220,7 +224,7 @@ export const ProductionOrdersView: React.FC = () => {
     setOrderStages(
       order.stages && order.stages.length > 0
         ? order.stages
-        : STAGE_TYPES.map((stg) => ({
+        : STAGE_TYPE_KEYS.map((stg) => ({
             production_order_id: order.id,
             stage_type: stg.key,
             status: 'pending',
@@ -282,7 +286,8 @@ export const ProductionOrdersView: React.FC = () => {
   };
 
   const handleDeleteOrder = async (id: number) => {
-    if (window.confirm('آیا از حذف این دستور کار تولید اطمینان دارید؟')) {
+    const confirmed = await confirmAction(t('production.confirmDeleteOrder'), t('common.confirmDeleteTitle'));
+    if (confirmed) {
       try {
         await storageManager.deleteProductionOrder(id);
         await loadData();
@@ -297,30 +302,58 @@ export const ProductionOrdersView: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
-        return <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-100 text-neutral-700">پیش‌نویس</span>;
+        return (
+          <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+            {t('production.statusDraft')}
+          </span>
+        );
       case 'cutting':
-        return <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-800">در حال برش</span>;
+        return (
+          <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+            {t('production.statusCutting')}
+          </span>
+        );
       case 'in_progress':
-        return <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-800">در حال دوخت / برون‌سپاری</span>;
+        return (
+          <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+            {t('production.statusInProgress')}
+          </span>
+        );
       case 'qc':
-        return <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-100 text-purple-800">کنترل کیفیت</span>;
+        return (
+          <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
+            {t('production.statusQc')}
+          </span>
+        );
       case 'completed':
-        return <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800">تکمیل‌شده</span>;
+        return (
+          <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+            {t('production.statusCompleted')}
+          </span>
+        );
       case 'cancelled':
-        return <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-100 text-rose-800">لغوشده</span>;
+        return (
+          <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300">
+            {t('production.statusCancelled')}
+          </span>
+        );
       default:
-        return <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-100 text-neutral-700">{status}</span>;
+        return (
+          <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+            {status}
+          </span>
+        );
     }
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="دستور کار تولید و حواله برش"
-        subtitle="ثبت سفارش ساخت، کسر خودکار پارچه، پیگیری مراحل برون‌سپاری خیاطی و تسویه کارمزدی"
+        title={t('production.ordersTitle')}
+        subtitle={t('production.ordersSubtitle')}
         action={
           <Button variant="primary" onClick={handleOpenCreateModal} icon={<Plus className="w-4 h-4" />}>
-            ثبت دستور کار جدید (حواله برش)
+            {t('production.createOrderBtn')}
           </Button>
         }
       />
@@ -332,7 +365,7 @@ export const ProductionOrdersView: React.FC = () => {
             <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-neutral-400" />
             <Input
               type="text"
-              placeholder="جستجو بر اساس شماره دستورکار یا عنوان محصول..."
+              placeholder={t('production.searchOrdersPlaceholder')}
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -351,12 +384,12 @@ export const ProductionOrdersView: React.FC = () => {
               }}
               className="text-xs"
             >
-              <option value="all">همه وضعیت‌ها</option>
-              <option value="cutting">در حال برش</option>
-              <option value="in_progress">در حال دوخت / برون‌سپاری</option>
-              <option value="qc">کنترل کیفیت</option>
-              <option value="completed">تکمیل‌شده</option>
-              <option value="cancelled">لغوشده</option>
+              <option value="all">{t('production.allStatuses')}</option>
+              <option value="cutting">{t('production.statusCutting')}</option>
+              <option value="in_progress">{t('production.statusInProgress')}</option>
+              <option value="qc">{t('production.statusQc')}</option>
+              <option value="completed">{t('production.statusCompleted')}</option>
+              <option value="cancelled">{t('production.statusCancelled')}</option>
             </Select>
           </div>
         </div>
@@ -364,10 +397,10 @@ export const ProductionOrdersView: React.FC = () => {
 
       {/* Data Table / Cards */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-neutral-400">در حال دریافت لیست دستورکارهای تولید...</div>
+        <div className="py-12 text-center text-xs text-neutral-400">{t('production.loadingOrders')}</div>
       ) : paginatedOrders.length === 0 ? (
         <Card className="p-8 text-center border-dashed border-neutral-200 dark:border-neutral-800">
-          <p className="text-xs text-neutral-500">هیچ دستور کار تولیدی یافت نشد.</p>
+          <p className="text-xs text-neutral-500">{t('production.noOrdersFound')}</p>
         </Card>
       ) : (
         <div className="space-y-4">
@@ -381,15 +414,15 @@ export const ProductionOrdersView: React.FC = () => {
                       {ord.order_number}
                     </span>
                     <h4 className="text-sm font-bold text-neutral-900 dark:text-white mt-1">
-                      {ord.product_name || `محصول کد ${ord.product_id}`}
+                      {ord.product_name || t('production.productCodeFallback', { id: ord.product_id })}
                     </h4>
                   </div>
 
                   <div className="flex items-center gap-1">
                     <Button variant="ghost" size="sm" onClick={() => handleOpenStagesModal(ord)}>
-                      پیگیری
+                      {t('production.trackBtn')}
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteOrder(ord.id)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteOrder(ord.id)} title={t('common.delete')}>
                       <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                     </Button>
                   </div>
@@ -397,14 +430,14 @@ export const ProductionOrdersView: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800 text-xs">
                   <div>
-                    <span className="text-[10px] text-neutral-400 block">تیراژ برنامه:</span>
+                    <span className="text-[10px] text-neutral-400 block">{t('production.plannedQtyLabel')}</span>
                     <span className="font-bold font-mono text-neutral-900 dark:text-white">
-                      {formatNum(ord.total_quantity)} عدد
+                      {formatNum(ord.total_quantity)} {t('production.piecesUnit')}
                     </span>
                   </div>
 
                   <div>
-                    <span className="text-[10px] text-neutral-400 block">وضعیت:</span>
+                    <span className="text-[10px] text-neutral-400 block">{t('production.colStatus')}:</span>
                     {getStatusBadge(ord.status)}
                   </div>
                 </div>
@@ -417,12 +450,12 @@ export const ProductionOrdersView: React.FC = () => {
             <table className="w-full text-start text-xs">
               <thead className="bg-neutral-50 dark:bg-[#181a20] border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold">
                 <tr>
-                  <th className="px-4 py-3 text-start">شماره دستورکار</th>
-                  <th className="px-4 py-3 text-start">عنوان محصول</th>
-                  <th className="px-4 py-3 text-center">تیراژ (عدد)</th>
-                  <th className="px-4 py-3 text-center">انبار مقصد</th>
-                  <th className="px-4 py-3 text-center">وضعیت</th>
-                  <th className="px-4 py-3 text-end">عملیات</th>
+                  <th className="px-4 py-3 text-start">{t('production.colOrderNumber')}</th>
+                  <th className="px-4 py-3 text-start">{t('production.colProductTitle')}</th>
+                  <th className="px-4 py-3 text-center">{t('production.colQuantity')}</th>
+                  <th className="px-4 py-3 text-center">{t('production.colTargetWarehouse')}</th>
+                  <th className="px-4 py-3 text-center">{t('production.colStatus')}</th>
+                  <th className="px-4 py-3 text-end">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
@@ -432,13 +465,13 @@ export const ProductionOrdersView: React.FC = () => {
                       {ord.order_number}
                     </td>
                     <td className="px-4 py-3 font-bold text-neutral-800 dark:text-neutral-200">
-                      {ord.product_name || `محصول کد ${ord.product_id}`}
+                      {ord.product_name || t('production.productCodeFallback', { id: ord.product_id })}
                     </td>
                     <td className="px-4 py-3 text-center font-bold font-mono text-neutral-900 dark:text-white">
                       {formatNum(ord.total_quantity)}
                     </td>
                     <td className="px-4 py-3 text-center text-neutral-500">
-                      {ord.target_warehouse_name || 'انبار اصلی'}
+                      {ord.target_warehouse_name || t('production.mainWarehouseFallback')}
                     </td>
                     <td className="px-4 py-3 text-center">{getStatusBadge(ord.status)}</td>
                     <td className="px-4 py-3 text-end whitespace-nowrap">
@@ -449,7 +482,7 @@ export const ProductionOrdersView: React.FC = () => {
                           onClick={() => handleOpenStagesModal(ord)}
                           className="text-amber-600 font-bold"
                         >
-                          پیگیری و کنترل مراحل
+                          {t('production.trackAndControlBtn')}
                         </Button>
                         <Button
                           variant="ghost"
@@ -457,7 +490,7 @@ export const ProductionOrdersView: React.FC = () => {
                           onClick={() => handleDeleteOrder(ord.id)}
                           className="text-rose-600"
                         >
-                          حذف
+                          {t('common.delete')}
                         </Button>
                       </div>
                     </td>
@@ -484,13 +517,13 @@ export const ProductionOrdersView: React.FC = () => {
         <Modal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          title="ثبت دستور کار جدید (حواله برش تولید)"
+          title={t('production.createOrderModalTitle')}
         >
           <div className="space-y-4 text-xs max-h-[80vh] overflow-y-auto pe-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
-                  شماره دستور کار *
+                  {t('production.orderNumberRequired')}
                 </label>
                 <Input
                   type="text"
@@ -501,7 +534,7 @@ export const ProductionOrdersView: React.FC = () => {
 
               <div>
                 <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
-                  محصول مورد نظر برای تولید *
+                  {t('production.targetProductRequired')}
                 </label>
                 <Select
                   value={formData.product_id}
@@ -519,13 +552,13 @@ export const ProductionOrdersView: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
-                  شناسنامه الگوی ساخت (BOM)
+                  {t('production.bomRecipeLabel')}
                 </label>
                 <Select
                   value={formData.bom_id}
                   onChange={(e) => setFormData({ ...formData, bom_id: Number(e.target.value) })}
                 >
-                  <option value={0}>بدون فرمول (تعریف دستی)</option>
+                  <option value={0}>{t('production.noBomOption')}</option>
                   {boms.map((b) => (
                     <option key={`po_bomopt_${b.id}`} value={b.id}>
                       {b.name} ({b.version})
@@ -536,7 +569,7 @@ export const ProductionOrdersView: React.FC = () => {
 
               <div>
                 <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
-                  انبار مقصد کالای ساخته‌شده
+                  {t('production.targetFinishedWarehouseLabel')}
                 </label>
                 <Select
                   value={formData.target_warehouse_id}
@@ -553,7 +586,7 @@ export const ProductionOrdersView: React.FC = () => {
 
             <div>
               <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
-                کل تیراژ برنامه‌ریزی‌شده (عدد)
+                {t('production.totalPlannedQtyLabel')}
               </label>
               <Input
                 type="number"
@@ -577,7 +610,7 @@ export const ProductionOrdersView: React.FC = () => {
             {selectedProductVariants.length > 0 && (
               <div className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
                 <label className="block font-bold text-neutral-900 dark:text-white">
-                  تفکیک سایز و رنگ‌های دستور برش:
+                  {t('production.variantBreakdownLabel')}
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {selectedProductVariants.map((v) => (
@@ -604,10 +637,12 @@ export const ProductionOrdersView: React.FC = () => {
             )}
 
             <div>
-              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">یادداشت کارگاهی</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 font-bold mb-1">
+                {t('production.workshopNotesLabel')}
+              </label>
               <Input
                 type="text"
-                placeholder="توضیحات پارچه، طاقه و ملاحظات برش کارگاه..."
+                placeholder={t('production.workshopNotesPlaceholder')}
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               />
@@ -615,10 +650,10 @@ export const ProductionOrdersView: React.FC = () => {
 
             <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
               <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
-                انصراف
+                {t('common.cancel')}
               </Button>
               <Button variant="primary" onClick={handleSaveOrder}>
-                صدور دستور کار برش
+                {t('production.issueOrderBtn')}
               </Button>
             </div>
           </div>
@@ -630,16 +665,18 @@ export const ProductionOrdersView: React.FC = () => {
         <Modal
           isOpen={isStagesModalOpen}
           onClose={() => setIsStagesModalOpen(false)}
-          title={`کنترل و پیگیری مراحل تولید: ${selectedOrder.order_number}`}
+          title={t('production.stagesModalTitle', { number: selectedOrder.order_number })}
         >
           <div className="space-y-4 text-xs max-h-[80vh] overflow-y-auto pe-1">
             <div className="p-3 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200/80 dark:border-neutral-800 flex items-center justify-between">
               <div>
                 <p className="font-bold text-neutral-900 dark:text-white">
-                  محصول: {selectedOrder.product_name}
+                  {t('production.productLabel')} {selectedOrder.product_name || t('production.productCodeFallback', { id: selectedOrder.product_id })}
                 </p>
                 <p className="text-[10px] text-neutral-500 mt-0.5">
-                  تیراژ کل: <strong className="font-mono">{formatNum(selectedOrder.total_quantity)}</strong> عدد
+                  {t('production.totalQtyLabel')}{' '}
+                  <strong className="font-mono">{formatNum(selectedOrder.total_quantity)}</strong>{' '}
+                  {t('production.piecesUnit')}
                 </p>
               </div>
 
@@ -651,19 +688,19 @@ export const ProductionOrdersView: React.FC = () => {
                   className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                   icon={<CheckCircle2 className="w-3.5 h-3.5" />}
                 >
-                  تکمیل نهایی تولید
+                  {t('production.completeProductionBtn')}
                 </Button>
               </div>
             </div>
 
             <h4 className="font-bold text-neutral-900 dark:text-white">
-              مراحل خط تولید و تخصیص به پیمانکاران:
+              {t('production.stagesSectionTitle')}
             </h4>
 
             <div className="space-y-3">
               {orderStages.map((stg, idx) => {
-                const stageLabel =
-                  STAGE_TYPES.find((s) => s.key === stg.stage_type)?.label || stg.stage_type;
+                const foundStage = STAGE_TYPE_KEYS.find((s) => s.key === stg.stage_type);
+                const stageLabel = foundStage ? t(foundStage.labelKey) : stg.stage_type;
                 return (
                   <div
                     key={`stg_row_${idx}`}
@@ -671,7 +708,7 @@ export const ProductionOrdersView: React.FC = () => {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-amber-700 dark:text-amber-400 font-mono">
-                        مرحله {formatNum(idx + 1)}: {stageLabel}
+                        {t('production.stageStepLabel', { step: formatNum(idx + 1), label: stageLabel })}
                       </span>
 
                       <Select
@@ -679,30 +716,38 @@ export const ProductionOrdersView: React.FC = () => {
                         onChange={(e) => handleUpdateStage(idx, 'status', e.target.value)}
                         className="text-xs w-36"
                       >
-                        <option value="pending">در انتظار</option>
-                        <option value="in_progress">در حال انجام</option>
-                        <option value="completed">تکمیل‌شده</option>
+                        <option value="pending">{t('production.stageStatusPending')}</option>
+                        <option value="in_progress">{t('production.stageStatusInProgress')}</option>
+                        <option value="completed">{t('production.stageStatusCompleted')}</option>
                       </Select>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div>
-                        <label className="text-[10px] text-neutral-400 block mb-0.5">پیمانکار / مجری</label>
+                        <label className="text-[10px] text-neutral-400 block mb-0.5">
+                          {t('production.contractorExecutorLabel')}
+                        </label>
                         <Select
                           value={stg.contractor_id || 0}
                           onChange={(e) => handleUpdateStage(idx, 'contractor_id', Number(e.target.value))}
                         >
-                          <option value={0}>کارگاه داخلی (بدون پیمانکار)</option>
-                          {contractors.map((c) => (
-                            <option key={`stg_c_${c.id}`} value={c.id}>
-                              {c.name} ({c.specialty})
-                            </option>
-                          ))}
+                          <option value={0}>{t('production.internalWorkshopOption')}</option>
+                          {contractors.map((c) => {
+                            const specKey = SPECIALTY_LABEL_KEYS[c.specialty];
+                            const specLabel = specKey ? t(specKey) : c.specialty;
+                            return (
+                              <option key={`stg_c_${c.id}`} value={c.id}>
+                                {c.name} ({specLabel})
+                              </option>
+                            );
+                          })}
                         </Select>
                       </div>
 
                       <div>
-                        <label className="text-[10px] text-neutral-400 block mb-0.5">اجرت هر عدد (تومان)</label>
+                        <label className="text-[10px] text-neutral-400 block mb-0.5">
+                          {t('production.unitFeePerPieceLabel')}
+                        </label>
                         <Input
                           type="number"
                           value={stg.unit_fee || 0}
@@ -711,7 +756,9 @@ export const ProductionOrdersView: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="text-[10px] text-neutral-400 block mb-0.5">تعداد تحویل گرفته شده</label>
+                        <label className="text-[10px] text-neutral-400 block mb-0.5">
+                          {t('production.qtyReceivedLabel')}
+                        </label>
                         <Input
                           type="number"
                           value={stg.quantity_received || 0}
@@ -721,9 +768,9 @@ export const ProductionOrdersView: React.FC = () => {
                     </div>
 
                     <div className="text-end text-[11px] text-neutral-500">
-                      مبلغ کل کارمزدی این مرحله:{' '}
+                      {t('production.stageTotalFeeLabel')}{' '}
                       <strong className="font-mono text-neutral-900 dark:text-white">
-                        {formatCurrency(stg.total_fee || 0)}
+                        {formatCurrency(stg.total_fee || 0, activeOrganization?.currency, isPersian)}
                       </strong>
                     </div>
                   </div>
@@ -733,10 +780,10 @@ export const ProductionOrdersView: React.FC = () => {
 
             <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
               <Button variant="ghost" onClick={() => setIsStagesModalOpen(false)}>
-                انصراف
+                {t('common.cancel')}
               </Button>
               <Button variant="primary" onClick={() => handleSaveStagesAndStatus()}>
-                ذخیره تغییرات مراحل
+                {t('production.saveStagesBtn')}
               </Button>
             </div>
           </div>

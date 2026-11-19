@@ -91,7 +91,7 @@ export const ModuleLockedCard: React.FC<ModuleLockedCardProps> = ({
         setMessage({ text: res.message, isError: true });
       }
     } catch (err: any) {
-      setMessage({ text: err?.message || 'خطا در اعتبارسنجی لایسنس', isError: true });
+      setMessage({ text: err?.message || t('modules.licenseVerifyError', 'خطا در اعتبارسنجی لایسنس'), isError: true });
     } finally {
       setIsActivating(false);
     }
@@ -249,8 +249,10 @@ export const ModuleLockedCard: React.FC<ModuleLockedCardProps> = ({
   };
 
   const featureHighlights = getFeatureHighlights();
-  const effectiveTitle = matchedModule?.name || moduleName;
-  const effectiveSubtitle = description || matchedModule?.description || t('modules.moduleLockedDesc', 'این بخش به عنوان ماژول تکمیلی و تخصصی ارائه شده است.');
+  const effectiveTitle = isRtl ? (matchedModule?.name || moduleName) : (moduleName || matchedModule?.name);
+  const effectiveSubtitle = isRtl
+    ? (description || matchedModule?.description || t('modules.moduleLockedDesc', 'این بخش به عنوان ماژول تکمیلی و تخصصی ارائه شده است.'))
+    : (description || t('modules.moduleLockedDesc', 'This section is offered as a specialized addon module.'));
 
   return (
     <div id={id} className="space-y-6 max-w-4xl mx-auto">

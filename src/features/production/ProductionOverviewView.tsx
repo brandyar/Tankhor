@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n';
+import { useOrganization } from '../../context/OrganizationContext';
 import { storageManager } from '../../storage';
 import { RawMaterial, ProductionOrder, Contractor } from '../../types';
 import { Card } from '../../components/ui/Card';
@@ -12,10 +13,8 @@ import {
   FileText,
   Users,
   AlertTriangle,
-  TrendingUp,
   Plus,
   ArrowUpRight,
-  Shirt,
   CheckCircle2,
   Clock,
 } from 'lucide-react';
@@ -28,6 +27,7 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
   onNavigateSubRoute,
 }) => {
   const { t, isPersian } = useTranslation();
+  const { activeOrganization } = useOrganization();
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [contractors, setContractors] = useState<Contractor[]>([]);
@@ -69,27 +69,55 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
-        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">پیش‌نویس</span>;
+        return (
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+            {t('production.statusDraft')}
+          </span>
+        );
       case 'cutting':
-        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">در حال برش</span>;
+        return (
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+            {t('production.statusCutting')}
+          </span>
+        );
       case 'in_progress':
-        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">در حال دوخت / برون‌سپاری</span>;
+        return (
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+            {t('production.statusInProgress')}
+          </span>
+        );
       case 'qc':
-        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">کنترل کیفیت</span>;
+        return (
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
+            {t('production.statusQc')}
+          </span>
+        );
       case 'completed':
-        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">تکمیل‌شده</span>;
+        return (
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+            {t('production.statusCompleted')}
+          </span>
+        );
       case 'cancelled':
-        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300">لغوشده</span>;
+        return (
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300">
+            {t('production.statusCancelled')}
+          </span>
+        );
       default:
-        return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-100 text-neutral-700">{status}</span>;
+        return (
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+            {status}
+          </span>
+        );
     }
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="پیشخوان و آمار تولید"
-        subtitle="خلاصه وضعیت سفارشات در حال ساخت، موجودی متریال و بدهکاری پیمانکاران"
+        title={t('production.overviewTitle')}
+        subtitle={t('production.overviewSubtitle')}
       />
 
       {/* KPI Cards Grid */}
@@ -100,12 +128,16 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
             <Scissors className="w-6 h-6" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium truncate">دستورکارهای فعال</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium truncate">
+              {t('production.activeOrdersKpi')}
+            </p>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-xl font-bold text-neutral-900 dark:text-white font-mono">
                 {formatNum(activeOrders.length)}
               </span>
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400">سفارش در جریان</span>
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                {t('production.ordersInProgressUnit')}
+              </span>
             </div>
           </div>
         </Card>
@@ -116,12 +148,16 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
             <AlertTriangle className="w-6 h-6" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium truncate">کسری متریال و خرج‌کار</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium truncate">
+              {t('production.lowStockMaterialsKpi')}
+            </p>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-xl font-bold text-rose-600 dark:text-rose-400 font-mono">
                 {formatNum(lowStockMaterials.length)}
               </span>
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400">آیتم زیر نقطه سفارش</span>
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                {t('production.itemsBelowReorderUnit')}
+              </span>
             </div>
           </div>
         </Card>
@@ -132,10 +168,12 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
             <Users className="w-6 h-6" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium truncate">طلب پیمانکاران (مزد‌دوز)</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium truncate">
+              {t('production.contractorPayableKpi')}
+            </p>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-lg font-bold text-neutral-900 dark:text-white font-mono">
-                {formatCurrency(totalContractorBalance)}
+                {formatCurrency(totalContractorBalance, activeOrganization?.currency, isPersian)}
               </span>
             </div>
           </div>
@@ -147,12 +185,16 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium truncate">تولید تکمیل‌شده</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium truncate">
+              {t('production.completedUnitsKpi')}
+            </p>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                 {formatNum(totalProductionUnits)}
               </span>
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400">عدد پوشاک</span>
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                {t('production.garmentPiecesUnit')}
+              </span>
             </div>
           </div>
         </Card>
@@ -170,9 +212,11 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
             </div>
             <ArrowUpRight className="w-5 h-5 text-amber-600 dark:text-amber-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
           </div>
-          <h4 className="text-sm font-bold text-neutral-900 dark:text-white mt-4">ثبت دستور کار جدید (حواله برش)</h4>
+          <h4 className="text-sm font-bold text-neutral-900 dark:text-white mt-4">
+            {t('production.quickOrderTitle')}
+          </h4>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-            تعیین تیراژ تولید، کسر خودکار متریال بر اساس BOM و برون‌سپاری به خیاط
+            {t('production.quickOrderDesc')}
           </p>
         </Card>
 
@@ -186,9 +230,11 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
             </div>
             <ArrowUpRight className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
           </div>
-          <h4 className="text-sm font-bold text-neutral-900 dark:text-white mt-4">مدیریت پارچه و خرج‌کار</h4>
+          <h4 className="text-sm font-bold text-neutral-900 dark:text-white mt-4">
+            {t('production.quickMaterialsTitle')}
+          </h4>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-            ورود متریال به انبار، تعریف فی متریال، نخ، زیپ، دکمه، لایی و کاور
+            {t('production.quickMaterialsDesc')}
           </p>
         </Card>
 
@@ -202,9 +248,11 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
             </div>
             <ArrowUpRight className="w-5 h-5 text-emerald-600 dark:text-emerald-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
           </div>
-          <h4 className="text-sm font-bold text-neutral-900 dark:text-white mt-4">تعریف فرمول ساخت (BOM)</h4>
+          <h4 className="text-sm font-bold text-neutral-900 dark:text-white mt-4">
+            {t('production.quickBomTitle')}
+          </h4>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-            شناسنامه الگوی تولید هر محصول همراه با درصد ضایعات و محاسبه تخمینی بهای تمام‌شده
+            {t('production.quickBomDesc')}
           </p>
         </Card>
       </div>
@@ -214,7 +262,9 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
-            <h3 className="text-sm font-bold text-neutral-900 dark:text-white">آخرین دستورکارهای تولید</h3>
+            <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
+              {t('production.recentOrdersTitle')}
+            </h3>
           </div>
           <Button
             variant="ghost"
@@ -222,15 +272,15 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
             onClick={() => onNavigateSubRoute('production/orders')}
             className="text-xs"
           >
-            مشاهده همه دستورکارها »
+            {t('production.viewAllOrders')}
           </Button>
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-xs text-neutral-400">در حال بارگذاری اطلاعات...</div>
+          <div className="py-8 text-center text-xs text-neutral-400">{t('production.loadingData')}</div>
         ) : orders.length === 0 ? (
           <div className="py-8 text-center border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl">
-            <p className="text-xs text-neutral-500">هیچ دستور کار تولیدی ثبت نشده است.</p>
+            <p className="text-xs text-neutral-500">{t('production.noOrdersRecorded')}</p>
             <Button
               variant="outline"
               size="sm"
@@ -238,7 +288,7 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
               className="mt-3 text-xs"
               icon={<Plus className="w-3.5 h-3.5" />}
             >
-              ایجاد اولین دستور کار
+              {t('production.createFirstOrder')}
             </Button>
           </div>
         ) : (
@@ -246,11 +296,11 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
             <table className="w-full text-xs text-start">
               <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold">
                 <tr>
-                  <th className="px-3 py-2 text-start">شماره دستورکار</th>
-                  <th className="px-3 py-2 text-start">محصول</th>
-                  <th className="px-3 py-2 text-center">تیراژ (عدد)</th>
-                  <th className="px-3 py-2 text-center">وضعیت</th>
-                  <th className="px-3 py-2 text-end">بهای تمام‌شده تخمینی</th>
+                  <th className="px-3 py-2 text-start">{t('production.colOrderNumber')}</th>
+                  <th className="px-3 py-2 text-start">{t('production.colProduct')}</th>
+                  <th className="px-3 py-2 text-center">{t('production.colQuantity')}</th>
+                  <th className="px-3 py-2 text-center">{t('production.colStatus')}</th>
+                  <th className="px-3 py-2 text-end">{t('production.colEstimatedCost')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
@@ -260,14 +310,18 @@ export const ProductionOverviewView: React.FC<ProductionOverviewProps> = ({
                       {ord.order_number}
                     </td>
                     <td className="px-3 py-2.5 font-medium text-neutral-800 dark:text-neutral-200">
-                      {ord.product_name || `محصول کد ${ord.product_id}`}
+                      {ord.product_name || t('production.productCodeFallback', { id: ord.product_id })}
                     </td>
                     <td className="px-3 py-2.5 text-center font-bold text-neutral-900 dark:text-white font-mono">
                       {formatNum(ord.total_quantity)}
                     </td>
                     <td className="px-3 py-2.5 text-center">{getStatusBadge(ord.status)}</td>
                     <td className="px-3 py-2.5 text-end font-mono font-bold text-neutral-900 dark:text-white">
-                      {formatCurrency((ord.estimated_unit_cost || 0) * ord.total_quantity)}
+                      {formatCurrency(
+                        (ord.estimated_unit_cost || 0) * ord.total_quantity,
+                        activeOrganization?.currency,
+                        isPersian
+                      )}
                     </td>
                   </tr>
                 ))}

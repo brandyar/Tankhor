@@ -3,6 +3,12 @@ import { LocalOfflineAdapter } from './localAdapter';
 import { CloudDirectusAdapter } from './cloudAdapter';
 import { SqliteStorageAdapter, isTauriEnvironment } from './sqliteAdapter';
 import { BackupManager } from './backupManager';
+import { swrCache } from '../api/swrCache';
+
+export interface SetModeOptions {
+  verifiedPro?: boolean;
+  force?: boolean;
+}
 
 class StorageManagerSingleton {
   private activeAdapter: IStorageProvider;
@@ -17,38 +23,64 @@ class StorageManagerSingleton {
     this.cloudAdapter = new CloudDirectusAdapter();
     this.isTauri = isTauriEnvironment();
 
-    // Check if user is on web and has pro or active session
-    let isWebPro = false;
-    if (!this.isTauri && typeof window !== 'undefined') {
-      try {
-        const cachedRaw = localStorage.getItem('tankhor_cached_user_profile');
-        const token = localStorage.getItem('tankhor_directus_token');
-        if (cachedRaw) {
-          const cached = JSON.parse(cachedRaw);
-          const activeOrg = cached.activeOrganization || cached.active_organization;
-          if (activeOrg && activeOrg.plan === 'pro') {
-            isWebPro = true;
-          }
-        }
-        if (token) {
-          isWebPro = true;
-        }
-      } catch {}
-    }
+    const cachedActiveOrg = this.resolveCachedActiveOrg();
+    const isProOrg = this.isOrganizationPro(cachedActiveOrg);
+    const hasToken = typeof window !== 'undefined' ? Boolean(localStorage.getItem('tankhor_directus_token')) : false;
 
-    if (isWebPro) {
+    // Pro organizations ALWAYS operate in cloud_synced mode on both Desktop and Web.
+    // On Web, any authenticated cloud session also boots directly into cloud_synced.
+    if (isProOrg || (!this.isTauri && hasToken)) {
       this.activeAdapter = this.cloudAdapter;
       if (typeof window !== 'undefined') {
         localStorage.setItem('tankhor_storage_mode', 'cloud_synced');
       }
+    } else if (cachedActiveOrg && !isProOrg) {
+      this.activeAdapter = this.isTauri ? this.sqliteAdapter : this.localAdapter;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tankhor_storage_mode', 'local_offline');
+      }
     } else {
       const storedMode = (typeof window !== 'undefined' ? localStorage.getItem('tankhor_storage_mode') as StorageMode : null) || 'local_offline';
-      if (storedMode === 'cloud_synced') {
+      if (storedMode === 'cloud_synced' && !this.isTauri) {
         this.activeAdapter = this.cloudAdapter;
       } else {
         this.activeAdapter = this.isTauri ? this.sqliteAdapter : this.localAdapter;
       }
     }
+  }
+
+  public isOrganizationPro(org: any): boolean {
+    if (!org || org.plan !== 'pro') return false;
+    if (org.trial_ends_at && !org.has_active_subscription) {
+      const expiry = new Date(org.trial_ends_at).getTime();
+      if (!Number.isNaN(expiry) && expiry <= Date.now()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private resolveCachedActiveOrg(): any {
+    if (typeof window === 'undefined') return null;
+    try {
+      const cachedRaw = localStorage.getItem('tankhor_cached_user_profile');
+      if (!cachedRaw) return null;
+      const cached = JSON.parse(cachedRaw);
+      const savedOrgId = localStorage.getItem('tankhor_active_org_id');
+
+      if (savedOrgId && Array.isArray(cached.organizations)) {
+        const matched = cached.organizations.find((o: any) => o && String(o.id) === String(savedOrgId));
+        if (matched) return matched;
+      }
+
+      const activeOrg = cached.activeOrganization || cached.active_organization;
+      if (activeOrg) return activeOrg;
+
+      if (Array.isArray(cached.organizations) && cached.organizations.length > 0) {
+        return cached.organizations[0];
+      }
+    } catch {}
+    return null;
   }
 
   public getAdapter(): IStorageProvider {
@@ -63,43 +95,30 @@ class StorageManagerSingleton {
     return this.isTauri && this.activeAdapter === this.sqliteAdapter;
   }
 
-  public setMode(mode: StorageMode) {
-    if (!this.isTauri && typeof window !== 'undefined') {
-      // In web environment, if Pro or cloud authenticated, enforce cloud_synced (offline disabled)
-      try {
-        const cachedRaw = localStorage.getItem('tankhor_cached_user_profile');
-        if (cachedRaw) {
-          const cached = JSON.parse(cachedRaw);
-          const activeOrg = cached.activeOrganization || cached.active_organization;
-          if (activeOrg && activeOrg.plan === 'pro') {
-            mode = 'cloud_synced';
-          }
-        }
-      } catch {}
+  public syncModeWithOrganization(org: any): StorageMode {
+    const isPro = this.isOrganizationPro(org);
+    const targetMode: StorageMode = isPro ? 'cloud_synced' : 'local_offline';
+    this.setMode(targetMode, { verifiedPro: isPro });
+    return this.getMode();
+  }
+
+  public setMode(mode: StorageMode, options?: SetModeOptions) {
+    const prevMode = this.activeAdapter.mode;
+    const isPro =
+      options?.verifiedPro !== undefined
+        ? options.verifiedPro
+        : this.isOrganizationPro(this.resolveCachedActiveOrg());
+
+    // Pro organizations always stay in cloud_synced mode on both Desktop and Web
+    // to prevent accidental split-brain or empty local SQLite views.
+    if (isPro && mode === 'local_offline' && !options?.force) {
+      mode = 'cloud_synced';
     }
 
-    if (mode === 'cloud_synced') {
-      let isPro = false;
-      try {
-        const cachedRaw = typeof window !== 'undefined' ? localStorage.getItem('tankhor_cached_user_profile') : null;
-        if (cachedRaw) {
-          const cached = JSON.parse(cachedRaw);
-          const activeOrg = cached.activeOrganization || cached.active_organization;
-          if (activeOrg && activeOrg.plan === 'pro') {
-            isPro = true;
-          }
-        }
-      } catch {}
-
-      if (!isPro && this.isTauri) {
-        console.warn('[StorageManager] Cloud sync denied: organization plan is not pro.');
-        localStorage.setItem('tankhor_storage_mode', 'local_offline');
-        this.activeAdapter = this.isTauri ? this.sqliteAdapter : this.localAdapter;
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('tankhor_storage_mode_changed', { detail: 'local_offline' }));
-        }
-        return;
-      }
+    // Free organizations on Desktop are strictly local_offline (SQLite).
+    if (!isPro && mode === 'cloud_synced' && this.isTauri && !options?.force) {
+      console.warn('[StorageManager] Cloud sync denied: organization plan is not pro.');
+      mode = 'local_offline';
     }
 
     if (typeof window !== 'undefined') {
@@ -110,6 +129,10 @@ class StorageManagerSingleton {
       this.activeAdapter = this.cloudAdapter;
     } else {
       this.activeAdapter = this.isTauri ? this.sqliteAdapter : this.localAdapter;
+    }
+
+    if (prevMode !== mode) {
+      swrCache.clearAll();
     }
 
     if (typeof window !== 'undefined') {

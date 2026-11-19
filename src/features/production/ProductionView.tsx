@@ -47,7 +47,7 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     return (
       <div className="py-24 flex flex-col items-center justify-center text-xs text-neutral-500">
         <RefreshCw className="w-5 h-5 animate-spin mb-3 text-neutral-400" />
-        <span>در حال بررسی مجوزهای ماژول تولید و برون‌سپاری...</span>
+        <span>{t('production.checkingPermissions')}</span>
       </div>
     );
   }
@@ -56,8 +56,8 @@ export const ProductionView: React.FC<ProductionViewProps> = ({
     return (
       <ModuleLockedCard
         moduleSlug="production"
-        moduleName={t('navigation.productionGroup', 'تولید و برون‌سپاری')}
-        description="مدیریت انبار مواد اولیه، فرمول ساخت (BOM)، دستور تولید، برون‌سپاری کارمزدی و محاسبه بهای تمام‌شده"
+        moduleName={t('production.moduleLockedName')}
+        description={t('production.moduleLockedDescription')}
       />
     );
   }

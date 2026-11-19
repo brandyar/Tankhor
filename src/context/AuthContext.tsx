@@ -149,7 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem(LAST_ACTIVITY_KEY);
     setUser(null);
     setIsCloudAuthenticated(false);
-    storageManager.setMode('local_offline');
+    storageManager.setMode('local_offline', { verifiedPro: false, force: true });
   }, []);
 
   const lastActiveTimestampRef = useRef<number>(Date.now());
@@ -249,20 +249,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               organizations: orgsList,
             };
 
+            localStorage.setItem(CACHED_USER_KEY, JSON.stringify(finalUser));
+            if (activeOrg && activeOrg.id) {
+              localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+            }
+
+            storageManager.syncModeWithOrganization(activeOrg);
+
             setUser(finalUser);
             setIsCloudAuthenticated(true);
             updateActivity();
 
-            if (activeOrg && activeOrg.plan === 'pro') {
-              storageManager.setMode('cloud_synced');
-            } else {
-              storageManager.setMode('local_offline');
-            }
-
-            localStorage.setItem(CACHED_USER_KEY, JSON.stringify(finalUser));
-
             if (activeOrg && activeOrg.id) {
-              localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
               storageManager.getLocalAdapter().saveOrganization(activeOrg).catch(() => {});
             }
           } else {
@@ -323,8 +321,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     setUser(offlineUser);
     setIsCloudAuthenticated(false);
-    storageManager.setMode('local_offline');
     localStorage.setItem(CACHED_USER_KEY, JSON.stringify(offlineUser));
+    storageManager.setMode('local_offline', { verifiedPro: false, force: true });
   };
 
   const login = async (email: string, pass: string): Promise<boolean> => {
@@ -355,19 +353,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       if (finalUser && (finalUser.id || finalUser.email)) {
-        setUser(finalUser);
-        setIsCloudAuthenticated(true);
-
-        if (activeOrg && activeOrg.plan === 'pro') {
-          storageManager.setMode('cloud_synced');
-        } else {
-          storageManager.setMode('local_offline');
-        }
-
         localStorage.setItem(CACHED_USER_KEY, JSON.stringify(finalUser));
-
         if (activeOrg && activeOrg.id) {
           localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+        }
+
+        storageManager.syncModeWithOrganization(activeOrg);
+
+        setUser(finalUser);
+        setIsCloudAuthenticated(true);
+        updateActivity();
+
+        if (activeOrg && activeOrg.id) {
           await storageManager.getLocalAdapter().saveOrganization(activeOrg);
         }
         for (const org of orgsList) {
@@ -449,20 +446,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (userData && (userData.id || userData.email)) {
-        setUser(userData);
-        setIsCloudAuthenticated(true);
-
         const activeOrg = sanitizeOrgPlanClient(userData.active_organization || userData.activeOrganization || regRes.organization || regRes.activeOrganization);
-        if (activeOrg && activeOrg.plan === 'pro') {
-          storageManager.setMode('cloud_synced');
-        } else {
-          storageManager.setMode('local_offline');
-        }
+        const normalizedUser: User = {
+          ...userData,
+          activeOrganization: activeOrg,
+          active_organization: activeOrg,
+          organizations: Array.isArray(userData.organizations)
+            ? userData.organizations.map(sanitizeOrgPlanClient)
+            : (activeOrg ? [activeOrg] : []),
+        };
 
-        localStorage.setItem(CACHED_USER_KEY, JSON.stringify(userData));
-
+        localStorage.setItem(CACHED_USER_KEY, JSON.stringify(normalizedUser));
         if (activeOrg && activeOrg.id) {
           localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+        }
+
+        storageManager.syncModeWithOrganization(activeOrg);
+
+        setUser(normalizedUser);
+        setIsCloudAuthenticated(true);
+        updateActivity();
+
+        if (activeOrg && activeOrg.id) {
           await storageManager.getLocalAdapter().saveOrganization(activeOrg);
         }
         if (Array.isArray(userData.organizations)) {
@@ -535,11 +540,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return updatedUser;
     });
 
-    if (sanitized.plan === 'pro') {
-      storageManager.setMode('cloud_synced');
-    }
     if (sanitized.id) {
       localStorage.setItem('tankhor_active_org_id', String(sanitized.id));
+    }
+    try {
+      const cachedRaw = localStorage.getItem(CACHED_USER_KEY);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        const prevOrgs = Array.isArray(cached.organizations) ? [...cached.organizations] : [];
+        const idx = prevOrgs.findIndex((o: any) => o && o.id === sanitized.id);
+        if (idx !== -1) {
+          prevOrgs[idx] = { ...prevOrgs[idx], ...sanitized };
+        } else {
+          prevOrgs.push(sanitized);
+        }
+        localStorage.setItem(
+          CACHED_USER_KEY,
+          JSON.stringify({
+            ...cached,
+            activeOrganization: sanitized,
+            active_organization: sanitized,
+            organizations: prevOrgs,
+          })
+        );
+      }
+    } catch {}
+
+    storageManager.syncModeWithOrganization(sanitized);
+
+    if (sanitized.id) {
       storageManager.getLocalAdapter().saveOrganization(sanitized).catch(() => {});
     }
   }, []);
@@ -566,14 +595,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           organizations: orgsList,
         };
 
-        setUser(finalUser);
         try {
           localStorage.setItem(CACHED_USER_KEY, JSON.stringify(finalUser));
+          if (activeOrg && activeOrg.id) {
+            localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+          }
         } catch {}
 
-        if (activeOrg && activeOrg.plan === 'pro') {
-          storageManager.setMode('cloud_synced');
-        }
+        storageManager.syncModeWithOrganization(activeOrg);
+        setUser(finalUser);
 
         return finalUser;
       }
