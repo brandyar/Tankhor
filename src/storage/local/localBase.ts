@@ -19,7 +19,11 @@ export class LocalStorageBase {
 
   setItem<T>(key: string, data: T[]) {
     if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(`tankhor_db_${key}`, JSON.stringify(data));
+    try {
+      localStorage.setItem(`tankhor_db_${key}`, JSON.stringify(data));
+    } catch (err) {
+      console.warn(`[LocalStorageBase] Failed to persist tankhor_db_${key} (quota or storage error):`, err);
+    }
   }
 
   generateUniqueId(items: { id: number | string }[]): number {

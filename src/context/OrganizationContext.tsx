@@ -5,14 +5,19 @@ import { useAuth } from './AuthContext';
 import { directusClient } from '../api/directus';
 import { swrCache } from '../api/swrCache';
 import { getRolePermissions, RolePermissions } from '../utils/permissions';
+import {
+  CACHED_USER_KEY,
+  safeSaveCachedUserProfile,
+  safeSetLocalStorageItem,
+} from '../utils/profileCache';
 
 function syncCachedOrganizationState(orgsList: Organization[], activeOrg: Organization | null) {
   if (typeof window !== 'undefined') {
     if (activeOrg?.id) {
-      localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+      safeSetLocalStorageItem('tankhor_active_org_id', String(activeOrg.id));
     }
     try {
-      const cachedRaw = localStorage.getItem('tankhor_cached_user_profile');
+      const cachedRaw = localStorage.getItem(CACHED_USER_KEY);
       if (cachedRaw) {
         const cached = JSON.parse(cachedRaw);
         const updatedCache = {
@@ -20,7 +25,7 @@ function syncCachedOrganizationState(orgsList: Organization[], activeOrg: Organi
           ...(activeOrg ? { activeOrganization: activeOrg, active_organization: activeOrg } : {}),
           ...(orgsList.length > 0 ? { organizations: orgsList } : {}),
         };
-        localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(updatedCache));
+        safeSaveCachedUserProfile(updatedCache);
       }
     } catch {}
   }
@@ -316,7 +321,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return [...filtered, created];
       });
       setActiveOrganization(created);
-      localStorage.setItem('tankhor_active_org_id', String(created.id));
+      safeSetLocalStorageItem('tankhor_active_org_id', String(created.id));
 
       return created;
     } finally {

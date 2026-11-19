@@ -5,6 +5,7 @@
 
 import { SystemModule } from '../types';
 import { swrCache } from './swrCache';
+import { safeSaveCachedUserProfile, safeSetLocalStorageItem } from '../utils/profileCache';
 
 export interface DirectusConfig {
   baseUrl: string;
@@ -46,12 +47,12 @@ class DirectusClient {
     this.token = token;
     if (typeof window !== 'undefined') {
       if (token) {
-        localStorage.setItem('tankhor_directus_token', token);
+        safeSetLocalStorageItem('tankhor_directus_token', token);
       } else {
         localStorage.removeItem('tankhor_directus_token');
       }
       if (refreshToken) {
-        localStorage.setItem('tankhor_directus_refresh_token', refreshToken);
+        safeSetLocalStorageItem('tankhor_directus_refresh_token', refreshToken);
       } else if (refreshToken === null) {
         localStorage.removeItem('tankhor_directus_refresh_token');
       }
@@ -354,7 +355,7 @@ class DirectusClient {
     }
 
     if (activeOrg?.id && typeof window !== 'undefined') {
-      localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+      safeSetLocalStorageItem('tankhor_active_org_id', String(activeOrg.id));
     }
 
     const finalOrgs = Array.isArray(orgs) && orgs.length > 0 ? orgs : (activeOrg ? [activeOrg] : []);
@@ -544,7 +545,7 @@ class DirectusClient {
       }
       const orgId = res.activeOrganization?.id || res.organization?.id;
       if (orgId && typeof window !== 'undefined') {
-        localStorage.setItem('tankhor_active_org_id', String(orgId));
+        safeSetLocalStorageItem('tankhor_active_org_id', String(orgId));
       }
       return res;
     } catch (err: any) {
@@ -661,7 +662,7 @@ class DirectusClient {
         const orgsList = activeOrg ? [activeOrg] : (loginRes.organizations || []);
 
         if (activeOrg?.id && typeof window !== 'undefined') {
-          localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+          safeSetLocalStorageItem('tankhor_active_org_id', String(activeOrg.id));
         }
 
         const finalUser = {
@@ -673,9 +674,7 @@ class DirectusClient {
           organizations: orgsList,
         };
 
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(finalUser));
-        }
+        safeSaveCachedUserProfile(finalUser);
 
         return {
           success: true,
@@ -697,7 +696,7 @@ class DirectusClient {
     }
     const orgId = res.activeOrganization?.id || res.organization?.id;
     if (orgId && typeof window !== 'undefined') {
-      localStorage.setItem('tankhor_active_org_id', String(orgId));
+      safeSetLocalStorageItem('tankhor_active_org_id', String(orgId));
     }
     return res;
   }
@@ -713,7 +712,7 @@ class DirectusClient {
     }
     const orgId = res.activeOrganization?.id || targetOrganizationId;
     if (orgId && typeof window !== 'undefined') {
-      localStorage.setItem('tankhor_active_org_id', String(orgId));
+      safeSetLocalStorageItem('tankhor_active_org_id', String(orgId));
     }
     return res;
   }
@@ -735,7 +734,7 @@ class DirectusClient {
     }
     const orgId = res.activeOrganization?.id || res.organization?.id;
     if (orgId && typeof window !== 'undefined') {
-      localStorage.setItem('tankhor_active_org_id', String(orgId));
+      safeSetLocalStorageItem('tankhor_active_org_id', String(orgId));
     }
     return res.organization || res.activeOrganization;
   }
@@ -768,7 +767,7 @@ class DirectusClient {
             if (Array.isArray(res.organizations) && res.organizations.length > 0) {
               cached.organizations = res.organizations;
             }
-            localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(cached));
+            safeSaveCachedUserProfile(cached);
           } catch {}
         }
       }
@@ -806,7 +805,7 @@ class DirectusClient {
                 cached.organizations[idx] = res.organization;
               }
             }
-            localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(cached));
+            safeSaveCachedUserProfile(cached);
           } catch {}
         }
       }
@@ -920,7 +919,7 @@ class DirectusClient {
             if (Array.isArray(res.organizations) && res.organizations.length > 0) {
               cached.organizations = res.organizations;
             }
-            localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(cached));
+            safeSaveCachedUserProfile(cached);
           } catch {}
         }
       }

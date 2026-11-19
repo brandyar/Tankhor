@@ -4,6 +4,7 @@ import { CloudDirectusAdapter } from './cloudAdapter';
 import { SqliteStorageAdapter, isTauriEnvironment } from './sqliteAdapter';
 import { BackupManager } from './backupManager';
 import { swrCache } from '../api/swrCache';
+import { safeSetLocalStorageItem } from '../utils/profileCache';
 
 export interface SetModeOptions {
   verifiedPro?: boolean;
@@ -31,14 +32,10 @@ class StorageManagerSingleton {
     // On Web, any authenticated cloud session also boots directly into cloud_synced.
     if (isProOrg || (!this.isTauri && hasToken)) {
       this.activeAdapter = this.cloudAdapter;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('tankhor_storage_mode', 'cloud_synced');
-      }
+      safeSetLocalStorageItem('tankhor_storage_mode', 'cloud_synced');
     } else if (cachedActiveOrg && !isProOrg) {
       this.activeAdapter = this.isTauri ? this.sqliteAdapter : this.localAdapter;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('tankhor_storage_mode', 'local_offline');
-      }
+      safeSetLocalStorageItem('tankhor_storage_mode', 'local_offline');
     } else {
       const storedMode = (typeof window !== 'undefined' ? localStorage.getItem('tankhor_storage_mode') as StorageMode : null) || 'local_offline';
       if (storedMode === 'cloud_synced' && !this.isTauri) {
@@ -121,9 +118,7 @@ class StorageManagerSingleton {
       mode = 'local_offline';
     }
 
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('tankhor_storage_mode', mode);
-    }
+    safeSetLocalStorageItem('tankhor_storage_mode', mode);
 
     if (mode === 'cloud_synced') {
       this.activeAdapter = this.cloudAdapter;

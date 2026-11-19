@@ -1,6 +1,7 @@
 import { directusClient } from '../api/directus';
 import { BackupManager } from './backupManager';
 import { storageManager } from './index';
+import { safeSaveCachedUserProfile, safeSetLocalStorageItem } from '../utils/profileCache';
 
 export interface MigrationStepProgress {
   step: string;
@@ -905,8 +906,8 @@ export class CloudMigrationManager {
 
       // Enforce local offline storage mode & update local cache
       try {
-        localStorage.setItem('tankhor_storage_mode', 'local_offline');
-        localStorage.setItem('tankhor_active_org_id', String(orgId));
+        safeSetLocalStorageItem('tankhor_storage_mode', 'local_offline');
+        safeSetLocalStorageItem('tankhor_active_org_id', String(orgId));
 
         // Update cached user profile if exists so it reflects local offline mode
         const cachedRaw = localStorage.getItem('tankhor_cached_user_profile');
@@ -924,7 +925,7 @@ export class CloudMigrationManager {
                 o && String(o.id) === String(orgId) ? { ...o, plan: 'free' } : o
               );
             }
-            localStorage.setItem('tankhor_cached_user_profile', JSON.stringify(cached));
+            safeSaveCachedUserProfile(cached);
           } catch {}
         }
 

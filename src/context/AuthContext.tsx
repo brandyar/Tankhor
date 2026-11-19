@@ -2,6 +2,11 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { directusClient } from '../api/directus';
 import { swrCache } from '../api/swrCache';
 import { storageManager } from '../storage';
+import {
+  CACHED_USER_KEY,
+  safeSaveCachedUserProfile,
+  safeSetLocalStorageItem,
+} from '../utils/profileCache';
 
 export interface UserRole {
   id?: string;
@@ -73,7 +78,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const CACHED_USER_KEY = 'tankhor_cached_user_profile';
 const LAST_ACTIVITY_KEY = 'tankhor_last_activity_timestamp';
 const MAX_INACTIVITY_MS = 24 * 60 * 60 * 1000; // 24 hours of inactivity requires re-login
 
@@ -134,9 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateActivity = useCallback(() => {
-    try {
-      localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
-    } catch {}
+    safeSetLocalStorageItem(LAST_ACTIVITY_KEY, Date.now().toString());
   }, []);
 
   const clearAllSessionData = useCallback(() => {
@@ -249,10 +251,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               organizations: orgsList,
             };
 
-            localStorage.setItem(CACHED_USER_KEY, JSON.stringify(finalUser));
             if (activeOrg && activeOrg.id) {
-              localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+              safeSetLocalStorageItem('tankhor_active_org_id', String(activeOrg.id));
             }
+            safeSaveCachedUserProfile(finalUser);
 
             storageManager.syncModeWithOrganization(activeOrg);
 
@@ -321,7 +323,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     setUser(offlineUser);
     setIsCloudAuthenticated(false);
-    localStorage.setItem(CACHED_USER_KEY, JSON.stringify(offlineUser));
+    safeSaveCachedUserProfile(offlineUser);
     storageManager.setMode('local_offline', { verifiedPro: false, force: true });
   };
 
@@ -353,10 +355,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       if (finalUser && (finalUser.id || finalUser.email)) {
-        localStorage.setItem(CACHED_USER_KEY, JSON.stringify(finalUser));
         if (activeOrg && activeOrg.id) {
-          localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+          safeSetLocalStorageItem('tankhor_active_org_id', String(activeOrg.id));
         }
+        safeSaveCachedUserProfile(finalUser);
 
         storageManager.syncModeWithOrganization(activeOrg);
 
@@ -365,11 +367,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateActivity();
 
         if (activeOrg && activeOrg.id) {
-          await storageManager.getLocalAdapter().saveOrganization(activeOrg);
+          await storageManager.getLocalAdapter().saveOrganization(activeOrg).catch(() => {});
         }
         for (const org of orgsList) {
           if (org && org.id && org.name) {
-            await storageManager.getLocalAdapter().saveOrganization(org);
+            await storageManager.getLocalAdapter().saveOrganization(org).catch(() => {});
           }
         }
 
@@ -456,10 +458,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : (activeOrg ? [activeOrg] : []),
         };
 
-        localStorage.setItem(CACHED_USER_KEY, JSON.stringify(normalizedUser));
         if (activeOrg && activeOrg.id) {
-          localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
+          safeSetLocalStorageItem('tankhor_active_org_id', String(activeOrg.id));
         }
+        safeSaveCachedUserProfile(normalizedUser);
 
         storageManager.syncModeWithOrganization(activeOrg);
 
@@ -468,12 +470,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateActivity();
 
         if (activeOrg && activeOrg.id) {
-          await storageManager.getLocalAdapter().saveOrganization(activeOrg);
+          await storageManager.getLocalAdapter().saveOrganization(activeOrg).catch(() => {});
         }
         if (Array.isArray(userData.organizations)) {
           for (const org of userData.organizations) {
             if (org && org.id && org.name) {
-              await storageManager.getLocalAdapter().saveOrganization(org);
+              await storageManager.getLocalAdapter().saveOrganization(org).catch(() => {});
             }
           }
         }
@@ -534,14 +536,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         active_organization: sanitized,
         organizations: newOrgs,
       };
-      try {
-        localStorage.setItem(CACHED_USER_KEY, JSON.stringify(updatedUser));
-      } catch {}
+      safeSaveCachedUserProfile(updatedUser);
       return updatedUser;
     });
 
     if (sanitized.id) {
-      localStorage.setItem('tankhor_active_org_id', String(sanitized.id));
+      safeSetLocalStorageItem('tankhor_active_org_id', String(sanitized.id));
     }
     try {
       const cachedRaw = localStorage.getItem(CACHED_USER_KEY);
@@ -554,15 +554,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           prevOrgs.push(sanitized);
         }
-        localStorage.setItem(
-          CACHED_USER_KEY,
-          JSON.stringify({
-            ...cached,
-            activeOrganization: sanitized,
-            active_organization: sanitized,
-            organizations: prevOrgs,
-          })
-        );
+        safeSaveCachedUserProfile({
+          ...cached,
+          activeOrganization: sanitized,
+          active_organization: sanitized,
+          organizations: prevOrgs,
+        });
       }
     } catch {}
 
@@ -595,12 +592,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           organizations: orgsList,
         };
 
-        try {
-          localStorage.setItem(CACHED_USER_KEY, JSON.stringify(finalUser));
-          if (activeOrg && activeOrg.id) {
-            localStorage.setItem('tankhor_active_org_id', String(activeOrg.id));
-          }
-        } catch {}
+        if (activeOrg && activeOrg.id) {
+          safeSetLocalStorageItem('tankhor_active_org_id', String(activeOrg.id));
+        }
+        safeSaveCachedUserProfile(finalUser);
 
         storageManager.syncModeWithOrganization(activeOrg);
         setUser(finalUser);
@@ -649,9 +644,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const cachedRaw = localStorage.getItem(CACHED_USER_KEY);
         if (cachedRaw) {
           const cached = JSON.parse(cachedRaw);
-          localStorage.setItem(CACHED_USER_KEY, JSON.stringify({ ...cached, ...mergedUser }));
+          safeSaveCachedUserProfile({ ...cached, ...mergedUser });
         } else {
-          localStorage.setItem(CACHED_USER_KEY, JSON.stringify(mergedUser));
+          safeSaveCachedUserProfile(mergedUser);
         }
       } catch {}
       return { success: true };
