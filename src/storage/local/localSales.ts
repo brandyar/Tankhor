@@ -5,6 +5,8 @@ import {
   Customer,
   Order,
   OrderItem,
+  OrderReturn,
+  OrderReturnItem,
   ProductVariant,
   Warehouse,
   PersonTransaction,
@@ -48,14 +50,23 @@ export class LocalSalesStorage {
       let calculatedBalance = 0;
       const custTxs = personTxs.filter((tx) => {
         const custId = typeof tx.customer_id === 'object' ? (tx.customer_id as any)?.id : tx.customer_id;
-        return Number(custId) === customer.id || tx.party_type === 'customer';
+        return Number(custId) === customer.id;
       });
 
       if (custTxs.length > 0) {
         custTxs.forEach((tx) => {
-          if (tx.type === 'debtor' || tx.transaction_type === 'sale_invoice') {
+          if (
+            tx.type === 'debtor' ||
+            tx.transaction_type === 'sale_invoice' ||
+            tx.transaction_type === 'cash_refund'
+          ) {
             calculatedBalance += Number(tx.debit_amount || tx.amount) || 0;
-          } else if (tx.type === 'creditor' || tx.transaction_type === 'cash_receipt' || tx.transaction_type === 'receipt') {
+          } else if (
+            tx.type === 'creditor' ||
+            tx.transaction_type === 'cash_receipt' ||
+            tx.transaction_type === 'receipt' ||
+            tx.transaction_type === 'sale_return'
+          ) {
             calculatedBalance -= Number(tx.credit_amount || tx.amount) || 0;
           }
         });
@@ -269,7 +280,12 @@ export class LocalSalesStorage {
     // Inventory & Accounting side-effects
     const newStatus = savedOrder.status;
     const isNowActive = newStatus === 'confirmed' || newStatus === 'processing' || newStatus === 'completed';
-    const wasActive = oldStatus === 'confirmed' || oldStatus === 'processing' || oldStatus === 'completed';
+    const wasActive =
+      oldStatus === 'confirmed' ||
+      oldStatus === 'processing' ||
+      oldStatus === 'completed' ||
+      oldStatus === 'partially_returned' ||
+      oldStatus === 'returned';
 
     // Stock deduction on confirmation
     if (isNowActive && !wasActive) {
@@ -508,6 +524,224 @@ export class LocalSalesStorage {
     const list = this.base.getItem<OrderItem>('order_items', []);
     const filtered = list.filter((i) => i.id !== id);
     this.base.setItem('order_items', filtered);
+    return true;
+  }
+
+  // Order Returns & Exchanges
+  async getOrderReturns(params?: QueryParams & { order_id?: number; reason?: string }): Promise<OrderReturn[]> {
+    let list = this.base.getItem<OrderReturn>('order_returns', []);
+    list = this.base.filterByOrg(list, params);
+
+    const orders = this.base.getItem<Order>('orders', []);
+    const customers = this.base.getItem<Customer>('customers', []);
+    const warehouses = this.base.getItem<Warehouse>('warehouses', []);
+    const allItems = this.base.getItem<OrderReturnItem>('order_return_items', []);
+
+    if (params?.order_id) {
+      list = list.filter((r) => {
+        const oid = typeof r.original_order_id === 'object' ? (r.original_order_id as any)?.id : r.original_order_id;
+        return Number(oid) === Number(params.order_id);
+      });
+    }
+    if (params?.type && params.type !== 'all') {
+      list = list.filter((r) => r.type === params.type);
+    }
+    if (params?.status && params.status !== 'all') {
+      list = list.filter((r) => r.status === params.status);
+    }
+    if (params?.reason && params.reason !== 'all') {
+      list = list.filter((r) => r.reason === params.reason);
+    }
+    if (params?.warehouse_id) {
+      list = list.filter((r) => {
+        const wId = typeof r.warehouse_id === 'object' ? (r.warehouse_id as any)?.id : r.warehouse_id;
+        return Number(wId) === Number(params.warehouse_id);
+      });
+    }
+
+    let mapped = list.map((ret) => {
+      const oId = typeof ret.original_order_id === 'object' ? (ret.original_order_id as any)?.id : ret.original_order_id;
+      const cId = typeof ret.customer_id === 'object' ? (ret.customer_id as any)?.id : ret.customer_id;
+      const wId = typeof ret.warehouse_id === 'object' ? (ret.warehouse_id as any)?.id : ret.warehouse_id;
+      const ord = orders.find((o) => Number(o.id) === Number(oId));
+      const cust = customers.find((c) => Number(c.id) === Number(cId));
+      const wh = warehouses.find((w) => Number(w.id) === Number(wId));
+      const retItems = allItems.filter((it) => {
+        const rId = typeof it.return_id === 'object' ? (it.return_id as any)?.id : it.return_id;
+        return Number(rId) === Number(ret.id);
+      });
+
+      return {
+        ...ret,
+        original_order_number: ret.original_order_number || ord?.order_number,
+        customer_name: ret.customer_name || cust?.name,
+        warehouse_name: ret.warehouse_name || wh?.name,
+        items_count: retItems.length,
+      };
+    });
+
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      mapped = mapped.filter(
+        (r) =>
+          (r.return_number && r.return_number.toLowerCase().includes(q)) ||
+          (r.original_order_number && r.original_order_number.toLowerCase().includes(q)) ||
+          (r.customer_name && r.customer_name.toLowerCase().includes(q)) ||
+          (r.notes && r.notes.toLowerCase().includes(q))
+      );
+    }
+
+    return mapped.sort(
+      (a, b) =>
+        new Date(b.return_date || b.date_created || 0).getTime() -
+        new Date(a.return_date || a.date_created || 0).getTime()
+    );
+  }
+
+  async getOrderReturnItems(returnId?: number): Promise<OrderReturnItem[]> {
+    let items = this.base.getItem<OrderReturnItem>('order_return_items', []);
+    const variants = this.base.getItem<ProductVariant>('product_variants', []);
+
+    if (returnId !== undefined) {
+      items = items.filter((i) => {
+        const rId = typeof i.return_id === 'object' ? (i.return_id as any)?.id : i.return_id;
+        return Number(rId) === Number(returnId);
+      });
+    } else {
+      const orgId = this.base.getActiveOrgId();
+      if (orgId) {
+        items = items.filter((i) => {
+          const iOrg = typeof i.organization_id === 'object' ? (i.organization_id as any)?.id : i.organization_id;
+          return !iOrg || Number(iOrg) === Number(orgId);
+        });
+      }
+    }
+
+    return items.map((item) => {
+      const vId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
+      const variant = variants.find((v) => Number(v.id) === Number(vId));
+      return {
+        ...item,
+        sku: item.sku || variant?.sku,
+        product_title: item.product_title || variant?.product_title,
+        color_name: item.color_name || variant?.color_name,
+        size_name: item.size_name || variant?.size_name,
+      };
+    });
+  }
+
+  async saveOrderReturn(
+    ret: Partial<OrderReturn>,
+    items?: Partial<OrderReturnItem>[]
+  ): Promise<OrderReturn> {
+    const list = this.base.getItem<OrderReturn>('order_returns', []);
+    const now = new Date().toISOString();
+    const orgId = Number(ret.organization_id) || this.base.getActiveOrgId() || 1;
+    let savedReturn: OrderReturn;
+
+    if (ret.id) {
+      const idx = list.findIndex((r) => Number(r.id) === Number(ret.id));
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], ...ret, id: ret.id, date_updated: now };
+        savedReturn = list[idx];
+      } else {
+        savedReturn = {
+          organization_id: orgId,
+          return_number: ret.return_number || `RET-${Date.now().toString().slice(-6)}`,
+          original_order_id: ret.original_order_id || 0,
+          warehouse_id: ret.warehouse_id || 1,
+          type: ret.type || 'return',
+          status: ret.status || 'completed',
+          returned_total: Number(ret.returned_total) || 0,
+          exchange_total: Number(ret.exchange_total) || 0,
+          net_amount: Number(ret.net_amount) || 0,
+          return_date: ret.return_date || now,
+          date_created: now,
+          date_updated: now,
+          ...ret,
+          id: ret.id,
+        } as OrderReturn;
+        list.unshift(savedReturn);
+      }
+    } else {
+      const newId = this.base.generateUniqueId(list);
+      savedReturn = {
+        id: newId,
+        organization_id: orgId,
+        return_number: ret.return_number || `RET-${Date.now().toString().slice(-6)}`,
+        original_order_id: ret.original_order_id || 0,
+        customer_id: ret.customer_id ?? null,
+        warehouse_id: ret.warehouse_id || 1,
+        pos_shift_id: ret.pos_shift_id ?? null,
+        type: ret.type || 'return',
+        status: ret.status || 'completed',
+        reason: ret.reason || 'other',
+        returned_total: Number(ret.returned_total) || 0,
+        exchange_total: Number(ret.exchange_total) || 0,
+        net_amount: Number(ret.net_amount) || 0,
+        settlement_method: ret.settlement_method || 'none',
+        financial_account_id: ret.financial_account_id ?? null,
+        return_date: ret.return_date || now,
+        notes: ret.notes || '',
+        date_created: now,
+        date_updated: now,
+        ...ret,
+      };
+      list.unshift(savedReturn);
+    }
+    this.base.setItem('order_returns', list);
+
+    if (items && items.length > 0) {
+      const allReturnItems = this.base.getItem<OrderReturnItem>('order_return_items', []);
+      const filtered = allReturnItems.filter((i) => {
+        const rId = typeof i.return_id === 'object' ? (i.return_id as any)?.id : i.return_id;
+        return Number(rId) !== Number(savedReturn.id);
+      });
+
+      const savedItems: OrderReturnItem[] = [];
+      for (const it of items) {
+        const newItemId = it.id || this.base.generateUniqueId(filtered);
+        const qty = Math.max(1, Number(it.quantity) || 1);
+        const unitPrice = Number(it.unit_price) || 0;
+        const savedItem: OrderReturnItem = {
+          ...it,
+          id: newItemId,
+          organization_id: orgId,
+          return_id: savedReturn.id,
+          item_type: it.item_type || 'returned',
+          original_order_item_id: it.original_order_item_id ?? null,
+          variant_id: it.variant_id || 0,
+          quantity: qty,
+          unit_price: unitPrice,
+          unit_cost: Number(it.unit_cost) || 0,
+          total: it.total !== undefined ? Number(it.total) : qty * unitPrice,
+          condition: it.condition || 'restockable',
+          created_at: it.created_at || now,
+        };
+        filtered.push(savedItem);
+        savedItems.push(savedItem);
+      }
+      this.base.setItem('order_return_items', filtered);
+      savedReturn.items = savedItems;
+    }
+
+    return savedReturn;
+  }
+
+  async deleteOrderReturn(id: number): Promise<boolean> {
+    const list = this.base.getItem<OrderReturn>('order_returns', []);
+    this.base.setItem(
+      'order_returns',
+      list.filter((r) => Number(r.id) !== Number(id))
+    );
+    const items = this.base.getItem<OrderReturnItem>('order_return_items', []);
+    this.base.setItem(
+      'order_return_items',
+      items.filter((i) => {
+        const rId = typeof i.return_id === 'object' ? (i.return_id as any)?.id : i.return_id;
+        return Number(rId) !== Number(id);
+      })
+    );
     return true;
   }
 

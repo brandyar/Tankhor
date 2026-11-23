@@ -251,7 +251,12 @@ export class SqliteInventoryStorage {
           curQty = Math.max(0, curQty - Math.abs(moveQty));
         } else if (moveType === 'damage') {
           curDamaged += Math.abs(moveQty);
-          curQty = Math.max(0, curQty - Math.abs(moveQty));
+          if (saved.reference_type === 'return') {
+            // Customer returned damaged item: increment total quantity & damaged_quantity so healthy available stock stays unchanged
+            curQty += Math.abs(moveQty);
+          } else {
+            curQty = Math.max(0, curQty - Math.abs(moveQty));
+          }
         } else if (moveType === 'adjustment') {
           curQty = Math.max(0, moveQty);
         }
@@ -266,9 +271,14 @@ export class SqliteInventoryStorage {
         const newItemId = this.base.generateUniqueId(inventoryList);
         let initQty = moveType === 'adjustment' ? Math.max(0, moveQty) : Math.abs(moveQty);
         let initDamaged = 0;
+        let initAvail = Math.max(0, initQty);
         if (moveType === 'damage') {
           initDamaged = Math.abs(moveQty);
+          initQty = saved.reference_type === 'return' ? Math.abs(moveQty) : 0;
+          initAvail = 0;
+        } else if (moveType === 'sale' || moveType === 'transfer_out') {
           initQty = 0;
+          initAvail = 0;
         }
 
         await this.base.saveItem('inventory_items', {
@@ -280,7 +290,7 @@ export class SqliteInventoryStorage {
           quantity: initQty,
           reserved_quantity: 0,
           damaged_quantity: initDamaged,
-          available_quantity: Math.max(0, initQty - initDamaged),
+          available_quantity: initAvail,
           reorder_point: 5,
           safety_stock: 2,
           updated_at: new Date().toISOString(),

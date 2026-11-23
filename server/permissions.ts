@@ -15,6 +15,8 @@ export const TENANT_SCOPED_COLLECTIONS = new Set([
   'inventory_movements',
   'orders',
   'order_items',
+  'order_returns',
+  'order_return_items',
   'customers',
   'suppliers',
   'purchase_orders',
@@ -72,6 +74,8 @@ export function checkRolePermission(
     const salesAllowedCollections = [
       'orders',
       'order_items',
+      'order_returns',
+      'order_return_items',
       'customers',
       'pos_shifts',
       'treasury_transactions',
@@ -102,6 +106,8 @@ export function checkRolePermission(
     const warehouseRestrictedCollections = [
       'orders',
       'order_items',
+      'order_returns',
+      'order_return_items',
       'customers',
       'organizations',
       'organization_users',
@@ -135,6 +141,10 @@ export function sanitizePayloadForDirectus(
     'product_id',
     'variant_id',
     'order_id',
+    'original_order_id',
+    'original_order_item_id',
+    'return_id',
+    'pos_shift_id',
     'purchase_order_id',
     'warehouse_id',
     'destination_warehouse_id',
@@ -273,6 +283,10 @@ export function sanitizePayloadForDirectus(
     delete payload.total_card_amount;
     delete payload.total_credit_amount;
     delete payload.total_orders_count;
+    delete payload.total_returns_count;
+    delete payload.total_refund_amount;
+    delete payload.total_cash_refund_amount;
+    delete payload.total_exchange_cash_in_amount;
     if (payload.opening_balance !== undefined && payload.opening_balance !== null) {
       payload.opening_balance = String(payload.opening_balance);
     }
@@ -282,6 +296,47 @@ export function sanitizePayloadForDirectus(
     if (payload.status !== undefined && payload.status !== null) {
       payload.status = Array.isArray(payload.status) ? payload.status : [payload.status];
     }
+  }
+
+  if (collection === 'order_items') {
+    if (payload.quantity !== undefined) payload.quantity = Math.max(0, Math.round(Number(payload.quantity) || 0));
+    if (payload.returned_quantity !== undefined) {
+      payload.returned_quantity = Math.max(0, Math.round(Number(payload.returned_quantity) || 0));
+    }
+    if (payload.unit_price !== undefined) payload.unit_price = Number(payload.unit_price) || 0;
+    if (payload.discount !== undefined) payload.discount = Number(payload.discount) || 0;
+    if (payload.total !== undefined) payload.total = Number(payload.total) || 0;
+    delete payload.unit_cost;
+    delete payload.variant_sku;
+    delete payload.product_title;
+    delete payload.color_name;
+    delete payload.size_name;
+  }
+
+  if (collection === 'order_returns') {
+    if (payload.returned_total !== undefined) payload.returned_total = Math.max(0, Number(payload.returned_total) || 0);
+    if (payload.exchange_total !== undefined) payload.exchange_total = Math.max(0, Number(payload.exchange_total) || 0);
+    if (payload.net_amount !== undefined) payload.net_amount = Number(payload.net_amount) || 0;
+    if (!payload.customer_id) payload.customer_id = null;
+    if (!payload.pos_shift_id) payload.pos_shift_id = null;
+    if (!payload.financial_account_id) payload.financial_account_id = null;
+    delete payload.original_order_number;
+    delete payload.customer_name;
+    delete payload.warehouse_name;
+    delete payload.items;
+    delete payload.items_count;
+  }
+
+  if (collection === 'order_return_items') {
+    if (payload.quantity !== undefined) payload.quantity = Math.max(1, Math.round(Number(payload.quantity) || 1));
+    if (payload.unit_price !== undefined) payload.unit_price = Math.max(0, Number(payload.unit_price) || 0);
+    if (payload.unit_cost !== undefined) payload.unit_cost = Math.max(0, Number(payload.unit_cost) || 0);
+    if (payload.total !== undefined) payload.total = Math.max(0, Number(payload.total) || 0);
+    if (!payload.original_order_item_id) payload.original_order_item_id = null;
+    delete payload.sku;
+    delete payload.product_title;
+    delete payload.color_name;
+    delete payload.size_name;
   }
 
   if (collection === 'product_variants') {

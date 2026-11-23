@@ -19,6 +19,8 @@ import {
   Supplier,
   Order,
   OrderItem,
+  OrderReturn,
+  OrderReturnItem,
   PurchaseOrder,
   PurchaseOrderItem,
   ProductVariant,
@@ -355,8 +357,16 @@ export class LocalAccountingStorage {
 
     const validOrders = orgOrders.filter((o) => isWithinPeriod(o.date_created || ''));
 
-    // 1. Total Revenue
-    const totalRevenue = validOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    // 1. Total Revenue (adjusted for completed returns & exchanges in period)
+    const orgReturns = this.base.getItem<OrderReturn>('order_returns', []).filter((r) => {
+      const rOrg = typeof r.organization_id === 'object' ? (r.organization_id as any)?.id : r.organization_id;
+      return Number(rOrg) === orgId && r.status === 'completed';
+    });
+    const validReturns = orgReturns.filter((r) => isWithinPeriod(r.return_date || r.date_created || ''));
+    const returnsNetRevenueAdjustment = validReturns.reduce((sum, r) => sum + (Number(r.net_amount) || 0), 0);
+
+    const grossOrdersRevenue = validOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    const totalRevenue = Math.max(0, grossOrdersRevenue + returnsNetRevenueAdjustment);
 
     // 2. Cost of Goods Sold (COGS)
     let totalCogs = 0;
@@ -369,10 +379,32 @@ export class LocalAccountingStorage {
     validOrderItems.forEach((oi) => {
       const vId = normalizeId(oi.variant_id);
       const v = variants.find((variant) => normalizeId(variant.id) === vId);
-      const unitBuyPrice = Number(v?.buy_price) || 0;
+      const unitBuyPrice = Number(v?.cost ?? v?.buy_price) || 0;
       const qty = Number(oi.quantity) || 1;
       totalCogs += unitBuyPrice * qty;
     });
+
+    // Adjust COGS for completed returns & exchanges:
+    // - Restockable returned items reduce COGS (back into inventory)
+    // - Damaged returned items stay in COGS (loss)
+    // - Exchanged outgoing items add to COGS
+    if (validReturns.length > 0) {
+      const validReturnIds = new Set(validReturns.map((r) => Number(r.id)));
+      const allReturnItems = this.base.getItem<OrderReturnItem>('order_return_items', []);
+      allReturnItems.forEach((ri) => {
+        const rId = typeof ri.return_id === 'object' ? (ri.return_id as any)?.id : ri.return_id;
+        if (!validReturnIds.has(Number(rId))) return;
+        const vId = normalizeId(ri.variant_id);
+        const v = variants.find((variant) => normalizeId(variant.id) === vId);
+        const unitCost = Number(ri.unit_cost) || Number(v?.cost ?? v?.buy_price) || 0;
+        const qty = Number(ri.quantity) || 1;
+        if (ri.item_type === 'returned' && ri.condition !== 'damaged') {
+          totalCogs = Math.max(0, totalCogs - unitCost * qty);
+        } else if (ri.item_type === 'exchanged') {
+          totalCogs += unitCost * qty;
+        }
+      });
+    }
 
     // 3. Gross Profit
     const grossProfit = totalRevenue - totalCogs;
@@ -1284,6 +1316,7 @@ export class LocalAccountingStorage {
     const accounts = this.base.getItem<FinancialAccount>('financial_accounts', []);
     const users = this.base.getItem<OrganizationUser>('organization_users', []);
     const orders = this.base.getItem<Order>('orders', []);
+    const orderReturns = this.base.getItem<OrderReturn>('order_returns', []);
 
     return filtered
       .map((shift) => {
@@ -1381,6 +1414,46 @@ export class LocalAccountingStorage {
           }
         }
 
+        // Calculate shift returns & exchanges cash impact
+        const shiftReturns = orderReturns.filter((r) => {
+          if (r.status !== 'completed') return false;
+          const rShiftId = typeof r.pos_shift_id === 'object' ? (r.pos_shift_id as any)?.id : r.pos_shift_id;
+          if (rShiftId && Number(rShiftId) === Number(shift.id)) return true;
+          if (rShiftId && Number(rShiftId) !== Number(shift.id)) return false;
+
+          const rWhId = typeof r.warehouse_id === 'object' ? (r.warehouse_id as any)?.id : r.warehouse_id;
+          if (whId && rWhId && Number(rWhId) !== Number(whId)) return false;
+
+          const rOrgId = typeof r.organization_id === 'object' ? (r.organization_id as any)?.id : r.organization_id;
+          const sOrgId = typeof shift.organization_id === 'object' ? (shift.organization_id as any)?.id : shift.organization_id;
+          if (sOrgId && rOrgId && Number(rOrgId) !== Number(sOrgId)) return false;
+
+          const rTime = r.return_date || r.date_created ? new Date(r.return_date || r.date_created || 0).getTime() : 0;
+          if (shiftStart > 0 && rTime > 0 && rTime < shiftStart - 60000) return false;
+          if (shiftEnd > 0 && rTime > 0 && rTime > shiftEnd + 60000) return false;
+          return true;
+        });
+
+        let totalRefundAmount = 0;
+        let totalCashRefundAmount = 0;
+        let totalExchangeCashInAmount = 0;
+
+        for (const ret of shiftReturns) {
+          const net = Number(ret.net_amount) || 0;
+          const method = String(ret.settlement_method || '').toLowerCase();
+          if (net < 0) {
+            const absRefund = Math.abs(net);
+            totalRefundAmount += absRefund;
+            if (method === 'cash') {
+              totalCashRefundAmount += absRefund;
+            }
+          } else if (net > 0) {
+            if (method === 'cash') {
+              totalExchangeCashInAmount += net;
+            }
+          }
+        }
+
         return {
           ...shift,
           warehouse_name: wh?.name || (whId ? `انبار #${whId}` : undefined),
@@ -1393,6 +1466,10 @@ export class LocalAccountingStorage {
           total_card_amount: cardSales,
           total_credit_amount: creditSales,
           total_orders_count: shiftOrders.filter((o) => o.status !== 'cancelled').length,
+          total_returns_count: shiftReturns.length,
+          total_refund_amount: totalRefundAmount,
+          total_cash_refund_amount: totalCashRefundAmount,
+          total_exchange_cash_in_amount: totalExchangeCashInAmount,
         };
       })
       .sort((a, b) => {

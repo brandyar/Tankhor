@@ -29,6 +29,7 @@ export const navigationFa = {
   contractors: 'معین و حساب پیمانکاران',
   allOrders: 'لیست سفارشات',
   createOrder: 'ثبت سفارش جدید',
+  orderReturns: 'مرجوعی و تعویض',
   purchasingGroup: 'خرید و تامین‌کنندگان',
   suppliers: 'تامین‌کنندگان',
   purchaseOrders: 'سفارشات خرید',

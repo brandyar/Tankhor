@@ -55,6 +55,7 @@ import {
   PackageX,
   TrendingUp,
   Scissors,
+  RotateCcw,
 } from 'lucide-react';
 import { UserProfileModal } from '../modals/UserProfileModal';
 import { FeedbackModal } from '../modals/FeedbackModal';
@@ -193,6 +194,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       items: [
         { route: 'orders/create', label: t('navigation.createOrder', 'ثبت سفارش جدید'), icon: PackagePlus, visible: permissions.canCreateOrders },
         { route: 'orders/all', label: t('navigation.allOrders', 'همه سفارشات'), icon: ShoppingCart, visible: permissions.canViewOrders },
+        { route: 'orders/returns', label: t('navigation.orderReturns', 'مرجوعی و تعویض'), icon: RotateCcw, visible: permissions.canViewOrders },
         { route: 'customers/all', label: t('navigation.allCustomers', 'مشتریان'), icon: Users, visible: permissions.canViewCustomers },
       ].filter((i) => i.visible !== false),
     },

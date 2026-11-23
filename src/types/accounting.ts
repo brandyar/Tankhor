@@ -4,9 +4,11 @@ export type PartyType = 'customer' | 'supplier' | 'other';
 
 export type PersonTransactionType =
   | 'sale_invoice'
+  | 'sale_return'
   | 'purchase_invoice'
   | 'cash_payment'
   | 'cash_receipt'
+  | 'cash_refund'
   | 'cheque'
   | 'discount'
   | 'opening_balance'

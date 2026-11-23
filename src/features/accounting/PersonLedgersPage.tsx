@@ -527,10 +527,16 @@ export const PersonLedgersPage: React.FC = () => {
                                 </td>
                                 <td className="py-2.5 px-3">
                                   <div className="font-semibold text-neutral-900 dark:text-neutral-100">
-                                    {tx.transaction_type === 'order_invoice' && 'فاکتور فروش کالا'}
+                                    {(tx.transaction_type === 'order_invoice' || tx.transaction_type === 'sale_invoice') && 'فاکتور فروش کالا'}
+                                    {tx.transaction_type === 'sale_return' && (
+                                      <span className="text-amber-700 dark:text-amber-400">برگشت از فروش (مرجوعی)</span>
+                                    )}
+                                    {tx.transaction_type === 'cash_refund' && (
+                                      <span className="text-rose-700 dark:text-rose-400">استرداد وجه مرجوعی</span>
+                                    )}
                                     {tx.transaction_type === 'purchase_invoice' && 'فاکتور خرید کالا'}
-                                    {tx.transaction_type === 'receive_money' && 'دریافت وجه'}
-                                    {tx.transaction_type === 'pay_money' && 'پرداخت وجه'}
+                                    {(tx.transaction_type === 'receive_money' || tx.transaction_type === 'cash_receipt' || tx.transaction_type === 'receipt') && 'دریافت وجه'}
+                                    {(tx.transaction_type === 'pay_money' || tx.transaction_type === 'cash_payment') && 'پرداخت وجه'}
                                     {tx.transaction_type === 'adjustment' && 'اصلاحیه حساب'}
                                   </div>
                                   {tx.description && (
@@ -579,10 +585,16 @@ export const PersonLedgersPage: React.FC = () => {
                             <div className="flex items-start justify-between gap-2">
                               <div>
                                 <span className="font-bold text-xs text-neutral-900 dark:text-white">
-                                  {tx.transaction_type === 'order_invoice' && 'فاکتور فروش کالا'}
+                                  {(tx.transaction_type === 'order_invoice' || tx.transaction_type === 'sale_invoice') && 'فاکتور فروش کالا'}
+                                  {tx.transaction_type === 'sale_return' && (
+                                    <span className="text-amber-700 dark:text-amber-400">برگشت از فروش (مرجوعی)</span>
+                                  )}
+                                  {tx.transaction_type === 'cash_refund' && (
+                                    <span className="text-rose-700 dark:text-rose-400">استرداد وجه مرجوعی</span>
+                                  )}
                                   {tx.transaction_type === 'purchase_invoice' && 'فاکتور خرید کالا'}
-                                  {tx.transaction_type === 'receive_money' && 'دریافت وجه'}
-                                  {tx.transaction_type === 'pay_money' && 'پرداخت وجه'}
+                                  {(tx.transaction_type === 'receive_money' || tx.transaction_type === 'cash_receipt' || tx.transaction_type === 'receipt') && 'دریافت وجه'}
+                                  {(tx.transaction_type === 'pay_money' || tx.transaction_type === 'cash_payment') && 'پرداخت وجه'}
                                   {tx.transaction_type === 'adjustment' && 'اصلاحیه حساب'}
                                 </span>
                                 {tx.description && (

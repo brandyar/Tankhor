@@ -31,6 +31,8 @@ export const SQLITE_COLLECTIONS = [
   'customers',
   'orders',
   'order_items',
+  'order_returns',
+  'order_return_items',
   'suppliers',
   'purchase_orders',
   'purchase_order_items',

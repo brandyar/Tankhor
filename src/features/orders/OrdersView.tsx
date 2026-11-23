@@ -5,6 +5,7 @@ import { storageManager } from '../../storage';
 import {
   Order,
   OrderItem,
+  OrderReturn,
   Customer,
   Warehouse,
   ProductVariant,
@@ -27,6 +28,8 @@ import { formatDate, formatCurrency, toPersianDigits } from '../../utils/formatt
 import { confirmAction } from '../../utils/confirm';
 import { printElement } from '../../utils/print';
 import { printOrderInvoice, OrderItemPrintData } from '../../utils/orderInvoicePrint';
+import { printReturnReceipt } from '../../utils/returnReceiptPrint';
+import { OrderReturnExchangeModal } from './components/OrderReturnExchangeModal';
 import { mediaManager } from '../../utils/mediaManager';
 import {
   ShoppingCart,
@@ -66,6 +69,7 @@ interface OrderItemDisplay {
   colorName?: string;
   sizeName?: string;
   quantity: number;
+  returnedQuantity?: number;
   unitPrice: number;
   discount: number;
   total: number;
@@ -97,9 +101,13 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
   // Order Details Modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedOrderItems, setSelectedOrderItems] = useState<OrderItemDisplay[]>([]);
+  const [selectedOrderReturns, setSelectedOrderReturns] = useState<OrderReturn[]>([]);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [receiptType, setReceiptType] = useState<'standard' | 'thermal'>('standard');
+
+  // Return / Exchange Modal
+  const [returnModalOrder, setReturnModalOrder] = useState<Order | null>(null);
 
   // Payment Settlement State
   const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
@@ -203,7 +211,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
   }, [activeOrganization, currentPage, pageSize, search, statusFilter]);
 
   useSwrRefresh(
-    ['orders', 'customers', 'warehouses', 'products', 'product_variants', 'financial_accounts'],
+    ['orders', 'order_returns', 'customers', 'warehouses', 'products', 'product_variants', 'financial_accounts'],
     () => {
       loadLookups();
       loadData(true);
@@ -265,8 +273,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
       const adapter = storageManager.getAdapter();
       const orgId = activeOrganization?.id || 1;
       const whId = typeof ord.warehouse_id === 'object' ? (ord.warehouse_id as any)?.id : (ord.warehouse_id || 1);
-      const wasStockDeducted = ord.status === 'confirmed' || ord.status === 'completed';
-      const willDeductStock = newStatus === 'confirmed' || newStatus === 'completed';
+      const wasStockDeducted =
+        ord.status === 'confirmed' ||
+        ord.status === 'completed' ||
+        ord.status === 'partially_returned' ||
+        ord.status === 'returned';
+      const willDeductStock =
+        newStatus === 'confirmed' ||
+        newStatus === 'completed' ||
+        newStatus === 'partially_returned' ||
+        newStatus === 'returned';
 
       // 1. If transitioning from un-deducted to confirmed/completed -> Deduct inventory
       if (!wasStockDeducted && willDeductStock) {
@@ -409,7 +425,12 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
 
     try {
       const adapter = storageManager.getAdapter();
-      const rawItems = await adapter.getOrderItems(ord.id);
+      const [rawItems, linkedReturns] = await Promise.all([
+        adapter.getOrderItems(ord.id),
+        adapter.getOrderReturns
+          ? adapter.getOrderReturns({ organization_id: activeOrganization?.id, order_id: ord.id }).catch(() => [])
+          : Promise.resolve([]),
+      ]);
 
       const itemsDisplay: OrderItemDisplay[] = rawItems.map((it) => {
         const varId = typeof it.variant_id === 'object' ? (it.variant_id as any)?.id : it.variant_id;
@@ -432,6 +453,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
           colorName,
           sizeName,
           quantity: it.quantity,
+          returnedQuantity: Number(it.returned_quantity) || 0,
           unitPrice: it.unit_price,
           discount: it.discount || 0,
           total: it.total || it.quantity * it.unit_price - (it.discount || 0) * it.quantity,
@@ -439,9 +461,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
       });
 
       setSelectedOrderItems(itemsDisplay);
+      setSelectedOrderReturns(linkedReturns || []);
     } catch (err) {
       console.error('[OrdersView] Error fetching order items:', err);
       setSelectedOrderItems([]);
+      setSelectedOrderReturns([]);
     } finally {
       setIsLoadingItems(false);
     }
@@ -492,6 +516,52 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
     printOrderInvoice(selectedOrder, selectedOrderItems, activeOrganization, isPersian, receiptType);
   };
 
+  const isReturnEligible = (status: OrderStatus) =>
+    status === 'confirmed' ||
+    status === 'processing' ||
+    status === 'completed' ||
+    status === 'partially_returned';
+
+  const handlePrintLinkedReturn = async (ret: OrderReturn) => {
+    try {
+      const adapter = storageManager.getAdapter();
+      const rawItems = adapter.getOrderReturnItems
+        ? await adapter.getOrderReturnItems(ret.id)
+        : [];
+      const enrichedItems = rawItems.map((it) => {
+        const vId = typeof it.variant_id === 'object' ? (it.variant_id as any)?.id : it.variant_id;
+        const matchedVar = variants.find((v) => Number(v.id) === Number(vId));
+        const pId = matchedVar
+          ? typeof matchedVar.product_id === 'object'
+            ? (matchedVar.product_id as any)?.id
+            : matchedVar.product_id
+          : undefined;
+        const matchedProd = pId ? products.find((p) => Number(p.id) === Number(pId)) : undefined;
+        return {
+          ...it,
+          sku: it.sku || matchedVar?.sku || '-',
+          product_title: it.product_title || matchedProd?.title || matchedVar?.product_title || t('orders.orderedItem'),
+          color_name: it.color_name || matchedVar?.color_name,
+          size_name: it.size_name || matchedVar?.size_name,
+        };
+      });
+      await printReturnReceipt({
+        orderReturn: {
+          ...ret,
+          original_order_number: selectedOrder?.order_number,
+          customer_name: selectedOrder?.customer_name,
+          warehouse_name: (selectedOrder as any)?.warehouse_name,
+        },
+        items: enrichedItems,
+        organization: activeOrganization,
+        format: receiptType === 'thermal' ? 'thermal' : 'a4',
+        isPersian,
+      });
+    } catch (err) {
+      console.error('[OrdersView] Failed to print linked return:', err);
+    }
+  };
+
   const getOrderStatusBadge = (status: OrderStatus) => {
     switch (status) {
       case 'completed':
@@ -504,6 +574,10 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
         return <Badge variant="neutral">{t('orders.statusDraft')}</Badge>;
       case 'cancelled':
         return <Badge variant="danger">{t('orders.statusCancelled')}</Badge>;
+      case 'returned':
+        return <Badge variant="danger">{t('orders.statusReturned')}</Badge>;
+      case 'partially_returned':
+        return <Badge variant="warning">{t('orders.statusPartiallyReturned')}</Badge>;
       default:
         return <Badge variant="neutral">{status}</Badge>;
     }
@@ -517,6 +591,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
         return <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">{t('orders.payUnpaid')}</span>;
       case 'partially_paid':
         return <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300">{t('orders.payPartial')}</span>;
+      case 'refunded':
+        return <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300">{t('orders.payRefunded')}</span>;
       default:
         return <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-neutral-200">{status}</span>;
     }
@@ -826,6 +902,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
                 { value: 'all', label: t('common.all') },
                 { value: 'completed', label: t('orders.statusCompleted') },
                 { value: 'confirmed', label: t('orders.statusPending') },
+                { value: 'partially_returned', label: t('orders.statusPartiallyReturned') },
+                { value: 'returned', label: t('orders.statusReturned') },
                 { value: 'draft', label: t('orders.statusDraft') },
                 { value: 'cancelled', label: t('orders.statusCancelled') },
               ]}
@@ -1154,7 +1232,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
                             </div>
                           </td>
                           <td className="p-2 text-center font-bold font-mono text-slate-900 dark:text-neutral-100">
-                            {isPersian ? toPersianDigits(item.quantity) : item.quantity}
+                            <div>{isPersian ? toPersianDigits(item.quantity) : item.quantity}</div>
+                            {item.returnedQuantity && item.returnedQuantity > 0 ? (
+                              <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-[9px] font-bold">
+                                {t('orders.returnedQtyBadge', {
+                                  count: isPersian
+                                    ? toPersianDigits(item.returnedQuantity)
+                                    : item.returnedQuantity,
+                                })}
+                              </span>
+                            ) : null}
                           </td>
                           <td className="p-2 text-end font-mono text-slate-800 dark:text-neutral-200">
                             {formatCurrency(item.unitPrice, 'TOMAN', isPersian)}
@@ -1197,6 +1284,51 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
               </div>
             </div>
 
+            {/* Linked Return & Exchange History */}
+            {selectedOrderReturns.length > 0 && (
+              <div className="p-3 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/50 rounded-xl space-y-2">
+                <div className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5 text-xs">
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <span>{t('orders.orderReturnsHistory')}</span>
+                </div>
+                <div className="space-y-1.5">
+                  {selectedOrderReturns.map((ret) => (
+                    <div
+                      key={`ord_ret_hist_${ret.id}`}
+                      className="p-2 rounded-lg bg-white dark:bg-[#181a20] border border-amber-200/60 dark:border-neutral-800 flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-neutral-900 dark:text-white">
+                            {ret.return_number}
+                          </span>
+                          <Badge variant={ret.type === 'exchange' ? 'info' : 'danger'}>
+                            {ret.type === 'exchange' ? t('orders.typeExchange') : t('orders.typeReturn')}
+                          </Badge>
+                        </div>
+                        <div className="text-[10px] text-neutral-500 font-mono mt-0.5">
+                          {formatDate(ret.return_date || ret.date_created, isPersian)} •{' '}
+                          {ret.net_amount < 0
+                            ? `${t('orders.netRefundToCustomer')}: ${formatCurrency(Math.abs(ret.net_amount), 'TOMAN', isPersian)}`
+                            : ret.net_amount > 0
+                            ? `${t('orders.netCollectFromCustomer')}: ${formatCurrency(ret.net_amount, 'TOMAN', isPersian)}`
+                            : t('orders.netEvenExchange')}
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePrintLinkedReturn(ret)}
+                        icon={<Printer className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />}
+                      >
+                        {t('orders.print')}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Print Settings & Format Selector */}
             <div className="p-3 bg-slate-50 dark:bg-[#181a20] border border-slate-200 dark:border-neutral-800 rounded-xl space-y-2">
               <label className="block font-bold text-slate-900 dark:text-neutral-100">{t('orders.selectPrintFormat')}</label>
@@ -1236,18 +1368,33 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-neutral-800">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200 dark:border-neutral-800">
               <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>
                 {t('orders.close')}
               </Button>
 
-              <Button
-                variant="primary"
-                onClick={triggerPrint}
-                icon={<Printer className="w-4 h-4 text-emerald-400" />}
-              >
-                {t('orders.printOrderInvoice')}
-              </Button>
+              <div className="flex items-center gap-2">
+                {isReturnEligible(selectedOrder.status) && permissions.canCreateOrders && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsDetailModalOpen(false);
+                      setReturnModalOrder(selectedOrder);
+                    }}
+                    icon={<RotateCcw className="w-4 h-4 text-amber-600 dark:text-amber-400" />}
+                    className="border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300"
+                  >
+                    {t('orders.returnOrExchange')}
+                  </Button>
+                )}
+                <Button
+                  variant="primary"
+                  onClick={triggerPrint}
+                  icon={<Printer className="w-4 h-4 text-emerald-400" />}
+                >
+                  {t('orders.printOrderInvoice')}
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -1511,6 +1658,15 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigateToCreate }) =>
           </div>
         </Modal>
       )}
+      {/* Modal: Order Return & Exchange */}
+      <OrderReturnExchangeModal
+        isOpen={Boolean(returnModalOrder)}
+        onClose={() => setReturnModalOrder(null)}
+        order={returnModalOrder}
+        onSuccess={() => {
+          loadData(true);
+        }}
+      />
     </div>
   );
 };

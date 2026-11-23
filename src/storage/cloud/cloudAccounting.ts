@@ -14,6 +14,8 @@ import {
   VatReportSummary,
   Order,
   OrderItem,
+  OrderReturn,
+  OrderReturnItem,
   Product,
   ProductVariant,
 } from '../../types';
@@ -367,7 +369,35 @@ export class CloudAccountingStorage {
         const allItems = await Promise.all(validOrders.map((o) => this.base.localAdapter.getOrderItems(o.id)));
         orderItems = allItems.flat();
       }
-      const totalRevenue = validOrders.reduce((sum, o) => sum + getOrderTotal(o), 0);
+
+      const allReturns = await this.base.client
+        .getItems<OrderReturn>('order_returns', {
+          filter: { organization_id: { _eq: orgId } },
+          limit: -1,
+        })
+        .catch(() =>
+          this.base.localAdapter.getOrderReturns
+            ? this.base.localAdapter.getOrderReturns({ organization_id: orgId })
+            : []
+        );
+
+      const validReturns = allReturns.filter((r) => {
+        if (r.status !== 'completed') return false;
+        if (startDate) {
+          const rdStr = r.return_date || r.date_created;
+          if (rdStr) {
+            const rd = new Date(rdStr);
+            if (!isNaN(rd.getTime()) && rd < startDate) return false;
+          }
+        }
+        return true;
+      });
+
+      const returnsNetRevenueAdj = validReturns.reduce((sum, r) => sum + (Number(r.net_amount) || 0), 0);
+      const totalRevenue = Math.max(
+        0,
+        validOrders.reduce((sum, o) => sum + getOrderTotal(o), 0) + returnsNetRevenueAdj
+      );
 
       let totalCogs = 0;
       validOrders.forEach((o) => {
@@ -378,11 +408,38 @@ export class CloudAccountingStorage {
         items.forEach((it) => {
           const vId = typeof it.variant_id === 'object' ? (it.variant_id as any)?.id : it.variant_id;
           const variant = variants.find((v) => v.id === Number(vId));
-          const unitCost = Number(variant?.cost) || 0;
+          const unitCost = Number(variant?.cost ?? variant?.buy_price) || 0;
           const qty = Number(it.quantity) || 1;
           totalCogs += unitCost * qty;
         });
       });
+
+      if (validReturns.length > 0) {
+        const validReturnIds = new Set(validReturns.map((r) => Number(r.id)));
+        const allReturnItems = await this.base.client
+          .getItems<OrderReturnItem>('order_return_items', {
+            filter: { organization_id: { _eq: orgId } },
+            limit: -1,
+          })
+          .catch(() =>
+            this.base.localAdapter.getOrderReturnItems
+              ? this.base.localAdapter.getOrderReturnItems()
+              : []
+          );
+        allReturnItems.forEach((ri) => {
+          const rId = typeof ri.return_id === 'object' ? (ri.return_id as any)?.id : ri.return_id;
+          if (!validReturnIds.has(Number(rId))) return;
+          const vId = typeof ri.variant_id === 'object' ? (ri.variant_id as any)?.id : ri.variant_id;
+          const variant = variants.find((v) => v.id === Number(vId));
+          const unitCost = Number(ri.unit_cost) || Number(variant?.cost ?? variant?.buy_price) || 0;
+          const qty = Number(ri.quantity) || 1;
+          if (ri.item_type === 'returned' && ri.condition !== 'damaged') {
+            totalCogs = Math.max(0, totalCogs - unitCost * qty);
+          } else if (ri.item_type === 'exchanged') {
+            totalCogs += unitCost * qty;
+          }
+        });
+      }
 
       const grossProfit = totalRevenue - totalCogs;
       const grossMarginPercent = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;

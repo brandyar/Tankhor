@@ -69,6 +69,10 @@ export interface PosShift {
   total_card_amount?: number;
   total_credit_amount?: number;
   total_orders_count?: number;
+  total_returns_count?: number;
+  total_refund_amount?: number;
+  total_cash_refund_amount?: number;
+  total_exchange_cash_in_amount?: number;
 }
 
 export interface Category {
@@ -287,7 +291,14 @@ export interface Customer {
   date_updated?: string;
 }
 
-export type OrderStatus = 'draft' | 'confirmed' | 'processing' | 'completed' | 'cancelled';
+export type OrderStatus =
+  | 'draft'
+  | 'confirmed'
+  | 'processing'
+  | 'completed'
+  | 'cancelled'
+  | 'returned'
+  | 'partially_returned';
 export type PaymentStatus = 'pending' | 'paid' | 'partially_paid' | 'refunded';
 
 export interface Order {
@@ -326,8 +337,79 @@ export interface OrderItem {
   unit_cost?: number;
   discount: number;
   total: number;
+  returned_quantity?: number;
   created_at?: string;
   variant_sku?: string;
+}
+
+export type OrderReturnType = 'return' | 'exchange';
+export type OrderReturnStatus = 'pending' | 'completed' | 'cancelled';
+export type OrderReturnReason =
+  | 'size_mismatch'
+  | 'color_mismatch'
+  | 'defective'
+  | 'wrong_item'
+  | 'customer_changed_mind'
+  | 'other';
+export type OrderReturnSettlementMethod =
+  | 'cash'
+  | 'pos'
+  | 'card'
+  | 'bank'
+  | 'store_credit'
+  | 'credit'
+  | 'none';
+export type OrderReturnItemType = 'returned' | 'exchanged';
+export type OrderReturnItemCondition = 'restockable' | 'damaged';
+
+export interface OrderReturn {
+  id: number;
+  organization_id: number;
+  return_number: string;
+  original_order_id: number | Order;
+  customer_id?: number | Customer | null;
+  warehouse_id: number | Warehouse;
+  pos_shift_id?: number | PosShift | null;
+  type: OrderReturnType;
+  status: OrderReturnStatus;
+  reason?: OrderReturnReason;
+  returned_total: number;
+  exchange_total: number;
+  net_amount: number; // exchange_total - returned_total (<0 refund to customer, >0 customer pays difference, 0 even exchange)
+  settlement_method?: OrderReturnSettlementMethod;
+  financial_account_id?: number | null;
+  return_date?: string;
+  notes?: string;
+  user_created?: string;
+  date_created?: string;
+  user_updated?: string;
+  date_updated?: string;
+  // Joined / Display fields
+  original_order_number?: string;
+  customer_name?: string;
+  warehouse_name?: string;
+  items?: OrderReturnItem[];
+  items_count?: number;
+}
+
+export interface OrderReturnItem {
+  id: number;
+  organization_id: number;
+  return_id: number | OrderReturn;
+  item_type: OrderReturnItemType;
+  original_order_item_id?: number | OrderItem | null;
+  variant_id: number | ProductVariant;
+  quantity: number;
+  unit_price: number;
+  unit_cost?: number;
+  total: number;
+  condition?: OrderReturnItemCondition;
+  created_at?: string;
+  // Joined / Display fields
+  sku?: string;
+  product_title?: string;
+  color_name?: string;
+  size_name?: string;
 }
 
 export interface Supplier {

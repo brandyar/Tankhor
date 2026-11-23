@@ -199,7 +199,7 @@ export class LocalInventoryStorage {
         size_name: szName,
         warehouse_name: wh?.name,
         location_name: loc?.name,
-        available_quantity: item.quantity - (item.reserved_quantity || 0),
+        available_quantity: Math.max(0, item.quantity - (item.reserved_quantity || 0) - (item.damaged_quantity || 0)),
       };
     });
   }
@@ -215,7 +215,12 @@ export class LocalInventoryStorage {
           ...list[idx],
           ...item,
           id: item.id,
-          available_quantity: (item.quantity ?? list[idx].quantity) - (item.reserved_quantity ?? list[idx].reserved_quantity ?? 0),
+          available_quantity: Math.max(
+            0,
+            (item.quantity ?? list[idx].quantity) -
+              (item.reserved_quantity ?? list[idx].reserved_quantity ?? 0) -
+              (item.damaged_quantity ?? list[idx].damaged_quantity ?? 0)
+          ),
           updated_at: new Date().toISOString(),
         };
         savedItem = list[idx];
@@ -223,7 +228,10 @@ export class LocalInventoryStorage {
         savedItem = {
           ...item,
           id: item.id,
-          available_quantity: (item.quantity || 0) - (item.reserved_quantity || 0),
+          available_quantity: Math.max(
+            0,
+            (item.quantity || 0) - (item.reserved_quantity || 0) - (item.damaged_quantity || 0)
+          ),
           updated_at: new Date().toISOString(),
         } as InventoryItem;
         list.push(savedItem);
@@ -232,6 +240,7 @@ export class LocalInventoryStorage {
       const newId = this.base.generateUniqueId(list);
       const qty = item.quantity || 0;
       const reserved = item.reserved_quantity || 0;
+      const damaged = item.damaged_quantity || 0;
       savedItem = {
         id: newId,
         organization_id: this.base.getActiveOrgId() || 1,
@@ -240,8 +249,8 @@ export class LocalInventoryStorage {
         location_id: item.location_id,
         quantity: qty,
         reserved_quantity: reserved,
-        available_quantity: qty - reserved,
-        damaged_quantity: item.damaged_quantity || 0,
+        available_quantity: Math.max(0, qty - reserved - damaged),
+        damaged_quantity: damaged,
         reorder_point: item.reorder_point || 5,
         safety_stock: item.safety_stock || 2,
         updated_at: new Date().toISOString(),
@@ -334,8 +343,16 @@ export class LocalInventoryStorage {
     if (item) {
       if (savedMov.type === 'purchase' || savedMov.type === 'return' || savedMov.type === 'transfer_in') {
         item.quantity += Math.abs(savedMov.quantity);
-      } else if (savedMov.type === 'sale' || savedMov.type === 'transfer_out' || savedMov.type === 'damage') {
+      } else if (savedMov.type === 'sale' || savedMov.type === 'transfer_out') {
         item.quantity = Math.max(0, item.quantity - Math.abs(savedMov.quantity));
+      } else if (savedMov.type === 'damage') {
+        item.damaged_quantity = (item.damaged_quantity || 0) + Math.abs(savedMov.quantity);
+        if (savedMov.reference_type === 'return') {
+          // Customer returned damaged item: add to both quantity and damaged_quantity so healthy available stock is unchanged
+          item.quantity += Math.abs(savedMov.quantity);
+        } else {
+          item.quantity = Math.max(0, item.quantity - Math.abs(savedMov.quantity));
+        }
       } else if (savedMov.type === 'adjustment') {
         item.quantity = Math.max(0, savedMov.quantity);
       }
@@ -345,17 +362,28 @@ export class LocalInventoryStorage {
       this.base.setItem('inventory_items', invItems);
     } else if (vId && wId) {
       const newItemId = this.base.generateUniqueId(invItems);
-      const qty = savedMov.type === 'adjustment' ? Math.max(0, savedMov.quantity) : Math.abs(savedMov.quantity);
+      const absQty = Math.abs(savedMov.quantity);
+      let initQty = savedMov.type === 'adjustment' ? Math.max(0, savedMov.quantity) : absQty;
+      let initDamaged = 0;
+      let initAvail = Math.max(0, initQty);
+      if (savedMov.type === 'damage') {
+        initDamaged = absQty;
+        initQty = savedMov.reference_type === 'return' ? absQty : 0;
+        initAvail = 0;
+      } else if (savedMov.type === 'sale' || savedMov.type === 'transfer_out') {
+        initQty = 0;
+        initAvail = 0;
+      }
       invItems.push({
         id: newItemId,
         organization_id: this.base.getActiveOrgId() || 1,
         variant_id: vId,
         warehouse_id: wId,
         location_id: normalizeId(savedMov.location_id),
-        quantity: Math.max(0, qty),
+        quantity: initQty,
         reserved_quantity: 0,
-        available_quantity: Math.max(0, qty),
-        damaged_quantity: savedMov.type === 'damage' ? Math.abs(savedMov.quantity) : 0,
+        available_quantity: initAvail,
+        damaged_quantity: initDamaged,
         reorder_point: 5,
         safety_stock: 2,
         updated_at: new Date().toISOString(),

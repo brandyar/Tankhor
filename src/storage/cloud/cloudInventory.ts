@@ -529,7 +529,12 @@ export class CloudInventoryStorage {
           currentQty = Math.max(0, currentQty - moveQty);
         } else if (moveType === 'damage') {
           currentDamaged += moveQty;
-          currentQty = Math.max(0, currentQty - moveQty);
+          if (payload.reference_type === 'return') {
+            // Customer returned a damaged item: add to total quantity and damaged_quantity so healthy available stock is untouched
+            currentQty += moveQty;
+          } else {
+            currentQty = Math.max(0, currentQty - moveQty);
+          }
         } else if (moveType === 'adjustment') {
           currentQty = moveQty;
         }
@@ -546,9 +551,14 @@ export class CloudInventoryStorage {
       } else if (vId && wId) {
         let initialQty = moveType === 'adjustment' ? Math.max(0, moveQty) : moveQty;
         let initialDamaged = 0;
+        let initialAvailable = initialQty;
         if (moveType === 'damage') {
           initialDamaged = moveQty;
+          initialQty = payload.reference_type === 'return' ? moveQty : 0;
+          initialAvailable = 0;
+        } else if (moveType === 'sale' || moveType === 'transfer_out') {
           initialQty = 0;
+          initialAvailable = 0;
         }
         await this.base.client.createItem<InventoryItem>('inventory_items', {
           organization_id: payload.organization_id,
@@ -557,7 +567,7 @@ export class CloudInventoryStorage {
           location_id: payload.location_id,
           quantity: initialQty,
           reserved_quantity: 0,
-          available_quantity: initialQty,
+          available_quantity: initialAvailable,
           damaged_quantity: initialDamaged,
           reorder_point: 5,
           safety_stock: 2,

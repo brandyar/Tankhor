@@ -16,6 +16,8 @@ import {
   PosShiftStatus,
   Order,
   OrderItem,
+  OrderReturn,
+  OrderReturnItem,
   ProductVariant,
   Customer,
   Supplier,
@@ -361,7 +363,24 @@ export class SqliteAccountingStorage {
       }
       return true;
     });
-    const totalRevenue = validOrders.reduce((sum, o) => sum + getOrderTotal(o), 0);
+
+    const allReturns = await this.base.getItems<OrderReturn>('order_returns', orgId);
+    const validReturns = allReturns.filter((r) => {
+      if (r.status !== 'completed') return false;
+      if (startDate) {
+        const rdStr = r.return_date || r.date_created;
+        if (rdStr) {
+          const rd = new Date(rdStr);
+          if (!isNaN(rd.getTime()) && rd < startDate) return false;
+        }
+      }
+      return true;
+    });
+    const returnsNetRevenueAdj = validReturns.reduce((sum, r) => sum + (Number(r.net_amount) || 0), 0);
+    const totalRevenue = Math.max(
+      0,
+      validOrders.reduce((sum, o) => sum + getOrderTotal(o), 0) + returnsNetRevenueAdj
+    );
 
     let totalCogs = 0;
     validOrders.forEach((o) => {
@@ -372,11 +391,29 @@ export class SqliteAccountingStorage {
       items.forEach((it) => {
         const vId = typeof it.variant_id === 'object' ? (it.variant_id as any)?.id : it.variant_id;
         const variant = variants.find((v) => v.id === Number(vId));
-        const unitCost = Number(variant?.cost) || 0;
+        const unitCost = Number(variant?.cost ?? variant?.buy_price) || 0;
         const qty = Number(it.quantity) || 1;
         totalCogs += unitCost * qty;
       });
     });
+
+    if (validReturns.length > 0) {
+      const validReturnIds = new Set(validReturns.map((r) => Number(r.id)));
+      const allReturnItems = await this.base.getItems<OrderReturnItem>('order_return_items');
+      allReturnItems.forEach((ri) => {
+        const rId = typeof ri.return_id === 'object' ? (ri.return_id as any)?.id : ri.return_id;
+        if (!validReturnIds.has(Number(rId))) return;
+        const vId = typeof ri.variant_id === 'object' ? (ri.variant_id as any)?.id : ri.variant_id;
+        const variant = variants.find((v) => v.id === Number(vId));
+        const unitCost = Number(ri.unit_cost) || Number(variant?.cost ?? variant?.buy_price) || 0;
+        const qty = Number(ri.quantity) || 1;
+        if (ri.item_type === 'returned' && ri.condition !== 'damaged') {
+          totalCogs = Math.max(0, totalCogs - unitCost * qty);
+        } else if (ri.item_type === 'exchanged') {
+          totalCogs += unitCost * qty;
+        }
+      });
+    }
 
     const grossProfit = totalRevenue - totalCogs;
     const grossMarginPercent = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
@@ -1175,6 +1212,7 @@ export class SqliteAccountingStorage {
     const accounts = await this.getFinancialAccounts({ organization_id: orgId });
     const users = await this.base.getItems<OrganizationUser>('organization_users', orgId);
     const orders = await this.base.getItems<Order>('orders', orgId);
+    const orderReturns = await this.base.getItems<OrderReturn>('order_returns', orgId);
 
     return filtered
       .map((shift) => {
@@ -1272,6 +1310,43 @@ export class SqliteAccountingStorage {
           }
         }
 
+        const shiftReturns = orderReturns.filter((r) => {
+          if (r.status !== 'completed') return false;
+          const rShiftId = typeof r.pos_shift_id === 'object' ? (r.pos_shift_id as any)?.id : r.pos_shift_id;
+          if (rShiftId && Number(rShiftId) === Number(shift.id)) return true;
+          if (rShiftId && Number(rShiftId) !== Number(shift.id)) return false;
+
+          const rWhId = typeof r.warehouse_id === 'object' ? (r.warehouse_id as any)?.id : r.warehouse_id;
+          if (whId && rWhId && Number(rWhId) !== Number(whId)) return false;
+
+          const rOrgId = typeof r.organization_id === 'object' ? (r.organization_id as any)?.id : r.organization_id;
+          const sOrgId = typeof shift.organization_id === 'object' ? (shift.organization_id as any)?.id : shift.organization_id;
+          if (sOrgId && rOrgId && Number(rOrgId) !== Number(sOrgId)) return false;
+
+          const rTime = r.return_date || r.date_created ? new Date(r.return_date || r.date_created || 0).getTime() : 0;
+          if (shiftStart > 0 && rTime > 0 && rTime < shiftStart - 60000) return false;
+          if (shiftEnd > 0 && rTime > 0 && rTime > shiftEnd + 60000) return false;
+          return true;
+        });
+
+        let totalRefundAmount = 0;
+        let totalCashRefundAmount = 0;
+        let totalExchangeCashInAmount = 0;
+
+        for (const ret of shiftReturns) {
+          const net = Number(ret.net_amount) || 0;
+          const method = String(ret.settlement_method || '').toLowerCase();
+          if (net < 0) {
+            const absRefund = Math.abs(net);
+            totalRefundAmount += absRefund;
+            if (method === 'cash') {
+              totalCashRefundAmount += absRefund;
+            }
+          } else if (net > 0 && method === 'cash') {
+            totalExchangeCashInAmount += net;
+          }
+        }
+
         return {
           ...shift,
           warehouse_name: wh?.name || (whId ? `انبار #${whId}` : undefined),
@@ -1284,6 +1359,10 @@ export class SqliteAccountingStorage {
           total_card_amount: cardSales,
           total_credit_amount: creditSales,
           total_orders_count: shiftOrders.filter((o) => o.status !== 'cancelled').length,
+          total_returns_count: shiftReturns.length,
+          total_refund_amount: totalRefundAmount,
+          total_cash_refund_amount: totalCashRefundAmount,
+          total_exchange_cash_in_amount: totalExchangeCashInAmount,
         };
       })
       .sort((a, b) => {

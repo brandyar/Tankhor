@@ -50,11 +50,16 @@ export const PosShiftActiveView: React.FC<PosShiftActiveViewProps> = ({
   const [closingNotes, setClosingNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const cashRefunds = Number(displayedShift.total_cash_refund_amount) || 0;
+  const exchangeCashIn = Number(displayedShift.total_exchange_cash_in_amount) || 0;
+  const returnsCount = Number(displayedShift.total_returns_count) || 0;
+  const totalRefunds = Number(displayedShift.total_refund_amount) || 0;
+
   const expectedCash = useMemo(() => {
     const opening = Number(displayedShift.opening_balance) || 0;
     const cashSales = Number(displayedShift.total_cash_amount) || 0;
-    return opening + cashSales;
-  }, [displayedShift]);
+    return opening + cashSales - cashRefunds + exchangeCashIn;
+  }, [displayedShift, cashRefunds, exchangeCashIn]);
 
   const countedCash = parseFloat(closingBalance.replace(/,/g, '')) || 0;
   const cashDiscrepancy = countedCash - expectedCash;
@@ -273,6 +278,36 @@ export const PosShiftActiveView: React.FC<PosShiftActiveViewProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Returns & Refunds Summary inside Shift (shown when > 0) */}
+        {(returnsCount > 0 || cashRefunds > 0 || exchangeCashIn > 0) && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="p-2.5 rounded-xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200/70 dark:border-rose-900/50">
+              <span className="text-[10px] text-rose-600 dark:text-rose-400 block mb-0.5">
+                {isPersian ? `مرجوعی / تعویض (${returnsCount} سند)` : `Returns / Exchanges (${returnsCount})`}
+              </span>
+              <span className="text-xs font-black text-rose-700 dark:text-rose-300 font-mono">
+                {formatCurrency(totalRefunds, activeOrganization?.currency || 'TOMAN')}
+              </span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200/70 dark:border-rose-900/50">
+              <span className="text-[10px] text-rose-600 dark:text-rose-400 block mb-0.5">
+                {isPersian ? 'عودت نقدی از کشو' : 'Cash Refunds Out'}
+              </span>
+              <span className="text-xs font-black text-rose-700 dark:text-rose-300 font-mono">
+                - {formatCurrency(cashRefunds, activeOrganization?.currency || 'TOMAN')}
+              </span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/70 dark:border-emerald-900/50">
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block mb-0.5">
+                {isPersian ? 'ما‌به‌التفاوت نقدی تعویض' : 'Exchange Cash In'}
+              </span>
+              <span className="text-xs font-black text-emerald-700 dark:text-emerald-300 font-mono">
+                + {formatCurrency(exchangeCashIn, activeOrganization?.currency || 'TOMAN')}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Expected Cash in drawer */}
         <div className="p-3 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/60 flex items-center justify-between text-xs">

@@ -4,6 +4,8 @@ import {
   Customer,
   Order,
   OrderItem,
+  OrderReturn,
+  OrderReturnItem,
   FinancialAccount,
   TreasuryTransaction,
   InventoryItem,
@@ -117,7 +119,12 @@ export class SqliteSalesStorage {
     // Handle inventory side effects on status changes
     const isNew = !previousOrder;
     const isNowConfirmedOrCompleted = savedOrder.status === 'confirmed' || savedOrder.status === 'completed';
-    const wasConfirmedOrCompleted = previousOrder && (previousOrder.status === 'confirmed' || previousOrder.status === 'completed');
+    const wasConfirmedOrCompleted =
+      previousOrder &&
+      (previousOrder.status === 'confirmed' ||
+        previousOrder.status === 'completed' ||
+        previousOrder.status === 'partially_returned' ||
+        previousOrder.status === 'returned');
     const isNowCancelled = savedOrder.status === 'cancelled';
 
     const targetWarehouseId = typeof savedOrder.warehouse_id === 'object' ? (savedOrder.warehouse_id as any)?.id : (savedOrder.warehouse_id || 1);
@@ -248,6 +255,207 @@ export class SqliteSalesStorage {
       const itemOrderId = typeof itm.order_id === 'object' ? (itm.order_id as any)?.id : itm.order_id;
       if (Number(itemOrderId) === Number(id)) {
         await this.base.deleteItem('order_items', itm.id);
+      }
+    }
+    return true;
+  }
+
+  async saveOrderItem(item: Partial<OrderItem>): Promise<OrderItem> {
+    const all = await this.base.getItems<OrderItem>('order_items');
+    const existing = item.id ? all.find((i) => Number(i.id) === Number(item.id)) : undefined;
+    const validId =
+      typeof item.id === 'number' && item.id > 0 ? item.id : this.base.generateUniqueId(all);
+    const saved: OrderItem = {
+      organization_id: existing?.organization_id || item.organization_id || this.base.getActiveOrgId() || 1,
+      order_id: existing?.order_id || item.order_id || 0,
+      variant_id: existing?.variant_id || item.variant_id || 0,
+      quantity: item.quantity ?? existing?.quantity ?? 1,
+      unit_price: item.unit_price ?? existing?.unit_price ?? 0,
+      discount: item.discount ?? existing?.discount ?? 0,
+      total: item.total ?? existing?.total ?? 0,
+      returned_quantity: item.returned_quantity ?? existing?.returned_quantity ?? 0,
+      created_at: existing?.created_at || new Date().toISOString(),
+      ...existing,
+      ...item,
+      id: validId,
+    };
+    await this.base.saveItem('order_items', saved);
+    return saved;
+  }
+
+  // ==========================================
+  // Order Returns & Exchanges
+  // ==========================================
+  async getOrderReturns(params?: QueryParams & { order_id?: number; reason?: string }): Promise<OrderReturn[]> {
+    const orgId = this.base.getActiveOrgId(params);
+    let list = await this.base.getItems<OrderReturn>('order_returns', orgId);
+    const [orders, customers, warehouses, allItems] = await Promise.all([
+      this.base.getItems<Order>('orders', orgId),
+      this.base.getItems<Customer>('customers', orgId),
+      this.base.getItems<any>('warehouses', orgId),
+      this.base.getItems<OrderReturnItem>('order_return_items', orgId),
+    ]);
+
+    if (params?.order_id) {
+      list = list.filter((r) => {
+        const oid = typeof r.original_order_id === 'object' ? (r.original_order_id as any)?.id : r.original_order_id;
+        return Number(oid) === Number(params.order_id);
+      });
+    }
+    if (params?.type && params.type !== 'all') {
+      list = list.filter((r) => r.type === params.type);
+    }
+    if (params?.status && params.status !== 'all') {
+      list = list.filter((r) => r.status === params.status);
+    }
+    if (params?.reason && params.reason !== 'all') {
+      list = list.filter((r) => r.reason === params.reason);
+    }
+    if (params?.warehouse_id) {
+      list = list.filter((r) => {
+        const wId = typeof r.warehouse_id === 'object' ? (r.warehouse_id as any)?.id : r.warehouse_id;
+        return Number(wId) === Number(params.warehouse_id);
+      });
+    }
+
+    let mapped = list.map((ret) => {
+      const oId = typeof ret.original_order_id === 'object' ? (ret.original_order_id as any)?.id : ret.original_order_id;
+      const cId = typeof ret.customer_id === 'object' ? (ret.customer_id as any)?.id : ret.customer_id;
+      const wId = typeof ret.warehouse_id === 'object' ? (ret.warehouse_id as any)?.id : ret.warehouse_id;
+      const ord = orders.find((o) => Number(o.id) === Number(oId));
+      const cust = customers.find((c) => Number(c.id) === Number(cId));
+      const wh = warehouses.find((w: any) => Number(w.id) === Number(wId));
+      const retItems = allItems.filter((it) => {
+        const rId = typeof it.return_id === 'object' ? (it.return_id as any)?.id : it.return_id;
+        return Number(rId) === Number(ret.id);
+      });
+      return {
+        ...ret,
+        original_order_number: ret.original_order_number || ord?.order_number,
+        customer_name: ret.customer_name || cust?.name,
+        warehouse_name: ret.warehouse_name || wh?.name,
+        items_count: retItems.length,
+      };
+    });
+
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      mapped = mapped.filter(
+        (r) =>
+          (r.return_number && r.return_number.toLowerCase().includes(q)) ||
+          (r.original_order_number && r.original_order_number.toLowerCase().includes(q)) ||
+          (r.customer_name && r.customer_name.toLowerCase().includes(q)) ||
+          (r.notes && r.notes.toLowerCase().includes(q))
+      );
+    }
+
+    return mapped.sort(
+      (a, b) =>
+        new Date(b.return_date || b.date_created || 0).getTime() -
+        new Date(a.return_date || a.date_created || 0).getTime()
+    );
+  }
+
+  async getOrderReturnItems(returnId?: number): Promise<OrderReturnItem[]> {
+    const all = await this.base.getItems<OrderReturnItem>('order_return_items');
+    const variants = await this.base.getItems<any>('product_variants');
+    const filtered =
+      returnId !== undefined
+        ? all.filter((i) => {
+            const rId = typeof i.return_id === 'object' ? (i.return_id as any)?.id : i.return_id;
+            return Number(rId) === Number(returnId);
+          })
+        : all;
+
+    return filtered.map((item) => {
+      const vId = typeof item.variant_id === 'object' ? (item.variant_id as any)?.id : item.variant_id;
+      const v = variants.find((x: any) => Number(x.id) === Number(vId));
+      return {
+        ...item,
+        sku: item.sku || v?.sku,
+        product_title: item.product_title || v?.product_title,
+        color_name: item.color_name || v?.color_name,
+        size_name: item.size_name || v?.size_name,
+      };
+    });
+  }
+
+  async saveOrderReturn(
+    ret: Partial<OrderReturn>,
+    items?: Partial<OrderReturnItem>[]
+  ): Promise<OrderReturn> {
+    const list = await this.base.getItems<OrderReturn>('order_returns');
+    const validId =
+      typeof ret.id === 'number' && ret.id > 0 ? ret.id : this.base.generateUniqueId(list);
+    const orgId = Number(ret.organization_id) || this.base.getActiveOrgId() || 1;
+    const now = new Date().toISOString();
+
+    const savedReturn: OrderReturn = {
+      organization_id: orgId,
+      return_number: ret.return_number || `RET-${Math.floor(100000 + Math.random() * 900000)}`,
+      original_order_id: ret.original_order_id || 0,
+      customer_id: ret.customer_id ?? null,
+      warehouse_id: ret.warehouse_id || 1,
+      pos_shift_id: ret.pos_shift_id ?? null,
+      type: ret.type || 'return',
+      status: ret.status || 'completed',
+      reason: ret.reason || 'other',
+      returned_total: Number(ret.returned_total) || 0,
+      exchange_total: Number(ret.exchange_total) || 0,
+      net_amount: Number(ret.net_amount) || 0,
+      settlement_method: ret.settlement_method || 'none',
+      financial_account_id: ret.financial_account_id ?? null,
+      return_date: ret.return_date || now,
+      notes: ret.notes || '',
+      date_created: ret.date_created || now,
+      date_updated: now,
+      ...ret,
+      id: validId,
+    };
+    await this.base.saveItem('order_returns', savedReturn);
+
+    if (items && items.length > 0) {
+      const allReturnItems = await this.base.getItems<OrderReturnItem>('order_return_items');
+      const savedItems: OrderReturnItem[] = [];
+      for (const it of items) {
+        const itId =
+          typeof it.id === 'number' && it.id > 0
+            ? it.id
+            : this.base.generateUniqueId(allReturnItems);
+        const qty = Math.max(1, Number(it.quantity) || 1);
+        const unitPrice = Number(it.unit_price) || 0;
+        const savedItem: OrderReturnItem = {
+          ...it,
+          id: itId,
+          organization_id: orgId,
+          return_id: validId,
+          item_type: it.item_type || 'returned',
+          original_order_item_id: it.original_order_item_id ?? null,
+          variant_id: it.variant_id || 0,
+          quantity: qty,
+          unit_price: unitPrice,
+          unit_cost: Number(it.unit_cost) || 0,
+          total: it.total !== undefined ? Number(it.total) : qty * unitPrice,
+          condition: it.condition || 'restockable',
+          created_at: it.created_at || now,
+        };
+        await this.base.saveItem('order_return_items', savedItem);
+        allReturnItems.push(savedItem);
+        savedItems.push(savedItem);
+      }
+      savedReturn.items = savedItems;
+    }
+
+    return savedReturn;
+  }
+
+  async deleteOrderReturn(id: number): Promise<boolean> {
+    await this.base.deleteItem('order_returns', id);
+    const allItems = await this.base.getItems<OrderReturnItem>('order_return_items');
+    for (const it of allItems) {
+      const rId = typeof it.return_id === 'object' ? (it.return_id as any)?.id : it.return_id;
+      if (Number(rId) === Number(id)) {
+        await this.base.deleteItem('order_return_items', it.id);
       }
     }
     return true;

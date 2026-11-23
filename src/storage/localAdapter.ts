@@ -28,6 +28,8 @@ import {
   Customer,
   Order,
   OrderItem,
+  OrderReturn,
+  OrderReturnItem,
   PurchaseOrder,
   PurchaseOrderItem,
   StockTransfer,
@@ -535,6 +537,38 @@ export class LocalOfflineAdapter implements IStorageProvider {
 
   deleteOrderItem(id: number): Promise<boolean> {
     return this.salesStorage.deleteOrderItem(id);
+  }
+
+  getOrderReturns(params?: QueryParams & { order_id?: number; reason?: string }): Promise<OrderReturn[]> {
+    return this.salesStorage.getOrderReturns(params);
+  }
+
+  async getPaginatedOrderReturns(
+    params: QueryParams & { order_id?: number; reason?: string }
+  ): Promise<PaginatedResult<OrderReturn>> {
+    const page = params.page || 1;
+    const pageSize = params.limit || 25;
+    const all = await this.salesStorage.getOrderReturns(params);
+    const start = (page - 1) * pageSize;
+    return {
+      items: all.slice(start, start + pageSize),
+      totalCount: all.length,
+      page,
+      pageSize,
+      totalPages: Math.ceil(all.length / pageSize) || 1,
+    };
+  }
+
+  getOrderReturnItems(returnId?: number): Promise<OrderReturnItem[]> {
+    return this.salesStorage.getOrderReturnItems(returnId);
+  }
+
+  saveOrderReturn(ret: Partial<OrderReturn>, items?: Partial<OrderReturnItem>[]): Promise<OrderReturn> {
+    return this.salesStorage.saveOrderReturn(ret, items);
+  }
+
+  deleteOrderReturn(id: number): Promise<boolean> {
+    return this.salesStorage.deleteOrderReturn(id);
   }
 
   reconcileOrdersWithTreasury(orgId?: number): Promise<void> {

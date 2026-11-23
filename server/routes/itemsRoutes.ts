@@ -685,6 +685,7 @@ itemsRouter.post(
         collection === 'treasury_transactions' ||
         collection === 'financial_accounts' ||
         collection === 'orders' ||
+        collection === 'order_returns' ||
         collection === 'expenses'
       ) {
         syncAndPersistFinancialAccountBalances(orgIdNum, true).catch((err) =>
@@ -968,6 +969,7 @@ itemsRouter.patch(
         collection === 'treasury_transactions' ||
         collection === 'financial_accounts' ||
         collection === 'orders' ||
+        collection === 'order_returns' ||
         collection === 'expenses'
       ) {
         syncAndPersistFinancialAccountBalances(orgIdNum, true).catch((err) =>
@@ -1038,6 +1040,7 @@ itemsRouter.delete(
         collection === 'treasury_transactions' ||
         collection === 'financial_accounts' ||
         collection === 'orders' ||
+        collection === 'order_returns' ||
         collection === 'expenses'
       ) {
         syncAndPersistFinancialAccountBalances(orgIdNum, true).catch((err) =>

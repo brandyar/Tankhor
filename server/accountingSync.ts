@@ -11,6 +11,7 @@ registerCacheInvalidator((orgId, collection) => {
     collection === 'treasury_transactions' ||
     collection === 'financial_accounts' ||
     collection === 'orders' ||
+    collection === 'order_returns' ||
     collection === 'expenses'
   ) {
     syncBalanceCache.delete(orgId);

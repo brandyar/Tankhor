@@ -1,7 +1,7 @@
 import {
   Organization, OrganizationUser, Category, Collection, Season, Color, Brand,
   SizeGroup, Size, Product, ProductVariant, Warehouse, WarehouseLocation,
-  InventoryItem, InventoryMovement, Customer, Order, OrderItem,
+  InventoryItem, InventoryMovement, Customer, Order, OrderItem, OrderReturn, OrderReturnItem,
   Supplier, PurchaseOrder, PurchaseOrderItem, StockTransfer, StockTransferItem,
   SizeGuideTemplate, SizeGuideMeasurement, SizeGuideValue,
   Subscription, SystemModule, OrganizationModule,
@@ -130,7 +130,15 @@ export interface IStorageProvider {
   getPaginatedOrders?(params: QueryParams): Promise<PaginatedResult<Order>>;
   getOrderItems(orderId: number): Promise<OrderItem[]>;
   saveOrder(order: Partial<Order>, items?: Partial<OrderItem>[]): Promise<Order>;
+  saveOrderItem?(item: Partial<OrderItem>): Promise<OrderItem>;
   deleteOrder?(id: number): Promise<boolean>;
+
+  // Order Returns & Exchanges (مرجوعی و تعویض سفارشات)
+  getOrderReturns?(params?: QueryParams & { order_id?: number; reason?: string }): Promise<OrderReturn[]>;
+  getPaginatedOrderReturns?(params: QueryParams & { order_id?: number; reason?: string }): Promise<PaginatedResult<OrderReturn>>;
+  getOrderReturnItems?(returnId?: number): Promise<OrderReturnItem[]>;
+  saveOrderReturn?(ret: Partial<OrderReturn>, items?: Partial<OrderReturnItem>[]): Promise<OrderReturn>;
+  deleteOrderReturn?(id: number): Promise<boolean>;
 
   // Customers
   getCustomers(params?: QueryParams): Promise<Customer[]>;

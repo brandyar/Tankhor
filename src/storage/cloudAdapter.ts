@@ -2,7 +2,7 @@ import { IStorageProvider, StorageMode, QueryParams, PaginatedResult } from './t
 import {
   Organization, OrganizationUser, Category, Collection, Season, Color, Brand,
   SizeGroup, Size, Product, ProductVariant, Warehouse, WarehouseLocation,
-  InventoryItem, InventoryMovement, Customer, Order, OrderItem,
+  InventoryItem, InventoryMovement, Customer, Order, OrderItem, OrderReturn, OrderReturnItem,
   Supplier, PurchaseOrder, PurchaseOrderItem, StockTransfer, StockTransferItem,
   SizeGuideTemplate, SizeGuideMeasurement, SizeGuideValue,
   Subscription, SystemModule, OrganizationModule,
@@ -412,8 +412,34 @@ export class CloudDirectusAdapter implements IStorageProvider {
     return this.sales.saveOrder(order, items);
   }
 
+  async saveOrderItem(item: Partial<OrderItem>): Promise<OrderItem> {
+    return this.sales.saveOrderItem(item);
+  }
+
   async deleteOrder(id: number): Promise<boolean> {
     return this.sales.deleteOrder(id);
+  }
+
+  async getOrderReturns(params?: QueryParams & { order_id?: number; reason?: string }): Promise<OrderReturn[]> {
+    return this.sales.getOrderReturns(params);
+  }
+
+  async getPaginatedOrderReturns(
+    params: QueryParams & { order_id?: number; reason?: string }
+  ): Promise<PaginatedResult<OrderReturn>> {
+    return this.sales.getPaginatedOrderReturns(params);
+  }
+
+  async getOrderReturnItems(returnId?: number): Promise<OrderReturnItem[]> {
+    return this.sales.getOrderReturnItems(returnId);
+  }
+
+  async saveOrderReturn(ret: Partial<OrderReturn>, items?: Partial<OrderReturnItem>[]): Promise<OrderReturn> {
+    return this.sales.saveOrderReturn(ret, items);
+  }
+
+  async deleteOrderReturn(id: number): Promise<boolean> {
+    return this.sales.deleteOrderReturn(id);
   }
 
   // ==========================================

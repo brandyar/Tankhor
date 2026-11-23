@@ -29,6 +29,7 @@ export const navigationEn = {
   contractors: 'Contractors & Ledgers',
   allOrders: 'All Orders',
   createOrder: 'Create Order',
+  orderReturns: 'Returns & Exchanges',
   purchasingGroup: 'Purchasing & Suppliers',
   suppliers: 'Suppliers',
   purchaseOrders: 'Purchase Orders',

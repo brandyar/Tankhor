@@ -38,8 +38,10 @@ const REFERENCE_COLLECTIONS = new Set([
 ]);
 
 const MUTATION_CASCADE_MAP: Record<string, string[]> = {
-  orders: ['orders', 'order_items', 'inventory_items', 'inventory_movements', 'financial_accounts', 'treasury_transactions', 'person_transactions', 'customers', 'pos_shifts'],
-  order_items: ['orders', 'order_items', 'inventory_items', 'inventory_movements'],
+  orders: ['orders', 'order_items', 'order_returns', 'inventory_items', 'inventory_movements', 'financial_accounts', 'treasury_transactions', 'person_transactions', 'customers', 'pos_shifts'],
+  order_items: ['orders', 'order_items', 'order_returns', 'inventory_items', 'inventory_movements'],
+  order_returns: ['order_returns', 'order_return_items', 'orders', 'order_items', 'inventory_items', 'inventory_movements', 'financial_accounts', 'treasury_transactions', 'person_transactions', 'customers', 'pos_shifts'],
+  order_return_items: ['order_returns', 'order_return_items', 'orders', 'order_items', 'inventory_items', 'inventory_movements'],
   purchase_orders: ['purchase_orders', 'purchase_order_items', 'inventory_items', 'inventory_movements', 'person_transactions', 'suppliers'],
   products: ['products', 'product_variants', 'inventory_items'],
   product_variants: ['product_variants', 'products', 'inventory_items'],

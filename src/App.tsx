@@ -24,6 +24,7 @@ import { MovementsView } from './features/inventory/MovementsView';
 import { TransfersView } from './features/inventory/TransfersView';
 import { OrdersView } from './features/orders/OrdersView';
 import { CreateOrderView } from './features/orders/CreateOrderView';
+import { ReturnsView } from './features/orders/ReturnsView';
 import { CustomersView } from './features/customers/CustomersView';
 import { SuppliersView } from './features/purchasing/SuppliersView';
 import { PurchaseOrdersView } from './features/purchasing/PurchaseOrdersView';
@@ -94,6 +95,7 @@ const AuthenticatedApp: React.FC = () => {
       case 'orders/create':
         return permissions.canCreateOrders;
       case 'orders/all':
+      case 'orders/returns':
       case 'sales/catalog':
       case 'sales/catalog/products':
       case 'sales/catalog/size-engine':
@@ -210,6 +212,8 @@ const AuthenticatedApp: React.FC = () => {
         return <OrdersView onNavigateToCreate={() => setCurrentRoute('orders/create')} />;
       case 'orders/create':
         return <CreateOrderView onOrderCreated={() => setCurrentRoute('orders/all')} />;
+      case 'orders/returns':
+        return <ReturnsView />;
       case 'sales/catalog':
       case 'sales/catalog/products':
       case 'sales/catalog/size-engine':
